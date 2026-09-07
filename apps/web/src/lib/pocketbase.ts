@@ -12,5 +12,17 @@ const url =
 
 export const pb = new PocketBase(url);
 
+/**
+ * El SDK cancela sola cualquier petición nueva que "se parezca" a otra en vuelo
+ * hacia la misma colección. Está pensado para búsquedas mientras se tipea, pero
+ * acá rompe cosas legítimas: guardar un permiso y recargar la lista, o resolver
+ * varias etiquetas seguidas al registrar un envío — la primera se cancelaba y el
+ * error aparecía como "The request was aborted (autocancelled)".
+ *
+ * Todas nuestras llamadas se esperan con await y en orden, así que no hay
+ * peticiones colgando que valga la pena cancelar.
+ */
+pb.autoCancellation(false);
+
 // El SDK persiste la sesión en localStorage. El manual (§6.6) lo llama
 // "mantener la sesión abierta"; el switch para desactivarlo llega en la Etapa 6.

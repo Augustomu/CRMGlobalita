@@ -6,6 +6,7 @@ import { ListaContactos } from './features/followup/ListaContactos';
 import { FichaLead } from './features/followup/FichaLead';
 import { usePlantillas } from './features/followup/usePlantillas';
 import { Vencimientos, leadsVencidos } from './features/vencimientos/Vencimientos';
+import { Usuarios } from './features/usuarios/Usuarios';
 import { useEtiquetas } from './features/followup/useEtiquetas';
 
 const TEMAS = ['tema-claro', 'tema-oscuro', 'tema-noche'] as const;
@@ -16,6 +17,7 @@ export function App() {
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const [tema, setTema] = useState(0);
   const [vencAbierto, setVencAbierto] = useState(false);
+  const [seccion, setSeccion] = useState<'followup' | 'usuarios'>('followup');
   const plantillas = usePlantillas(auth.usuario);
   const catalogoEtiquetas = useEtiquetas(auth.usuario);
 
@@ -40,12 +42,26 @@ export function App() {
       <header className="header">
         <strong className="header-marca">CRM Globalita</strong>
         <nav className="header-tabs">
-          <span className="tab tab-on">Follow-up</span>
+          {puedeUsuario(auth.usuario, 'followup') && (
+            <button
+              type="button"
+              className={`tab ${seccion === 'followup' ? 'tab-on' : 'tab-off'}`}
+              onClick={() => setSeccion('followup')}
+            >
+              Follow-up
+            </button>
+          )}
           {puedeUsuario(auth.usuario, 'automatizaciones') && (
-            <span className="tab tab-off" title="Etapa 5">Automatizaciones</span>
+            <span className="tab tab-off" title="Etapa 5, todavía no construida">Automatizaciones</span>
           )}
           {puedeUsuario(auth.usuario, 'usuarios') && (
-            <span className="tab tab-off" title="Etapa 6">Usuarios</span>
+            <button
+              type="button"
+              className={`tab ${seccion === 'usuarios' ? 'tab-on' : 'tab-off'}`}
+              onClick={() => setSeccion('usuarios')}
+            >
+              Usuarios
+            </button>
           )}
         </nav>
 
@@ -89,7 +105,11 @@ export function App() {
             </p>
           </div>
         )}
-        {!cargando && !error && (
+        {!cargando && !error && seccion === 'usuarios' && auth.usuario && (
+          <Usuarios usuarioActual={auth.usuario} leads={leads} onCambio={recargar} />
+        )}
+
+        {!cargando && !error && seccion === 'followup' && (
           <>
             <ListaContactos
               leads={leads}

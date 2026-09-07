@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { puede, puedeEditarLead, type Clave, type Rol } from '@crm/core/permisos';
 import { pb } from '../../lib/pocketbase';
 import type { LeadRecord, UsuarioRecord } from '../../lib/types';
@@ -25,12 +25,19 @@ export function puedeEditar(usuario: UsuarioRecord | null, lead: LeadRecord | nu
 
 export function useLeads(usuario: UsuarioRecord | null) {
   const [leads, setLeads] = useState<LeadRecord[]>([]);
+  // Para saber si ya hubo una carga sin meter  en las dependencias de
+  // recargar (que lo haria recrearse en cada cambio y disparar un bucle).
+  const leadsRef = useRef<LeadRecord[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const recargar = useCallback(async () => {
     if (!usuario) return;
-    setCargando(true);
+    // `cargando` solo en la PRIMERA carga. Si se prendiera en cada refresco, la
+    // sección se desmontaría y volvería a montar con cada guardado: se pierde
+    // el estado interno (qué usuario estabas mirando, qué bloque abierto) y la
+    // pantalla parpadea. Un refresco no es una carga.
+    setCargando((c) => (leadsRef.current.length === 0 ? true : c));
     setError(null);
     try {
       // Sin verTodosLeads, el colaborador ve solo los asignados (§6.3).
@@ -48,6 +55,7 @@ export function useLeads(usuario: UsuarioRecord | null) {
         sort: 'proximo_contacto',
       });
       setLeads(registros);
+      leadsRef.current = registros;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
