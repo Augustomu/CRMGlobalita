@@ -22,9 +22,16 @@ El tablero de **decisiones abiertas** del mapa dice qué falta definir antes de 
 
 ## Estado
 
-En definición. Todavía no hay código: primero se cierran las decisiones bloqueantes
-de `docs/04-decisiones/`.
+**Etapa 1 en marcha.** Ya existe el esquema de datos y las reglas de negocio que
+no dependen de decisiones abiertas. Falta la interfaz.
+
+| Ruta | Que es |
+|---|---|
+| `packages/core/` | Reglas de negocio como funciones puras, con 28 tests. `npm test` |
+| `packages/db/` | Esquema de PocketBase. `npm run db:dev -- --seed` levanta una base local con los datos de demo |
 
 Stack decidido: PocketBase + React/Vite + worker Node sobre VPS de Hostinger.
 Ver [D34](docs/04-decisiones/D34-stack-tecnologico.md) y [D35](docs/04-decisiones/D35-donde-corren-los-workers.md).
 
+Las 7 decisiones bloqueantes estan cerradas. Quedan 21 abiertas, ninguna frena el avance:
+el tablero esta en `docs/00-Mapa.md`.

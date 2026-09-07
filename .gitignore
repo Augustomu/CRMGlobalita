@@ -2,6 +2,7 @@ node_modules/
 dist/
 .env
 .env.*
+.pb/
 pb_data/
 *.log
 .DS_Store

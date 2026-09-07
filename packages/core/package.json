@@ -1,0 +1,13 @@
+{
+  "name": "@crm/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./cadencia": "./src/cadencia.ts",
+    "./dedupe": "./src/dedupe.ts",
+    "./permisos": "./src/permisos.ts",
+    "./tipos": "./src/tipos.ts"
+  }
+}
+
