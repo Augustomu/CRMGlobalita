@@ -7,12 +7,12 @@
 
    Para agrandar o achicar TODA la interfaz, cambiá ese único número:
      1     = idéntico al prototipo
-     1.25  = actual
+     1.45  = actual
      1.4   = bastante más grande
    ──────────────────────────────────────────────────────────────────────── */
 
 :root {
-  --escala-texto: 1.25;
+  --escala-texto: 1.45;
 
   --txt-micro: calc(7px  * var(--escala-texto));
   --txt-xs:    calc(9px  * var(--escala-texto));
@@ -64,7 +64,7 @@ html, body, #root { height: 100%; }
 .cuerpo { flex: 1; min-height: 0; display: flex; overflow: hidden; }
 
 .columna-lista {
-  width: 340px;
+  width: calc(300px * var(--escala-texto));
   flex-shrink: 0;
   border-right: .5px solid var(--border);
   background: var(--surface);
