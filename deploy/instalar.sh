@@ -122,8 +122,15 @@ echo
 echo "======================================================================"
 systemctl --no-pager status crm-globalita | head -5 || true
 echo "----------------------------------------------------------------------"
-echo "bitacora:  $(curl -s -o /dev/null -w '%{http_code}' https://bitacorapersonal.online || echo 'sin respuesta')  (deberia ser 200)"
-echo "crm:       $(curl -s -o /dev/null -w '%{http_code}' -H 'Host: '"$DOMINIO" http://127.0.0.1/api/health || echo 'sin respuesta')  (deberia ser 200)"
+# Se prueba contra 127.0.0.1 con el Host puesto a mano: salir a internet y
+# volver al mismo server no siempre funciona (hairpin NAT) y da un 000 que
+# parece que rompiste algo cuando en realidad esta todo bien.
+for SITIO in $(ls /etc/nginx/sites-enabled/); do
+  CODIGO=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 \
+    --resolve "$SITIO:443:127.0.0.1" -k "https://$SITIO/" 2>/dev/null || echo "000")
+  echo "  $SITIO -> HTTP $CODIGO"
+done
+echo "  (200, 301 o 302 estan bien; 000 o 502 no)"
 echo "======================================================================"
 echo
 echo "Siguiente:"
