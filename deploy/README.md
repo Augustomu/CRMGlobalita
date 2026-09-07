@@ -4,7 +4,7 @@
 > instalacion (VPS 45.90.108.64, dominio crm.globalita.tech). Este archivo es la
 > referencia general.
 
-Arquitectura: **un solo proceso**. PocketBase sirve la API *y* la interfaz
+Arquitectura: **PocketBase detrás de nginx**. PocketBase escucha solo en
 (desde `pb_public/`), y saca el certificado HTTPS solo. No hace falta nginx,
 ni Docker, ni un proceso aparte para el frontend.
 
@@ -29,7 +29,7 @@ certificado al arrancar, y sin DNS apuntando falla.
 Desde tu máquina, en la carpeta del proyecto:
 
 ```bash
-scp deploy/instalar.sh deploy/crm-globalita.service deploy/backup.sh root@TU_IP:/tmp/
+scp deploy/instalar.sh deploy/crm-globalita.service deploy/backup.sh deploy/nginx-crm.conf root@TU_IP:/tmp/
 ssh root@TU_IP 'bash /tmp/instalar.sh'
 ```
 

@@ -8,27 +8,19 @@ User=crm
 Group=crm
 WorkingDirectory=/opt/crm-globalita
 
-# PocketBase saca y renueva el certificado de Let's Encrypt solo para el
-# dominio que se le pasa en --https. Requiere que crm.globalita.tech ya
-# resuelva a este servidor ANTES de arrancar, y el puerto 80 abierto para
-# el desafio de validacion.
+# Escucha SOLO en localhost: quien atiende desde afuera es nginx, que ya tiene
+# los puertos 80 y 443 sirviendo bitacorapersonal.online. Que PocketBase no se
+# asome a internet es ademas mas seguro: no hay forma de entrarle por el 8090.
 ExecStart=/opt/crm-globalita/pocketbase serve \
   --dir=/opt/crm-globalita/pb_data \
   --publicDir=/opt/crm-globalita/pb_public \
   --migrationsDir=/opt/crm-globalita/pb_migrations \
-  --http=0.0.0.0:80 \
-  --https=crm.globalita.tech:443
-
-# Sin dominio (se entra por http://IP:8090). Menos seguro: la sesion viaja sin cifrar.
-# ExecStart=/opt/crm-globalita/pocketbase serve --dir=/opt/crm-globalita/pb_data --publicDir=/opt/crm-globalita/pb_public --migrationsDir=/opt/crm-globalita/pb_migrations --http=0.0.0.0:8090
+  --http=127.0.0.1:8090
 
 Restart=always
 RestartSec=5
 
-# Permite escuchar en los puertos 80 y 443 sin correr como root.
-AmbientCapabilities=CAP_NET_BIND_SERVICE
-
-# Endurecimiento basico: el proceso solo puede escribir en su propio directorio.
+# Endurecimiento: el proceso solo puede escribir en su propio directorio.
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full

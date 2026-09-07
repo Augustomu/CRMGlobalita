@@ -7,7 +7,7 @@ Datos concretos de esta instalación:
 | VPS | `srv1961198.hstgr.cloud` → **45.90.108.64** |
 | Dominio del CRM | **`crm.globalita.tech`** (hay que crearlo, paso 2) |
 | Ruta en el servidor | `/opt/crm-globalita` |
-| Ojo | en ese VPS **ya vive la bitácora personal** |
+| Ya vive ahí | **`bitacorapersonal.online`**, detrás de nginx 1.24.0 |
 
 ---
 
@@ -19,40 +19,46 @@ período de gracia largo.
 
 1. En el panel de Hostinger, arriba, el aviso amarillo → botón **Renovar**.
 2. Después, entrá a **Dominios → globalita.tech** y activá la
-   **renovación automática**. Esto no debería depender de que alguien se acuerde.
+   **renovación automática**. Esto no debería depender de que alguien se acuerde
+   el año que viene.
 
 No sigas con lo demás hasta resolver esto.
 
 ---
 
-## Paso 1 · Ver qué hay corriendo en el VPS
+## Paso 1 · Cómo conviven la bitácora y el CRM
 
-Hace falta saberlo **antes** de instalar, porque el CRM quiere los puertos 80 y
-443, y la bitácora podría estar usándolos.
+Esto ya está verificado, no hace falta que revises nada: en el VPS corre
+**nginx 1.24.0** sirviendo `bitacorapersonal.online` por HTTPS (y redirigiendo
+HTTP a HTTPS). O sea que **los puertos 80 y 443 ya están ocupados**.
 
-1. Panel de Hostinger → **VPS** → `srv1961198.hstgr.cloud`
-2. Arriba a la derecha: botón **Consola web**
-3. Pegá esto y mandame la salida:
+Por eso el CRM no los toma. La solución es la estándar, y termina siendo más
+segura que la idea original:
 
-```bash
-echo "=== PUERTOS 80/443/8090 ==="; ss -tlnp | grep -E ':(80|443|8090)\s' || echo "LIBRES"
-echo "=== SERVICIOS ==="; systemctl list-units --type=service --state=running | grep -viE 'systemd|dbus|cron|ssh|getty|polkit|network|resolved|journal|user@' | head
-echo "=== DOCKER ==="; docker ps 2>/dev/null || echo "sin docker"
-echo "=== ESPACIO ==="; df -h / | tail -1; free -m | head -2
+```
+                       ┌── bitacorapersonal.online ──► la bitácora (igual que hoy)
+ internet ──► nginx ───┤
+              :80/:443 └── crm.globalita.tech ───────► 127.0.0.1:8090  (PocketBase)
 ```
 
-**Qué significa la respuesta:**
+PocketBase escucha **solo en localhost**. Desde internet no se le puede entrar
+directo: todo pasa por nginx, que es quien tiene los certificados.
 
-- Si dice **LIBRES** → seguimos derecho, el CRM toma 80 y 443.
-- Si aparece algo escuchando en 80 o 443 → hay que poner un proxy que reparta
-  por nombre de dominio. Se resuelve, pero cambia los pasos 4 y 5. Avisame.
+**Qué hace el instalador para no romper la bitácora:**
+
+- Agrega un archivo de configuración **nuevo**, no edita los que ya existen.
+- Guarda un respaldo completo de `/etc/nginx` en `/root/` antes de tocar nada.
+- Valida con `nginx -t` **antes** de recargar. Si no valida, deshace el enlace y
+  no recarga: la bitácora sigue exactamente igual.
+- Al final verifica que la bitácora siga respondiendo 200.
 
 ---
 
 ## Paso 2 · Crear el subdominio `crm.globalita.tech`
 
-Esto **no toca tu sitio web**: `globalita.tech` sigue apuntando al hosting, y
-solo el subdominio `crm` va al VPS.
+Esto **no toca tu sitio web**. Verificado: `globalita.tech` apunta al hosting
+(147.79.120.196) y `crm.globalita.tech` no existe todavía. Son registros
+independientes.
 
 1. Barra lateral izquierda → **Dominios**
 2. Click en **globalita.tech**
@@ -69,7 +75,7 @@ solo el subdominio `crm` va al VPS.
 
 6. **Guardar**
 
-En el campo Nombre va solo `crm`, **no** `crm.globalita.tech` — el panel le
+En el campo *Nombre* va solo `crm`, **no** `crm.globalita.tech` — el panel le
 agrega el dominio solo. Si ponés el nombre completo te queda
 `crm.globalita.tech.globalita.tech`, que es el error más común acá.
 
@@ -77,14 +83,14 @@ agrega el dominio solo. Si ponés el nombre completo te queda
 
 ## Paso 3 · Esperar y verificar
 
-El DNS tarda entre 5 minutos y un par de horas. Para verificar, en tu PC:
+El DNS tarda entre 5 minutos y un par de horas. Desde tu PC:
 
 ```bash
 nslookup crm.globalita.tech
 ```
 
 Tiene que responder **45.90.108.64**. Hasta que no diga eso, no sigas: el
-certificado HTTPS se pide contra ese nombre y va a fallar.
+certificado se pide contra ese nombre y Let's Encrypt lo va a rechazar.
 
 ---
 
@@ -96,14 +102,19 @@ Desde tu PC, en la carpeta del proyecto:
 cd ~/Projects/CRMGlobalita
 
 scp -i ~/.ssh/bitacora_vps \
-  deploy/instalar.sh deploy/crm-globalita.service deploy/backup.sh \
+  deploy/instalar.sh deploy/crm-globalita.service \
+  deploy/backup.sh deploy/nginx-crm.conf \
   root@45.90.108.64:/tmp/
 
-ssh -i ~/.ssh/bitacora_vps root@45.90.108.64 'apt-get install -y sqlite3 && bash /tmp/instalar.sh'
+ssh -i ~/.ssh/bitacora_vps root@45.90.108.64 'bash /tmp/instalar.sh'
 ```
 
-Deja instalado: PocketBase, un usuario `crm` sin acceso, el servicio arrancando
-solo al bootear, el firewall abierto en 22/80/443 y el backup diario a las 03:15.
+Deja: PocketBase corriendo en 127.0.0.1:8090, usuario `crm` sin acceso, servicio
+que arranca solo al bootear, el server block de nginx, el certificado HTTPS y el
+backup diario a las 03:15.
+
+Al terminar imprime dos chequeos: que la bitácora sigue en 200 y que el CRM
+responde. **Si la bitácora no da 200, avisame antes de seguir.**
 
 ---
 
@@ -125,11 +136,11 @@ proyecto** — anotala donde guardes tus contraseñas.
 bash deploy/publicar.sh 45.90.108.64 ~/.ssh/bitacora_vps
 ```
 
-Corre los tests (si fallan, no publica), compila la interfaz, la sube y
-reinicia. Al arrancar, PocketBase aplica las migraciones y pide el certificado.
+Corre los tests (si fallan, no publica), compila la interfaz, la sube a
+`pb_public/`, sube las migraciones y reinicia. Al arrancar, PocketBase aplica
+las migraciones que falten.
 
-La primera vez, el certificado tarda unos segundos. Si el navegador se queja,
-esperá un minuto y recargá.
+**Nunca toca `pb_data`**: los datos del servidor no se pisan desde acá.
 
 ---
 
@@ -154,7 +165,8 @@ Esto no es opcional, y es lo que evita repetir lo de septiembre.
 
 ```bash
 # generar uno a mano, sin esperar a las 03:15
-ssh -i ~/.ssh/bitacora_vps root@45.90.108.64 'sudo -u crm /opt/crm-globalita/backup.sh'
+ssh -i ~/.ssh/bitacora_vps root@45.90.108.64 \
+  'sudo -u crm /opt/crm-globalita/backup.sh'
 
 # bajarlo a tu PC
 bash deploy/traer-backup.sh 45.90.108.64 ~/.ssh/bitacora_vps
@@ -165,19 +177,51 @@ tenés las tres copias (VPS + tu PC + Drive).
 
 ---
 
+## Actualizar, más adelante
+
+Cada vez que quieras publicar cambios, un solo comando:
+
+```bash
+bash deploy/publicar.sh 45.90.108.64 ~/.ssh/bitacora_vps
+```
+
+---
+
 ## Si algo sale mal
 
 ```bash
-# estado del servicio
+# el CRM
 ssh -i ~/.ssh/bitacora_vps root@45.90.108.64 'systemctl status crm-globalita'
-
-# los últimos errores
 ssh -i ~/.ssh/bitacora_vps root@45.90.108.64 'journalctl -u crm-globalita -n 40 --no-pager'
+
+# nginx
+ssh -i ~/.ssh/bitacora_vps root@45.90.108.64 'nginx -t && systemctl status nginx'
 ```
 
-**Los dos errores más probables:**
+**Los errores más probables:**
 
-1. *"cannot bind to :80"* → algo más ya usa el puerto. Es lo que revisamos en el
-   paso 1.
-2. *No saca el certificado* → `crm.globalita.tech` todavía no resuelve al VPS, o
-   el puerto 80 está cerrado (Let's Encrypt lo necesita para validar).
+1. **Certbot falla.** `crm.globalita.tech` todavía no resuelve al VPS. Esperá a
+   que propague y corré:
+   `certbot --nginx -d crm.globalita.tech`
+2. **502 Bad Gateway.** nginx está bien, PocketBase no. Mirá
+   `journalctl -u crm-globalita`.
+3. **Se rompió la bitácora.** No debería, pero el respaldo está en
+   `/root/nginx-backup-FECHA.tar.gz`:
+   ```bash
+   rm /etc/nginx/sites-enabled/crm.globalita.tech
+   nginx -t && systemctl reload nginx
+   ```
+   Eso la deja como estaba, sin tocar nada más.
+
+---
+
+## Lo que este despliegue todavía NO incluye
+
+- **El worker de LinkedIn y WhatsApp** (Etapa 5, el mayor riesgo técnico del
+  proyecto → `docs/05-operacion/riesgo-linkedin.md`). Va a ser otro servicio de
+  systemd, uno por cuenta.
+- **Backup de las sesiones** de LinkedIn/WhatsApp: recuperarlas evita tener que
+  revincular 10 cuentas por QR.
+
+Lo que sí corre es el CRM manual: cargar leads, seguirlos, armar los mensajes
+con las plantillas y registrar los envíos.
