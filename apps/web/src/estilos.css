@@ -1119,3 +1119,11 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .switch-on { justify-content: flex-end; background: var(--accent); border-color: var(--accent); }
 .switch-on .switch-punto { background: var(--surface); }
 .switch:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ---------- burbuja de canal en la fila (dos estados) ---------- */
+.burbuja { display: inline-flex; align-items: center; flex-shrink: 0; }
+.burbuja svg { width: 13px; height: 13px; display: block; }
+/* Verde de marca cuando el WhatsApp se puede usar. */
+.burbuja-on { color: var(--brand-whatsapp); }
+/* Apagada, no oculta: §9.7. El title dice por qué. */
+.burbuja-off { color: var(--border); }

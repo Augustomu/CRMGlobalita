@@ -117,6 +117,7 @@ export function App() {
               onSeleccionar={setSeleccionado}
               usuario={auth.usuario}
               verColaboradores={puedeUsuario(auth.usuario, 'verTodosLeads')}
+              veTelefono={puedeUsuario(auth.usuario, 'verTelefono')}
             />
             {lead ? (
               <FichaLead

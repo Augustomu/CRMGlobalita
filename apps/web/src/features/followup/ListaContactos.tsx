@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { tocaHoy } from '@crm/core/cadencia';
 import type { LeadRecord, UsuarioRecord } from '../../lib/types';
+import { BurbujaWhatsApp } from './IconosCanal';
 
 const HOY = new Date().toISOString().slice(0, 10);
 
@@ -46,6 +47,9 @@ interface Props {
   onSeleccionar: (id: string) => void;
   usuario: UsuarioRecord | null;
   verColaboradores: boolean;
+  /** Sin permiso de ver el teléfono tampoco se muestra la burbuja: el icono
+   *  revelaría que el dato existe. */
+  veTelefono: boolean;
 }
 
 export function ListaContactos({
@@ -54,11 +58,13 @@ export function ListaContactos({
   onSeleccionar,
   usuario,
   verColaboradores,
+  veTelefono,
 }: Props) {
   const [busqueda, setBusqueda] = useState('');
   const [cuenta, setCuenta] = useState('todas');
   const [colaborador, setColaborador] = useState('todos');
   const [soloVencidos, setSoloVencidos] = useState(false);
+  const [soloWa, setSoloWa] = useState(false);
   const [filtrosAbierto, setFiltrosAbierto] = useState(false);
   const [pos, setPos] = useState({ left: 0, top: 0 });
   const botonFiltros = useRef<HTMLButtonElement>(null);
@@ -87,13 +93,14 @@ export function ListaContactos({
       ) {
         return false;
       }
+      if (soloWa && !p?.telefono_valido) return false;
       if (!q) return true;
       // §7.2: nombre, empresa, teléfono y ciudad.
       return [p?.nombre, p?.empresa, p?.telefono, p?.ciudad]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
-  }, [leads, busqueda, cuenta, colaborador, soloVencidos]);
+  }, [leads, busqueda, cuenta, colaborador, soloVencidos, soloWa]);
 
   // §7.2: los últimos leads editados, como accesos rápidos.
   const ultimos = useMemo(
@@ -101,7 +108,8 @@ export function ListaContactos({
     [leads],
   );
 
-  const nFiltros = (cuenta !== 'todas' ? 1 : 0) + (colaborador !== 'todos' ? 1 : 0) + (soloVencidos ? 1 : 0);
+  const nFiltros =
+    (cuenta !== 'todas' ? 1 : 0) + (colaborador !== 'todos' ? 1 : 0) + (soloVencidos ? 1 : 0) + (soloWa ? 1 : 0);
 
   // §9.5: el popover se posiciona con coordenadas calculadas desde el botón,
   // para que no lo recorte el scroll de la columna.
@@ -150,6 +158,7 @@ export function ListaContactos({
                   setCuenta('todas');
                   setColaborador('todos');
                   setSoloVencidos(false);
+                  setSoloWa(false);
                 }}
               >
                 Limpiar
@@ -171,6 +180,25 @@ export function ListaContactos({
                   onClick={() => setSoloVencidos(true)}
                 >
                   solo vencidos
+                </button>
+              </div>
+            </div>
+            <div className="popover-grupo">
+              <span className="campo-label">WhatsApp</span>
+              <div className="chips">
+                <button
+                  type="button"
+                  className={`chip ${!soloWa ? 'chip-on' : ''}`}
+                  onClick={() => setSoloWa(false)}
+                >
+                  todos
+                </button>
+                <button
+                  type="button"
+                  className={`chip ${soloWa ? 'chip-on' : ''}`}
+                  onClick={() => setSoloWa(true)}
+                >
+                  solo con WhatsApp
                 </button>
               </div>
             </div>
@@ -264,6 +292,12 @@ export function ListaContactos({
             >
               <div className="fila-arriba">
                 <div className="fila-nombre">{p?.nombre ?? '(sin perfil)'}</div>
+                {veTelefono && (
+                  <BurbujaWhatsApp
+                    activa={Boolean(p?.telefono_valido)}
+                    motivo={p?.telefono ? 'Teléfono a revisar' : 'Sin teléfono cargado'}
+                  />
+                )}
                 {sinLeer && <span className="fila-duenio fila-nuevo">nuevo</span>}
                 {l.expand?.asignado && (
                   <span className="fila-duenio" title={l.expand.asignado.name}>
