@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:fixed;inset:0;z-index:300;background:rgba(20,20,18,.42);display:flex;align-items:center;justify-content:center;padding:24px;font-family:Inter,-apple-system,sans-serif" onClick="{{ cerrar }}">
+  <div onClick="{{ noCerrar }}" style="width:100%;max-width:640px;max-height:86vh;background:var(--surface);border:.5px solid var(--border);border-radius:14px;box-shadow:0 14px 44px rgba(0,0,0,.2);display:flex;flex-direction:column;overflow:hidden">
+
+    <div style="display:flex;align-items:center;gap:9px;padding:13px 15px;border-bottom:.5px solid var(--border);flex-wrap:wrap">
+      <span style="font-size:14px;font-weight:600;color:var(--text)">Reglas y acciones r&aacute;pidas</span>
+      <span style="font-size:10px;color:var(--hint);white-space:nowrap">{{ resumen }}</span>
+      <button type="button" onClick="{{ nueva }}" style="margin-left:auto;height:26px;padding:0 10px;border-radius:8px;border:.5px solid var(--accent);background:var(--accent-light);color:var(--accent);font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">Nueva regla</button>
+      <button type="button" onClick="{{ cerrar }}" style="width:26px;height:26px;border-radius:8px;border:.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:12px;height:12px"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
+    </div>
+
+    <div style="flex:1;min-height:0;overflow-y:auto;padding:12px 15px 16px;display:flex;flex-direction:column;gap:8px">
+      <sc-if value="{{ creando }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:8px;padding:11px 12px;border-radius:11px;border:.5px solid var(--accent);background:var(--accent-light)">
+          <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--accent)">Regla nueva</span>
+          <input type="text" value="{{ nNombre }}" onChange="{{ setNombre }}" placeholder="Nombre de la regla" style="height:30px;padding:0 9px;border-radius:8px;border:.5px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:12px;outline:none" style-focus="border-color:var(--accent)" />
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)">Si pasa esto</span>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <sc-for list="{{ disparadores }}" as="d" hint-placeholder-count="5">
+                <button type="button" onClick="{{ d.elegir }}" style="height:24px;padding:0 9px;border-radius:8px;border:.5px solid {{ d.borde }};background:{{ d.fondo }};color:{{ d.color }};font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap">{{ d.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)">Y se cumple</span>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <sc-for list="{{ condiciones }}" as="c" hint-placeholder-count="4">
+                <button type="button" onClick="{{ c.elegir }}" style="height:24px;padding:0 9px;border-radius:8px;border:.5px solid {{ c.borde }};background:{{ c.fondo }};color:{{ c.color }};font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap">{{ c.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)">Entonces</span>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <sc-for list="{{ acciones }}" as="a" hint-placeholder-count="5">
+                <button type="button" onClick="{{ a.elegir }}" style="height:24px;padding:0 9px;border-radius:8px;border:.5px solid {{ a.borde }};background:{{ a.fondo }};color:{{ a.color }};font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap">{{ a.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;justify-content:flex-end">
+            <button type="button" onClick="{{ cancelarNueva }}" style="height:28px;padding:0 11px;border-radius:8px;border:.5px solid var(--border);background:transparent;color:var(--muted);font-family:inherit;font-size:11px;cursor:pointer">Cancelar</button>
+            <button type="button" onClick="{{ guardarNueva }}" style="height:28px;padding:0 12px;border-radius:8px;border:none;background:var(--accent);color:var(--surface);font-family:inherit;font-size:11px;font-weight:600;cursor:pointer">Crear regla</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-for list="{{ reglas }}" as="r" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:6px;padding:10px 11px;border-radius:11px;border:.5px solid {{ r.borde }};background:{{ r.fondo }}">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;font-weight:600;color:var(--text);flex:1;min-width:0;text-wrap:pretty">{{ r.nombre }}</span>
+            <span style="font-size:9px;color:var(--hint);font-variant-numeric:tabular-nums;white-space:nowrap">{{ r.corridas }}</span>
+            <sc-if value="{{ r.on }}" hint-placeholder-val="{{ true }}">
+              <button type="button" onClick="{{ r.toggle }}" style="width:34px;height:20px;border-radius:10px;border:.5px solid var(--accent);background:var(--accent);cursor:pointer;padding:2px;display:flex;justify-content:flex-end;align-items:center;flex-shrink:0">
+                <span style="width:14px;height:14px;border-radius:50%;background:var(--surface);display:block"></span>
+              </button>
+            </sc-if>
+            <sc-if value="{{ r.off }}" hint-placeholder-val="{{ false }}">
+              <button type="button" onClick="{{ r.toggle }}" style="width:34px;height:20px;border-radius:10px;border:.5px solid var(--border);background:var(--bg);cursor:pointer;padding:2px;display:flex;justify-content:flex-start;align-items:center;flex-shrink:0">
+                <span style="width:14px;height:14px;border-radius:50%;background:var(--hint);display:block"></span>
+              </button>
+            </sc-if>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+            <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:7px;background:var(--info-light);color:var(--muted);white-space:nowrap">si {{ r.disparador }}</span>
+            <sc-if value="{{ r.tieneCondicion }}" hint-placeholder-val="{{ false }}">
+              <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:7px;background:var(--bg);color:var(--hint);border:.5px solid var(--border);white-space:nowrap">y {{ r.condicion }}</span>
+            </sc-if>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--hint)" stroke-width="2" style="width:10px;height:10px;flex-shrink:0"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+            <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:7px;background:var(--accent-light);color:var(--accent);white-space:nowrap">{{ r.accion }}</span>
+          </div>
+        </div>
+      </sc-for>
+
+      <span style="font-size:10px;color:var(--hint);line-height:1.5;text-wrap:pretty;padding:2px 2px 0">Las reglas corren sobre los leads de todas las cuentas. Una regla apagada deja de disparar pero conserva su historial.</span>
+
+      <div style="display:flex;flex-direction:column;gap:8px;padding:11px 12px;border-radius:11px;border:.5px solid var(--border);background:var(--bg);margin-top:4px">
+        <span style="font-size:10px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:.05em">Alrededor de la reuni&oacute;n</span>
+        <sc-for list="{{ reunion }}" as="r" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="min-width:0;flex:1;display:flex;flex-direction:column;gap:1px">
+              <span style="font-size:12px;color:var(--text)">{{ r.titulo }}</span>
+              <span style="font-size:10px;color:var(--hint)">{{ r.detalle }}</span>
+            </div>
+            <sc-if value="{{ r.on }}" hint-placeholder-val="{{ true }}">
+              <button type="button" onClick="{{ r.toggle }}" style="width:34px;height:20px;border-radius:10px;border:.5px solid var(--accent);background:var(--accent);cursor:pointer;padding:2px;display:flex;justify-content:flex-end;align-items:center;flex-shrink:0">
+                <span style="width:14px;height:14px;border-radius:50%;background:var(--surface);display:block"></span>
+              </button>
+            </sc-if>
+            <sc-if value="{{ r.off }}" hint-placeholder-val="{{ false }}">
+              <button type="button" onClick="{{ r.toggle }}" style="width:34px;height:20px;border-radius:10px;border:.5px solid var(--border);background:var(--surface);cursor:pointer;padding:2px;display:flex;justify-content:flex-start;align-items:center;flex-shrink:0">
+                <span style="width:14px;height:14px;border-radius:50%;background:var(--hint);display:block"></span>
+              </button>
+            </sc-if>
+          </div>
+        </sc-for>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-top:7px;border-top:.5px solid var(--border)">
+          <span style="font-size:9px;color:var(--hint);text-transform:uppercase;letter-spacing:.04em;font-weight:600;white-space:nowrap">Recordatorio extra</span>
+          <sc-for list="{{ opcRecordatorio }}" as="o" hint-placeholder-count="4">
+            <button type="button" onClick="{{ o.elegir }}" style="height:23px;padding:0 8px;border-radius:8px;border:.5px solid {{ o.borde }};background:{{ o.fondo }};color:{{ o.color }};font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:680,&quot;height&quot;:600}}">
+class Component extends DCLogic {
+  static BASE = [
+    { k: 'sugerirProximoR', nombre: 'Etiqueta "Contacto" sugiere el próximo R', disparador: 'el lead tiene la etiqueta Contacto', condicion: 'sin Reunión, Esperando confirmación ni Aprobación del equipo', accion: 'muestra en el chat el próximo R que toca enviar (todas las cuentas)', corridas: '—' },
+    { k: 'etiquetaRecordatorio', nombre: 'Envío de un R agrega Recordatorio', disparador: 'se envía cualquiera de los R0–R8', condicion: '', accion: 'agrega la etiqueta Recordatorio si todavía no la tiene', corridas: '—' }
+  ];
+
+  static DISPARADORES = ['se agrega una etiqueta', 'el lead responde', 'la reunión queda en no asistió', 'N días sin actividad', 'entra un lead nuevo'];
+  static CONDICIONES = ['sin condición', 'de una cuenta', 'de un país', 'en una etapa'];
+  static ACCIONES = ['fijar próximo contacto', 'cambiar la etapa', 'asignar a un colaborador', 'cargar mensaje a la cola', 'crear una tarea'];
+
+  state = { off: [], nuevas: [], creando: false, nNombre: '', nDisp: null, nCond: null, nAcc: null, reunion: { conf24: true, aviso90: true, gracias: true }, recordatorio: 3 };
+
+  renderVals() {
+    const todas = Component.BASE.concat(this.state.nuevas);
+    const chip = (lista, sel, set) => lista.map(label => {
+      const on = sel === label;
+      return {
+        label,
+        fondo: on ? 'var(--accent)' : 'var(--surface)',
+        borde: on ? 'var(--accent)' : 'var(--border)',
+        color: on ? 'var(--surface)' : 'var(--muted)',
+        elegir: () => set(label)
+      };
+    });
+
+    return {
+      cerrar: () => { if (this.props.onCerrar) this.props.onCerrar(); },
+      reunion: [
+        { k: 'conf24', titulo: 'Confirmación 24 h antes', detalle: 'por el canal donde respondió' },
+        { k: 'aviso90', titulo: 'Aviso 1 h 30 antes', detalle: 'con el link de la reunión' },
+        { k: 'gracias', titulo: 'Agradecimiento post reunión', detalle: 'sale si el estado queda en asistió' }
+      ].map(r => ({
+        titulo: r.titulo, detalle: r.detalle,
+        on: this.state.reunion[r.k], off: !this.state.reunion[r.k],
+        toggle: () => this.setState(s => ({ reunion: { ...s.reunion, [r.k]: !s.reunion[r.k] } }))
+      })),
+      opcRecordatorio: [0, 2, 3, 4].map(h => {
+        const on = this.state.recordatorio === h;
+        return {
+          label: h === 0 ? 'ninguno' : h + ' h antes',
+          fondo: on ? 'var(--accent)' : 'var(--surface)',
+          borde: on ? 'var(--accent)' : 'var(--border)',
+          color: on ? 'var(--surface)' : 'var(--muted)',
+          elegir: () => this.setState({ recordatorio: h })
+        };
+      }),
+      noCerrar: e => e.stopPropagation(),
+      resumen: (todas.length - this.state.off.length) + ' de ' + todas.length + ' activas',
+      reglas: todas.map(r => {
+        const on = this.state.off.indexOf(r.k) < 0;
+        return {
+          nombre: r.nombre, disparador: r.disparador, condicion: r.condicion,
+          tieneCondicion: !!r.condicion, accion: r.accion,
+          corridas: on ? r.corridas : 'apagada',
+          on, off: !on,
+          borde: on ? 'var(--accent-br)' : 'var(--border)',
+          fondo: on ? 'var(--info-light)' : 'var(--bg)',
+          toggle: () => this.setState(s => ({ off: on ? s.off.concat([r.k]) : s.off.filter(x => x !== r.k) }))
+        };
+      }),
+      creando: this.state.creando,
+      nueva: () => this.setState({ creando: true, nNombre: '', nDisp: null, nCond: null, nAcc: null }),
+      cancelarNueva: () => this.setState({ creando: false }),
+      nNombre: this.state.nNombre,
+      setNombre: e => this.setState({ nNombre: e.target.value }),
+      disparadores: chip(Component.DISPARADORES, this.state.nDisp, v => this.setState({ nDisp: v })),
+      condiciones: chip(Component.CONDICIONES, this.state.nCond, v => this.setState({ nCond: v })),
+      acciones: chip(Component.ACCIONES, this.state.nAcc, v => this.setState({ nAcc: v })),
+      guardarNueva: () => {
+        const disparador = this.state.nDisp || Component.DISPARADORES[0];
+        const accion = this.state.nAcc || Component.ACCIONES[0];
+        const cond = this.state.nCond && this.state.nCond !== 'sin condición' ? this.state.nCond : '';
+        this.setState(s => ({
+          creando: false,
+          nuevas: s.nuevas.concat([{
+            k: 'r' + Date.now().toString(36),
+            nombre: (s.nNombre || '').trim() || 'Regla sin nombre',
+            disparador, condicion: cond, accion, corridas: 'recién creada'
+          }])
+        }));
+      }
+    };
+  }
+}
+
+</script>
+</body>
+</html>

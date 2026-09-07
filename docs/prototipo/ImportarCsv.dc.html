@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:220;display:flex;align-items:center;justify-content:center;padding:20px" onClick="{{ cerrar }}">
+  <div style="width:640px;max-width:96vw;max-height:88vh;background:var(--surface);border:.5px solid var(--border);border-radius:12px;display:flex;flex-direction:column;overflow:hidden" onClick="{{ stop }}">
+
+    <div style="display:flex;align-items:center;gap:8px;padding:11px 16px;border-bottom:.5px solid var(--border)">
+      <span style="font-size:14px;font-weight:500;color:var(--text);white-space:nowrap">Importar leads desde CSV</span>
+      <button type="button" onClick="{{ cerrar }}" title="Cerrar" style="margin-left:auto;width:26px;height:26px;flex-shrink:0;border-radius:8px;border:.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 150ms ease-out" style-hover="background:var(--accent-light);border-color:var(--accent-br);color:var(--accent)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:12px;height:12px"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
+    </div>
+
+    <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;min-height:0">
+
+      <sc-if value="{{ paso1 }}" hint-placeholder-val="{{ true }}">
+        <span style="font-size:11px;color:var(--muted);line-height:1.5;text-wrap:pretty">Subí un CSV con una fila por lead. Columnas esperadas: <b style="color:var(--text)">nombre, telefono, empresa, cargo, ciudad, pais, email</b>. Solo nombre y telefono son obligatorias.</span>
+        <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:110px;border:1.5px dashed var(--border);border-radius:10px;background:var(--bg);cursor:pointer;transition:border-color 150ms ease-out" style-hover="border-color:var(--accent-br)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="width:22px;height:22px;color:var(--hint)"><path d="M12 15V4M8 8l4-4 4 4"></path><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"></path></svg>
+          <span style="font-size:11px;color:var(--muted)">Arrastr&aacute; el archivo o hac&eacute; clic para elegirlo</span>
+          <input type="file" accept=".csv" onChange="{{ onArchivo }}" style="display:none" />
+        </label>
+        <sc-if value="{{ error }}" hint-placeholder-val="{{ false }}">
+          <span style="font-size:10px;color:var(--error);background:var(--error-light);border:.5px solid var(--error);border-radius:8px;padding:6px 9px">{{ errorTexto }}</span>
+        </sc-if>
+        <button type="button" onClick="{{ usarEjemplo }}" style="align-self:flex-start;font-size:10px;color:var(--accent);background:transparent;border:none;cursor:pointer;font-family:inherit;padding:0;text-decoration:underline">probar con un archivo de ejemplo</button>
+      </sc-if>
+
+      <sc-if value="{{ paso2 }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--text)">{{ resumenArchivo }}</span>
+          <span style="margin-left:auto;font-size:9px;font-weight:600;padding:2px 7px;border-radius:10px;background:var(--success-light);color:var(--success);white-space:nowrap">{{ nuevosLabel }}</span>
+          <sc-if value="{{ hayDuplicados }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:10px;background:var(--warning-light);color:var(--warning);white-space:nowrap">{{ duplicadosLabel }}</span>
+          </sc-if>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:4px;max-height:260px;overflow-y:auto">
+          <sc-for list="{{ filas }}" as="f" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:16px minmax(0,1fr) 100px 74px;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:{{ f.fondo }};border:.5px solid var(--border)">
+              <sc-if value="{{ f.incluir }}" hint-placeholder-val="{{ true }}">
+                <button type="button" onClick="{{ f.alternar }}" title="No importar este lead" style="width:15px;height:15px;border-radius:4px;border:none;background:var(--accent);color:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width:9px;height:9px"><path d="M5 13l4 4L19 7"></path></svg>
+                </button>
+              </sc-if>
+              <sc-if value="{{ f.excluir }}" hint-placeholder-val="{{ false }}">
+                <button type="button" onClick="{{ f.alternar }}" title="Importar este lead" style="width:15px;height:15px;border-radius:4px;border:.5px solid var(--border);background:var(--surface);cursor:pointer;padding:0"></button>
+              </sc-if>
+              <div style="min-width:0;display:flex;flex-direction:column;gap:1px">
+                <span style="font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.nombre }}</span>
+                <span style="font-size:9px;color:var(--hint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.empresa }}</span>
+              </div>
+              <span style="font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap">{{ f.telefono }}</span>
+              <sc-if value="{{ f.esDuplicado }}" hint-placeholder-val="{{ false }}">
+                <span title="Ya existe un lead con este tel&eacute;fono: se va a fusionar" style="font-size:9px;font-weight:600;color:var(--warning);white-space:nowrap">ya existe</span>
+              </sc-if>
+              <sc-if value="{{ f.esNuevo }}" hint-placeholder-val="{{ true }}">
+                <span style="font-size:9px;color:var(--success);white-space:nowrap">nuevo</span>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:8px;padding-top:8px;border-top:.5px solid var(--border)">
+          <button type="button" onClick="{{ volver }}" style="height:30px;padding:0 12px;border-radius:8px;border:.5px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit">Elegir otro archivo</button>
+          <button type="button" onClick="{{ confirmarImportacion }}" style="margin-left:auto;height:30px;padding:0 16px;border-radius:8px;border:none;background:var(--accent);color:var(--surface);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:background 150ms ease-out" style-hover="background:var(--accent-hover)">{{ botonImportar }}</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ paso3 }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px 0">
+          <span style="width:36px;height:36px;border-radius:50%;background:var(--success-light);color:var(--success);display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="width:18px;height:18px"><path d="M5 13l4 4L19 7"></path></svg>
+          </span>
+          <span style="font-size:12px;font-weight:600;color:var(--text)">{{ resultadoTitulo }}</span>
+          <span style="font-size:11px;color:var(--muted);text-align:center;text-wrap:pretty">{{ resultadoDetalle }}</span>
+          <button type="button" onClick="{{ cerrar }}" style="height:30px;padding:0 16px;border-radius:8px;border:none;background:var(--accent);color:var(--surface);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">Ir a Follow-up</button>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:640,&quot;height&quot;:560},&quot;contactos&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;object[]&quot;},&quot;onImportar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(filas:object[])=&gt;void&quot;},&quot;onCerrar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;()=&gt;void&quot;}}">
+class Component extends DCLogic {
+  static PAISES = { BR: 'Brasil', MX: 'México', MZ: 'Mozambique' };
+
+  static EJEMPLO = [
+    { nombre: 'Bruno Kessler', telefono: '+55 11 98220 3341', empresa: 'Kessler Metais', cargo: 'Gerente de Compras', ciudad: 'Sao Paulo', pais: 'Brasil', email: 'bruno@kesslermetais.com' },
+    { nombre: 'Ivana Suárez', telefono: '+54 9 341 555 0192', empresa: 'Suárez Hnos.', cargo: 'Directora', ciudad: 'Rosario', pais: 'Argentina', email: 'ivana@suarezhnos.com' },
+    { nombre: 'Marcelo Jordão', telefono: '+55 21 98765 1234', empresa: 'Randon Implementos', cargo: 'Gerente de Manutenção', ciudad: 'Rio de Janeiro', pais: 'Brasil', email: '' },
+    { nombre: 'Paulina Reyes', telefono: '+52 81 1234 5678', empresa: 'Reyes Industrial', cargo: 'Jefa de Planta', ciudad: 'Monterrey', pais: 'México', email: 'paulina@reyesindustrial.mx' }
+  ];
+
+  static parseCsv(texto) {
+    const lineas = texto.split(/\r?\n/).filter(l => l.trim().length > 0);
+    if (!lineas.length) return [];
+    const encabezado = lineas[0].split(',').map(h => h.trim().toLowerCase());
+    return lineas.slice(1).map(linea => {
+      const campos = linea.split(',').map(c => c.trim());
+      const obj = {};
+      encabezado.forEach((h, i) => { obj[h] = campos[i] || ''; });
+      let pais = obj.pais || obj['pa\u00eds'] || obj.region || '';
+      const codigo = pais.trim().toUpperCase();
+      if (Component.PAISES[codigo]) pais = Component.PAISES[codigo];
+      return {
+        nombre: obj.nombre || '',
+        telefono: obj.telefono || obj['tel\u00e9fono'] || '',
+        empresa: obj.empresa || '',
+        cargo: obj.cargo || obj.rol || '',
+        ciudad: obj.ciudad || '',
+        pais,
+        email: obj.email || ''
+      };
+    }).filter(r => r.nombre && r.telefono);
+  }
+
+  state = { paso: 1, filas: null, incluidos: null, error: false, resultado: null };
+
+  procesar(datos) {
+    if (!datos.length) { this.setState({ error: true }); return; }
+    const existentes = (this.props.contactos || []).map(c => (c.telefono || '').replace(/\D/g, '').slice(-8));
+    const filas = datos.map((d, i) => ({
+      ...d,
+      id: 'imp-' + i,
+      dup: existentes.indexOf((d.telefono || '').replace(/\D/g, '').slice(-8)) >= 0
+    }));
+    const incluidos = {};
+    filas.forEach(f => { incluidos[f.id] = true; });
+    this.setState({ paso: 2, filas, incluidos, error: false });
+  }
+
+  renderVals() {
+    const filas = this.state.filas || [];
+    const incluidos = this.state.incluidos || {};
+    const seleccion = filas.filter(f => incluidos[f.id]);
+    const dups = seleccion.filter(f => f.dup).length;
+
+    return {
+      paso1: this.state.paso === 1,
+      paso2: this.state.paso === 2,
+      paso3: this.state.paso === 3,
+      error: this.state.error,
+      errorTexto: 'No se pudo leer el archivo: verific\u00e1 que tenga columnas nombre y telefono.',
+      onArchivo: e => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => this.procesar(Component.parseCsv(String(ev.target.result || '')));
+        reader.readAsText(file);
+      },
+      usarEjemplo: () => this.procesar(Component.EJEMPLO),
+
+      resumenArchivo: filas.length + ' leads le\u00eddos del archivo',
+      nuevosLabel: (filas.length - filas.filter(f => f.dup).length) + ' nuevos',
+      hayDuplicados: filas.filter(f => f.dup).length > 0,
+      duplicadosLabel: filas.filter(f => f.dup).length + ' coinciden con la base (se fusionan)',
+
+      filas: filas.map(f => ({
+        nombre: f.nombre, empresa: f.empresa, telefono: f.telefono,
+        incluir: !!incluidos[f.id], excluir: !incluidos[f.id],
+        esDuplicado: f.dup, esNuevo: !f.dup,
+        fondo: incluidos[f.id] ? 'var(--surface)' : 'var(--bg)',
+        alternar: () => this.setState(s => ({ incluidos: { ...s.incluidos, [f.id]: !s.incluidos[f.id] } }))
+      })),
+
+      volver: () => this.setState({ paso: 1, filas: null, incluidos: null }),
+      botonImportar: 'Importar ' + seleccion.length + (seleccion.length === 1 ? ' lead' : ' leads'),
+      confirmarImportacion: () => {
+        if (this.props.onImportar) this.props.onImportar(seleccion);
+        this.setState({
+          paso: 3,
+          resultado: { total: seleccion.length, dups, nuevos: seleccion.length - dups }
+        });
+      },
+
+      resultadoTitulo: 'Migraci\u00f3n completa',
+      resultadoDetalle: (function (r) {
+        if (!r) return '';
+        return r.nuevos + (r.nuevos === 1 ? ' lead nuevo cargado' : ' leads nuevos cargados') +
+          (r.dups ? ' \u00b7 ' + r.dups + (r.dups === 1 ? ' se fusion\u00f3' : ' se fusionaron') + ' con fichas existentes' : '') +
+          ' en Follow-up, todos en Sin leer.';
+      })(this.state.resultado),
+
+      stop: ev => ev.stopPropagation(),
+      cerrar: () => { if (this.props.onCerrar) this.props.onCerrar(); }
+    };
+  }
+}
+</script>
+</body>
+</html>

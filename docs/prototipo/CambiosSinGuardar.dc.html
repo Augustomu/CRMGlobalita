@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:210;display:flex;align-items:center;justify-content:center">
+  <div style="width:380px;max-width:94vw;background:var(--surface);border:.5px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;animation:om-agendada 240ms cubic-bezier(.4,0,.2,1)">
+    <span style="font-size:14px;font-weight:500;color:var(--text)">Ten&eacute;s cambios sin guardar</span>
+    <span style="font-size:12px;color:var(--muted);line-height:1.55;text-wrap:pretty">Estabas editando <b style="color:var(--text);font-weight:600">{{ nombre }}</b>. Si sal&iacute;s sin guardar, esos cambios se pierden.</span>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button type="button" onClick="{{ cancelar }}" style="height:28px;padding:0 12px;border-radius:8px;border:.5px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--bg)">Seguir editando</button>
+      <button type="button" onClick="{{ descartar }}" style="height:28px;padding:0 12px;border-radius:8px;border:.5px solid var(--error);background:var(--error-light);color:var(--error);font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--error);color:var(--surface)">Descartar</button>
+      <button type="button" onClick="{{ guardar }}" style="height:28px;padding:0 14px;border-radius:8px;border:none;background:var(--accent);color:var(--surface);font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--accent-hover)">Guardar y salir</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:520,&quot;height&quot;:260},&quot;nombre&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Alexandre Jordão&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;onCancelar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;()=&gt;void&quot;},&quot;onDescartar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;()=&gt;void&quot;},&quot;onGuardar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;()=&gt;void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      nombre: this.props.nombre || 'este perfil',
+      cancelar: () => { if (this.props.onCancelar) this.props.onCancelar(); },
+      descartar: () => { if (this.props.onDescartar) this.props.onDescartar(); },
+      guardar: () => { if (this.props.onGuardar) this.props.onGuardar(); }
+    };
+  }
+}
+</script>
+</body>
+</html>

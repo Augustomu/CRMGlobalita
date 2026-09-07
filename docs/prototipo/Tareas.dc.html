@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div>
+  <div style="position:fixed;inset:0;z-index:99;background:transparent" onClick="{{ cerrar }}"></div>
+  <div style="position:absolute;top:calc(100% + 4px);right:0;width:440px;max-height:420px;z-index:100;background:var(--surface);border:.5px solid var(--border);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.12);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;animation:om-abrir 160ms ease-out">
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:.5px solid var(--border)">
+      <span style="font-size:11px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap">Tareas</span>
+      <sc-if value="{{ hayVencidas }}" hint-placeholder-val="{{ false }}">
+        <span style="font-size:9px;font-weight:600;padding:1px 6px;border-radius:8px;background:var(--error-light);color:var(--error);white-space:nowrap;font-variant-numeric:tabular-nums">{{ nVencidas }}</span>
+      </sc-if>
+      <span style="font-size:9px;font-weight:600;padding:1px 6px;border-radius:8px;background:var(--accent-light);color:var(--accent);white-space:nowrap;font-variant-numeric:tabular-nums">{{ nHoy }}</span>
+      <span style="font-size:9px;color:var(--hint);white-space:nowrap;font-variant-numeric:tabular-nums">{{ nAbiertas }}</span>
+      <button type="button" onClick="{{ toggleNueva }}" title="Agregar tarea" style="margin-left:auto;width:26px;height:26px;flex-shrink:0;border-radius:8px;border:none;background:var(--accent);color:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 150ms ease-out" style-hover="background:var(--accent-hover)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
+      <button type="button" onClick="{{ cerrar }}" title="Cerrar" style="width:26px;height:26px;flex-shrink:0;border-radius:8px;border:.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 150ms ease-out" style-hover="background:var(--bg);color:var(--text)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:12px;height:12px"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:.5px solid var(--border);background:var(--bg);flex-wrap:wrap">
+      <span style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);font-weight:600;white-space:nowrap">Ver</span>
+      <sc-for list="{{ filtros }}" as="o" hint-placeholder-count="3">
+        <sc-if value="{{ o.on }}" hint-placeholder-val="{{ false }}">
+          <button type="button" onClick="{{ o.elegir }}" style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;white-space:nowrap;background:var(--accent);color:var(--surface);border:.5px solid var(--accent);cursor:pointer;font-family:inherit">{{ o.label }}</button>
+        </sc-if>
+        <sc-if value="{{ o.off }}" hint-placeholder-val="{{ true }}">
+          <button type="button" onClick="{{ o.elegir }}" style="padding:2px 8px;border-radius:10px;font-size:10px;white-space:nowrap;background:var(--surface);color:var(--muted);border:.5px solid var(--border);cursor:pointer;font-family:inherit;transition:background 150ms ease-out" style-hover="background:var(--accent-light);color:var(--accent);border-color:var(--accent-br)">{{ o.label }}</button>
+        </sc-if>
+      </sc-for>
+      <span style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);font-weight:600;white-space:nowrap;margin-left:6px">Ordenar</span>
+      <sc-for list="{{ ordenes }}" as="o" hint-placeholder-count="3">
+        <sc-if value="{{ o.on }}" hint-placeholder-val="{{ false }}">
+          <button type="button" onClick="{{ o.elegir }}" title="{{ o.titulo }}" style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;white-space:nowrap;background:var(--accent);color:var(--surface);border:.5px solid var(--accent);cursor:pointer;font-family:inherit">{{ o.label }}</button>
+        </sc-if>
+        <sc-if value="{{ o.off }}" hint-placeholder-val="{{ true }}">
+          <button type="button" onClick="{{ o.elegir }}" title="{{ o.titulo }}" style="padding:2px 8px;border-radius:10px;font-size:10px;white-space:nowrap;background:var(--surface);color:var(--muted);border:.5px solid var(--border);cursor:pointer;font-family:inherit;transition:background 150ms ease-out" style-hover="background:var(--accent-light);color:var(--accent);border-color:var(--accent-br)">{{ o.label }}</button>
+        </sc-if>
+      </sc-for>
+    </div>
+
+    <div style="min-height:0;overflow-y:auto;padding:5px 6px 10px;display:flex;flex-direction:column;gap:1px">
+      <sc-if value="{{ nuevaAbierta }}" hint-placeholder-val="{{ false }}">
+        <div style="border:.5px solid var(--accent);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:7px;margin-bottom:5px;animation:om-abrir 150ms ease-out">
+          <input type="text" value="{{ nombreNueva }}" onChange="{{ setNombreNueva }}" placeholder="Nombre de la tarea…" style="width:100%;box-sizing:border-box;height:28px;padding:0 9px;border:.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px;font-weight:500;font-family:inherit;outline:none;transition:border-color 150ms ease-out" style-focus="border-color:var(--accent)" />
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);font-weight:600;white-space:nowrap">Prioridad</span>
+            <div style="display:flex;gap:1px">
+              <sc-for list="{{ estrellasNueva }}" as="e" hint-placeholder-count="5">
+                <sc-if value="{{ e.llena }}" hint-placeholder-val="{{ false }}">
+                  <button type="button" onClick="{{ e.elegir }}" title="{{ e.titulo }}" style="width:17px;height:20px;border:none;background:transparent;cursor:pointer;padding:0;color:var(--accent);display:flex;align-items:center;justify-content:center">
+                    <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.4" style="width:12px;height:12px"><path d="M12 4l2.4 5 5.6.8-4 4 1 5.6-5-2.7-5 2.7 1-5.6-4-4 5.6-.8z"></path></svg>
+                  </button>
+                </sc-if>
+                <sc-if value="{{ e.vacia }}" hint-placeholder-val="{{ true }}">
+                  <button type="button" onClick="{{ e.elegir }}" title="{{ e.titulo }}" style="width:17px;height:20px;border:none;background:transparent;cursor:pointer;padding:0;color:var(--border);display:flex;align-items:center;justify-content:center;transition:color 150ms ease-out" style-hover="color:var(--accent-br)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="width:12px;height:12px"><path d="M12 4l2.4 5 5.6.8-4 4 1 5.6-5-2.7-5 2.7 1-5.6-4-4 5.6-.8z"></path></svg>
+                  </button>
+                </sc-if>
+              </sc-for>
+            </div>
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);font-weight:600;white-space:nowrap">Vence</span>
+            <input type="date" value="{{ finNueva }}" onChange="{{ setFinNueva }}" style="height:26px;padding:0 6px;border:.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:10px;font-family:inherit;outline:none" />
+            <sc-if value="{{ notifNueva }}" hint-placeholder-val="{{ true }}">
+              <button type="button" onClick="{{ toggleNotifNueva }}" title="Notificar el vencimiento" style="display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 8px;border-radius:8px;border:.5px solid var(--accent-br);background:var(--accent-light);color:var(--accent);cursor:pointer;font-family:inherit;white-space:nowrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:12px;height:12px"><path d="M6 16V11a6 6 0 1112 0v5l2 3H4z"></path><path d="M10 22h4"></path></svg>
+                <span style="font-size:10px;font-weight:600">notifica</span>
+              </button>
+            </sc-if>
+            <sc-if value="{{ sinNotifNueva }}" hint-placeholder-val="{{ false }}">
+              <button type="button" onClick="{{ toggleNotifNueva }}" title="Sin notificación" style="display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 8px;border-radius:8px;border:.5px solid var(--border);background:transparent;color:var(--hint);cursor:pointer;font-family:inherit;white-space:nowrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:12px;height:12px"><path d="M6 16V11a6 6 0 1112 0v5l2 3H4z"></path><path d="M10 22h4M4 4l16 16"></path></svg>
+                <span style="font-size:10px;font-weight:500">sin aviso</span>
+              </button>
+            </sc-if>
+          </div>
+          <textarea value="{{ notasNueva }}" onChange="{{ setNotasNueva }}" placeholder="Notas…" style="width:100%;box-sizing:border-box;min-height:46px;padding:7px 9px;border:.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:11px;line-height:1.5;font-family:inherit;resize:vertical;outline:none;transition:border-color 150ms ease-out" style-focus="border-color:var(--accent)"></textarea>
+          <div style="display:flex;gap:6px;justify-content:flex-end">
+            <button type="button" onClick="{{ toggleNueva }}" style="height:26px;padding:0 12px;border-radius:8px;border:.5px solid var(--border);background:var(--surface);color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit;white-space:nowrap">Cancelar</button>
+            <button type="button" onClick="{{ crear }}" style="height:26px;padding:0 14px;border-radius:8px;border:none;background:var(--accent);color:var(--surface);font-size:10px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--accent-hover)">Crear tarea</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-for list="{{ items }}" as="t" hint-placeholder-count="3">
+        <div style="border-radius:8px;transition:background 150ms ease-out" style-hover="background:var(--bg)">
+          <div style="display:grid;grid-template-columns:16px minmax(0,1fr) 78px 62px 96px 38px 42px;align-items:center;gap:7px;padding:5px 6px">
+            <sc-if value="{{ t.hecha }}" hint-placeholder-val="{{ false }}">
+              <button type="button" onClick="{{ t.alternar }}" title="Reabrir" style="width:16px;height:16px;flex-shrink:0;border-radius:4px;border:none;background:var(--accent);color:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width:10px;height:10px"><path d="M5 13l4 4L19 7"></path></svg>
+              </button>
+              <button type="button" onClick="{{ t.expandir }}" style="flex:1;min-width:0;text-align:left;border:none;background:transparent;padding:0;cursor:pointer;font-family:inherit;font-size:11px;color:var(--hint);text-decoration:line-through;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.nombre }}</button>
+            </sc-if>
+            <sc-if value="{{ t.pendiente }}" hint-placeholder-val="{{ true }}">
+              <button type="button" onClick="{{ t.alternar }}" title="Marcar hecha" style="width:16px;height:16px;flex-shrink:0;border-radius:4px;border:.5px solid var(--border);background:var(--surface);cursor:pointer;padding:0;transition:border-color 150ms ease-out" style-hover="border-color:var(--accent)"></button>
+              <button type="button" onClick="{{ t.expandir }}" style="flex:1;min-width:0;text-align:left;border:none;background:transparent;padding:0;cursor:pointer;font-family:inherit;font-size:11px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.nombre }}</button>
+            </sc-if>
+            <span style="font-size:9px;color:var(--hint);white-space:nowrap;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis">{{ t.fechas }}</span>
+            <span style="min-width:0">
+              <sc-if value="{{ t.vence }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:9px;font-weight:600;padding:1px 6px;border-radius:8px;background:var(--error-light);color:var(--error);white-space:nowrap">{{ t.venceLabel }}</span>
+              </sc-if>
+            </span>
+            <div style="display:flex;gap:3px;min-width:0;overflow:hidden">
+              <sc-for list="{{ t.etiquetas }}" as="e" hint-placeholder-count="1">
+                <span style="font-size:9px;font-weight:500;padding:1px 6px;border-radius:10px;background:var(--accent-light);color:var(--accent);border:.5px solid var(--accent-br);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ e.nombre }}</span>
+              </sc-for>
+            </div>
+            <div style="display:flex;gap:2px;justify-content:flex-end">
+              <sc-if value="{{ t.tieneNotas }}" hint-placeholder-val="{{ false }}">
+                <span title="Tiene notas" style="width:16px;height:16px;flex-shrink:0;color:var(--accent);display:flex;align-items:center;justify-content:center">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:11px;height:11px"><path d="M5 4h14v12l-4 4H5z"></path><path d="M8 9h8M8 13h5"></path></svg>
+                </span>
+              </sc-if>
+              <sc-if value="{{ t.notifica }}" hint-placeholder-val="{{ true }}">
+                <span title="Notifica el vencimiento" style="width:16px;height:16px;flex-shrink:0;color:var(--accent);display:flex;align-items:center;justify-content:center">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:11px;height:11px"><path d="M6 16V11a6 6 0 1112 0v5l2 3H4z"></path><path d="M10 22h4"></path></svg>
+                </span>
+              </sc-if>
+            </div>
+            <span style="font-size:10px;color:var(--accent);white-space:nowrap;letter-spacing:.06em;text-align:right">{{ t.prioridadLabel }}</span>
+          </div>
+
+          <sc-if value="{{ t.abierta }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:0 6px 8px 29px;display:flex;flex-direction:column;gap:7px;animation:om-abrir 150ms ease-out">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);font-weight:600;white-space:nowrap">Prioridad</span>
+                <div style="display:flex;gap:1px">
+                  <sc-for list="{{ t.estrellas }}" as="e" hint-placeholder-count="5">
+                    <sc-if value="{{ e.llena }}" hint-placeholder-val="{{ false }}">
+                      <button type="button" onClick="{{ e.elegir }}" title="{{ e.titulo }}" style="width:17px;height:20px;border:none;background:transparent;cursor:pointer;padding:0;color:var(--accent);display:flex;align-items:center;justify-content:center">
+                        <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.4" style="width:12px;height:12px"><path d="M12 4l2.4 5 5.6.8-4 4 1 5.6-5-2.7-5 2.7 1-5.6-4-4 5.6-.8z"></path></svg>
+                      </button>
+                    </sc-if>
+                    <sc-if value="{{ e.vacia }}" hint-placeholder-val="{{ true }}">
+                      <button type="button" onClick="{{ e.elegir }}" title="{{ e.titulo }}" style="width:17px;height:20px;border:none;background:transparent;cursor:pointer;padding:0;color:var(--border);display:flex;align-items:center;justify-content:center;transition:color 150ms ease-out" style-hover="color:var(--accent-br)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="width:12px;height:12px"><path d="M12 4l2.4 5 5.6.8-4 4 1 5.6-5-2.7-5 2.7 1-5.6-4-4 5.6-.8z"></path></svg>
+                      </button>
+                    </sc-if>
+                  </sc-for>
+                </div>
+                <span style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);font-weight:600;white-space:nowrap">Inicio</span>
+                <input type="date" value="{{ t.inicio }}" onChange="{{ t.setInicio }}" style="height:26px;padding:0 6px;border:.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:10px;font-family:inherit;outline:none" />
+                <span style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);font-weight:600;white-space:nowrap">Vence</span>
+                <input type="date" value="{{ t.fin }}" onChange="{{ t.setFin }}" style="height:26px;padding:0 6px;border:.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:10px;font-family:inherit;outline:none" />
+              </div>
+              <textarea value="{{ t.notas }}" onChange="{{ t.escribirNotas }}" placeholder="Notas…" style="width:100%;box-sizing:border-box;min-height:46px;padding:7px 9px;border:.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:11px;line-height:1.5;font-family:inherit;resize:vertical;outline:none;transition:border-color 150ms ease-out" style-focus="border-color:var(--accent)"></textarea>
+              <div style="display:flex;align-items:center;gap:6px">
+                <button type="button" onClick="{{ t.toggleNotif }}" title="{{ t.tituloNotif }}" style="display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 8px;border-radius:8px;border:.5px solid var(--border);background:transparent;color:{{ t.colorNotif }};cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--accent-light)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:12px;height:12px"><path d="M6 16V11a6 6 0 1112 0v5l2 3H4z"></path><path d="M10 22h4"></path></svg>
+                  <span style="font-size:10px;font-weight:600">{{ t.labelNotif }}</span>
+                </button>
+                <button type="button" onClick="{{ t.borrar }}" style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:8px;border:.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--error-light);border-color:var(--error);color:var(--error)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:11px;height:11px"><path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13"></path></svg>
+                  <span style="font-size:10px;font-weight:500">Eliminar</span>
+                </button>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+      <sc-if value="{{ vacio }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:16px 8px;font-size:11px;color:var(--hint);text-align:center">sin tareas cargadas</div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:480,&quot;height&quot;:440},&quot;tareas&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;object[]&quot;},&quot;onCerrar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;()=&gt;void&quot;}}">
+class Component extends DCLogic {
+  state = { lista: null, abierta: null, nuevaAbierta: false, nombre: '', prioridad: 3, fin: '', notas: '', notifica: true, filtro: 'Abiertas', orden: ['vencimiento'] };
+
+  get lista() { return this.state.lista || (this.props.tareas || []).slice(); }
+  set(id, patch) { this.setState({ lista: this.lista.map(t => t.id === id ? { ...t, ...patch } : t) }); }
+  static dm(iso) { return iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : ''; }
+
+  visibles() {
+    const hoy = new Date().toISOString().slice(0, 10);
+    let lista = this.lista.slice();
+    if (this.state.filtro === 'Abiertas') lista = lista.filter(t => !t.hecha);
+    if (this.state.filtro === 'Vencidas') lista = lista.filter(t => !t.hecha && t.fin && t.fin <= hoy);
+    const orden = this.state.orden;
+    return lista.sort((a, b) => {
+      if (a.hecha !== b.hecha) return a.hecha - b.hecha;
+      for (const clave of orden) {
+        if (clave === 'vencimiento') {
+          const x = a.fin || '9999', y = b.fin || '9999';
+          if (x !== y) return x.localeCompare(y);
+        }
+        if (clave === 'prioridad' && a.prioridad !== b.prioridad) return b.prioridad - a.prioridad;
+        if (clave === 'inicio') {
+          const x = a.inicio || '9999', y = b.inicio || '9999';
+          if (x !== y) return x.localeCompare(y);
+        }
+      }
+      return 0;
+    });
+  }
+
+  renderVals() {
+    const hoy = new Date().toISOString().slice(0, 10);
+    const abiertas = this.lista.filter(t => !t.hecha);
+    const vencidas = abiertas.filter(t => t.fin && t.fin < hoy).length;
+    const delDia = abiertas.filter(t => t.fin === hoy).length;
+    const estrellasDe = (valor, elegir) => [1, 2, 3, 4, 5].map(v => ({
+      llena: (valor || 0) >= v,
+      vacia: (valor || 0) < v,
+      titulo: 'Prioridad ' + v + ' de 5',
+      elegir: () => elegir(v)
+    }));
+
+    return {
+      nVencidas: vencidas + ' vencidas',
+      hayVencidas: vencidas > 0,
+      nHoy: delDia + ' hoy',
+      nAbiertas: abiertas.length + ' abiertas',
+      cerrar: () => { if (this.props.onCerrar) this.props.onCerrar(); },
+
+      nuevaAbierta: this.state.nuevaAbierta,
+      toggleNueva: () => this.setState(s => ({ nuevaAbierta: !s.nuevaAbierta })),
+      nombreNueva: this.state.nombre,
+      setNombreNueva: e => this.setState({ nombre: e.target.value }),
+      estrellasNueva: estrellasDe(this.state.prioridad, v => this.setState({ prioridad: v })),
+      finNueva: this.state.fin,
+      setFinNueva: e => this.setState({ fin: e.target.value }),
+      notasNueva: this.state.notas,
+      setNotasNueva: e => this.setState({ notas: e.target.value }),
+      notifNueva: this.state.notifica,
+      sinNotifNueva: !this.state.notifica,
+      toggleNotifNueva: () => this.setState(s => ({ notifica: !s.notifica })),
+      crear: () => {
+        const n = this.state.nombre.trim();
+        if (!n) return;
+        this.setState({
+          lista: this.lista.concat([{
+            id: 'tk-' + Date.now(), nombre: n, prioridad: this.state.prioridad,
+            inicio: hoy, fin: this.state.fin, notas: this.state.notas,
+            notificar: this.state.notifica, hecha: false
+          }]),
+          nuevaAbierta: false, nombre: '', prioridad: 3, fin: '', notas: '', notifica: true
+        });
+      },
+
+      vacio: this.lista.length === 0,
+      filtros: ['Abiertas', 'Vencidas', 'Todas'].map(label => ({
+        label, on: this.state.filtro === label, off: this.state.filtro !== label,
+        elegir: () => this.setState({ filtro: label })
+      })),
+      ordenes: [
+        { label: 'vencimiento', clave: 'vencimiento', titulo: 'Ordenar por fecha de vencimiento' },
+        { label: 'prioridad', clave: 'prioridad', titulo: 'Ordenar por estrellas' },
+        { label: 'inicio', clave: 'inicio', titulo: 'Ordenar por fecha de inicio' }
+      ].map(o => ({
+        label: o.label, titulo: o.titulo + ' (se combinan en el orden que los tocás)',
+        on: this.state.orden.includes(o.clave),
+        off: !this.state.orden.includes(o.clave),
+        elegir: () => this.setState(s => ({
+          orden: s.orden.includes(o.clave) ? s.orden.filter(x => x !== o.clave) : s.orden.concat([o.clave])
+        }))
+      })),
+      items: this.visibles().map(t => ({
+        nombre: t.nombre,
+        etiquetas: (t.etiquetas || []).map(nombre => ({ nombre })),
+        hecha: !!t.hecha,
+        pendiente: !t.hecha,
+        alternar: () => this.set(t.id, { hecha: !t.hecha }),
+        abierta: this.state.abierta === t.id,
+        expandir: () => this.setState({ abierta: this.state.abierta === t.id ? null : t.id }),
+        prioridadLabel: '★'.repeat(t.prioridad || 0),
+        estrellas: estrellasDe(t.prioridad, v => this.set(t.id, { prioridad: v })),
+        inicio: t.inicio || '',
+        fin: t.fin || '',
+        setInicio: e => this.set(t.id, { inicio: e.target.value }),
+        setFin: e => this.set(t.id, { fin: e.target.value }),
+        fechas: [Component.dm(t.inicio), Component.dm(t.fin)].filter(Boolean).join(' → ') || 'sin fechas',
+        vence: !t.hecha && !!t.fin && t.fin <= hoy,
+        venceLabel: t.fin === hoy ? 'hoy' : 'vencida',
+        notas: t.notas || '',
+        tieneNotas: !!t.notas,
+        escribirNotas: e => this.set(t.id, { notas: e.target.value }),
+        notifica: !!t.notificar,
+        colorNotif: t.notificar ? 'var(--accent)' : 'var(--hint)',
+        labelNotif: t.notificar ? 'notifica' : 'sin aviso',
+        tituloNotif: t.notificar ? 'Notificación activada' : 'Notificación desactivada',
+        toggleNotif: () => this.set(t.id, { notificar: !t.notificar }),
+        borrar: () => this.setState({ lista: this.lista.filter(x => x.id !== t.id), abierta: null })
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

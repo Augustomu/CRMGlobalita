@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="background:var(--surface);border:.5px solid var(--border);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:11px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap">Enviar mensaje</span>
+    <button type="button" onClick="{{ enviar }}" title="Enviar mensaje (sale al guardar)" style="width:26px;height:26px;flex-shrink:0;border-radius:8px;border:.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 150ms ease-out" style-hover="background:var(--accent-light);border-color:var(--accent-br);color:var(--accent)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:13px;height:13px"><path d="M4 12l16-8-6 16-2-6-8-2z"></path></svg>
+    </button>
+    <sc-if value="{{ sucio }}" hint-placeholder-val="{{ false }}">
+      <button type="button" onClick="{{ guardar }}" title="Guardar todos los cambios de la ficha" style="width:26px;height:26px;flex-shrink:0;border-radius:8px;border:.5px solid var(--accent);background:var(--accent);color:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;animation:om-agendada 260ms ease-out">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px"><path d="M5 4h11l3 3v13H5z"></path><path d="M9 4v5h6V4M9 20v-6h6v6"></path></svg>
+      </button>
+    </sc-if>
+    <sc-if value="{{ limpio }}" hint-placeholder-val="{{ true }}">
+      <button type="button" onClick="{{ guardar }}" title="Guardar todos los cambios de la ficha" style="width:26px;height:26px;flex-shrink:0;border-radius:8px;border:.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 150ms ease-out" style-hover="background:var(--accent-light);border-color:var(--accent-br);color:var(--accent)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px"><path d="M5 4h11l3 3v13H5z"></path><path d="M9 4v5h6V4M9 20v-6h6v6"></path></svg>
+      </button>
+    </sc-if>
+    <sc-if value="{{ hayConversacion }}" hint-placeholder-val="{{ true }}">
+      <a href="{{ linkConversacion }}" target="_blank" title="{{ tituloConversacion }}" style="display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;flex-shrink:0;border-radius:8px;border:.5px solid {{ colorCanal }};background:{{ fondoCanal }};color:{{ colorCanal }};text-decoration:none;font-weight:600;font-size:10px;white-space:nowrap;transition:background 150ms ease-out">
+        <span style="font-size:12px;line-height:1;flex-shrink:0">&#8599;</span>
+        Ir al chat
+      </a>
+    </sc-if>
+    <sc-if value="{{ sinConversacion }}" hint-placeholder-val="{{ false }}">
+      <span title="{{ tituloSinChat }}" style="display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;flex-shrink:0;border-radius:8px;border:.5px dashed var(--border);background:transparent;color:var(--hint);font-weight:600;font-size:10px;white-space:nowrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:12px;height:12px;flex-shrink:0"><path d="M20 15a3 3 0 01-3 3H8l-4 3V6a3 3 0 013-3h10a3 3 0 013 3z"></path></svg>
+        Sin chat
+      </span>
+    </sc-if>
+    <div style="display:flex;gap:0;border:.5px solid var(--border);border-radius:8px;overflow:hidden">
+      <sc-for list="{{ canales }}" as="c" hint-placeholder-count="2">
+        <sc-if value="{{ c.onLi }}" hint-placeholder-val="{{ true }}">
+          <button type="button" onClick="{{ c.elegir }}" style="height:26px;padding:0 12px;border:none;background:var(--brand-linkedin);color:var(--surface);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">{{ c.label }}</button>
+        </sc-if>
+        <sc-if value="{{ c.onWa }}" hint-placeholder-val="{{ false }}">
+          <button type="button" onClick="{{ c.elegir }}" style="height:26px;padding:0 12px;border:none;background:var(--brand-whatsapp);color:var(--surface);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">{{ c.label }}</button>
+        </sc-if>
+        <sc-if value="{{ c.off }}" hint-placeholder-val="{{ false }}">
+          <button type="button" onClick="{{ c.elegir }}" style="height:26px;padding:0 12px;border:none;background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--accent-light);color:var(--accent)">{{ c.label }}</button>
+        </sc-if>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+    <sc-for list="{{ chips }}" as="c" hint-placeholder-count="0">
+      <span draggable="true" onDragStart="{{ c.arrastrar }}" onDragOver="{{ c.sobre }}" onDrop="{{ c.soltar }}" onDragEnd="{{ c.fin }}" title="{{ c.titulo }}" style="display:inline-flex;align-items:center;gap:5px;padding:2px 4px 2px 8px;border-radius:10px;background:var(--surface);border:.5px solid var(--border);cursor:grab">
+        <button type="button" onClick="{{ c.usar }}" style="border:none;background:transparent;padding:0;cursor:pointer;font-family:inherit;font-size:10px;font-weight:600;color:var(--muted);white-space:nowrap" style-hover="color:var(--accent)">{{ c.nombre }}</button>
+        <span style="font-size:8px;font-weight:700;color:var(--accent);white-space:nowrap">{{ c.idioma }}</span>
+        <button type="button" onClick="{{ c.quitar }}" title="Sacar el chip" style="width:14px;height:14px;border:none;border-radius:50%;background:transparent;color:var(--hint);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0" style-hover="background:var(--bg);color:var(--error)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="width:7px;height:7px"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </button>
+      </span>
+    </sc-for>
+    <button type="button" onClick="{{ toggleLista }}" title="Elegir y destacar mensajes del repositorio" style="height:24px;padding:0 8px;border-radius:8px;border:.5px dashed var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:4px;font-family:inherit;font-size:9px;font-weight:600;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--accent-light);border-color:var(--accent-br);color:var(--accent)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px"><path d="M12 5v14M5 12h14"></path></svg>
+      destacados
+    </button>
+    <sc-if value="{{ hayChips }}" hint-placeholder-val="{{ false }}">
+      <span style="font-size:9px;color:var(--hint);white-space:nowrap">arrastr&aacute; para ordenar &middot; clic reemplaza el mensaje</span>
+    </sc-if>
+    <span title="Idioma sugerido según el país del lead" style="margin-left:auto;font-size:9px;font-weight:600;color:var(--accent);background:var(--accent-light);border-radius:10px;padding:2px 7px;white-space:nowrap">{{ idiomaLabel }}</span>
+  </div>
+
+  <sc-if value="{{ listaAbierta }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:79;background:rgba(0,0,0,.35)" onClick="{{ cerrarLista }}"></div>
+    <div style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:80;width:400px;max-height:74vh;overflow-y:auto;background:var(--surface);border:.5px solid var(--border);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.22);padding:12px;display:flex;flex-direction:column;gap:8px;animation:om-abrir 150ms ease-out">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:12px;font-weight:600;color:var(--text)">Destacar mensajes</span>
+        <span style="font-size:9px;color:var(--hint);white-space:nowrap">para {{ cuentaLabel }}</span>
+        <button type="button" onClick="{{ cerrarLista }}" style="margin-left:auto;width:22px;height:22px;border-radius:8px;border:none;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0" style-hover="background:var(--bg)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:12px;height:12px"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </button>
+      </div>
+      <span style="font-size:10px;color:var(--muted);line-height:1.5;text-wrap:pretty">Marc&aacute; los que quer&eacute;s tener a mano. Se guardan en <b style="color:var(--accent)">{{ idiomaLabel2 }}</b> y quedan como chips arriba.</span>
+
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <sc-for list="{{ filas }}" as="m" hint-placeholder-count="5">
+          <button type="button" onClick="{{ m.alternar }}" style="display:flex;align-items:flex-start;gap:8px;padding:7px 8px;border-radius:8px;border:.5px solid var(--border);background:var(--bg);cursor:pointer;font-family:inherit;text-align:left;transition:background 150ms ease-out" style-hover="background:var(--accent-light);border-color:var(--accent-br)">
+            <sc-if value="{{ m.marcado }}" hint-placeholder-val="{{ false }}">
+              <span style="width:16px;height:16px;flex-shrink:0;margin-top:1px;border-radius:5px;background:var(--accent);color:var(--surface);display:flex;align-items:center;justify-content:center">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width:9px;height:9px"><path d="M5 13l4 4L19 7"></path></svg>
+              </span>
+            </sc-if>
+            <sc-if value="{{ m.libre }}" hint-placeholder-val="{{ true }}">
+              <span style="width:16px;height:16px;flex-shrink:0;margin-top:1px;border-radius:5px;border:.5px solid var(--border);background:var(--surface)"></span>
+            </sc-if>
+            <div style="min-width:0;flex:1;display:flex;flex-direction:column;gap:1px">
+              <span style="display:flex;align-items:center;gap:6px;min-width:0">
+                <span style="font-size:11px;font-weight:600;color:var(--text);white-space:nowrap">{{ m.nombre }}</span>
+                <span style="font-size:9px;font-weight:700;color:var(--accent);white-space:nowrap">{{ m.idioma }}</span>
+                <span style="font-size:9px;color:var(--hint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.alcance }}</span>
+              </span>
+              <span style="font-size:10px;color:var(--muted);line-height:1.4;overflow:hidden;text-overflow:ellipsis">{{ m.preview }}</span>
+            </div>
+          </button>
+        </sc-for>
+        <sc-if value="{{ sinMensajes }}" hint-placeholder-val="{{ false }}">
+          <span style="font-size:11px;color:var(--hint);padding:6px 2px">todav&iacute;a no hay mensajes en el repositorio</span>
+        </sc-if>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding-top:8px;border-top:.5px solid var(--border)">
+        <span style="font-size:9px;color:var(--hint);white-space:nowrap">{{ conteoSeleccion }}</span>
+        <button type="button" onClick="{{ guardarSeleccion }}" style="margin-left:auto;height:28px;padding:0 14px;border-radius:8px;border:none;background:var(--accent);color:var(--surface);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--accent-hover)">Guardar</button>
+      </div>
+      <span style="font-size:9px;color:var(--hint);line-height:1.4">&iquest;Se destac&oacute; mal? Volv&eacute; a abrir esta lista y destild&aacute;lo, o corregilo desde el Repositorio de mensajes &mdash; los cambios se ven en los dos lados.</span>
+    </div>
+  </sc-if>
+
+  <textarea value="{{ texto }}" onChange="{{ setTexto }}" placeholder="Escribir mensaje…" style="width:100%;box-sizing:border-box;min-height:56px;padding:8px 10px;border:.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px;line-height:1.5;font-family:inherit;resize:vertical;outline:none;transition:border-color 150ms ease-out" style-focus="border-color:var(--accent)"></textarea>
+
+  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+    <sc-if value="{{ puedeGuardarNuevo }}" hint-placeholder-val="{{ false }}">
+      <button type="button" onClick="{{ guardarNuevo }}" title="Guardar este texto como mensaje nuevo del repositorio" style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:8px;border:.5px solid var(--border);background:transparent;color:var(--muted);font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--accent-light);border-color:var(--accent-br);color:var(--accent)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="width:11px;height:11px"><path d="M12 4l2.4 5 5.6.8-4 4 1 5.6-5-2.7-5 2.7 1-5.6-4-4 5.6-.8z"></path></svg>
+        Guardar
+      </button>
+    </sc-if>
+    <sc-if value="{{ sinTexto }}" hint-placeholder-val="{{ true }}">
+      <span style="font-size:9px;color:var(--hint);white-space:nowrap">escrib&iacute; algo para poder guardarlo en el repositorio</span>
+    </sc-if>
+    <sc-if value="{{ guardadoOk }}" hint-placeholder-val="{{ false }}">
+      <span style="display:flex;flex-direction:column;gap:6px;width:100%;animation:om-abrir 150ms ease-out;padding:8px;border-radius:8px;background:var(--accent-light);border:.5px solid var(--accent-br)">
+        <span style="font-size:10px;color:var(--text)">Guardado como <b>{{ guardadoNombre }}</b> en {{ guardadoIdioma }}.</span>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-size:9px;color:var(--muted);white-space:nowrap">&iquest;Cargarlo en otro idioma?</span>
+          <sc-for list="{{ idiomasFaltantes }}" as="i" hint-placeholder-count="2">
+            <button type="button" onClick="{{ i.elegir }}" style="height:22px;padding:0 8px;border-radius:8px;border:.5px solid var(--accent-br);background:var(--surface);color:var(--accent);font-size:9px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">{{ i.label }}</button>
+          </sc-for>
+        </div>
+        <sc-if value="{{ cargandoIdioma }}" hint-placeholder-val="{{ false }}">
+          <span style="display:flex;flex-direction:column;gap:4px">
+            <textarea value="{{ textoIdiomaExtra }}" onChange="{{ setTextoIdiomaExtra }}" placeholder="Texto en {{ idiomaEnCarga }}…" style="width:100%;box-sizing:border-box;min-height:44px;padding:6px 8px;border:.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:11px;font-family:inherit;resize:vertical;outline:none"></textarea>
+            <button type="button" onClick="{{ guardarIdiomaExtra }}" style="align-self:flex-start;height:22px;padding:0 9px;border-radius:8px;border:none;background:var(--accent);color:var(--surface);font-size:9px;font-weight:600;cursor:pointer;font-family:inherit">Guardar idioma</button>
+          </span>
+        </sc-if>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-top:6px;border-top:.5px solid var(--accent-br)">
+          <span style="font-size:9px;color:var(--muted);white-space:nowrap">&iquest;Destacarlo?</span>
+          <button type="button" onClick="{{ destacarTodasNuevo }}" style="height:22px;padding:0 9px;border-radius:8px;border:.5px solid var(--accent-br);background:var(--surface);color:var(--accent);font-size:9px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">Todas las cuentas</button>
+          <button type="button" onClick="{{ destacarCuentaNuevo }}" style="height:22px;padding:0 9px;border-radius:8px;border:.5px solid var(--accent-br);background:var(--surface);color:var(--accent);font-size:9px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">Solo {{ cuentaLabel }}</button>
+          <button type="button" onClick="{{ cerrarGuardado }}" style="margin-left:auto;height:22px;padding:0 9px;border-radius:8px;border:none;background:transparent;color:var(--hint);font-size:9px;cursor:pointer;font-family:inherit;white-space:nowrap">Ahora no</button>
+        </div>
+      </span>
+    </sc-if>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:9px;color:var(--hint);font-variant-numeric:tabular-nums;white-space:nowrap">{{ chars }}</span>
+    <sc-if value="{{ sucio }}" hint-placeholder-val="{{ false }}">
+      <span style="display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:600;color:var(--warning);background:var(--warning-light);border:.5px solid var(--warning);border-radius:10px;padding:2px 7px;white-space:nowrap;animation:om-agendada 260ms ease-out">
+        <span style="width:5px;height:5px;border-radius:50%;background:var(--warning)"></span>cambios sin guardar
+      </span>
+    </sc-if>
+    <span style="margin-left:auto;font-size:9px;color:var(--hint);line-height:1.5;text-align:right">A guardar &middot; S enviar &middot; D pr&oacute;x. contacto &middot; F reuni&oacute;n &middot; V LinkedIn &middot; G WhatsApp &middot; Ctrl+Z deshacer</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:620,&quot;height&quot;:260},&quot;mensajes&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;object[]&quot;},&quot;onDestacarCuenta&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(ids:string[],cuenta:string)=&gt;void&quot;},&quot;onGuardarNuevo&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(id:string,nombre:string,texto:string,idioma:string)=&gt;void&quot;},&quot;onAgregarIdioma&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(id:string,idioma:string,texto:string)=&gt;void&quot;},&quot;onDestacarTodas&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(id:string)=&gt;void&quot;},&quot;cuentaActual&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;sucio&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;onCambio&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;()=&gt;void&quot;},&quot;onEnviar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(t:string,c:string)=&gt;void&quot;},&quot;onGuardar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;()=&gt;void&quot;}}">
+class Component extends DCLogic {
+  state = { canal: null, texto: '', listaAbierta: false, chips: [], seleccion: null, guardado: null, idiomaEnCarga: null, textoIdiomaExtra: '' };
+  get canal() { return this.state.canal || this.props.canalPorDefecto || 'LinkedIn'; }
+
+  reordenarChip(origen, destino) {
+    if (!origen || origen === destino) return;
+    const chips = (this.state.chips || []).slice();
+    const i = chips.findIndex(c => c.msgId === origen);
+    const j = chips.findIndex(c => c.msgId === destino);
+    if (i < 0 || j < 0) return;
+    const [it] = chips.splice(i, 1);
+    chips.splice(j, 0, it);
+    this.setState({ chips });
+  }
+
+  componentDidUpdate(prev) {
+    if (prev.contactoId !== this.props.contactoId) this.setState({ canal: null, texto: '', listaAbierta: false, chips: [], seleccion: null, guardado: null, idiomaEnCarga: null, textoIdiomaExtra: '' });
+    if (prev.canalNonce !== this.props.canalNonce) {
+      this.setState({ canal: this.canal === 'LinkedIn' ? 'WhatsApp' : 'LinkedIn' });
+    }
+    if (prev.enviarNonce !== this.props.enviarNonce && this.props.onEnviar) {
+      this.props.onEnviar(this.state.texto, this.canal);
+    }
+  }
+
+  renderVals() {
+    const canales = ['LinkedIn', 'WhatsApp'].map(label => ({
+      label,
+      onLi: this.canal === label && label === 'LinkedIn',
+      onWa: this.canal === label && label === 'WhatsApp',
+      off: this.canal !== label,
+      elegir: () => this.setState({ canal: label })
+    }));
+    const idioma = (this.props.idiomaSugerido || 'ES').toLowerCase();
+    const cuenta = this.props.cuentaActual || 'tu cuenta';
+    const mensajes = this.props.mensajes || [];
+    const chipsState = this.state.chips || [];
+    const seleccion = this.state.seleccion || [];
+    const g = this.state.guardado;
+
+    const membresia = m => (m.destacado || '').split(',').map(s => s.trim()).filter(Boolean);
+
+    const chips = chipsState.map(c => {
+      const m = mensajes.find(x => x.id === c.msgId);
+      if (!m) return null;
+      const textos = m.textos || {};
+      const texto = textos[idioma] || textos.es || '';
+      return {
+        nombre: m.nombre,
+        idioma: (textos[idioma] ? idioma : 'es').toUpperCase(),
+        titulo: 'Reemplazar el mensaje por \u00ab' + m.nombre + '\u00bb',
+        usar: () => { this.setState({ texto }); if (this.props.onCambio) this.props.onCambio(); },
+        quitar: () => this.setState(s => ({ chips: (s.chips || []).filter(x => x.msgId !== c.msgId) })),
+        arrastrar: () => { this._arr = c.msgId; },
+        sobre: e => e.preventDefault(),
+        soltar: e => { e.preventDefault(); this.reordenarChip(this._arr, c.msgId); },
+        fin: () => { this._arr = null; }
+      };
+    }).filter(Boolean);
+
+    const filas = mensajes.map(m => {
+      const textos = m.textos || {};
+      const texto = textos[idioma] || textos.es || '';
+      const marcado = seleccion.indexOf(m.id) >= 0;
+      return {
+        nombre: m.nombre,
+        idioma: (textos[idioma] ? idioma : 'es').toUpperCase(),
+        alcance: m.destacado ? ('destacado: ' + m.destacado) : 'sin destacar',
+        preview: texto.slice(0, 100) + (texto.length > 100 ? '\u2026' : ''),
+        marcado, libre: !marcado,
+        alternar: () => this.setState(s => {
+          const sel = s.seleccion || [];
+          return { seleccion: marcado ? sel.filter(x => x !== m.id) : sel.concat([m.id]) };
+        })
+      };
+    });
+
+    const idiomasFaltantes = g ? ['pt', 'en'].filter(k => k !== g.idioma).map(k => ({
+      label: k.toUpperCase(),
+      elegir: () => this.setState({ idiomaEnCarga: k, textoIdiomaExtra: '' })
+    })) : [];
+
+    return {
+      canales, chips, filas,
+      hayChips: chips.length > 0,
+      sinMensajes: mensajes.length === 0,
+      listaAbierta: this.state.listaAbierta,
+      cuentaLabel: cuenta,
+      idiomaLabel2: (this.props.idiomaSugerido || 'ES'),
+      conteoSeleccion: seleccion.length + (seleccion.length === 1 ? ' seleccionado' : ' seleccionados'),
+      toggleLista: () => this.setState(s => {
+        if (s.listaAbierta) return { listaAbierta: false };
+        return { listaAbierta: true, seleccion: mensajes.filter(m => membresia(m).indexOf(cuenta) >= 0 || m.destacado === 'todas las cuentas').map(m => m.id) };
+      }),
+      cerrarLista: () => this.setState({ listaAbierta: false }),
+      guardarSeleccion: () => {
+        const sel = this.state.seleccion || [];
+        if (this.props.onDestacarCuenta) this.props.onDestacarCuenta(sel, cuenta);
+        const yaChip = (this.state.chips || []).map(c => c.msgId);
+        const nuevos = mensajes.filter(m => sel.indexOf(m.id) >= 0 && yaChip.indexOf(m.id) < 0).map(m => ({ msgId: m.id }));
+        this.setState(s => ({ chips: (s.chips || []).concat(nuevos), listaAbierta: false }));
+      },
+      puedeGuardarNuevo: this.state.texto.trim().length > 0 && !g,
+      sinTexto: this.state.texto.trim().length === 0 && !g,
+      guardarNuevo: () => {
+        const id = 'msg-' + Date.now();
+        const nombre = 'Mensaje ' + new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+        if (this.props.onGuardarNuevo) this.props.onGuardarNuevo(id, nombre, this.state.texto, idioma);
+        this.setState({ guardado: { id, nombre, idioma } });
+      },
+      guardadoOk: !!g,
+      guardadoNombre: g ? g.nombre : '',
+      guardadoIdioma: g ? g.idioma.toUpperCase() : '',
+      idiomasFaltantes,
+      cargandoIdioma: !!this.state.idiomaEnCarga,
+      idiomaEnCarga: (this.state.idiomaEnCarga || '').toUpperCase(),
+      textoIdiomaExtra: this.state.textoIdiomaExtra,
+      setTextoIdiomaExtra: e => this.setState({ textoIdiomaExtra: e.target.value }),
+      guardarIdiomaExtra: () => {
+        if (g && this.props.onAgregarIdioma) this.props.onAgregarIdioma(g.id, this.state.idiomaEnCarga, this.state.textoIdiomaExtra);
+        this.setState({ idiomaEnCarga: null, textoIdiomaExtra: '' });
+      },
+      destacarTodasNuevo: () => { if (g && this.props.onDestacarTodas) this.props.onDestacarTodas(g.id); this.setState({ guardado: null, texto: '' }); },
+      destacarCuentaNuevo: () => { if (g && this.props.onDestacarCuenta) this.props.onDestacarCuenta([g.id], cuenta); this.setState({ guardado: null, texto: '' }); },
+      cerrarGuardado: () => this.setState({ guardado: null, texto: '' }),
+      idiomaLabel: 'idioma detectado: ' + (this.props.idiomaSugerido || 'ES'),
+      texto: this.state.texto,
+      chars: this.state.texto.length + ' caracteres',
+      linkConversacion: this.canal === 'WhatsApp' ? (this.props.linkWhatsapp || '#') : (this.props.linkChat || '#'),
+      hayConversacion: this.canal === 'WhatsApp' ? !!(this.props.linkWhatsapp && this.props.linkWhatsapp !== '#') : !!this.props.linkChat,
+      sinConversacion: this.canal === 'WhatsApp' ? !(this.props.linkWhatsapp && this.props.linkWhatsapp !== '#') : !this.props.linkChat,
+      tituloSinChat: this.canal === 'WhatsApp' ? 'Este lead no tiene tel\u00e9fono cargado' : 'No hay conversaci\u00f3n de LinkedIn guardada',
+      colorCanal: this.canal === 'WhatsApp' ? 'var(--brand-whatsapp)' : 'var(--brand-linkedin)',
+      fondoCanal: this.canal === 'WhatsApp' ? 'var(--success-light)' : 'var(--brand-linkedin-light)',
+      tituloConversacion: 'Abrir la conversaci\u00f3n de ' + this.canal + ' con este lead',
+      sucio: !!this.props.sucio,
+      limpio: !this.props.sucio,
+      setTexto: e => { this.setState({ texto: e.target.value }); if (this.props.onCambio) this.props.onCambio(); },
+      enviar: () => { if (this.props.onEnviar) this.props.onEnviar(this.state.texto, this.canal); },
+      guardar: () => { if (this.props.onGuardar) this.props.onGuardar(); }
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="background:var(--surface);border:.5px solid var(--border);border-radius:12px;overflow:hidden">
+  <button type="button" onClick="{{ toggle }}" style="width:100%;display:flex;align-items:center;gap:8px;padding:7px 12px;background:transparent;border:none;cursor:pointer;font-family:inherit;text-align:left;transition:background 150ms ease-out" style-hover="background:var(--accent-light)">
+    <sc-if value="{{ abierto }}" hint-placeholder-val="{{ false }}">
+      <span style="font-size:9px;color:var(--hint);width:10px;flex-shrink:0">&#9662;</span>
+    </sc-if>
+    <sc-if value="{{ cerrado }}" hint-placeholder-val="{{ true }}">
+      <span style="font-size:9px;color:var(--hint);width:10px;flex-shrink:0">&#9656;</span>
+    </sc-if>
+    <span style="font-size:11px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap">{{ titulo }}</span>
+    <span style="margin-left:auto;font-size:10px;color:var(--hint);font-variant-numeric:tabular-nums">{{ resumen }}</span>
+  </button>
+  <sc-if value="{{ abierto }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:8px;padding:8px 12px 12px;border-top:.5px solid var(--border);animation:om-abrir 180ms ease-out">
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <sc-for list="{{ chips }}" as="c" hint-placeholder-count="5">
+          <sc-if value="{{ c.editando }}" hint-placeholder-val="{{ false }}">
+            <span style="display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:8px;background:var(--surface);border:1px solid var(--accent)">
+              <span style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);font-weight:600;white-space:nowrap">{{ c.label }}</span>
+              <input type="text" value="{{ c.borrador }}" onChange="{{ c.escribir }}" onBlur="{{ c.salir }}" placeholder="{{ c.label }}" style="width:170px;height:20px;padding:0 6px;border:none;border-radius:6px;background:var(--bg);color:var(--text);font-size:11px;font-family:inherit;outline:none" />
+            </span>
+          </sc-if>
+          <sc-if value="{{ c.tiene }}" hint-placeholder-val="{{ true }}">
+            <button type="button" onClick="{{ c.editar }}" title="{{ c.titulo }}" style="display:inline-flex;align-items:baseline;gap:6px;padding:3px 9px;border-radius:8px;background:var(--bg);border:.5px solid var(--border);max-width:100%;min-width:0;cursor:pointer;font-family:inherit;text-align:left;transition:border-color 150ms ease-out,background 150ms ease-out" style-hover="border-color:var(--accent-br);background:var(--accent-light)">
+              <span style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);font-weight:600;white-space:nowrap;flex-shrink:0">{{ c.label }}</span>
+              <span style="font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.value }}</span>
+            </button>
+          </sc-if>
+          <sc-if value="{{ c.vacio }}" hint-placeholder-val="{{ false }}">
+            <button type="button" onClick="{{ c.editar }}" title="{{ c.titulo }}" style="display:inline-flex;align-items:baseline;gap:6px;padding:3px 9px;border-radius:8px;background:transparent;border:.5px dashed var(--border);max-width:100%;cursor:pointer;font-family:inherit;text-align:left;transition:border-color 150ms ease-out,background 150ms ease-out" style-hover="border-color:var(--accent-br);background:var(--accent-light)">
+              <span style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);font-weight:600;white-space:nowrap">{{ c.label }}</span>
+              <span style="font-size:11px;color:var(--hint);white-space:nowrap">{{ c.placeholder }}</span>
+            </button>
+          </sc-if>
+        </sc-for>
+      </div>
+      <sc-for list="{{ bloques }}" as="b" hint-placeholder-count="1">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);font-weight:600">{{ b.label }}</span>
+            <span style="font-size:9px;color:var(--hint);padding:0 5px;border-radius:8px;border:.5px solid var(--border);white-space:nowrap">extra&iacute;do de LinkedIn</span>
+          </div>
+          <sc-if value="{{ b.tiene }}" hint-placeholder-val="{{ true }}">
+            <div style="font-size:12px;color:var(--text);line-height:1.55;overflow-wrap:break-word;text-wrap:pretty;background:var(--bg);border:.5px solid var(--border);border-radius:8px;padding:8px 10px">{{ b.value }}</div>
+          </sc-if>
+          <sc-if value="{{ b.vacio }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:11px;color:var(--hint);border:.5px dashed var(--border);border-radius:8px;padding:8px 10px">el perfil no tiene secci&oacute;n &laquo;Acerca de&raquo;</div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:560,&quot;height&quot;:240},&quot;titulo&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Datos&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;abierto&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;editable&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;chips&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;{label:string,value:string,editable:boolean}[]&quot;},&quot;bloques&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;{label:string,value:string}[]&quot;},&quot;onEditar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(label:string,value:string)=&gt;void&quot;}}">
+class Component extends DCLogic {
+  state = { abierto: null, editando: null, borrador: '' };
+  componentDidUpdate(prev) {
+    if (prev.contactoId !== this.props.contactoId) this.setState({ abierto: null, editando: null, borrador: '' });
+  }
+  get open() {
+    if (this.state.abierto !== null) return this.state.abierto;
+    return this.props.abierto === true;
+  }
+  renderVals() {
+    const chips = this.props.chips || [];
+    const bloques = this.props.bloques || [];
+    const total = chips.length + bloques.length;
+    const llenos = chips.filter(c => c.value).length + bloques.filter(b => b.value).length;
+    const editables = this.props.editable !== false;
+    return {
+      titulo: this.props.titulo || '',
+      abierto: this.open,
+      cerrado: !this.open,
+      resumen: this.open ? '' : llenos + '/' + total,
+      chips: chips.map(r => {
+        const edit = editables && r.editable !== false;
+        const editando = edit && this.state.editando === r.label;
+        return {
+          label: r.label,
+          value: r.value || '',
+          tiene: !!r.value && !editando,
+          vacio: !r.value && !editando,
+          editando,
+          placeholder: edit ? 'cargar' : 'sin dato',
+          titulo: edit ? 'Editar ' + r.label.toLowerCase() : r.label,
+          borrador: this.state.borrador,
+          escribir: e => {
+            this.setState({ borrador: e.target.value });
+            if (this.props.onEditar) this.props.onEditar(r.label, e.target.value);
+          },
+          salir: () => this.setState({ editando: null }),
+          editar: () => { if (edit) this.setState({ editando: r.label, borrador: r.value || '' }); }
+        };
+      }),
+      bloques: bloques.map(r => ({ label: r.label, value: r.value || '', tiene: !!r.value, vacio: !r.value })),
+      toggle: () => this.setState({ abierto: !this.open })
+    };
+  }
+}
+</script>
+</body>
+</html>

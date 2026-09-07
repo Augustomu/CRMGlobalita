@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div>
+  <div style="position:fixed;inset:0;z-index:99;background:transparent" onClick="{{ cerrar }}"></div>
+  <div style="position:absolute;top:calc(100% + 5px);right:0;width:330px;z-index:100;background:var(--surface);border:.5px solid var(--border);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.12);padding:9px 10px;display:flex;flex-direction:column;gap:8px;animation:om-abrir 160ms ease-out">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:10px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Cuentas conectadas</span>
+      <span style="font-size:9px;color:var(--hint);white-space:nowrap">{{ conteo }}</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <span style="font-size:9px;font-weight:600;color:var(--brand-linkedin);text-transform:uppercase;letter-spacing:.04em">LinkedIn</span>
+      <sc-for list="{{ linkedin }}" as="l" hint-placeholder-count="6">
+        <div style="display:flex;align-items:center;gap:7px;padding:4px 6px;border-radius:8px;transition:background 150ms ease-out" style-hover="background:var(--bg)">
+          <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:var(--brand-linkedin-light);color:var(--brand-linkedin);white-space:nowrap;flex-shrink:0">{{ l.cuenta }}</span>
+          <span style="font-size:10px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0">{{ l.nombre }}</span>
+          <sc-if value="{{ l.activa }}" hint-placeholder-val="{{ true }}">
+            <span style="display:inline-flex;align-items:center;gap:4px;font-size:9px;color:var(--success);white-space:nowrap;flex-shrink:0">
+              <span style="width:5px;height:5px;border-radius:50%;background:var(--success)"></span>{{ l.detalle }}
+            </span>
+          </sc-if>
+          <sc-if value="{{ l.caida }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:9px;font-weight:600;color:var(--warning);white-space:nowrap;flex-shrink:0">{{ l.detalle }}</span>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;padding-top:6px;border-top:.5px solid var(--border)">
+      <span style="font-size:9px;font-weight:600;color:var(--brand-whatsapp);text-transform:uppercase;letter-spacing:.04em">WhatsApp</span>
+      <span style="font-size:9px;color:var(--hint);white-space:nowrap">Baileys</span>
+      <button type="button" onClick="{{ vincularNueva }}" style="margin-left:auto;height:22px;padding:0 8px;border-radius:8px;border:.5px solid var(--brand-whatsapp);background:var(--success-light);color:var(--brand-whatsapp);font-size:9px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">Vincular otro n&uacute;mero</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ sesiones }}" as="s" hint-placeholder-count="6">
+        <div style="display:flex;align-items:center;gap:7px;padding:5px 6px;border-radius:8px;transition:background 150ms ease-out" style-hover="background:var(--bg)">
+          <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:var(--bg);color:var(--muted);border:.5px solid var(--border);white-space:nowrap;flex-shrink:0">{{ s.cuenta }}</span>
+          <sc-if value="{{ s.activa }}" hint-placeholder-val="{{ true }}">
+            <span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--success);white-space:nowrap;flex:1;min-width:0">
+              <span style="width:6px;height:6px;border-radius:50%;background:var(--success);flex-shrink:0"></span>conectada
+            </span>
+            <span style="font-size:9px;color:var(--hint);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums">{{ s.detalle }}</span>
+            <button type="button" onClick="{{ s.vincular }}" title="Volver a vincular este número" style="height:22px;padding:0 7px;flex-shrink:0;border-radius:8px;border:.5px solid var(--border);background:transparent;color:var(--muted);font-size:9px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--accent-light);border-color:var(--accent-br);color:var(--accent)">QR</button>
+          </sc-if>
+          <sc-if value="{{ s.caida }}" hint-placeholder-val="{{ false }}">
+            <span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:var(--warning);white-space:nowrap;flex:1;min-width:0">
+              <span style="width:6px;height:6px;border-radius:50%;background:var(--warning);flex-shrink:0;animation:om-pulso 1.6s ease-in-out infinite"></span>pide QR
+            </span>
+            <span style="font-size:9px;font-weight:600;color:var(--error);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums">{{ s.detalle }}</span>
+            <button type="button" onClick="{{ s.vincular }}" style="height:22px;padding:0 8px;flex-shrink:0;border-radius:8px;border:none;background:var(--accent);color:var(--surface);font-size:9px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--accent-hover)">Vincular</button>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+    <sc-if value="{{ qrAbierto }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:center;padding:10px;border:.5px solid var(--border);border-radius:8px;background:var(--bg);animation:om-abrir 150ms ease-out">
+        <span style="font-size:10px;font-weight:600;color:var(--text)">{{ qrCuenta }}</span>
+        <div style="width:104px;height:104px;border:.5px solid var(--border);border-radius:8px;background:var(--surface);display:flex;align-items:center;justify-content:center">
+          <span style="font-size:9px;color:var(--hint);text-align:center;line-height:1.4">el QR aparece ac&aacute;<br />al conectar Baileys</span>
+        </div>
+        <span style="font-size:9px;color:var(--hint);text-align:center;line-height:1.45;text-wrap:pretty">Escane&aacute; desde WhatsApp &gt; Dispositivos vinculados. La cola de esa cuenta arranca sola al reconectar.</span>
+      </div>
+    </sc-if>
+    <span style="font-size:9px;color:var(--hint);line-height:1.45;text-wrap:pretty;padding-top:6px;border-top:.5px solid var(--border)">{{ resumen }}</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:380,&quot;height&quot;:420},&quot;sesiones&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;{cuenta:string,activa:boolean,ultimo:string,frenados:number}[]&quot;},&quot;linkedin&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;{cuenta:string,nombre:string,activa:boolean,ultimo:string,motivo:string}[]&quot;},&quot;onCerrar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;()=&gt;void&quot;}}">
+class Component extends DCLogic {
+  state = { qr: null };
+  renderVals() {
+    const ses = this.props.sesiones || [];
+    const lis = this.props.linkedin || [];
+    const frenados = ses.filter(s => !s.activa).reduce((a, s) => a + (s.frenados || 0), 0);
+    return {
+      conteo: lis.filter(l => l.activa).length + ' LinkedIn · ' + ses.filter(s => s.activa).length + '/' + ses.length + ' WhatsApp',
+      linkedin: lis.map(l => ({
+        cuenta: l.cuenta,
+        nombre: l.nombre || '',
+        activa: !!l.activa,
+        caida: !l.activa,
+        detalle: l.activa ? (l.ultimo || 'activa') : (l.motivo || 'revisar')
+      })),
+      vincularNueva: () => this.setState({ qr: 'una cuenta nueva' }),
+      sesiones: ses.map(s => ({
+        cuenta: s.cuenta,
+        activa: !!s.activa,
+        caida: !s.activa,
+        detalle: s.activa ? (s.ultimo || '') : (s.frenados || 0) + ' frenados',
+        vincular: () => this.setState({ qr: s.cuenta })
+      })),
+      qrAbierto: !!this.state.qr,
+      qrCuenta: this.state.qr ? 'Vincular ' + this.state.qr : '',
+      resumen: frenados
+        ? frenados + ' envíos frenados por sesiones caídas. Mientras la sesión no vuelva, la cola se acumula sin avisar al lead.'
+        : 'Todas las sesiones activas: la cola sale según lo programado.',
+      cerrar: () => { if (this.props.onCerrar) this.props.onCerrar(); }
+    };
+  }
+}
+</script>
+</body>
+</html>
