@@ -47,6 +47,18 @@ docs/         El vault. La documentación viaja con el código.
 5. **Ningún color suelto.** Todo pasa por las variables de `docs/design/tokens.css`.
    Tres temas: claro, oscuro, noche.
 
+6. **El prototipo es la fuente de verdad visual, no una referencia vaga.**
+   Antes de escribir una pantalla, abrí el `.dc.html` que le corresponde en
+   `docs/prototipo/` y copiá las medidas reales: tamaños de fuente, paddings,
+   bordes (son `.5px`, no 1px), radios, y la estructura del layout — varias
+   pantallas usan `grid` con filas explícitas, no flex.
+
+   Tomar solo los colores y maquetar de cero **no es respetar el diseño**: da
+   algo que funciona pero se ve distinto, y la diferencia se nota sobre todo en
+   la densidad. Si algo del prototipo no se puede construir todavía (porque
+   depende de datos que no existen), se omite y se anota — no se reemplaza por
+   una versión inventada.
+
 ## Definición de terminado
 
 Una regla está hecha cuando tiene las cuatro: nota en el vault, función en `core/`,

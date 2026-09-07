@@ -4,7 +4,7 @@ import { idiomaEfectivo } from '@crm/core/idioma';
 import { linkWhatsApp } from '@crm/core/telefono';
 import { pb } from '../../lib/pocketbase';
 import type { EnvioRecord, LeadRecord, PlantillaRecord } from '../../lib/types';
-import { NOMBRE_SITUACION } from './ListaContactos';
+import { NOMBRE_SITUACION, iniciales } from './ListaContactos';
 import { EnviarMensaje } from './EnviarMensaje';
 
 const HOY = new Date().toISOString().slice(0, 10);
@@ -117,28 +117,39 @@ export function FichaLead({
   return (
     <section className="ficha">
       <header className="ficha-header">
-        <div className="ficha-titulo-fila">
-          <h2 className="ficha-nombre" title={p?.nombre}>
-            {p?.nombre ?? '(sin perfil)'}
-          </h2>
-          {p?.no_contactar && (
-            <span className="pastilla pastilla-error" title={p.no_contactar_motivo}>
-              no contactar
-            </span>
-          )}
+        {/* Prototipo: avatar de 30px, chip de cuenta en acento, nombre a 14px. */}
+        <div className="ficha-identidad">
+          <span className="ficha-avatar" title={p?.nombre}>
+            {iniciales(p?.nombre ?? '')}
+          </span>
+          <span className="ficha-cuenta" title="Cuenta de LinkedIn">
+            {lead.expand?.cuenta?.abrev ?? '—'}
+          </span>
+          <span className="ficha-duenio" title="Asignado a">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+              <circle cx="12" cy="8" r="3.4" />
+              <path d="M5 20a7 7 0 0114 0" />
+            </svg>
+            {lead.expand?.asignado?.name?.split(' ')[0] ?? 'sin asignar'}
+          </span>
+
+          <div className="ficha-nombre-caja">
+            <span className="ficha-nombre">{p?.nombre ?? '(sin perfil)'}</span>
+          </div>
         </div>
 
         <div className="ficha-chips">
-          <span className="pastilla">{lead.expand?.cuenta?.abrev ?? '—'}</span>
           <span className="pastilla">{lead.etapa}</span>
           <span className="pastilla">{NOMBRE_SITUACION[lead.situacion] ?? lead.situacion}</span>
           <span className="pastilla" title="Idioma sugerido por país (§5.6)">
             {idioma}
           </span>
           {vence && <span className="pastilla pastilla-alerta">le toca hoy</span>}
-          <span className="pastilla pastilla-suave">
-            {lead.expand?.asignado?.name ?? 'sin asignar'}
-          </span>
+          {p?.no_contactar && (
+            <span className="pastilla pastilla-error" title={p.no_contactar_motivo}>
+              no contactar
+            </span>
+          )}
         </div>
 
         <div className="ficha-acciones">

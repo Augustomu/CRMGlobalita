@@ -79,6 +79,8 @@ export function App() {
               leads={leads}
               seleccionado={seleccionado}
               onSeleccionar={setSeleccionado}
+              usuario={auth.usuario}
+              verColaboradores={puedeUsuario(auth.usuario, 'verTodosLeads')}
             />
             {lead ? (
               <FichaLead lead={lead} plantillas={plantillas} onGuardado={recargar} />

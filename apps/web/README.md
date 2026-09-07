@@ -43,7 +43,9 @@ Esto es la primera pasada: funciona de verdad, pero no es el prototipo completo.
 
 | Falta | Por qué |
 |---|---|
-| Columnas arrastrables, filtros en popover | detalle de §7.2, no cambia lo que se puede hacer |
+| Columnas arrastrables | detalle de §7.2, no cambia lo que se puede hacer |
+| Foto del lead (pegar del portapapeles) | el avatar muestra iniciales por ahora |
+| Filtros de WhatsApp, reunión, rol, país, etiquetas | el popover existe; faltan esos grupos |
 | Renderizar de a 80 con scroll infinito | con 8 leads de demo no se nota; hace falta antes de los 1.500 |
 | Deshacer y log de ediciones | necesita la pila de `docs/02-modelo/deshacer-y-revertir.md` |
 | Aviso de cambios sin guardar | va junto con lo anterior |
@@ -52,6 +54,16 @@ Esto es la primera pasada: funciona de verdad, pero no es el prototipo completo.
 | Editar etiquetas | se muestran, todavía no se agregan ni se quitan desde acá |
 
 No hay ningún botón que simule funcionar: lo que no está construido, no está puesto.
+
+## Fidelidad al prototipo
+
+La maqueta sigue las medidas reales de `docs/prototipo/`: grid de filas en la
+columna 1, hairlines de `.5px`, nombre del lead a 13px en la lista y 14px en la
+ficha, chips pastilla de 10px, avatares circulares de 14px (lista) y 30px (ficha),
+y `tabular-nums` en todo lo que sea número o fecha.
+
+Si vas a tocar una pantalla, abrí primero su `.dc.html` — es la regla 6 del
+`CLAUDE.md` de la raíz.
 
 ## Cómo se conecta con el resto
 
