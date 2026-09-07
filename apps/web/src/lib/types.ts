@@ -126,3 +126,19 @@ export interface EnvioRecord {
   a_mano: boolean;
   created: string;
 }
+
+export interface ReunionRecord {
+  id: string;
+  lead: string;
+  /** Instante con zona (D23). */
+  inicio: string;
+  zona: string;
+  duracion_min: number;
+  estado: 'pendiente' | 'asistio' | 'no-asistio' | 'cancelada' | 'reagendada';
+  calendario: string;
+  notas: string;
+  /** D10: para actualizar el evento en vez de duplicarlo. */
+  google_event_id: string;
+  google_calendar_id: string;
+  reagendada_de: string;
+}

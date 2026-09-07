@@ -7,6 +7,7 @@ import { FichaLead } from './features/followup/FichaLead';
 import { usePlantillas } from './features/followup/usePlantillas';
 import { Vencimientos, leadsVencidos } from './features/vencimientos/Vencimientos';
 import { Usuarios } from './features/usuarios/Usuarios';
+import { Repositorio } from './features/repositorio/Repositorio';
 import { useEtiquetas } from './features/followup/useEtiquetas';
 
 const TEMAS = ['tema-claro', 'tema-oscuro', 'tema-noche'] as const;
@@ -17,6 +18,7 @@ export function App() {
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const [tema, setTema] = useState(0);
   const [vencAbierto, setVencAbierto] = useState(false);
+  const [repoAbierto, setRepoAbierto] = useState(false);
   const [seccion, setSeccion] = useState<'followup' | 'usuarios'>('followup');
   const plantillas = usePlantillas(auth.usuario);
   const catalogoEtiquetas = useEtiquetas(auth.usuario);
@@ -66,6 +68,16 @@ export function App() {
         </nav>
 
         <div className="header-derecha">
+          {puedeUsuario(auth.usuario, 'repositorio') && (
+            <button
+              type="button"
+              className="boton-secundario"
+              onClick={() => setRepoAbierto(true)}
+              title="Repositorio de mensajes"
+            >
+              repositorio
+            </button>
+          )}
           {puedeUsuario(auth.usuario, 'vencimientos') && (
             <button
               type="button"
@@ -135,6 +147,10 @@ export function App() {
           </>
         )}
       </main>
+
+      {repoAbierto && (
+        <Repositorio onCerrar={() => setRepoAbierto(false)} onCambio={recargar} />
+      )}
 
       {vencAbierto && (
         <Vencimientos

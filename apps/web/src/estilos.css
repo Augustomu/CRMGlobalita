@@ -1127,3 +1127,71 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .burbuja-on { color: var(--brand-whatsapp); }
 /* Apagada, no oculta: §9.7. El title dice por qué. */
 .burbuja-off { color: var(--border); }
+
+/* ---------- reunión (§3.2) ---------- */
+.reunion { display: flex; flex-direction: column; gap: 10px; }
+.reunion-proxima { display: flex; flex-direction: column; gap: 6px; }
+.reunion-fila { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.reunion-agendar { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.reunion-vista { display: flex; flex-direction: column; gap: 4px; }
+.reunion-preview {
+  background: var(--bg);
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: var(--txt-md);
+  color: var(--text);
+}
+.reunion-preview pre {
+  margin: 4px 0 0;
+  font-family: ui-monospace, monospace;
+  font-size: var(--txt-sm);
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.pastilla-ok { background: var(--success-light); color: var(--success); border-color: transparent; font-weight: 600; }
+
+/* ---------- repositorio de mensajes (§7.9) ---------- */
+.overlay-ancho { width: min(94vw, calc(900px * var(--escala-texto))); }
+.repo { min-height: 0; display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); overflow: hidden; }
+.repo-lista {
+  border-right: .5px solid var(--border);
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg);
+}
+.repo-grupo { display: flex; flex-direction: column; gap: 2px; }
+.repo-grupo-cabecera { display: flex; align-items: center; gap: 6px; padding: 2px 4px; }
+.repo-grupo-cabecera .boton-mini { margin-left: auto; height: 18px; padding: 0 6px; }
+.repo-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: .5px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 150ms ease-out;
+}
+.repo-item:hover { background: var(--surface); }
+.repo-item-on { background: var(--accent-light); border-color: var(--accent-br); }
+.repo-nombre {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--txt-md);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.repo-idiomas { font-size: var(--txt-xs); color: var(--hint); text-transform: uppercase; letter-spacing: .04em; }
+.repo-defecto { color: var(--accent); font-size: var(--txt-sm); }
+.repo-vacio { font-size: var(--txt-xs); color: var(--hint); padding: 2px 8px; font-style: italic; }
+.repo-editor { overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }

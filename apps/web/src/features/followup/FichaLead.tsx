@@ -8,6 +8,7 @@ import { puedeEditar, puedeUsuario } from './useLeads';
 import { NOMBRE_SITUACION, iniciales } from './ListaContactos';
 import { EnviarMensaje, type Propuesta } from './EnviarMensaje';
 import { Colapsable, type Chip } from './Colapsable';
+import { FechaReunion } from './FechaReunion';
 import { useFicha } from './useFicha';
 import { useAtajos } from './useAtajos';
 
@@ -395,10 +396,10 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuar
             <span className="campo-label">Origen</span>
             <input value={lead.lista || '—'} readOnly />
           </div>
-          <p className="nota-tecnica">
-            La reunión y la agenda llegan en la Etapa 3, cuando exista la colección
-            <code> reunion</code>. Faltan las decisiones D10, D18 y D23.
-          </p>
+        </Colapsable>
+
+        <Colapsable titulo="Fecha de reunión">
+          <FechaReunion lead={lead} usuario={usuario} editable={editable} onCambio={onGuardado} />
         </Colapsable>
 
         {/* El banner de propuesta del prototipo: aparece DESPUÉS de registrar
