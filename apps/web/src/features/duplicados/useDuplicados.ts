@@ -74,25 +74,33 @@ export function useDuplicados(usuario: UsuarioRecord | null) {
       return;
     }
     try {
-      // `:length` filtra del lado del servidor: la bandeja no tiene por qué
-      // bajarse la base entera para encontrar los pocos marcados.
+      // Ojo con el filtro: sobre un campo JSON, `:length` mide el largo del
+      // TEXTO, no del array, asi que "[]" cuenta como 2 y devolvia tambien los
+      // perfiles ya resueltos — 354 en vez de 149.
       const marcados = await pb.collection('perfil').getFullList<PerfilMarcado>({
-        filter: 'posible_duplicado_de:length > 0 && fusionado_en = ""',
+        filter: 'posible_duplicado_de != null && posible_duplicado_de != "[]" && fusionado_en = ""',
         sort: 'created',
       });
 
       const armados = agruparPorConexion(marcados);
 
-      // Los leads de todos los perfiles en juego, de una sola vez: son los que
-      // se mueven al fusionar y los que pueden chocar.
+      // Los leads de los perfiles en juego: son los que se mueven al fusionar y
+      // los que pueden chocar.
+      //
+      // En tandas de a 40. Con 150 perfiles marcados el filtro de un solo tiro
+      // se pasaba de largo y PocketBase respondía 400, así que la bandeja se
+      // quedaba vacía justo cuando más duplicados había.
       const ids = armados.flatMap((g) => g.map((p) => p.id));
-      const leads = ids.length
-        ? await pb.collection('lead').getFullList({
-            filter: ids.map((id) => `perfil = "${id}"`).join(' || '),
-            expand: 'cuenta',
-            fields: 'id,perfil,cuenta,expand.cuenta.abrev',
-          })
-        : [];
+      const leads: unknown[] = [];
+      for (let i = 0; i < ids.length; i += 40) {
+        const tanda = ids.slice(i, i + 40);
+        const r = await pb.collection('lead').getFullList({
+          filter: tanda.map((id) => `perfil = "${id}"`).join(' || '),
+          expand: 'cuenta',
+          fields: 'id,perfil,cuenta,expand.cuenta.abrev',
+        });
+        leads.push(...r);
+      }
 
       const porPerfil = new Map<string, LeadDelPerfil[]>();
       for (const l of leads as unknown as Array<{

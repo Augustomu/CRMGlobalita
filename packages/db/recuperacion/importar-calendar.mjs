@@ -32,8 +32,22 @@ const eventos = JSON.parse(
  */
 function partirTitulo(summary) {
   const partes = String(summary).split(/\s*[\/|-]\s*/).map((s) => s.trim()).filter(Boolean);
-  if (partes.length >= 3) return { lead: partes[0], cuenta: partes[1] };
+  if (partes.length >= 3) return { lead: partes[0], cuenta: normalizarCuenta(partes[1]) };
   return { lead: partes[0] ?? '', cuenta: null };
+}
+
+/**
+ * La misma cuenta aparece escrita de varias formas a lo largo de los meses:
+ * "David", "David Luna", "Francisco", "Francisco Hernandez", "ALejandro". Sin
+ * esto se crearían cuentas duplicadas, y la cuenta es de donde cuelga todo el
+ * trabajo de prospección.
+ *
+ * Se queda con el primer nombre, que es lo único constante.
+ */
+function normalizarCuenta(nombre) {
+  const primero = String(nombre).trim().split(/\s+/)[0] ?? '';
+  if (!primero) return null;
+  return primero[0].toUpperCase() + primero.slice(1).toLowerCase();
 }
 
 /** Un link de LinkedIn puede venir en cinco formas; solo dos son usables. */
@@ -55,7 +69,12 @@ const porTipo = {};
 const plan = [];
 
 for (const ev of eventos) {
-  const { lead: nombreLead, cuenta } = partirTitulo(ev.summary);
+  // El extractor ya resolvio los titulos donde el lead no va primero
+  // ("Alejandro - Augusto - Herik Brasil"). Si lo hizo, se le cree: partir el
+  // titulo a ciegas daria "Alejandro" como nombre del lead, que es la cuenta.
+  const delTitulo = partirTitulo(ev.summary);
+  const nombreLead = ev.lead_del_titulo || delTitulo.lead;
+  const cuenta = normalizarCuenta(ev.cuenta_del_titulo ?? '') ?? delTitulo.cuenta;
   const link = clasificarLink(ev.linkedin);
   porTipo[link.tipo] = (porTipo[link.tipo] ?? 0) + 1;
 

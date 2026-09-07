@@ -11,13 +11,23 @@
 // decida en la bandeja de duplicados. La fusion no puede ser automatica: hay
 // dos personas distintas compartiendo un telefono (Mauricio Mantovani y Paul
 // Goris, +31 6 3179xxxx), y fusionarlas seria un error irreversible.
+//
+// EL PROBLEMA DEL NOMBRE DE PILA. El titulo del evento es "Marcelo / Francisco
+// / Augusto", asi que 173 de los 187 perfiles del Calendar tienen una sola
+// palabra por nombre. Emparejar "Marcelo" con todos los Marcelo del CSV daba
+// 181 grupos: mas ruido que trabajo util, y una bandeja de 181 pantallas no la
+// mira nadie.
+//
+// Hace falta un segundo dato que confirme. Hay dos, y con cualquiera alcanza:
+//   - el slug de LinkedIn      -> `marcelomcarneiro` contiene "carneiro"
+//   - el email del invitado    -> `emilliapaulino11@gmail.com` contiene "paulino"
+// Sin ninguno de los dos NO se marca: dejar a la persona sin emparejar es mejor
+// que enterrarla entre falsos positivos.
 
-import { entrar, PB_URL } from './entrar.mjs';
+import { entrar } from './entrar.mjs';
 import { huella } from '../../core/src/dedupe.ts';
 
 const APLICAR = process.argv.includes('--aplicar');
-
-
 const pb = await entrar();
 
 const todos = await pb.collection('perfil').getFullList({ sort: 'created' });
@@ -26,15 +36,25 @@ const todos = await pb.collection('perfil').getFullList({ sort: 'created' });
 // poder llegar al que sobrevivio, nada mas.
 const perfiles = todos.filter((p) => !p.fusionado_en);
 
+// El email vive en el lead (es de la relacion, no de la persona), asi que hay
+// que traerlo aparte.
+const leads = await pb.collection('lead').getFullList({ fields: 'perfil,email,email2,email3' });
+const emailsDe = new Map();
+for (const l of leads) {
+  const suyos = [l.email, l.email2, l.email3].filter(Boolean);
+  if (suyos.length) emailsDe.set(l.perfil, [...(emailsDe.get(l.perfil) ?? []), ...suyos]);
+}
+
 /** Dos perfiles que una persona ya declaro distintos no vuelven a la bandeja. */
 function yaSeMiraron(a, b) {
   const da = a.distinto_de ?? [];
   const db = b.distinto_de ?? [];
   return da.includes(b.id) || db.includes(a.id);
 }
+
 console.log('='.repeat(70));
 console.log(APLICAR ? 'MARCANDO' : 'SIMULACRO — nada se escribe');
-console.log('perfiles:', perfiles.length);
+console.log('perfiles:', perfiles.length, '| leads con email:', emailsDe.size);
 console.log('='.repeat(70));
 
 /** Nombre normalizado para comparar: sin acentos, sin puntuación, sin orden. */
@@ -60,7 +80,7 @@ function parecido(a, b) {
   return comunes / Math.min(ta.size, tb.size);
 }
 
-const grupos = new Map(); // clave -> { motivo, perfiles[] }
+const grupos = new Map(); // clave -> { motivo, ids: Set }
 
 function agrupar(clave, motivo, a, b) {
   if (yaSeMiraron(a, b)) return;
@@ -82,8 +102,13 @@ for (const [tel, v] of porTel) {
 }
 
 // 2. Misma huella nombre+empresa (D02).
+//
+// Con la empresa vacia la huella degenera en "mismo nombre", y como el Calendar
+// guarda solo el nombre de pila eso emparejaba a todos los Luiz entre si. La
+// regla vale cuando hay empresa; sin ella no dice nada.
 const porHuella = new Map();
 for (const p of perfiles) {
+  if (!p.empresa) continue;
   const h = p.huella || huella(p.nombre, p.empresa);
   if (!h) continue;
   if (!porHuella.has(h)) porHuella.set(h, []);
@@ -94,42 +119,58 @@ for (const [h, v] of porHuella) {
   for (let i = 1; i < v.length; i++) agrupar(`huella:${h}`, 'mismo nombre y empresa', v[0], v[i]);
 }
 
-// 3. Nombres muy parecidos entre las DOS fuentes: uno con LinkedIn (Calendar)
-//    y otro con teléfono (CSV). Es el cruce que interesa: completan datos
-//    distintos de la misma persona.
+// 3. El cruce que interesa: uno con LinkedIn (Calendar) y otro con teléfono
+//    (CSV) completan datos distintos de la misma persona.
 const conLinkedIn = perfiles.filter((p) => (p.slug || p.urn) && !p.telefono);
 const conTelefono = perfiles.filter((p) => p.telefono && !p.slug && !p.urn);
 
+/** Todo junto y sin separadores, para buscar un apellido adentro. */
+function aplanar(texto) {
+  return String(texto || '')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
 /**
- * El Calendar solo guarda el PRIMER nombre (el título del evento es
- * "Marcelo / Francisco / Augusto"), así que "Marcelo" empata con los tres
- * Marcelos del CSV. Pero el slug sí trae el apellido: `marcelomcarneiro`.
+ * ¿Hay algo, además del nombre de pila, que confirme que son la misma persona?
  *
- * Comparar contra el slug desambigua: de los tres Marcelos, solo Carneiro
- * aparece dentro de `marcelomcarneiro`.
+ * Se buscan las partes del nombre completo del candidato (todas menos la
+ * primera) dentro del slug de LinkedIn y de los emails. Es lo que distingue
+ * a Marcelo Carneiro de Marcelo Manhães cuando el Calendar solo dice "Marcelo".
  */
-function apellidoEnSlug(slug, nombreCompleto) {
-  if (!slug) return false;
-  const s = slug.replace(/[^a-z]/gi, '').toLowerCase();
-  const partes = [...tokens(nombreCompleto)];
-  // Alcanza con que UNA parte del nombre (que no sea el primer nombre) esté
-  // dentro del slug: es lo que distingue Carneiro de Manhães.
-  return partes.slice(1).some((t) => t.length >= 4 && s.includes(t));
+function confirma(perfilCalendar, nombreCompleto) {
+  const donde = [aplanar(perfilCalendar.slug)];
+  for (const e of emailsDe.get(perfilCalendar.id) ?? []) donde.push(aplanar(e.split('@')[0]));
+
+  const utiles = donde.filter(Boolean);
+  if (!utiles.length) return null; // no hay con qué confirmar
+
+  // La confirmación tiene que ser un dato NUEVO. Si el Calendar dice "Pedro",
+  // encontrar "pedro" en `pedro-herrera` no confirma nada: es lo mismo que ya
+  // hizo coincidir los nombres. Así "Pedro" dejaba de emparejar con cualquier
+  // "José Pedro Madureira" de la base.
+  const yaSabido = tokens(perfilCalendar.nombre);
+  const partes = [...tokens(nombreCompleto)].filter((t) => t.length >= 4 && !yaSabido.has(t));
+  if (!partes.length) return null;
+
+  if (utiles.some((d) => partes.some((t) => d.includes(t)))) {
+    return perfilCalendar.slug ? 'apellido en el perfil de LinkedIn' : 'apellido en el email';
+  }
+  return null;
 }
 
 for (const a of conLinkedIn) {
   for (const b of conTelefono) {
-    const p = parecido(a.nombre, b.nombre);
-    if (p < 0.75) continue;
+    if (parecido(a.nombre, b.nombre) < 0.75) continue;
 
-    // Si el perfil del Calendar tiene slug, se exige que el apellido del
-    // candidato aparezca ahí. Sin esa comprobación, un nombre de pila común
-    // arrastra a media base.
-    if (a.slug && !apellidoEnSlug(a.slug, b.nombre)) continue;
+    // Sin una segunda señal no se marca. Un nombre de pila compartido no es
+    // evidencia: hay tres Marcelo, cuatro Daniel y cinco Alejandro en la base.
+    const motivo = confirma(a, b.nombre);
+    if (!motivo) continue;
 
-    // Sin slug (solo URN) no hay con qué desambiguar: se marca igual, pero
-    // queda para que lo mire una persona, que es de lo que se trata.
-    agrupar(`cruce:${a.id}`, a.slug ? 'mismo nombre y apellido en el perfil' : 'mismo nombre, sin apellido para confirmar', a, b);
+    agrupar(`cruce:${a.id}`, motivo, a, b);
   }
 }
 
@@ -148,7 +189,7 @@ for (const [m, n] of Object.entries(porMotivo).sort((a, b) => b[1] - a[1])) {
 
 const mapa = new Map(perfiles.map((p) => [p.id, p]));
 console.log('\nDetalle:');
-for (const [clave, g] of grupos) {
+for (const [, g] of grupos) {
   const ps = [...g.ids].map((id) => mapa.get(id)).filter(Boolean);
   console.log(`\n  [${g.motivo}]`);
   for (const p of ps) {
@@ -164,6 +205,19 @@ if (!APLICAR) {
   process.exit(0);
 }
 
+// ----------------------------------------------------------------- escritura
+const enGrupos = new Set([...grupos.values()].flatMap((g) => [...g.ids]));
+
+// Las marcas viejas de perfiles que ya no estan en ningun grupo se borran: si
+// no, la bandeja arrastra para siempre lo que una corrida anterior propuso.
+let limpiados = 0;
+for (const p of perfiles) {
+  if (enGrupos.has(p.id)) continue;
+  if (!(p.posible_duplicado_de ?? []).length) continue;
+  await pb.collection('perfil').update(p.id, { posible_duplicado_de: [] });
+  limpiados++;
+}
+
 let marcados = 0;
 for (const g of grupos.values()) {
   const ids = [...g.ids];
@@ -177,5 +231,6 @@ for (const g of grupos.values()) {
 
 console.log('\n' + '='.repeat(70));
 console.log('Perfiles marcados:', marcados, 'en', grupos.size, 'grupos');
+if (limpiados) console.log('Marcas viejas borradas:', limpiados);
 console.log('Se resuelven a mano desde la bandeja de duplicados del CRM.');
 console.log('='.repeat(70));

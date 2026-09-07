@@ -10,3 +10,4 @@ pb_data/
 # Datos reales de contactos. El repo es publico: nombres y telefonos de
 # personas no salen de la maquina ni del VPS.
 packages/db/recuperacion/*.csv
+packages/db/recuperacion/eventos-calendar.json
