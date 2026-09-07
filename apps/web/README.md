@@ -1,0 +1,59 @@
+# @crm/web
+
+La interfaz. React + Vite + TypeScript, contra la PocketBase de `packages/db`.
+
+## Levantarlo
+
+Hacen falta dos procesos:
+
+```
+npm run db:dev -- --seed     # PocketBase en :8090, con los datos de demo
+npm run web:dev              # la interfaz en :5173
+```
+
+Entrar con `alberto@globalita.test` (administrador, ve los 8 leads) o
+`sofia@globalita.test` (colaboradora, ve solo los 2 asignados). Clave `demo12345`.
+
+## Qué hay construido
+
+**Follow-up de la Etapa 1**, funcionando contra datos reales:
+
+- **Login real.** No es decorativo: las colecciones exigen sesión, sin login no se
+  lee ni un lead. Un cliente anónimo recibe lista vacía y 404 en el resto.
+- **Columna 1 — lista.** Buscador por nombre/empresa/teléfono/ciudad, chips por
+  cuenta, filtro "solo vencidos", borde ámbar en los que tienen mensajes sin leer.
+- **Columna 2 — ficha.** Bloques colapsables, edición en vivo que persiste en
+  PocketBase, botón de guardar que se habilita solo si hay cambios.
+- **Permisos de verdad.** `verTodosLeads` se resuelve con `@crm/core/permisos` y
+  se aplica **en la consulta**, no en el render: los leads ajenos ni siquiera
+  viajan por la red.
+- **Las reglas de core, en pantalla.** El badge "le toca hoy" sale de `tocaHoy()`,
+  el chip de idioma de `idiomaEfectivo()`, el botón de WhatsApp de `linkWhatsApp()`.
+  Si no hay teléfono válido, se muestra **tachado con el motivo**, no oculto (§9.7).
+- **Los tres temas** (claro / oscuro / noche) desde `docs/design/tokens.css`.
+
+## Qué NO hay todavía, y por qué
+
+Esto es la primera pasada: funciona de verdad, pero no es el prototipo completo.
+
+| Falta | Por qué |
+|---|---|
+| Columnas arrastrables, filtros en popover | detalle de §7.2, no cambia lo que se puede hacer |
+| Renderizar de a 80 con scroll infinito | con 8 leads de demo no se nota; hace falta antes de los 1.500 |
+| Deshacer y log de ediciones | necesita la pila de `docs/02-modelo/deshacer-y-revertir.md` |
+| Aviso de cambios sin guardar | va junto con lo anterior |
+| Atajos de teclado | §9.1, transversal |
+| Enviar mensaje | necesita la colección `plantilla` y `envio.ts`, que son Etapa 2 |
+| Reunión y agenda | colección `reunion`, Etapa 3 |
+| Editar etiquetas | se muestran, todavía no se agregan ni se quitan desde acá |
+
+No hay ningún botón que simule funcionar: lo que no está construido, no está puesto.
+
+## Cómo se conecta con el resto
+
+`vite.config.ts` apunta `@crm/core` directo a `packages/core/src`, sin paso de
+build. Las reglas viven ahí y la interfaz solo las consume — nunca reimplementa
+una regla de negocio (regla 1 del `CLAUDE.md` de la raíz).
+
+`public/design-tokens.css` es una copia de `docs/design/tokens.css`. Si cambian
+los tokens, hay que volver a copiarlo.

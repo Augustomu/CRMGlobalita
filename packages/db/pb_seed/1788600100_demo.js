@@ -120,7 +120,7 @@ migrate(
           telefono: '5511987654321', telefono_raw: '5511987654321', telefono_valido: true,
         },
         lead: {
-          cuenta: 'DL', etapa: 'R3', situacion: 'contesto',
+          cuenta: 'DL', etapa: 'R3', situacion: 'contesto', asignado: 'sofia',
           lista: 'Sales Navigator - Gerentes SP', pagina_origen: 3, nota_r0: true,
           proximo_contacto: '2026-09-08',
           f_invitacion: '2026-05-12', f_aceptacion: '2026-05-20', f_respuesta: '2026-05-20',
@@ -171,7 +171,7 @@ migrate(
           telefono: '528112345678', telefono_raw: '528112345678', telefono_valido: true,
         },
         lead: {
-          cuenta: 'ED', etapa: 'R1', situacion: 'contesto',
+          cuenta: 'ED', etapa: 'R1', situacion: 'contesto', asignado: 'sofia',
           lista: 'Sales Navigator - Compras MX', pagina_origen: 2, nota_r0: true,
           proximo_contacto: '2026-09-05',
           f_invitacion: '2026-08-20', f_aceptacion: '2026-08-21', f_respuesta: '2026-08-22',
@@ -250,6 +250,8 @@ migrate(
         perfil: perfilId,
         cuenta: cuentas[g.lead.cuenta],
         etiquetas: (g.lead.etiquetas || []).map((e) => etiquetas[e]).filter(Boolean),
+        // Sin asignar = del pool, lo ven todos los administradores (D07).
+        asignado: g.lead.asignado ? usuarios[g.lead.asignado] : '',
       });
       nuevo('lead', datosLead);
     }

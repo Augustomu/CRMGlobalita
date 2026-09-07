@@ -8,10 +8,14 @@
   ],
   "scripts": {
     "test": "node --test packages/core/test/*.test.ts",
-    "db:dev": "node packages/db/dev.mjs"
+    "db:dev": "node packages/db/dev.mjs",
+    "web:dev": "npm run dev --workspace @crm/web",
+    "web:build": "npm run build --workspace @crm/web"
   },
   "engines": {
     "node": ">=22.6"
+  },
+  "allowScripts": {
+    "esbuild@0.21.5": true
   }
 }
-

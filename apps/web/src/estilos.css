@@ -1,0 +1,295 @@
+/* Estilos de la app. Regla 5 del CLAUDE.md: ningún color suelto — todo sale de
+   las variables de public/design-tokens.css (copia de docs/design/tokens.css). */
+
+html, body, #root { height: 100%; }
+
+.app { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ---------- header (§7.1: 44 px fijos, nada envuelve) ---------- */
+.header {
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.header-marca { font-size: 13px; color: var(--text); white-space: nowrap; }
+.header-tabs { display: flex; gap: 2px; }
+.header-derecha { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+.tab {
+  padding: 0 11px;
+  font-size: 13px;
+  line-height: 42px;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.tab-on { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
+.tab-off { color: var(--hint); }
+
+/* ---------- cuerpo: dos columnas (§7.2) ---------- */
+.cuerpo { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+
+.columna-lista {
+  width: 340px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+}
+.lista-controles {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.lista-conteo { font-size: 10px; color: var(--hint); font-variant-numeric: tabular-nums; }
+.lista-filas { flex: 1; overflow-y: auto; min-height: 0; }
+
+.fila {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 10px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.fila:hover { background: var(--accent-light); }
+.fila-on { background: var(--accent-light); border-left-color: var(--accent); }
+.fila-sin-leer { border-left-color: var(--warning); }
+.fila-arriba { display: flex; align-items: center; gap: 6px; }
+.fila-nombre {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fila-abajo { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.fila-meta { font-size: 10px; color: var(--hint); }
+.fila-fecha {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.fila-fecha-vencida { color: var(--error); font-weight: 600; }
+
+/* ---------- ficha (§7.2 columna 2) ---------- */
+.ficha { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.ficha-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface);
+}
+.ficha-titulo-fila { display: flex; align-items: center; gap: 8px; }
+.ficha-nombre {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* §10: el nombre se guarda completo, se trunca solo en la vista. */
+}
+.ficha-chips, .ficha-acciones { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ficha-cuerpo {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ficha-pie {
+  border-top: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+}
+.ficha-pie .boton-principal { margin-left: auto; }
+
+/* ---------- bloques colapsables ---------- */
+.bloque { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
+.bloque-cabecera {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text);
+}
+.bloque-cabecera:hover { background: var(--accent-light); }
+.bloque-flecha { color: var(--hint); font-size: 9px; }
+.bloque-cuerpo {
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ---------- campos ---------- */
+.campo { display: flex; flex-direction: column; gap: 3px; }
+.campo-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--hint);
+  font-weight: 600;
+}
+.campo-ayuda { font-size: 10px; color: var(--hint); }
+.nota-tecnica {
+  font-size: 10px;
+  color: var(--hint);
+  border-left: 2px solid var(--border);
+  padding-left: 8px;
+}
+.texto-largo { font-size: 12px; line-height: 1.55; color: var(--text); }
+
+input, textarea, .buscador {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+input[readonly] { color: var(--muted); background: var(--info-light); }
+textarea { resize: vertical; }
+
+.filtro-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.filtro-check input { width: auto; }
+
+/* ---------- chips y pastillas ---------- */
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip {
+  padding: 2px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 10px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.chip-on { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 600; }
+.chip-sistema { border-style: dashed; cursor: default; }
+
+.pastilla {
+  padding: 1px 7px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.pastilla-suave { border-color: transparent; background: var(--info-light); }
+.pastilla-nuevo { background: var(--badge-await); color: var(--badge-await-text); border-color: transparent; font-weight: 600; }
+.pastilla-alerta { background: var(--warning-light); color: var(--warning); border-color: transparent; font-weight: 600; }
+.pastilla-error { background: var(--error-light); color: var(--error); border-color: transparent; font-weight: 600; }
+
+/* ---------- botones ---------- */
+.boton-principal, .boton-secundario, .boton-whatsapp {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+.boton-principal { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.boton-principal:disabled { opacity: 0.45; cursor: default; }
+.boton-secundario:hover { border-color: var(--accent-br); background: var(--accent-light); }
+.boton-whatsapp { background: var(--brand-whatsapp); border-color: var(--brand-whatsapp); color: var(--surface); }
+/* §9.7: deshabilitado con motivo, nunca oculto. */
+.boton-off {
+  background: var(--bg);
+  border-color: var(--border);
+  color: var(--hint);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
+/* ---------- login ---------- */
+.login-fondo { height: 100%; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.login-caja {
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.login-titulo { font-size: 18px; color: var(--text); }
+.login-sub { font-size: 12px; color: var(--hint); margin-top: -8px; }
+.login-error {
+  font-size: 11px;
+  color: var(--error);
+  background: var(--error-light);
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+.login-pista { font-size: 10px; color: var(--hint); line-height: 1.5; }
+code { font-family: ui-monospace, monospace; font-size: 10px; }
+
+/* ---------- varios ---------- */
+.vacio { padding: 16px; font-size: 12px; color: var(--hint); }
+.aviso-error {
+  margin: 20px;
+  padding: 14px;
+  border: 1px solid var(--error);
+  background: var(--error-light);
+  border-radius: 12px;
+  font-size: 12px;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
