@@ -103,6 +103,7 @@ export function App() {
                 lead={lead}
                 plantillas={plantillas}
                 catalogoEtiquetas={catalogoEtiquetas}
+                usuario={auth.usuario}
                 onGuardado={recargar}
               />
             ) : (

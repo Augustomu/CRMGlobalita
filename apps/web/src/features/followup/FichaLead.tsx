@@ -3,7 +3,8 @@ import { tocaHoy } from '@crm/core/cadencia';
 import { idiomaEfectivo } from '@crm/core/idioma';
 import { linkWhatsApp } from '@crm/core/telefono';
 import { pb } from '../../lib/pocketbase';
-import type { EnvioRecord, EtiquetaRecord, LeadRecord, PlantillaRecord } from '../../lib/types';
+import type { EnvioRecord, EtiquetaRecord, LeadRecord, PlantillaRecord, UsuarioRecord } from '../../lib/types';
+import { puedeEditar, puedeUsuario } from './useLeads';
 import { NOMBRE_SITUACION, iniciales } from './ListaContactos';
 import { EnviarMensaje, type Propuesta } from './EnviarMensaje';
 import { Colapsable, type Chip } from './Colapsable';
@@ -51,10 +52,16 @@ interface Props {
   lead: LeadRecord;
   plantillas: PlantillaRecord[];
   catalogoEtiquetas: EtiquetaRecord[];
+  usuario: UsuarioRecord | null;
   onGuardado: () => void;
 }
 
-export function FichaLead({ lead, plantillas, catalogoEtiquetas, onGuardado }: Props) {
+export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuardado }: Props) {
+  // Dos ejes independientes: si puede editar ESTE lead, y qué campos ve.
+  const editable = puedeEditar(usuario, lead);
+  const veTelefono = puedeUsuario(usuario, 'verTelefono');
+  const veEmails = puedeUsuario(usuario, 'verEmails');
+  const veLinks = puedeUsuario(usuario, 'verLinks');
   const original = useMemo(() => valoresDe(lead), [lead.id, lead.updated]);
   const ficha = useFicha<Valores>(original, `${lead.id}:${lead.updated}`);
   const { valores, aplicar } = ficha;
@@ -101,7 +108,7 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, onGuardado }: P
   const etiquetasAplicadas = lead.expand?.etiquetas ?? [];
 
   async function guardar() {
-    if (!ficha.sucio) return;
+    if (!ficha.sucio || !editable) return;
     setGuardando(true);
     setError(null);
     try {
@@ -249,7 +256,7 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, onGuardado }: P
         </div>
 
         <div className="ficha-botonera">
-          {linkPerfil && (
+          {veLinks && linkPerfil && (
             <a className="boton-icono-26" href={linkPerfil} target="_blank" rel="noreferrer" title="Abrir perfil de LinkedIn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <path d="M7 17L17 7M17 7h-7M17 7v7" />
@@ -297,7 +304,7 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, onGuardado }: P
           </div>
 
           {/* §9.7: sin teléfono, deshabilitado con motivo — nunca oculto. */}
-          {wa ? (
+          {veTelefono && wa ? (
             <a className="boton-whatsapp" href={wa} target="_blank" rel="noreferrer">
               WhatsApp
             </a>
@@ -340,27 +347,36 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, onGuardado }: P
           titulo="Datos"
           chips={datosChips}
           bloques={p?.resumen ? [{ label: 'Resumen', valor: p.resumen, origen: 'extraído de LinkedIn' }] : []}
-          onEditar={(clave, valor) =>
-            aplicar({ [clave]: valor } as Partial<Valores>, etiquetaDe(clave))
+          onEditar={
+            editable
+              ? (clave, valor) => aplicar({ [clave]: valor } as Partial<Valores>, etiquetaDe(clave))
+              : undefined
           }
         />
 
         <Colapsable
           titulo="Contacto"
-          chips={contactoChips}
-          onEditar={(clave, valor) =>
-            aplicar({ [clave]: valor } as Partial<Valores>, etiquetaDe(clave))
+          chips={veEmails ? contactoChips : []}
+          onEditar={
+            editable
+              ? (clave, valor) => aplicar({ [clave]: valor } as Partial<Valores>, etiquetaDe(clave))
+              : undefined
           }
         >
+          {!veEmails && (
+            <span className="campo-ayuda">Los emails no están habilitados para tu usuario.</span>
+          )}
           <div className="campo">
             <span className="campo-label">Teléfono</span>
-            <input value={p?.telefono ?? ''} readOnly />
+            <input value={veTelefono ? (p?.telefono ?? '') : '· · · · ·'} readOnly />
             <span className="campo-ayuda">
-              {p?.telefono
-                ? p.telefono_valido
-                  ? 'Normalizado (D29). Vive en el perfil, no en el lead (D08).'
-                  : `A revisar. Original: ${p.telefono_raw || '—'}`
-                : 'Sin teléfono cargado.'}
+              {!veTelefono
+                ? 'El teléfono no está habilitado para tu usuario.'
+                : p?.telefono
+                  ? p.telefono_valido
+                    ? 'Normalizado (D29). Vive en el perfil, no en el lead (D08).'
+                    : `A revisar. Original: ${p.telefono_raw || '—'}`
+                  : 'Sin teléfono cargado.'}
             </span>
           </div>
         </Colapsable>
@@ -410,6 +426,7 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, onGuardado }: P
           </div>
         )}
 
+        {editable && puedeUsuario(usuario, 'enviarMensajes') && (
         <Colapsable titulo="Enviar mensaje">
           <EnviarMensaje
             lead={lead}
@@ -421,6 +438,7 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, onGuardado }: P
             }}
           />
         </Colapsable>
+        )}
 
         <Colapsable titulo={`Historial de envíos`} resumen={String(envios.length)} abiertoPorDefecto={false}>
           {envios.length === 0 && <span className="vacio">Todavía no se registró ningún envío.</span>}
@@ -457,12 +475,16 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, onGuardado }: P
       <footer className="ficha-pie">
         {error && <span className="login-error">{error}</span>}
         <span className="campo-ayuda">
-          {ficha.sucio ? 'Hay cambios sin guardar.' : 'Sin cambios pendientes.'}
+          {!editable
+            ? 'Tenés este lead asignado en modo lectura: podés verlo, no editarlo.'
+            : ficha.sucio
+              ? 'Hay cambios sin guardar.'
+              : 'Sin cambios pendientes.'}
         </span>
         <button
           type="button"
           className="boton-principal"
-          disabled={!ficha.sucio || guardando}
+          disabled={!ficha.sucio || guardando || !editable}
           onClick={() => void guardar()}
           title="Guardar (A)"
         >

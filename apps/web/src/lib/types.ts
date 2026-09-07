@@ -4,10 +4,14 @@
 export type Etapa =
   | 'R0' | 'R0-recontacto' | 'R1' | 'R2' | 'R3' | 'R4' | 'R5' | 'R6' | 'R7' | 'R8';
 
+export type NivelAsignacion = 'lectura' | 'seguimiento';
+
+export type LineaNegocio = 'ia' | 'inversiones';
+
 export type Situacion =
   | 'en_curso' | 'contesto' | 'pausado' | 'agotado' | 'esperando_recontacto' | 'descartado';
 
-export type Rol = 'administrador' | 'colaborador';
+export type Rol = 'administrador' | 'colaborador' | 'observador';
 export type EstadoUsuario = 'activo' | 'pendiente' | 'suspendido';
 
 export interface PerfilRecord {
@@ -42,6 +46,8 @@ export interface CuentaRecord {
   sesion_wa: 'activa' | 'caida' | 'sin_vincular';
   cupo_diario: number;
   objetivo_semanal: number;
+  /** Las cuentas estan segmentadas por producto: IA o inversiones. */
+  linea_negocio: LineaNegocio;
 }
 
 export interface EtiquetaRecord {
@@ -71,6 +77,8 @@ export interface LeadRecord {
   perfil: string;
   cuenta: string;
   asignado: string;
+  /** lectura = solo ve el estado; seguimiento = edita y escribe. */
+  nivel_asignacion: NivelAsignacion | null;
   etapa: Etapa;
   situacion: Situacion;
   motivo_descarte: string;

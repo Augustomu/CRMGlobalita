@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { puede, type Clave, type Rol } from '@crm/core/permisos';
+import { puede, puedeEditarLead, type Clave, type Rol } from '@crm/core/permisos';
 import { pb } from '../../lib/pocketbase';
 import type { LeadRecord, UsuarioRecord } from '../../lib/types';
 
@@ -7,6 +7,20 @@ import type { LeadRecord, UsuarioRecord } from '../../lib/types';
 export function puedeUsuario(usuario: UsuarioRecord | null, clave: Clave): boolean {
   if (!usuario) return false;
   return puede({ rol: usuario.rol as Rol, permisos: usuario.permisos ?? {} }, clave);
+}
+
+/**
+ * Si este usuario puede EDITAR este lead. Es un eje distinto de la visibilidad:
+ * el nivel de la asignación dice si puede tocarlo; los permisos verTelefono,
+ * verEmails y verLinks dicen qué campos ve.
+ */
+export function puedeEditar(usuario: UsuarioRecord | null, lead: LeadRecord | null): boolean {
+  if (!usuario || !lead) return false;
+  return puedeEditarLead(
+    { rol: usuario.rol as Rol, permisos: usuario.permisos ?? {} },
+    { asignado: lead.asignado, nivel_asignacion: lead.nivel_asignacion },
+    usuario.id,
+  );
 }
 
 export function useLeads(usuario: UsuarioRecord | null) {
