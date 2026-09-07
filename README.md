@@ -30,6 +30,7 @@ Las reglas de negocio viven en `packages/core` y la interfaz solo las consume.
 | `packages/core/` | Reglas de negocio como funciones puras, con 54 tests. `npm test` |
 | `packages/db/` | Esquema de PocketBase. `npm run db:dev -- --seed` levanta una base local con los datos de demo |
 | `apps/web/` | La interfaz. `npm run web:dev` la levanta en :5173. Ver su README |
+| `deploy/` | Despliegue al VPS. Ver `deploy/README.md` |
 
 Stack decidido: PocketBase + React/Vite + worker Node sobre VPS de Hostinger.
 Ver [D34](docs/04-decisiones/D34-stack-tecnologico.md) y [D35](docs/04-decisiones/D35-donde-corren-los-workers.md).

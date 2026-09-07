@@ -1,0 +1,40 @@
+[Unit]
+Description=CRM Globalita (PocketBase + interfaz)
+After=network.target
+
+[Service]
+Type=simple
+User=crm
+Group=crm
+WorkingDirectory=/opt/crm-globalita
+
+# --http y --https juntos: PocketBase saca y renueva el certificado de
+# Let's Encrypt solo, siempre que el dominio apunte a este servidor.
+# Sin dominio todavia, comenta estas dos y descomenta la linea de abajo.
+ExecStart=/opt/crm-globalita/pocketbase serve \
+  --dir=/opt/crm-globalita/pb_data \
+  --publicDir=/opt/crm-globalita/pb_public \
+  --migrationsDir=/opt/crm-globalita/pb_migrations \
+  --http=0.0.0.0:80 \
+  --https=0.0.0.0:443
+
+# Sin dominio (se entra por http://IP:8090). Menos seguro: la sesion viaja sin cifrar.
+# ExecStart=/opt/crm-globalita/pocketbase serve --dir=/opt/crm-globalita/pb_data --publicDir=/opt/crm-globalita/pb_public --migrationsDir=/opt/crm-globalita/pb_migrations --http=0.0.0.0:8090
+
+Restart=always
+RestartSec=5
+
+# Permite escuchar en los puertos 80 y 443 sin correr como root.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+# Endurecimiento basico: el proceso solo puede escribir en su propio directorio.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/crm-globalita
+
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target
