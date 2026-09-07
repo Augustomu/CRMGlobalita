@@ -48,9 +48,13 @@ fi
 echo "==> Subiendo las migraciones"
 scp "${SSH_ARGS[@]}" -r packages/db/pb_migrations/. "$USUARIO_SSH@$IP:$DESTINO/pb_migrations/"
 
+echo "==> Subiendo los hooks"
+ssh "${SSH_ARGS[@]}" "$USUARIO_SSH@$IP" "mkdir -p $DESTINO/pb_hooks"
+scp "${SSH_ARGS[@]}" -r packages/db/pb_hooks/. "$USUARIO_SSH@$IP:$DESTINO/pb_hooks/"
+
 echo "==> Permisos y reinicio"
 ssh "${SSH_ARGS[@]}" "$USUARIO_SSH@$IP" "
-  chown -R crm:crm $DESTINO/pb_public $DESTINO/pb_migrations &&
+  chown -R crm:crm $DESTINO/pb_public $DESTINO/pb_migrations $DESTINO/pb_hooks &&
   systemctl restart crm-globalita &&
   sleep 2 &&
   systemctl is-active crm-globalita

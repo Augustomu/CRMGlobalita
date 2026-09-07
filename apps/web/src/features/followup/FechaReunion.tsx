@@ -97,18 +97,28 @@ export function FechaReunion({ lead, usuario, editable, onCambio }: Props) {
     setError(null);
     try {
       const inicio = aIso(cuando);
-      await pb.collection('reunion').create({
+      // El titulo y la descripcion se calculan ACA, con core/reunion.ts, y se
+      // guardan con la reunion: el hook del servidor que escribe en Google solo
+      // manda lo que ya esta resuelto, y la regla queda en un solo lugar.
+      const creada = await pb.collection('reunion').create({
         lead: lead.id,
         inicio,
         zona: ZONA,
         duracion_min: duracion,
         estado: 'pendiente',
         calendario: usuario?.id ?? '',
+        titulo_evento: titulo,
+        descripcion_evento: descripcion,
+        invitado_email: lead.email || '',
       });
       // Una reunión agendada es una respuesta: el lead sale de la cadencia
       // automática (§5.1) y su próximo contacto lo maneja la reunión.
       await pb.collection('lead').update(lead.id, { situacion: 'contesto' });
-      window.open(linkCalendar(inicio, duracion), '_blank');
+      // Si el servidor lo escribio en Google, no hay nada que abrir. Si no
+      // pudo, se abre el link armado como antes: la reunion nunca queda sin
+      // forma de llegar al calendario.
+      const conEstado = await pb.collection('reunion').getOne(creada.id).catch(() => null);
+      if (conEstado?.sync !== 'ok') window.open(linkCalendar(inicio, duracion), '_blank');
       setCuando('');
       await recargar();
       onCambio();

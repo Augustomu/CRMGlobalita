@@ -27,7 +27,9 @@
   --txt-2xl:   calc(18px * var(--escala-texto));
 
   /* Acompañan al texto para que no se desborde. */
-  --alto-header:   calc(44px * var(--escala-texto));
+  /* El header NO escala con el texto: en el prototipo son 44px fijos y con la
+     escala quedaba desproporcionado contra los botones de la derecha. */
+  --alto-header:   46px;
   --avatar-chico:  calc(14px * var(--escala-texto));
   --avatar-grande: calc(30px * var(--escala-texto));
 }
@@ -49,15 +51,25 @@ html, body, #root { height: 100%; }
   background: var(--surface);
   border-bottom: .5px solid var(--border);
 }
-.header-marca { font-size: var(--txt-lg); color: var(--text); white-space: nowrap; }
+.header-marca { font-size: var(--txt-md); color: var(--text); white-space: nowrap; }
 .header-tabs { display: flex; gap: 2px; }
 .header-derecha { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 
+/* En el prototipo la pestaña es SOLO texto con una línea abajo. Sin resetear
+   `border` y `background` se ve el botón por defecto del navegador, y con un
+   line-height del alto del header cada pestaña queda como un bloque enorme al
+   lado de los botones de la derecha. */
 .tab {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
   padding: 0 11px;
-  font-size: var(--txt-lg);
-  line-height: calc(var(--alto-header) - 2px);
+  font-family: inherit;
+  font-size: var(--txt-md);
+  border: none;
+  background: none;
   border-bottom: 2px solid transparent;
+  cursor: pointer;
   white-space: nowrap;
 }
 .tab-on { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
