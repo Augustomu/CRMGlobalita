@@ -15,7 +15,7 @@ VERSION_PB="${VERSION_PB:-0.40.2}"
 
 echo "==> Paquetes basicos"
 apt-get update -qq
-apt-get install -y -qq unzip curl ca-certificates
+apt-get install -y -qq unzip curl ca-certificates sqlite3
 
 echo "==> Usuario de servicio ($USUARIO), sin login"
 id -u "$USUARIO" >/dev/null 2>&1 || useradd --system --create-home --shell /usr/sbin/nologin "$USUARIO"

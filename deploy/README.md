@@ -1,5 +1,9 @@
 # Desplegar el CRM en el VPS
 
+> **¿Primera vez?** Segui `PASO-A-PASO.md`, que tiene los datos reales de esta
+> instalacion (VPS 45.90.108.64, dominio crm.globalita.tech). Este archivo es la
+> referencia general.
+
 Arquitectura: **un solo proceso**. PocketBase sirve la API *y* la interfaz
 (desde `pb_public/`), y saca el certificado HTTPS solo. No hace falta nginx,
 ni Docker, ni un proceso aparte para el frontend.
