@@ -9,6 +9,8 @@ import { Vencimientos, leadsVencidos } from './features/vencimientos/Vencimiento
 import { Usuarios } from './features/usuarios/Usuarios';
 import { Repositorio } from './features/repositorio/Repositorio';
 import { useEtiquetas } from './features/followup/useEtiquetas';
+import { Duplicados } from './features/duplicados/Duplicados';
+import { useDuplicados } from './features/duplicados/useDuplicados';
 
 const TEMAS = ['tema-claro', 'tema-oscuro', 'tema-noche'] as const;
 
@@ -19,9 +21,12 @@ export function App() {
   const [tema, setTema] = useState(0);
   const [vencAbierto, setVencAbierto] = useState(false);
   const [repoAbierto, setRepoAbierto] = useState(false);
+  const [dupAbierto, setDupAbierto] = useState(false);
   const [seccion, setSeccion] = useState<'followup' | 'usuarios'>('followup');
   const plantillas = usePlantillas(auth.usuario);
   const catalogoEtiquetas = useEtiquetas(auth.usuario);
+  // Se carga siempre: el contador del header tiene que estar sin abrir nada.
+  const duplicados = useDuplicados(auth.usuario);
 
   useEffect(() => {
     document.body.className = TEMAS[tema]!;
@@ -76,6 +81,17 @@ export function App() {
               title="Repositorio de mensajes"
             >
               repositorio
+            </button>
+          )}
+          {puedeUsuario(auth.usuario, 'importarLeads') && duplicados.grupos.length > 0 && (
+            <button
+              type="button"
+              className="boton-secundario boton-badge"
+              onClick={() => setDupAbierto(true)}
+              title="Perfiles que podrían ser la misma persona"
+            >
+              duplicados
+              <span className="badge">{duplicados.grupos.length}</span>
             </button>
           )}
           {puedeUsuario(auth.usuario, 'vencimientos') && (
@@ -150,6 +166,14 @@ export function App() {
 
       {repoAbierto && (
         <Repositorio onCerrar={() => setRepoAbierto(false)} onCambio={recargar} />
+      )}
+
+      {dupAbierto && (
+        <Duplicados
+          duplicados={duplicados}
+          onCerrar={() => setDupAbierto(false)}
+          onCambio={recargar}
+        />
       )}
 
       {vencAbierto && (

@@ -6,3 +6,7 @@ dist/
 pb_data/
 *.log
 .DS_Store
+
+# Datos reales de contactos. El repo es publico: nombres y telefonos de
+# personas no salen de la maquina ni del VPS.
+packages/db/recuperacion/*.csv

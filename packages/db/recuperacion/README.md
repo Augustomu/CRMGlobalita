@@ -67,3 +67,84 @@ dejarlo para cuando el worker de la Etapa 5 esté andando y probado.
 
 De las 13.000 invitaciones, ~10% aceptó. Ese 10% es lo que hay que identificar,
 y la única fuente son los hilos de conversación de cada cuenta.
+
+---
+
+## 2. La base de contactos de WhatsApp — hecho
+
+Export de Google Contacts, dos archivos: `gerentes.csv` (228) y
+`consultores.csv` (20). **248 contactos.**
+
+```bash
+node packages/db/recuperacion/importar-contactos.mjs            # simulacro
+node packages/db/recuperacion/importar-contactos.mjs --aplicar  # escribe
+```
+
+Entran como **perfiles, no como leads**: un lead es la relación entre una cuenta
+y una persona (D01), y el CSV no dice de qué cuenta salió cada uno. Los leads se
+crean al cruzar con el histórico del Calendar, que sí trae la cuenta de origen.
+
+### Cómo se interpretan los nombres
+
+El nombre trae el cargo y el lugar adentro, repartidos de cualquier forma entre
+las columnas First / Middle / Last:
+
+```
+"Alexandre Jordão Gerente RJ BR"
+ └── nombre ──┘ └cargo┘ └ciudad┘ └país
+```
+
+Se pegan las tres columnas y se corta en el cargo (`Gerente` o `Consultor`).
+
+### El país sale del teléfono, no del nombre
+
+La etiqueta del nombre miente en 7 de 248 casos:
+
+| Contacto | Dice | El teléfono es de |
+|---|---|---|
+| Hugo Honwana | Brasil | Mozambique |
+| Magno Silva | Mozambique | Australia |
+| Junior Brito | Brasil | Portugal |
+| Rudinei De Souza | México | Brasil |
+
+El prefijo telefónico es un hecho verificable; la etiqueta es lo que alguien
+escribió a mano. Gana el prefijo, y la discrepancia se reporta.
+
+### Reparto real
+
+| País | Contactos |
+|---|---|
+| Brasil | 165 |
+| México | 52 |
+| Argentina | 19 |
+| Mozambique | 8 |
+| Otros (NL, PT, AU) | 4 |
+
+245 teléfonos válidos, 3 a revisar.
+
+### Duplicados: 9 grupos, todos a verificación manual
+
+Nunca se fusionan solos (D02). Dos clases distintas:
+
+**La misma persona escrita de dos formas** — se pueden fusionar:
+```
+Thiago Gomes            +55 21 97007-xxxx
+Tiago  Gomes            +55 21 97007-xxxx
+Rafael Sampaio de Sá    +55 85 92006-xxxx
+Rafael Sá               +55 85 92006-xxxx
+```
+
+**Dos personas distintas con el mismo teléfono** — NO se fusionan:
+```
+Mauricio Mantovani      +31 6 3179xxxx
+Paul Goris              +31 6 3179xxxx
+```
+
+Ese último caso es exactamente por qué la fusión no puede ser automática: por
+teléfono son idénticos y son dos personas. El importador los marca en
+`posible_duplicado_de` y no toca nada más.
+
+### Tolerancia a errores
+
+Un contacto que falla no corta la importación: se anota cuál y por qué, y se
+sigue. Al final se listan los que quedaron afuera.
