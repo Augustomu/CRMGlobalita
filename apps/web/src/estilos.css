@@ -593,3 +593,301 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
 }
 .ficha-duenio svg { width: 12px; height: 12px; flex-shrink: 0; }
 .ficha-nombre-caja { flex: 0 1 auto; min-width: 0; line-height: 1.35; }
+
+/* ---------- colapsable con chips editables (prototipo: Colapsable.dc.html) ---------- */
+.colapsable {
+  background: var(--surface);
+  border: .5px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.colapsable-cabecera {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 150ms ease-out;
+}
+.colapsable-cabecera:hover { background: var(--accent-light); }
+.colapsable-flecha { font-size: 9px; color: var(--hint); width: 10px; flex-shrink: 0; }
+.colapsable-titulo {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+.colapsable-resumen {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--hint);
+  font-variant-numeric: tabular-nums;
+}
+.colapsable-cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px 12px;
+  border-top: .5px solid var(--border);
+  animation: om-abrir 180ms ease-out;
+}
+.colapsable-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Los campos son pastillas que se vuelven input al tocarlas. */
+.chip-campo {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: .5px solid var(--border);
+  max-width: 100%;
+  min-width: 0;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: border-color 150ms ease-out, background 150ms ease-out;
+}
+.chip-campo:hover { border-color: var(--accent-br); background: var(--accent-light); }
+.chip-campo-vacio { background: transparent; border-style: dashed; }
+.chip-campo-editando {
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  align-items: center;
+  cursor: default;
+}
+.chip-campo-editando input {
+  width: 170px;
+  height: 20px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 11px;
+}
+.chip-campo-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--hint);
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.chip-campo-editando .chip-campo-label { color: var(--accent); }
+.chip-campo-valor {
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chip-campo-placeholder { font-size: 11px; color: var(--hint); white-space: nowrap; }
+
+.colapsable-bloque { display: flex; flex-direction: column; gap: 4px; }
+.colapsable-bloque-cabecera { display: flex; align-items: center; gap: 6px; }
+.colapsable-origen {
+  font-size: 9px;
+  color: var(--hint);
+  padding: 0 5px;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  white-space: nowrap;
+}
+.colapsable-texto {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.55;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+  background: var(--bg);
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.colapsable-texto-vacio {
+  font-size: 11px;
+  color: var(--hint);
+  border: .5px dashed var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+/* ---------- botones del encabezado de la ficha ---------- */
+.ficha-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.ficha-botonera { display: flex; align-items: center; gap: 6px; flex-shrink: 0; white-space: nowrap; }
+.relativo { position: relative; flex-shrink: 0; }
+
+.boton-icono-26 {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 150ms ease-out;
+}
+.boton-icono-26 svg { width: 13px; height: 13px; }
+.boton-icono-26:hover { background: var(--accent-light); border-color: var(--accent-br); color: var(--accent); }
+
+.boton-chico {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 150ms ease-out;
+}
+.boton-chico svg { width: 12px; height: 12px; flex-shrink: 0; }
+.boton-chico:hover { background: var(--accent-light); border-color: var(--accent-br); color: var(--accent); }
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* Solo aparece cuando hay algo que deshacer (§9.2). */
+.boton-deshacer {
+  height: 26px;
+  flex-shrink: 0;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: .5px solid var(--warning);
+  background: var(--warning-light);
+  color: var(--warning);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: inherit;
+  max-width: 190px;
+}
+.boton-deshacer svg { width: 13px; height: 13px; flex-shrink: 0; }
+.boton-deshacer span {
+  font-size: 10px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Tooltip de hitos sobre el nombre. */
+.ficha-info { position: relative; display: inline-flex; vertical-align: middle; margin-left: 6px; }
+.ficha-info-i {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: .5px solid var(--border);
+  color: var(--hint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: help;
+}
+.ficha-info-panel {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  z-index: 60;
+  width: 250px;
+  background: var(--surface);
+  border: .5px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .12);
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  animation: om-abrir 140ms ease-out;
+}
+.ficha-info-fila { display: contents; }
+.ficha-info-valor { font-size: 11px; color: var(--text); font-variant-numeric: tabular-nums; }
+
+.ficha-etiquetas { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; min-width: 0; }
+.chip-etiqueta {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border: .5px solid var(--accent-br);
+  white-space: nowrap;
+}
+
+.popover-anclado { position: absolute; top: calc(100% + 6px); right: 0; left: auto; width: 260px; }
+
+/* ---------- banner de propuesta (§5.10 punto 4) ---------- */
+.propuesta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 11px;
+  border-radius: 12px;
+  border: .5px solid var(--warning);
+  background: var(--warning-light);
+  animation: om-abrir 160ms ease-out;
+}
+.propuesta-tag {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--warning);
+  color: var(--surface);
+  white-space: nowrap;
+}
+.propuesta-texto { font-size: 11px; color: var(--text); line-height: 1.5; flex: 1; min-width: 160px; }
+.propuesta-aceptar {
+  height: 26px;
+  padding: 0 11px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: var(--surface);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.propuesta-descartar {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}

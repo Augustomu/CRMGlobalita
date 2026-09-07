@@ -47,11 +47,10 @@ Esto es la primera pasada: funciona de verdad, pero no es el prototipo completo.
 | Foto del lead (pegar del portapapeles) | el avatar muestra iniciales por ahora |
 | Filtros de WhatsApp, reunión, rol, país, etiquetas | el popover existe; faltan esos grupos |
 | Renderizar de a 80 con scroll infinito | con 8 leads de demo no se nota; hace falta antes de los 1.500 |
-| Deshacer y log de ediciones | necesita la pila de `docs/02-modelo/deshacer-y-revertir.md` |
-| Aviso de cambios sin guardar | va junto con lo anterior |
-| Atajos de teclado | §9.1, transversal |
+| Aviso de cambios sin guardar al cambiar de lead | §9.3 |
+| Log de ediciones persistido | la pila de deshacer vive en memoria; falta la colección y D21 |
+| Conversaciones (LinkedIn/WhatsApp) | falta D06 |
 | Reunión y agenda | colección `reunion`, Etapa 3 |
-| Editar etiquetas | se muestran, todavía no se agregan ni se quitan desde acá |
 
 No hay ningún botón que simule funcionar: lo que no está construido, no está puesto.
 

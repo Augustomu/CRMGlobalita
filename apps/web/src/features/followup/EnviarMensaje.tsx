@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CADENCIA_POR_DEFECTO, canalDe, siguientePaso } from '@crm/core/cadencia';
 import { planDeEnvio } from '@crm/core/envio';
 import { idiomaEfectivo } from '@crm/core/idioma';
@@ -22,10 +22,19 @@ function aPlantilla(r: PlantillaRecord): Plantilla {
   };
 }
 
+/** Lo que el prototipo muestra en el banner ambar despues de registrar. */
+export interface Propuesta {
+  paso: string;
+  fecha: string;
+  dias: number;
+}
+
 interface Props {
   lead: LeadRecord;
   plantillas: PlantillaRecord[];
-  onRegistrado: () => void;
+  /** Se incrementa con el atajo S para disparar el registro (SS9.1). */
+  nonceEnviar: number;
+  onRegistrado: (propuesta: Propuesta | null) => void;
 }
 
 /**
@@ -33,7 +42,7 @@ interface Props {
  * arma el texto, te lleva al chat real, y después registra que lo mandaste.
  * No envía nada por su cuenta — eso llega con el worker, en la Etapa 5.
  */
-export function EnviarMensaje({ lead, plantillas, onRegistrado }: Props) {
+export function EnviarMensaje({ lead, plantillas, nonceEnviar, onRegistrado }: Props) {
   const perfil = lead.expand?.perfil;
   const cfg = CADENCIA_POR_DEFECTO;
 
@@ -103,7 +112,13 @@ export function EnviarMensaje({ lead, plantillas, onRegistrado }: Props) {
       ? `https://wa.me/${perfil.telefono}`
       : lead.link_chat || (perfil?.slug ? `https://www.linkedin.com/in/${perfil.slug}` : '');
 
-  async function registrar(aceptarFecha: boolean) {
+  /**
+   * Registra el envío y **no toca la fecha**: devuelve la propuesta para que la
+   * ficha muestre el banner de §5.10 punto 4, con "Aceptar fecha" o "La cargo a
+   * mano". Es como lo hace el prototipo (`registrarEnvio` → `state.propuesta`).
+   */
+  async function registrar() {
+    if (!texto || guardando) return;
     setGuardando(true);
     setError(null);
     try {
@@ -124,20 +139,37 @@ export function EnviarMensaje({ lead, plantillas, onRegistrado }: Props) {
         f_ultimo_contacto: plan.lead.f_ultimo_contacto,
         etiquetas: [...idsEtiquetas],
         etapa: paso === 'agradecimiento' ? lead.etapa : paso,
-        // §5.10: la fecha se propone. Solo se guarda si el usuario la acepta.
-        ...(aceptarFecha && plan.proximo_contacto_propuesto
-          ? { proximo_contacto: plan.proximo_contacto_propuesto }
-          : {}),
       });
 
       setTocado(false);
-      onRegistrado();
+      onRegistrado(
+        plan.proximo_contacto_propuesto
+          ? {
+              paso,
+              fecha: plan.proximo_contacto_propuesto,
+              dias: Math.round(
+                (Date.parse(plan.proximo_contacto_propuesto) - Date.parse(HOY)) / 86_400_000,
+              ),
+            }
+          : null,
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setGuardando(false);
     }
   }
+
+  // Atajo S (§9.1): la ficha incrementa el nonce y acá se dispara el registro.
+  const primeraVez = useRef(true);
+  useEffect(() => {
+    if (primeraVez.current) {
+      primeraVez.current = false;
+      return;
+    }
+    void registrar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nonceEnviar]);
 
   return (
     <div className="enviar">
@@ -228,33 +260,15 @@ export function EnviarMensaje({ lead, plantillas, onRegistrado }: Props) {
           Copiar
         </button>
 
-        <div className="enviar-registrar">
-          {plan.proximo_contacto_propuesto && (
-            <span className="campo-ayuda">
-              Próximo contacto propuesto: <strong>{plan.proximo_contacto_propuesto}</strong>
-            </span>
-          )}
-          <button
-            type="button"
-            className="boton-principal"
-            disabled={!texto || guardando}
-            onClick={() => void registrar(true)}
-            title="Registra el envío y acepta la fecha propuesta"
-          >
-            {guardando ? 'Registrando…' : 'Registrar envío'}
-          </button>
-          {plan.proximo_contacto_propuesto && (
-            <button
-              type="button"
-              className="boton-secundario"
-              disabled={!texto || guardando}
-              onClick={() => void registrar(false)}
-              title="Registra el envío sin tocar la fecha de próximo contacto"
-            >
-              Registrar sin mover la fecha
-            </button>
-          )}
-        </div>
+        <button
+          type="button"
+          className="boton-principal enviar-registrar"
+          disabled={!texto || guardando}
+          onClick={() => void registrar()}
+          title="Registrar que mandaste este mensaje (S)"
+        >
+          {guardando ? 'Registrando…' : 'Registrar envío'}
+        </button>
       </div>
 
       {plan.etiquetas_a_agregar.length > 0 && (

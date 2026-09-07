@@ -1,67 +1,80 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { tocaHoy } from '@crm/core/cadencia';
 import { idiomaEfectivo } from '@crm/core/idioma';
 import { linkWhatsApp } from '@crm/core/telefono';
 import { pb } from '../../lib/pocketbase';
-import type { EnvioRecord, LeadRecord, PlantillaRecord } from '../../lib/types';
+import type { EnvioRecord, EtiquetaRecord, LeadRecord, PlantillaRecord } from '../../lib/types';
 import { NOMBRE_SITUACION, iniciales } from './ListaContactos';
-import { EnviarMensaje } from './EnviarMensaje';
+import { EnviarMensaje, type Propuesta } from './EnviarMensaje';
+import { Colapsable, type Chip } from './Colapsable';
+import { useFicha } from './useFicha';
+import { useAtajos } from './useAtajos';
 
 const HOY = new Date().toISOString().slice(0, 10);
 
-/** Campos editables, separados por dónde viven de verdad (D01, D08). */
-interface Borrador {
-  // perfil = identidad de la persona, compartida por las 10 cuentas
+/**
+ * Los campos editables de la ficha, separados por dónde viven de verdad:
+ * los de identidad en `perfil` (D01), los de la relación en `lead`.
+ */
+interface Valores {
   cargo: string;
   empresa: string;
+  web: string;
   industria: string;
   ciudad: string;
   pais: string;
-  // lead = el trabajo de esta cuenta con esa persona
   email: string;
+  email2: string;
+  email3: string;
   nota: string;
   proximo_contacto: string;
 }
 
-function borradorDe(lead: LeadRecord): Borrador {
+function valoresDe(lead: LeadRecord): Valores {
   const p = lead.expand?.perfil;
   return {
     cargo: p?.cargo ?? '',
     empresa: p?.empresa ?? '',
+    web: p?.web ?? '',
     industria: p?.industria ?? '',
     ciudad: p?.ciudad ?? '',
     pais: p?.pais ?? '',
     email: lead.email ?? '',
+    email2: lead.email2 ?? '',
+    email3: lead.email3 ?? '',
     nota: lead.nota ?? '',
     proximo_contacto: (lead.proximo_contacto ?? '').slice(0, 10),
   };
 }
 
-export function FichaLead({
-  lead,
-  plantillas,
-  onGuardado,
-}: {
+interface Props {
   lead: LeadRecord;
   plantillas: PlantillaRecord[];
+  catalogoEtiquetas: EtiquetaRecord[];
   onGuardado: () => void;
-}) {
-  const [borrador, setBorrador] = useState<Borrador>(() => borradorDe(lead));
+}
+
+export function FichaLead({ lead, plantillas, catalogoEtiquetas, onGuardado }: Props) {
+  const original = useMemo(() => valoresDe(lead), [lead.id, lead.updated]);
+  const ficha = useFicha<Valores>(original, `${lead.id}:${lead.updated}`);
+  const { valores, aplicar } = ficha;
+
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [envios, setEnvios] = useState<EnvioRecord[]>([]);
+  const [etiquetasAbierto, setEtiquetasAbierto] = useState(false);
+  const [logAbierto, setLogAbierto] = useState(false);
+  const [infoVisible, setInfoVisible] = useState(false);
+  const [propuesta, setPropuesta] = useState<Propuesta | null>(null);
+  const [nonceEnviar, setNonceEnviar] = useState(0);
+  const refProximo = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    setBorrador(borradorDe(lead));
-    setError(null);
-  }, [lead.id, lead.updated]);
+  const p = lead.expand?.perfil;
 
-  // El historial de envíos es la base de la analítica (§3.2); acá se muestra
-  // como lo que el equipo necesita ver: qué se mandó y cuándo.
   useEffect(() => {
     let vivo = true;
     pb.collection('envio')
-      .getFullList<EnvioRecord>({ filter: `lead = "${lead.id}"`, sort: '-enviado_en' })
+      .getFullList<EnvioRecord>({ filter: `lead = "${lead.id}"`, sort: '-enviado_en', expand: 'plantilla' })
       .then((r) => vivo && setEnvios(r))
       .catch(() => vivo && setEnvios([]));
     return () => {
@@ -69,43 +82,47 @@ export function FichaLead({
     };
   }, [lead.id, lead.updated]);
 
-  const p = lead.expand?.perfil;
-  const original = borradorDe(lead);
-  const sucio = (Object.keys(borrador) as (keyof Borrador)[]).some(
-    (k) => borrador[k] !== original[k],
-  );
+  // Cambiar de lead cierra todos los paneles, como el prototipo.
+  useEffect(() => {
+    setEtiquetasAbierto(false);
+    setLogAbierto(false);
+    setInfoVisible(false);
+    setPropuesta(null);
+    setError(null);
+  }, [lead.id]);
 
-  const idioma = idiomaEfectivo({ pais: borrador.pais });
-  const wa = p?.telefono
-    ? linkWhatsApp({ valor: p.telefono, valido: p.telefono_valido })
-    : undefined;
+  const idioma = idiomaEfectivo({ pais: valores.pais });
+  const wa = p?.telefono ? linkWhatsApp({ valor: p.telefono, valido: p.telefono_valido }) : undefined;
+  const linkPerfil = p?.slug ? `https://www.linkedin.com/in/${p.slug}` : '';
   const vence = tocaHoy(
     { situacion: lead.situacion, proximo_contacto: lead.proximo_contacto || null },
     HOY,
   );
-
-  function set<K extends keyof Borrador>(k: K, v: Borrador[K]) {
-    setBorrador((b) => ({ ...b, [k]: v }));
-  }
+  const etiquetasAplicadas = lead.expand?.etiquetas ?? [];
 
   async function guardar() {
+    if (!ficha.sucio) return;
     setGuardando(true);
     setError(null);
     try {
       if (p) {
         await pb.collection('perfil').update(p.id, {
-          cargo: borrador.cargo,
-          empresa: borrador.empresa,
-          industria: borrador.industria,
-          ciudad: borrador.ciudad,
-          pais: borrador.pais,
+          cargo: valores.cargo,
+          empresa: valores.empresa,
+          web: valores.web,
+          industria: valores.industria,
+          ciudad: valores.ciudad,
+          pais: valores.pais,
         });
       }
       await pb.collection('lead').update(lead.id, {
-        email: borrador.email,
-        nota: borrador.nota,
-        proximo_contacto: borrador.proximo_contacto || null,
+        email: valores.email,
+        email2: valores.email2,
+        email3: valores.email3,
+        nota: valores.nota,
+        proximo_contacto: valores.proximo_contacto || null,
       });
+      ficha.limpiar(); // §9.2: guardar limpia la pila de deshacer
       onGuardado();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -114,61 +131,172 @@ export function FichaLead({
     }
   }
 
+  async function cambiarEtiqueta(et: EtiquetaRecord, poner: boolean) {
+    const ids = new Set(lead.etiquetas ?? []);
+    if (poner) ids.add(et.id);
+    else ids.delete(et.id);
+    await pb.collection('lead').update(lead.id, { etiquetas: [...ids] });
+    onGuardado();
+  }
+
+  useAtajos(
+    {
+      guardar: () => void guardar(),
+      enviar: () => setNonceEnviar((n) => n + 1),
+      proximoContacto: () => refProximo.current?.showPicker?.() ?? refProximo.current?.focus(),
+      verPerfil: () => linkPerfil && window.open(linkPerfil, '_blank'),
+      irAlChat: () => {
+        const url = wa ?? lead.link_chat ?? linkPerfil;
+        if (url) window.open(url, '_blank');
+      },
+      deshacer: ficha.deshacer,
+    },
+    etiquetasAbierto || logAbierto,
+  );
+
+  const datosChips: Chip[] = [
+    { clave: 'cargo', label: 'Cargo', valor: valores.cargo },
+    { clave: 'empresa', label: 'Empresa', valor: valores.empresa },
+    { clave: 'web', label: 'Web', valor: valores.web },
+    { clave: 'industria', label: 'Industria', valor: valores.industria },
+    { clave: 'ciudad', label: 'Ciudad', valor: valores.ciudad },
+    { clave: 'pais', label: 'País', valor: valores.pais },
+  ];
+
+  const contactoChips: Chip[] = [
+    { clave: 'email', label: 'Email', valor: valores.email },
+    { clave: 'email2', label: 'Email 2', valor: valores.email2 },
+    { clave: 'email3', label: 'Email 3', valor: valores.email3 },
+  ];
+
+  /** Los hitos que el prototipo muestra en el tooltip del nombre. */
+  const hitos = [
+    ['Invitación', lead.f_invitacion],
+    ['Aceptación', lead.f_aceptacion],
+    ['Respuesta', lead.f_respuesta],
+    ['Último contacto', lead.f_ultimo_contacto],
+    ['Cancelada', lead.f_cancelada],
+  ].filter(([, v]) => v) as [string, string][];
+
   return (
     <section className="ficha">
       <header className="ficha-header">
-        {/* Prototipo: avatar de 30px, chip de cuenta en acento, nombre a 14px. */}
-        <div className="ficha-identidad">
-          <span className="ficha-avatar" title={p?.nombre}>
-            {iniciales(p?.nombre ?? '')}
-          </span>
-          <span className="ficha-cuenta" title="Cuenta de LinkedIn">
-            {lead.expand?.cuenta?.abrev ?? '—'}
-          </span>
-          <span className="ficha-duenio" title="Asignado a">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
-              <circle cx="12" cy="8" r="3.4" />
-              <path d="M5 20a7 7 0 0114 0" />
+        <span className="ficha-avatar" title={p?.nombre}>
+          {iniciales(p?.nombre ?? '')}
+        </span>
+
+        <span className="ficha-cuenta" title="Cuenta de LinkedIn">
+          {lead.expand?.cuenta?.abrev ?? '—'}
+        </span>
+
+        <span className="boton-chico" title="Asignado a">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <circle cx="12" cy="8" r="3.4" />
+            <path d="M5 20a7 7 0 0114 0" />
+          </svg>
+          {lead.expand?.asignado?.name?.split(' ')[0] ?? 'sin asignar'}
+        </span>
+
+        <button
+          type="button"
+          className="boton-icono-26"
+          title="Log de ediciones"
+          onClick={() => setLogAbierto((a) => !a)}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+        </button>
+
+        {/* Solo aparece cuando hay algo que deshacer, como el prototipo. */}
+        {ficha.hayDeshacer && (
+          <button
+            type="button"
+            className="boton-deshacer"
+            title={`Deshacer: ${ficha.ultimaEtiqueta}`}
+            onClick={ficha.deshacer}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M4 9h11a4 4 0 010 8h-6" />
+              <path d="M8 5L4 9l4 4" />
             </svg>
-            {lead.expand?.asignado?.name?.split(' ')[0] ?? 'sin asignar'}
-          </span>
+            <span>{ficha.ultimaEtiqueta}</span>
+          </button>
+        )}
 
-          <div className="ficha-nombre-caja">
-            <span className="ficha-nombre">{p?.nombre ?? '(sin perfil)'}</span>
-          </div>
-        </div>
-
-        <div className="ficha-chips">
-          <span className="pastilla">{lead.etapa}</span>
-          <span className="pastilla">{NOMBRE_SITUACION[lead.situacion] ?? lead.situacion}</span>
-          <span className="pastilla" title="Idioma sugerido por país (§5.6)">
-            {idioma}
-          </span>
-          {vence && <span className="pastilla pastilla-alerta">le toca hoy</span>}
-          {p?.no_contactar && (
-            <span className="pastilla pastilla-error" title={p.no_contactar_motivo}>
-              no contactar
+        <div className="ficha-nombre-caja">
+          <span className="ficha-nombre">{p?.nombre ?? '(sin perfil)'}</span>
+          {hitos.length > 0 && (
+            <span
+              className="ficha-info"
+              onMouseEnter={() => setInfoVisible(true)}
+              onMouseLeave={() => setInfoVisible(false)}
+            >
+              <span className="ficha-info-i">i</span>
+              {infoVisible && (
+                <span className="ficha-info-panel">
+                  {hitos.map(([label, valor]) => (
+                    <span key={label} className="ficha-info-fila">
+                      <span className="campo-label">{label}</span>
+                      <span className="ficha-info-valor">{valor.slice(0, 10)}</span>
+                    </span>
+                  ))}
+                </span>
+              )}
             </span>
           )}
         </div>
 
-        <div className="ficha-acciones">
-          {p?.slug && (
-            <a
-              className="boton-secundario"
-              href={`https://www.linkedin.com/in/${p.slug}`}
-              target="_blank"
-              rel="noreferrer"
+        <div className="ficha-botonera">
+          {linkPerfil && (
+            <a className="boton-icono-26" href={linkPerfil} target="_blank" rel="noreferrer" title="Abrir perfil de LinkedIn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M7 17L17 7M17 7h-7M17 7v7" />
+              </svg>
+            </a>
+          )}
+
+          <div className="relativo">
+            <button
+              type="button"
+              className="boton-chico"
+              title="Etiquetas del perfil"
+              onClick={() => setEtiquetasAbierto((a) => !a)}
             >
-              Perfil
-            </a>
-          )}
-          {lead.link_chat && (
-            <a className="boton-secundario" href={lead.link_chat} target="_blank" rel="noreferrer">
-              Chat LinkedIn
-            </a>
-          )}
-          {/* §9.7: sin teléfono se muestra deshabilitado con motivo, no oculto. */}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                <path d="M20 12l-8 8-8-8V4h8l8 8z" />
+                <circle cx="8.5" cy="8.5" r="1.2" />
+              </svg>
+              <span className="tabular">{etiquetasAplicadas.length}</span>
+            </button>
+            {etiquetasAbierto && (
+              <>
+                <div className="popover-fondo" onClick={() => setEtiquetasAbierto(false)} />
+                <div className="popover popover-anclado">
+                  <span className="campo-label">Etiquetas</span>
+                  <div className="chips">
+                    {catalogoEtiquetas.map((et) => {
+                      const puesta = (lead.etiquetas ?? []).includes(et.id);
+                      return (
+                        <button
+                          key={et.id}
+                          type="button"
+                          className={`chip-pastilla ${puesta ? 'chip-pastilla-on' : ''}`}
+                          title={et.del_sistema ? 'La pone el sistema (D04)' : undefined}
+                          onClick={() => void cambiarEtiqueta(et, !puesta)}
+                        >
+                          {et.nombre}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* §9.7: sin teléfono, deshabilitado con motivo — nunca oculto. */}
           {wa ? (
             <a className="boton-whatsapp" href={wa} target="_blank" rel="noreferrer">
               WhatsApp
@@ -176,33 +304,54 @@ export function FichaLead({
           ) : (
             <span
               className="boton-whatsapp boton-off"
-              title={
-                p?.telefono
-                  ? `Teléfono a revisar: ${p.telefono_raw || p.telefono}`
-                  : 'Sin teléfono cargado'
-              }
+              title={p?.telefono ? `Teléfono a revisar: ${p.telefono_raw || p.telefono}` : 'Sin teléfono cargado'}
             >
               WhatsApp
+            </span>
+          )}
+        </div>
+
+        {/* Chips de las etiquetas aplicadas, debajo de la botonera. */}
+        {etiquetasAplicadas.length > 0 && (
+          <div className="ficha-etiquetas">
+            {etiquetasAplicadas.map((e) => (
+              <span key={e.id} className="chip-etiqueta">
+                {e.nombre}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="ficha-chips">
+          <span className="pastilla">{lead.etapa}</span>
+          <span className="pastilla">{NOMBRE_SITUACION[lead.situacion] ?? lead.situacion}</span>
+          <span className="pastilla" title="Idioma sugerido por país (§5.6)">{idioma}</span>
+          {vence && <span className="pastilla pastilla-alerta">le toca hoy</span>}
+          {p?.no_contactar && (
+            <span className="pastilla pastilla-error" title={p.no_contactar_motivo}>
+              no contactar
             </span>
           )}
         </div>
       </header>
 
       <div className="ficha-cuerpo">
-        <Bloque titulo="Datos">
-          <Campo label="Cargo" valor={borrador.cargo} onChange={(v) => set('cargo', v)} />
-          <Campo label="Empresa" valor={borrador.empresa} onChange={(v) => set('empresa', v)} />
-          <Campo label="Industria" valor={borrador.industria} onChange={(v) => set('industria', v)} />
-          <Campo label="Ciudad" valor={borrador.ciudad} onChange={(v) => set('ciudad', v)} />
-          <Campo label="País" valor={borrador.pais} onChange={(v) => set('pais', v)} />
-          <p className="nota-tecnica">
-            Estos campos viven en el <strong>perfil</strong>: se comparten con las otras cuentas
-            que trabajen a la misma persona (D01).
-          </p>
-        </Bloque>
+        <Colapsable
+          titulo="Datos"
+          chips={datosChips}
+          bloques={p?.resumen ? [{ label: 'Resumen', valor: p.resumen, origen: 'extraído de LinkedIn' }] : []}
+          onEditar={(clave, valor) =>
+            aplicar({ [clave]: valor } as Partial<Valores>, etiquetaDe(clave))
+          }
+        />
 
-        <Bloque titulo="Contacto">
-          <Campo label="Email" valor={borrador.email} onChange={(v) => set('email', v)} />
+        <Colapsable
+          titulo="Contacto"
+          chips={contactoChips}
+          onEditar={(clave, valor) =>
+            aplicar({ [clave]: valor } as Partial<Valores>, etiquetaDe(clave))
+          }
+        >
           <div className="campo">
             <span className="campo-label">Teléfono</span>
             <input value={p?.telefono ?? ''} readOnly />
@@ -214,41 +363,66 @@ export function FichaLead({
                 : 'Sin teléfono cargado.'}
             </span>
           </div>
-        </Bloque>
+        </Colapsable>
 
-        <Bloque titulo="Seguimiento">
+        <Colapsable titulo="Seguimiento" resumen={valores.proximo_contacto || 'sin fecha'}>
           <div className="campo">
             <span className="campo-label">Próximo contacto</span>
             <input
+              ref={refProximo}
               type="date"
-              value={borrador.proximo_contacto}
-              onChange={(e) => set('proximo_contacto', e.target.value)}
+              value={valores.proximo_contacto}
+              onChange={(e) => aplicar({ proximo_contacto: e.target.value }, 'Próximo contacto')}
             />
           </div>
           <div className="campo">
             <span className="campo-label">Origen</span>
             <input value={lead.lista || '—'} readOnly />
           </div>
-        </Bloque>
+          <p className="nota-tecnica">
+            La reunión y la agenda llegan en la Etapa 3, cuando exista la colección
+            <code> reunion</code>. Faltan las decisiones D10, D18 y D23.
+          </p>
+        </Colapsable>
 
-        <Bloque titulo="Etiquetas">
-          <div className="chips">
-            {(lead.expand?.etiquetas ?? []).map((e) => (
-              <span key={e.id} className={`chip ${e.del_sistema ? 'chip-sistema' : ''}`}>
-                {e.nombre}
-              </span>
-            ))}
-            {(lead.expand?.etiquetas ?? []).length === 0 && (
-              <span className="vacio">Sin etiquetas.</span>
-            )}
+        {/* El banner de propuesta del prototipo: aparece DESPUÉS de registrar
+            un envío, con las dos salidas de §5.10 punto 4. */}
+        {propuesta && (
+          <div className="propuesta">
+            <span className="propuesta-tag">Recordatorio</span>
+            <span className="propuesta-texto">
+              {propuesta.paso} enviado. La cadencia propone el próximo contacto para el{' '}
+              <strong>{propuesta.fecha}</strong> ({propuesta.dias} días).
+            </span>
+            <button
+              type="button"
+              className="propuesta-aceptar"
+              onClick={() => {
+                aplicar({ proximo_contacto: propuesta.fecha }, 'Próximo contacto');
+                setPropuesta(null);
+              }}
+            >
+              Aceptar fecha
+            </button>
+            <button type="button" className="propuesta-descartar" onClick={() => setPropuesta(null)}>
+              La cargo a mano
+            </button>
           </div>
-        </Bloque>
+        )}
 
-        <Bloque titulo="Enviar mensaje">
-          <EnviarMensaje lead={lead} plantillas={plantillas} onRegistrado={onGuardado} />
-        </Bloque>
+        <Colapsable titulo="Enviar mensaje">
+          <EnviarMensaje
+            lead={lead}
+            plantillas={plantillas}
+            nonceEnviar={nonceEnviar}
+            onRegistrado={(prop) => {
+              setPropuesta(prop);
+              onGuardado();
+            }}
+          />
+        </Colapsable>
 
-        <Bloque titulo={`Historial de envíos (${envios.length})`}>
+        <Colapsable titulo={`Historial de envíos`} resumen={String(envios.length)} abiertoPorDefecto={false}>
           {envios.length === 0 && <span className="vacio">Todavía no se registró ningún envío.</span>}
           {envios.map((e) => (
             <div key={e.id} className="envio-fila">
@@ -261,35 +435,36 @@ export function FichaLead({
               <p className="envio-texto">{e.texto}</p>
             </div>
           ))}
-        </Bloque>
+        </Colapsable>
 
-        <Bloque titulo="Nota">
+        <Colapsable titulo="Nota" abiertoPorDefecto={false}>
           <textarea
             rows={5}
-            value={borrador.nota}
-            onChange={(e) => set('nota', e.target.value)}
+            value={valores.nota}
+            onChange={(e) => aplicar({ nota: e.target.value }, 'Nota')}
             placeholder="Resumen del perfil, escrito a mano."
           />
-        </Bloque>
+        </Colapsable>
 
-        {p?.resumen && (
-          <Bloque titulo="Análisis del perfil">
-            <p className="texto-largo">{p.resumen}</p>
-            <span className="campo-ayuda">extraído de LinkedIn</span>
-          </Bloque>
+        {logAbierto && (
+          <div className="aviso-suave">
+            El log de ediciones todavía no se guarda en la base: la pila de deshacer vive solo
+            mientras la ficha está abierta. Falta la colección de log (§3.2) y la decisión D21.
+          </div>
         )}
       </div>
 
       <footer className="ficha-pie">
         {error && <span className="login-error">{error}</span>}
         <span className="campo-ayuda">
-          {sucio ? 'Hay cambios sin guardar.' : 'Sin cambios pendientes.'}
+          {ficha.sucio ? 'Hay cambios sin guardar.' : 'Sin cambios pendientes.'}
         </span>
         <button
           type="button"
           className="boton-principal"
-          disabled={!sucio || guardando}
+          disabled={!ficha.sucio || guardando}
           onClick={() => void guardar()}
+          title="Guardar (A)"
         >
           {guardando ? 'Guardando…' : 'Guardar'}
         </button>
@@ -298,32 +473,20 @@ export function FichaLead({
   );
 }
 
-function Bloque({ titulo, children }: { titulo: string; children: React.ReactNode }) {
-  const [abierto, setAbierto] = useState(true);
-  return (
-    <div className="bloque">
-      <button type="button" className="bloque-cabecera" onClick={() => setAbierto((a) => !a)}>
-        <span className="bloque-flecha">{abierto ? '▾' : '▸'}</span>
-        {titulo}
-      </button>
-      {abierto && <div className="bloque-cuerpo">{children}</div>}
-    </div>
-  );
-}
-
-function Campo({
-  label,
-  valor,
-  onChange,
-}: {
-  label: string;
-  valor: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <label className="campo">
-      <span className="campo-label">{label}</span>
-      <input value={valor} onChange={(e) => onChange(e.target.value)} />
-    </label>
-  );
+/** Las etiquetas del prototipo para la pila de deshacer (`REVERTIBLES`). */
+function etiquetaDe(clave: string): string {
+  const nombres: Record<string, string> = {
+    cargo: 'Cargo',
+    empresa: 'Empresa',
+    web: 'Web',
+    industria: 'Industria',
+    ciudad: 'Ciudad',
+    pais: 'País',
+    email: 'Email',
+    email2: 'Email 2',
+    email3: 'Email 3',
+    nota: 'Nota',
+    proximo_contacto: 'Próximo contacto',
+  };
+  return nombres[clave] ?? clave;
 }
