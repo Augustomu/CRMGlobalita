@@ -63,6 +63,11 @@ export interface UsuarioRecord {
   rol: Rol;
   estado: EstadoUsuario;
   permisos: Partial<Record<string, boolean>>;
+  /**
+   * A que linea de negocio esta limitado su Control. Vacio = ve las dos.
+   * No es un permiso: los permisos son si/no y esto es un alcance.
+   */
+  linea_control: LineaNegocio | '';
 }
 
 export interface LeadExpand {

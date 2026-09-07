@@ -55,3 +55,15 @@ Su agenda muestra sus reuniones más las de **cada administrador** como bloques 
 
 Un administrador puede entrar a la vista de un colaborador desde el chip de sesión. No persiste entre recargas; "Volver a mi usuario" regresa. Es soporte, no suplantación auditada, aunque conviene registrarla en el log de actividad.
 
+
+
+## Control es un permiso especial
+
+Las demás claves son sí/no sobre lo que ya hace el equipo. `control` no: se le da
+a alguien de **afuera** —el socio de IT de Globalita, el socio de inversiones de
+SENG— y cada uno tiene que ver su negocio, no el del otro.
+
+Por eso lleva un **alcance** aparte, `users.linea_control`, que no es una clave de
+la lista de permisos: los permisos son sí/no y esto elige entre dos mundos.
+
+Ver [[control]] y `lineasDeControl()` en `core/permisos.ts`.

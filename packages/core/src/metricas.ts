@@ -5,6 +5,7 @@
 // que ve el Observador: no le interesa la prospección, le interesa cuántas
 // reuniones salieron, con quién, y cuántas derivaron en un proyecto.
 
+import type { LineaNegocio } from './permisos.ts';
 import { enSuZona } from './reunion.ts';
 
 export type EstadoReunion = 'pendiente' | 'asistio' | 'no-asistio' | 'cancelada' | 'reagendada';
@@ -35,6 +36,8 @@ export interface ReunionMedida {
   nota: string;
   /** Id del proyecto al que derivó, si derivó. */
   proyecto: string;
+  /** De qué negocio es, para el Control por línea. Sale de la cuenta del lead. */
+  linea: LineaNegocio | null;
 }
 
 

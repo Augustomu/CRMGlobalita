@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Proyecto, ReunionDelProyecto } from '@crm/core/proyecto';
 import type { ReunionMedida } from '@crm/core/metricas';
+import { lineasDeControl, veLineaEnControl, type LineaNegocio } from '@crm/core/permisos';
 import { pb } from '../../lib/pocketbase';
 import type { UsuarioRecord } from '../../lib/types';
 
@@ -9,7 +10,7 @@ interface ProyectoRecord extends Proyecto {
   responsable: string;
   motivo_cierre: string;
   expand?: {
-    cuenta?: { abrev?: string };
+    cuenta?: { abrev?: string; linea_negocio?: string };
     responsable?: { name?: string };
     lead?: { id?: string };
   };
@@ -20,6 +21,8 @@ export interface ProyectoConDatos {
   reuniones: ReunionDelProyecto[];
   cuenta_abrev: string;
   responsable: string;
+  /** De que negocio es. Sale de la cuenta; el proyecto no la guarda aparte. */
+  linea: LineaNegocio | null;
 }
 
 /**
@@ -79,6 +82,7 @@ export function useControl(usuario: UsuarioRecord | null) {
           genero: lead?.expand?.asignado?.name ?? '',
           nota: r.notas ?? '',
           proyecto: lead ? (proyectoDeLead.get(lead.id) ?? '') : '',
+          linea: (lead?.expand?.cuenta?.linea_negocio ?? null) as LineaNegocio | null,
         };
       });
 
@@ -91,15 +95,28 @@ export function useControl(usuario: UsuarioRecord | null) {
         ]);
       }
 
+      // El alcance se aplica ACA, no al dibujar: al observador de SENG los
+      // proyectos de Globalita no le tienen que llegar al navegador, aunque
+      // ninguna pantalla se los muestre.
+      const suyo = {
+        rol: usuario.rol as never,
+        permisos: usuario.permisos ?? {},
+        linea_control: usuario.linea_control,
+      };
+      const mio = (linea: LineaNegocio | null) => veLineaEnControl(suyo, linea);
+
       setProyectos(
-        ps.map((p) => ({
-          proyecto: p,
-          reuniones: porProyecto.get(p.id) ?? [],
-          cuenta_abrev: p.expand?.cuenta?.abrev ?? '',
-          responsable: p.expand?.responsable?.name ?? '',
-        })),
+        ps
+          .map((p) => ({
+            proyecto: p,
+            reuniones: porProyecto.get(p.id) ?? [],
+            cuenta_abrev: p.expand?.cuenta?.abrev ?? '',
+            linea: (p.expand?.cuenta?.linea_negocio ?? null) as LineaNegocio | null,
+            responsable: p.expand?.responsable?.name ?? '',
+          }))
+          .filter((p) => mio(p.linea)),
       );
-      setReuniones(medidas);
+      setReuniones(medidas.filter((r) => mio(r.linea)));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -112,5 +129,13 @@ export function useControl(usuario: UsuarioRecord | null) {
     void recargar();
   }, [recargar]);
 
-  return { proyectos, reuniones, cargando, error, recargar };
+  const lineas = usuario
+    ? lineasDeControl({
+        rol: usuario.rol as never,
+        permisos: usuario.permisos ?? {},
+        linea_control: usuario.linea_control,
+      })
+    : [];
+
+  return { proyectos, reuniones, lineas, cargando, error, recargar };
 }

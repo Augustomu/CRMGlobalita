@@ -155,8 +155,13 @@ async function cuentaId(nombre) {
 
   if (porAbrev[0]) {
     // Existe el slot: se le pone el nombre real que dice el Calendar.
-    if (porAbrev[0].nombre_perfil !== nombre) {
-      await pb.collection('cuenta').update(porAbrev[0].id, { nombre_perfil: nombre });
+    const arreglos = {};
+    if (porAbrev[0].nombre_perfil !== nombre) arreglos.nombre_perfil = nombre;
+    if (!porAbrev[0].linea_negocio) {
+      arreglos.linea_negocio = /alberto/i.test(nombre) ? 'inversiones' : 'ia';
+    }
+    if (Object.keys(arreglos).length) {
+      await pb.collection('cuenta').update(porAbrev[0].id, arreglos);
     }
     cacheCuentas.set(nombre, porAbrev[0].id);
     return porAbrev[0].id;
@@ -164,8 +169,13 @@ async function cuentaId(nombre) {
 
   const todas = await pb.collection('cuenta').getFullList();
   const slot = Math.max(0, ...todas.map((c) => c.slot ?? 0)) + 1;
+  // La linea de negocio no es opcional: una cuenta sin linea deja sus proyectos
+  // invisibles para cualquier observador limitado a un negocio. Alberto es
+  // inversiones (SENG); el resto, IA (Globalita).
+  const linea_negocio = /alberto/i.test(nombre) ? 'inversiones' : 'ia';
+
   const r = await pb.collection('cuenta').create({
-    abrev, nombre_perfil: nombre, slot,
+    abrev, nombre_perfil: nombre, slot, linea_negocio,
     estado_sesion: 'sin_vincular', sesion_wa: 'sin_vincular',
     cupo_diario: 40, objetivo_semanal: 200,
   });

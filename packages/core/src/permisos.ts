@@ -126,3 +126,68 @@ export function seccionInicial(usuario: UsuarioPermisos): 'followup' | 'control'
   }
   return null;
 }
+
+// ------------------------------------------------------- lineas de negocio
+
+/**
+ * Las dos lineas. Cada cuenta de invitacion pertenece a una, y el lead la
+ * hereda de su cuenta: asi no se puede cargar inconsistente.
+ */
+export type LineaNegocio = 'ia' | 'inversiones';
+
+export const LINEAS: LineaNegocio[] = ['ia', 'inversiones'];
+
+/** Como se llaman de verdad, que es como las nombra el equipo. */
+export const NOMBRE_LINEA: Record<LineaNegocio, string> = {
+  ia: 'Globalita',
+  inversiones: 'SENG',
+};
+
+export const DETALLE_LINEA: Record<LineaNegocio, string> = {
+  ia: 'Producto de inteligencia artificial. David, Alejandro, Edith, Francisco y Bruno.',
+  inversiones: 'Propuestas de inversion. Hoy, solo la cuenta de Alberto Cordoba.',
+};
+
+export interface UsuarioDeControl extends UsuarioPermisos {
+  /**
+   * A que linea esta limitado su Control. Vacio = ve las dos.
+   *
+   * No es un permiso de la lista: los permisos son si/no y esto es un alcance.
+   * Meterlo entre las claves obligaria a inventar `controlIa` y
+   * `controlInversiones`, y con una tercera linea habria que tocar el codigo.
+   */
+  linea_control?: LineaNegocio | '' | null;
+}
+
+/**
+ * Que lineas ve este usuario en Control.
+ *
+ * Control es un permiso especial: se le da a alguien de afuera del equipo de
+ * prospeccion — el socio de IT en Globalita, el socio de inversiones en SENG —
+ * y cada uno tiene que ver SU negocio, no el del otro. Por eso el alcance va
+ * aparte del permiso.
+ *
+ * Sin `control` no ve ninguna. Con `control` y sin linea, ve las dos.
+ */
+export function lineasDeControl(usuario: UsuarioDeControl): LineaNegocio[] {
+  if (!puede(usuario, 'control')) return [];
+  const suya = usuario.linea_control;
+  return suya && LINEAS.includes(suya) ? [suya] : [...LINEAS];
+}
+
+/**
+ * Si un proyecto o una reunion de esta linea le corresponde.
+ *
+ * Lo que NO tiene linea cargada se muestra a quien ve las dos, y se esconde a
+ * quien esta limitado a una. Es la unica opcion segura: mostrarselo igual
+ * filtraria mal hacia el lado que expone datos del otro negocio.
+ */
+export function veLineaEnControl(
+  usuario: UsuarioDeControl,
+  linea: LineaNegocio | '' | null | undefined,
+): boolean {
+  const suyas = lineasDeControl(usuario);
+  if (!suyas.length) return false;
+  if (!linea) return suyas.length === LINEAS.length;
+  return suyas.includes(linea);
+}

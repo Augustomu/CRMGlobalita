@@ -1321,6 +1321,26 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .ctrl-vista-off:hover { background: var(--accent-light); color: var(--accent); }
 .ctrl-vista-n { font-size: var(--txt-xs); opacity: .8; }
 
+/* Selector de linea de negocio. Mismo switch que las pestanas: es la misma
+   clase de eleccion, y usar otro control haria pensar que hace otra cosa. */
+.ctrl-lineas {
+  display: flex;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.ctrl-lineas button {
+  height: 27px;
+  padding: 0 11px;
+  border: none;
+  font-family: inherit;
+  font-size: var(--txt-md);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 /* La sección entera es de solo lectura y la pastilla lo declara. */
 .ctrl-solo-lectura {
   margin-left: auto;

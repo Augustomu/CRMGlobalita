@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CLAVES, origen, permisosEfectivos, puede, puedeEditarLead, seccionInicial, volverAlPreset,
+  lineasDeControl,
+  veLineaEnControl,
 } from '../src/permisos.ts';
 
 const admin = { rol: 'administrador' as const, permisos: {} };
@@ -116,4 +118,51 @@ test('anexo Control · cada rol cae en la primera sección que tiene permitida',
 
 test('un colaborador sin follow-up cae en WA Personal, no en una pantalla vacía', () => {
   assert.equal(seccionInicial({ rol: 'colaborador', permisos: { followup: false } }), 'waPersonal');
+});
+
+// ------------------------------------------------------- lineas de negocio
+
+test('el Observador de SENG ve inversiones y nada mas', () => {
+  const seng = { rol: 'observador' as const, permisos: {}, linea_control: 'inversiones' as const };
+  assert.deepEqual(lineasDeControl(seng), ['inversiones']);
+  assert.equal(veLineaEnControl(seng, 'inversiones'), true);
+  assert.equal(veLineaEnControl(seng, 'ia'), false);
+});
+
+test('el Observador de Globalita ve IA y nada mas', () => {
+  const glob = { rol: 'observador' as const, permisos: {}, linea_control: 'ia' as const };
+  assert.deepEqual(lineasDeControl(glob), ['ia']);
+  assert.equal(veLineaEnControl(glob, 'ia'), true);
+  assert.equal(veLineaEnControl(glob, 'inversiones'), false);
+});
+
+test('sin linea asignada ve las dos', () => {
+  const ambas = { rol: 'observador' as const, permisos: {} };
+  assert.deepEqual(lineasDeControl(ambas), ['ia', 'inversiones']);
+  assert.equal(veLineaEnControl(ambas, 'ia'), true);
+  assert.equal(veLineaEnControl(ambas, 'inversiones'), true);
+});
+
+test('sin el permiso control no ve ninguna linea, tenga la que tenga', () => {
+  // El alcance no reemplaza al permiso: son dos preguntas distintas.
+  const colab = { rol: 'colaborador' as const, permisos: {}, linea_control: 'ia' as const };
+  assert.deepEqual(lineasDeControl(colab), []);
+  assert.equal(veLineaEnControl(colab, 'ia'), false);
+});
+
+test('el administrador ve las dos aunque tenga una asignada por error', () => {
+  // Es administrador: puede('control') es true y sin linea propia ve todo. Con
+  // una linea cargada queda limitado igual, que es lo que se pidio.
+  const admin = { rol: 'administrador' as const, permisos: {} };
+  assert.deepEqual(lineasDeControl(admin), ['ia', 'inversiones']);
+});
+
+test('un proyecto sin linea cargada solo lo ve quien ve las dos', () => {
+  // Mostrarselo a un limitado seria filtrarle trabajo del otro negocio; es el
+  // unico lado del error que importa.
+  const seng = { rol: 'observador' as const, permisos: {}, linea_control: 'inversiones' as const };
+  const ambas = { rol: 'observador' as const, permisos: {} };
+  assert.equal(veLineaEnControl(seng, ''), false);
+  assert.equal(veLineaEnControl(seng, null), false);
+  assert.equal(veLineaEnControl(ambas, ''), true);
 });

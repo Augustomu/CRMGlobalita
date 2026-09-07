@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { origen, puede, type Clave, type Rol } from '@crm/core/permisos';
+import {
+  DETALLE_LINEA,
+  LINEAS,
+  NOMBRE_LINEA,
+  origen,
+  puede,
+  type Clave,
+  type LineaNegocio,
+  type Rol,
+} from '@crm/core/permisos';
 import { pb } from '../../lib/pocketbase';
 import type { LeadRecord, UsuarioRecord } from '../../lib/types';
 import { iniciales } from '../followup/ListaContactos';
@@ -128,6 +137,27 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
     setGuardando(true);
     try {
       const guardado = await pb.collection('users').update<UsuarioRecord>(usuario.id, { rol });
+      setUsuarios((us) => us.map((u) => (u.id === guardado.id ? guardado : u)));
+      onCambio();
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  /**
+   * A que negocio esta limitado su Control.
+   *
+   * Es un ALCANCE, no un permiso: los permisos son sí/no y esto elige entre dos
+   * negocios. Solo tiene sentido con el permiso de Control prendido, así que la
+   * fila aparece únicamente cuando lo tiene.
+   */
+  async function cambiarLinea(linea: LineaNegocio | '') {
+    if (!usuario) return;
+    setGuardando(true);
+    try {
+      const guardado = await pb
+        .collection('users')
+        .update<UsuarioRecord>(usuario.id, { linea_control: linea });
       setUsuarios((us) => us.map((u) => (u.id === guardado.id ? guardado : u)));
       onCambio();
     } finally {
@@ -288,6 +318,50 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
                 </div>
               ))}
 
+              {puede({ rol: usuario.rol as Rol, permisos: usuario.permisos ?? {} }, 'control') && (
+                <div className="colapsable">
+                  <div className="colapsable-cabecera" style={{ cursor: 'default' }}>
+                    <span className="colapsable-titulo">Qué negocio ve en Control</span>
+                    <span className="colapsable-resumen">
+                      {usuario.linea_control ? NOMBRE_LINEA[usuario.linea_control] : 'los dos'}
+                    </span>
+                  </div>
+                  <div className="colapsable-cuerpo">
+                    <span className="campo-ayuda">
+                      Control se le da a alguien de afuera del equipo de prospección, y hay dos
+                      negocios. El socio de un lado no tiene por qué ver los proyectos del otro.
+                    </span>
+                    <div className="permiso-fila">
+                      <span className="permiso-que">Los dos</span>
+                      <span className="permiso-detalle">Ve todo el trabajo, de las dos líneas.</span>
+                      <span className="permiso-origen" />
+                      <button
+                        type="button"
+                        className={`switch ${!usuario.linea_control ? 'switch-on' : ''}`}
+                        onClick={() => void cambiarLinea('')}
+                        disabled={guardando}
+                      >
+                        <span className="switch-punto" />
+                      </button>
+                    </div>
+                    {LINEAS.map((l) => (
+                      <div key={l} className="permiso-fila">
+                        <span className="permiso-que">{NOMBRE_LINEA[l]}</span>
+                        <span className="permiso-detalle">{DETALLE_LINEA[l]}</span>
+                        <span className="permiso-origen" />
+                        <button
+                          type="button"
+                          className={`switch ${usuario.linea_control === l ? 'switch-on' : ''}`}
+                          onClick={() => void cambiarLinea(l as LineaNegocio)}
+                          disabled={guardando}
+                        >
+                          <span className="switch-punto" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="colapsable">
                 <div className="colapsable-cabecera" style={{ cursor: 'default' }}>
                   <span className="colapsable-titulo">Leads asignados</span>

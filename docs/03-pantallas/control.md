@@ -64,3 +64,32 @@ la ficha y después no hay dónde agregarles nada. **Falta esa pantalla**, y sin
 ella los estados se quedan quietos y todo termina Congelado a los 30 días.
 
 Relacionadas: [[proyectos-y-estados]] · [[permisos]] · [[metricas]]
+
+## Un Control por negocio
+
+Control **no es un permiso normal**: no se lo dás a un colaborador cualquiera,
+se lo dás a alguien de **afuera** del equipo de prospección. Y hay dos afueras,
+porque hay dos negocios:
+
+| Línea | Nombre real | Cuentas |
+|---|---|---|
+| `ia` | **Globalita** | David, Alejandro, Edith, Francisco, Bruno |
+| `inversiones` | **SENG** | Alberto Córdoba |
+
+El socio de IT de Globalita no tiene por qué ver los proyectos de SENG, ni al
+revés. Por eso al permiso se le suma un **alcance**: `users.linea_control`.
+
+- Con `control` y **sin** línea → ve las dos, y elige cuál mirar con el switch
+  del header.
+- Con `control` y una línea → ve solo esa, y una pastilla dice cuál. No hay nada
+  que elegir: el filtro se aplicó **al leer**, no al dibujar, así que los datos
+  del otro negocio no llegan a su navegador.
+
+**No se resolvió con dos claves de permiso** (`controlIa`, `controlInversiones`):
+los permisos son sí/no y esto es un alcance. Con una tercera línea habría que
+tocar el código en vez de cargar un dato.
+
+La línea vive en la **cuenta**, y el proyecto y la reunión la heredan de ahí. Un
+proyecto sin cuenta —o una cuenta sin línea— solo lo ve quien ve las dos: dárselo
+a un limitado sería filtrarle trabajo del otro negocio, y ese es el único lado
+del error que importa.

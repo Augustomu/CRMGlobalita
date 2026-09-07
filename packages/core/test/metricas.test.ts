@@ -18,7 +18,7 @@ const r = (x: Partial<ReunionMedida> & { inicio: string }): ReunionMedida => ({
   id: 'r' + x.inicio, zona: 'America/Sao_Paulo', duracion_min: 30, estado: 'asistio',
   nombre: 'Alguien', cargo: 'Gerente', empresa: 'Vale',
   pais: 'Brasil', ciudad: 'São Paulo', industria: 'Minería',
-  cuenta: 'FR', genero: 'Francisco', nota: '', proyecto: '',
+  cuenta: 'FR', genero: 'Francisco', nota: '', proyecto: '', linea: 'ia',
   ...x,
 });
 
