@@ -10,14 +10,12 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import PocketBase from 'pocketbase';
+import { entrar, PB_URL } from './entrar.mjs';
 import { normalizarTelefono, codigoDePais } from '../../core/src/telefono.ts';
 import { huella } from '../../core/src/dedupe.ts';
 
 const APLICAR = process.argv.includes('--aplicar');
-const PB_URL = process.env.PB_URL || 'http://127.0.0.1:8090';
-const PB_USER = process.env.PB_USER || 'alberto@globalita.test';
-const PB_PASS = process.env.PB_PASS || 'demo12345';
+
 
 /** Prefijo telefonico -> pais. El prefijo no miente; la etiqueta del nombre si. */
 const POR_PREFIJO = [
@@ -206,9 +204,7 @@ if (!APLICAR) {
 }
 
 // ---------------------------------------------------------------- escritura
-const pb = new PocketBase(PB_URL);
-pb.autoCancellation(false);
-await pb.collection('users').authWithPassword(PB_USER, PB_PASS);
+const pb = await entrar();
 
 let creados = 0, actualizados = 0, marcados = 0;
 const fallados = [];

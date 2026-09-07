@@ -148,3 +148,42 @@ teléfono son idénticos y son dos personas. El importador los marca en
 
 Un contacto que falla no corta la importación: se anota cuál y por qué, y se
 sigue. Al final se listan los que quedaron afuera.
+
+---
+
+## Correr esto contra producción
+
+Los tres scripts entran por `entrar.mjs`. Contra la base local usan las
+credenciales de demo; contra producción **piden la clave por teclado**, sin eco
+y sin dejarla en el historial del shell.
+
+```bash
+PB_URL=https://crm.globalita.tech PB_USER=augusto.unzaga@outlook.com.ar \
+  node packages/db/recuperacion/importar-contactos.mjs            # simulacro
+```
+
+Sacando `PB_URL` vuelven a apuntar a la base local. **Todos son simulacro por
+defecto**: sin `--aplicar` no escriben nada, solo muestran lo que harían.
+
+El orden importa:
+
+1. `importar-calendar.mjs` — crea cuentas, perfiles y **leads**. Es la única
+   fuente que dice de qué cuenta salió cada persona.
+2. `importar-contactos.mjs` — agrega los perfiles del CSV de WhatsApp. Sin
+   leads: el CSV no sabe de qué cuenta vino cada uno.
+3. `detectar-duplicados.mjs --aplicar` — marca los que se pisan.
+4. La bandeja de duplicados del CRM, a mano. La fusión la decide una persona.
+
+Antes de escribir en producción, backup:
+
+```bash
+ssh root@45.90.108.64 'bash /opt/crm-globalita/backup.sh'
+bash deploy/traer-backup.sh 45.90.108.64
+```
+
+### Los CSV no están en el repo
+
+`gerentes.csv` y `consultores.csv` están en `.gitignore`: son 248 nombres y
+teléfonos de personas reales y el repositorio es público. Viven solo en la
+máquina de Augusto. Los ejemplos de este documento tienen los últimos dígitos
+tapados por la misma razón.

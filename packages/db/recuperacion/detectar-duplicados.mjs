@@ -12,17 +12,13 @@
 // dos personas distintas compartiendo un telefono (Mauricio Mantovani y Paul
 // Goris, +31 6 3179xxxx), y fusionarlas seria un error irreversible.
 
-import PocketBase from 'pocketbase';
+import { entrar, PB_URL } from './entrar.mjs';
 import { huella } from '../../core/src/dedupe.ts';
 
 const APLICAR = process.argv.includes('--aplicar');
-const PB_URL = process.env.PB_URL || 'http://127.0.0.1:8090';
-const PB_USER = process.env.PB_USER || 'alberto@globalita.test';
-const PB_PASS = process.env.PB_PASS || 'demo12345';
 
-const pb = new PocketBase(PB_URL);
-pb.autoCancellation(false);
-await pb.collection('users').authWithPassword(PB_USER, PB_PASS);
+
+const pb = await entrar();
 
 const todos = await pb.collection('perfil').getFullList({ sort: 'created' });
 
