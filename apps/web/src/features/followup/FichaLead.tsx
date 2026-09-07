@@ -6,6 +6,7 @@ import { pb } from '../../lib/pocketbase';
 import type { EnvioRecord, EtiquetaRecord, LeadRecord, PlantillaRecord, UsuarioRecord } from '../../lib/types';
 import { puedeEditar, puedeUsuario } from './useLeads';
 import { AbrirProyecto } from './AbrirProyecto';
+import { ProyectosDelLead } from './ProyectosDelLead';
 import { NOMBRE_SITUACION, iniciales } from './ListaContactos';
 import { EnviarMensaje, type Propuesta } from './EnviarMensaje';
 import { Colapsable, type Chip } from './Colapsable';
@@ -258,9 +259,7 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuar
         </div>
 
         <div className="ficha-botonera">
-          {puedeUsuario(usuario, 'control') && (
-            <AbrirProyecto lead={lead} puedeEditar={editable} />
-          )}
+          {editable && <AbrirProyecto lead={lead} puedeEditar={editable} />}
           {veLinks && linkPerfil && (
             <a className="boton-icono-26" href={linkPerfil} target="_blank" rel="noreferrer" title="Abrir perfil de LinkedIn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -400,6 +399,13 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuar
             <span className="campo-label">Origen</span>
             <input value={lead.lista || '—'} readOnly />
           </div>
+        </Colapsable>
+
+        {/* No se gatea con `control`: §7 dice que el colaborador abre y edita
+            los proyectos de SUS leads, y no tiene esa clave. Quien manda es
+            `editable`, que ya excluye al Observador. */}
+        <Colapsable titulo="Proyectos" abiertoPorDefecto={false}>
+          <ProyectosDelLead lead={lead} editable={editable} onCambio={onGuardado} />
         </Colapsable>
 
         <Colapsable titulo="Fecha de reunión">

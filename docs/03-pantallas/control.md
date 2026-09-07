@@ -56,12 +56,18 @@ piden**: `useLeads`, las plantillas y las etiquetas se le pasan `null`. Tiene
 links — si igual se bajaran, estarían en su navegador aunque ninguna pantalla los
 dibuje.
 
-## Lo que quedó afuera
+## Dónde se edita un proyecto
 
-El anexo describe la sección como solo lectura y no define cómo se cargan las
-notas, actualizaciones y acciones de un proyecto. Hoy se crean al abrirlo desde
-la ficha y después no hay dónde agregarles nada. **Falta esa pantalla**, y sin
-ella los estados se quedan quietos y todo termina Congelado a los 30 días.
+En la **ficha del lead**, en el bloque `Proyectos` — no en Control, que es solo
+lectura. Ahí se cambia el estado, se cargan actualizaciones, notas y próximas
+acciones, y se marcan hechas.
+
+Cualquier escritura mueve `ultimo_movimiento`, que es lo que **descongela**: no
+hay que acordarse de nada ni correr ningún proceso.
+
+El bloque **no se gatea con `control`**. El §7 dice que un colaborador abre y
+edita los proyectos de SUS leads, y los colaboradores no tienen esa clave: quien
+manda es si puede editar el lead, que ya deja afuera al Observador.
 
 Relacionadas: [[proyectos-y-estados]] · [[permisos]] · [[metricas]]
 

@@ -1759,3 +1759,34 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   flex-direction: column;
   gap: 4px;
 }
+
+/* --- proyectos en la ficha del lead ---------------------------------------
+   Control es solo lectura: acá se edita. Sin esto un proyecto no se puede
+   mover nunca y todos terminan Congelados a los 30 dias. */
+.proyectos-lead { display: flex; flex-direction: column; gap: 10px; }
+
+.proyecto-bloque {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: .5px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+.proyecto-cabecera { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.proyecto-carriles { display: flex; gap: 4px; flex-wrap: wrap; }
+.proyecto-alta { display: flex; flex-direction: column; gap: 6px; }
+.proyecto-alta-pie { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
+.proyecto-historial { display: flex; flex-direction: column; gap: 6px; }
+.proyecto-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: .5px solid var(--border);
+}
+.proyecto-item .panel-item-texto { flex: 1; min-width: 0; }
+.proyecto-item .boton-mini { flex-shrink: 0; }
+/* Una accion hecha se tacha en vez de desaparecer: el historial es el valor. */
+.proyecto-item-hecha { text-decoration: line-through; color: var(--hint); }
