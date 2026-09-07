@@ -6,13 +6,16 @@
    queda chico, así que los tamaños originales se multiplican por --escala-texto.
 
    Para agrandar o achicar TODA la interfaz, cambiá ese único número:
-     1     = idéntico al prototipo
-     1.45  = actual
-     1.4   = bastante más grande
+     1     = idéntico al prototipo (9-13 px)
+     1.2   = actual. El cuerpo queda en 13 px: los dos puntos que hacían falta
+             para leerlo cómodo, sin perder la densidad, que es lo que define
+             este diseño.
+     1.45  = se probó y quedó grande: el cuerpo iba a 16 px y entraban cinco
+             filas menos en la columna 1.
    ──────────────────────────────────────────────────────────────────────── */
 
 :root {
-  --escala-texto: 1.45;
+  --escala-texto: 1.2;
 
   --txt-micro: calc(7px  * var(--escala-texto));
   --txt-xs:    calc(9px  * var(--escala-texto));
@@ -44,7 +47,7 @@ html, body, #root { height: 100%; }
   gap: 12px;
   padding: 0 12px;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  border-bottom: .5px solid var(--border);
 }
 .header-marca { font-size: var(--txt-lg); color: var(--text); white-space: nowrap; }
 .header-tabs { display: flex; gap: 2px; }
@@ -150,7 +153,7 @@ html, body, #root { height: 100%; }
   white-space: nowrap;
   background: transparent;
   color: var(--muted);
-  border: 1px solid transparent;
+  border: .5px solid transparent;
   cursor: pointer;
   font-family: inherit;
   transition: background 150ms ease-out;
@@ -347,7 +350,7 @@ html, body, #root { height: 100%; }
   gap: 10px;
 }
 .ficha-pie {
-  border-top: 1px solid var(--border);
+  border-top: .5px solid var(--border);
   padding: 10px 16px;
   display: flex;
   align-items: center;
@@ -357,7 +360,7 @@ html, body, #root { height: 100%; }
 .ficha-pie .boton-principal { margin-left: auto; }
 
 /* ---------- bloques colapsables ---------- */
-.bloque { flex-shrink: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
+.bloque { flex-shrink: 0; border: .5px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
 .bloque-cabecera {
   width: 100%;
   display: flex;
@@ -378,7 +381,7 @@ html, body, #root { height: 100%; }
 .bloque-flecha { color: var(--hint); font-size: var(--txt-xs); }
 .bloque-cuerpo {
   padding: 10px 12px 12px;
-  border-top: 1px solid var(--border);
+  border-top: .5px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -405,7 +408,7 @@ html, body, #root { height: 100%; }
 input, textarea, .buscador {
   width: 100%;
   padding: 6px 8px;
-  border: 1px solid var(--border);
+  border: .5px solid var(--border);
   border-radius: 8px;
   background: var(--bg);
   color: var(--text);
@@ -430,7 +433,7 @@ textarea { resize: vertical; }
 .chip {
   padding: 2px 8px;
   border-radius: 8px;
-  border: 1px solid var(--border);
+  border: .5px solid var(--border);
   background: var(--bg);
   color: var(--muted);
   font-size: var(--txt-sm);
@@ -443,7 +446,7 @@ textarea { resize: vertical; }
 .pastilla {
   padding: 1px 7px;
   border-radius: 7px;
-  border: 1px solid var(--border);
+  border: .5px solid var(--border);
   background: var(--bg);
   font-size: var(--txt-sm);
   color: var(--muted);
@@ -462,7 +465,7 @@ textarea { resize: vertical; }
   font-family: inherit;
   font-weight: 600;
   cursor: pointer;
-  border: 1px solid var(--border);
+  border: .5px solid var(--border);
   background: var(--bg);
   color: var(--text);
   text-decoration: none;
@@ -492,7 +495,7 @@ textarea { resize: vertical; }
   gap: 12px;
   padding: 24px;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: .5px solid var(--border);
   border-radius: 14px;
 }
 .login-titulo { font-size: var(--txt-2xl); color: var(--text); }
@@ -512,7 +515,7 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .aviso-error {
   margin: 20px;
   padding: 14px;
-  border: 1px solid var(--error);
+  border: .5px solid var(--error);
   background: var(--error-light);
   border-radius: 12px;
   font-size: var(--txt-base);
@@ -528,7 +531,7 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .campo-chico { width: auto; min-width: 90px; }
 .campo-chico select {
   padding: 6px 8px;
-  border: 1px solid var(--border);
+  border: .5px solid var(--border);
   border-radius: 8px;
   background: var(--bg);
   color: var(--text);
@@ -563,7 +566,7 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   gap: 5px;
   flex-wrap: wrap;
   padding: 6px 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: .5px solid var(--border);
 }
 .envio-fila:last-child { border-bottom: none; }
 .envio-fecha { font-size: var(--txt-sm); color: var(--hint); font-variant-numeric: tabular-nums; }
@@ -693,7 +696,7 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .chip-campo-vacio { background: transparent; border-style: dashed; }
 .chip-campo-editando {
   background: var(--surface);
-  border: 1px solid var(--accent);
+  border: .5px solid var(--accent);
   align-items: center;
   cursor: default;
 }

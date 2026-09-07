@@ -101,7 +101,10 @@ export function Colapsable({
                   >
                     <span className="chip-campo-label">{c.label}</span>
                     <span className={c.valor ? 'chip-campo-valor' : 'chip-campo-placeholder'}>
-                      {c.valor || c.placeholder || c.label.toLowerCase()}
+                      {/* Un campo vacío NO repite su propio nombre: "EMAIL email"
+                          se lee como si el valor fuera "email". El prototipo usa
+                          `cargar` si se puede editar y `sin dato` si no. */}
+                      {c.valor || c.placeholder || (onEditar ? 'cargar' : 'sin dato')}
                     </span>
                   </button>
                 );
