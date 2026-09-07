@@ -9,17 +9,18 @@ etapa: 2
 
 Se deduce del país del lead:
 
-- **pt** — Brasil (BR), Mozambique (MZ)
-- **es** — Argentina, México (MX), Uruguay, Chile, Colombia, Perú, Paraguay, Bolivia, España
-- **en** — cualquier otro
+- **pt** — Brasil, Mozambique, Portugal, Angola.
+- **es** — toda América Latina hispanohablante y España.
+- **en** — default para cualquier otro país (no es una lista aparte que haya que mantener).
 
 Se aceptan **códigos ISO-2 y nombres completos**, porque los CSV llegan de las dos formas.
 
-El idioma es una **sugerencia**: el usuario puede cambiarlo al escribir.
+## El idioma es una sugerencia, con override guardado (D09)
 
-## Hueco conocido
+El lead tiene su propio campo `idioma`. Vacío = se usa la deducción por país. Cargado = manda, aunque el país diga otra cosa — resuelve al brasileño radicado en México, que con la sola inferencia se sugería mal para siempre. Se completa la primera vez que el usuario cambia el idioma al escribir.
 
-La lista `es` deja afuera a Ecuador, Venezuela, Centroamérica y a Portugal (que sí figura en [[normalizacion-telefono]]): todos caen en inglés. → [[D28-paises-faltantes]]
+## Países que faltaban (D28)
 
-El lead tampoco tiene campo `idioma` propio, así que un brasileño radicado en México se sugiere mal y no queda registrado el override. → [[D09-idioma-en-el-lead]]
+La lista original de `es` dejaba afuera a Ecuador, Venezuela y Centroamérica, y Portugal no estaba en ningún lado. Corregido: `pt` suma Portugal y Angola; `es` suma el resto de LATAM hispanohablante.
 
+→ `idiomaSugerido()` e `idiomaEfectivo()` en `packages/core/src/idioma.ts`, 9 tests en `packages/core/test/idioma.test.ts`

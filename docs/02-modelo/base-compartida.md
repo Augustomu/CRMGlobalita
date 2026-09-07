@@ -12,9 +12,11 @@ Tabla de todos los perfiles que **alguna** cuenta ya invitó, para que las cuent
 
 `duplicado_en` lista las otras cuentas que tienen el mismo perfil.
 
-## La decisión estructural más grande del proyecto
+## La decisión estructural más grande del proyecto — ya resuelta
 
-Esto repite casi todos los campos de [[lead]]. Con 27.000 perfiles y 1.500 leads activos, la relación entre las dos tablas define el esquema entero. → [[D01-base-compartida-vs-lead]] y [[D02-clave-de-dedupe]]
+Esto repetía casi todos los campos de [[lead]]. Quedó resuelto: la base compartida es la tabla **`perfil`**, y ya no es una tabla aparte que haya que sincronizar — es la identidad de la persona, compartida por las 10 cuentas. `duplicado_en[]` desapareció como campo: son los `lead` de ese mismo perfil, una consulta. → [[D01-base-compartida-vs-lead]], [[D02-clave-de-dedupe]]
+
+El teléfono también vive acá, no en el lead: es dato de la persona, no de la relación con una cuenta puntual. → [[D08-telefono-como-clave]]
 
 ## Pantalla
 

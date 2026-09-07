@@ -6,7 +6,7 @@ Esquema de PocketBase. Una migración por cambio, en `pb_migrations/`.
 
 | Colección | Qué guarda | Decisión |
 |---|---|---|
-| `perfil` | la persona: identidad y `no_contactar`. Una fila por ser humano | D01, D02, D33 |
+| `perfil` | la persona: identidad, teléfono y `no_contactar`. Una fila por ser humano | D01, D02, D08, D33 |
 | `lead` | la relación de trabajo entre una cuenta y un perfil | D01, D17 |
 | `cuenta` | los 10 slots de LinkedIn/WhatsApp | — |
 | `etiqueta` | catálogo libre | D04 |
@@ -22,6 +22,9 @@ Faltan las de etapas siguientes: `plantilla`, `reunion`, `lista`, `tarea`,
 - `perfil.slug` y `perfil.urn` son **únicos pero pueden estar vacíos** (índice parcial):
   un perfil puede llegar sin URL pública o sin URN, pero nunca dos con el mismo. → D02
 - `perfil.huella` es índice común, **no único**: sugiere duplicados, no los impide. → D02
+- `perfil.telefono` también es índice común, **no único**, por la misma razón: dos
+  perfiles pueden compartir un teléfono por error de carga y eso no debe bloquear
+  la escritura. → D08
 - `lead (perfil, cuenta)` es único: un solo lead por par. → D27
 - `lead (situacion, proximo_contacto)` es el índice de "¿a quién le toca hoy?". → D17
 

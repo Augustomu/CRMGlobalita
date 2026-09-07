@@ -12,11 +12,18 @@ Nada de acá sabe qué base de datos hay, ni si el envío lo dispara una persona
 | `cadencia.ts` | `docs/01-negocio/cadencia-r0-r8.md` | D15, D16, D17 |
 | `dedupe.ts` | `docs/04-decisiones/D02-clave-de-dedupe.md` | D01, D02 |
 | `permisos.ts` | `docs/01-negocio/permisos.md` | — |
+| `telefono.ts` | `docs/01-negocio/normalizacion-telefono.md` | D29, D08 |
+| `idioma.ts` | `docs/01-negocio/idioma-sugerido.md` | D09, D28 |
+| `ruteo.ts` | `docs/01-negocio/ruteo-whatsapp.md` | D08 |
+
+`telefono.ts` y `ruteo.ts` están acoplados a propósito: el teléfono vive en `perfil`
+(D08), así que `ruteo.ts` recibe el valor ya normalizado por `telefono.ts` y no
+vuelve a adivinar el país ni el formato.
 
 ## Qué falta y por qué
 
-`telefono.ts`, `idioma.ts` y `ruteo.ts` esperan a que se cierren D29, D28/D09 y D08.
-Implementarlos ahora sería adivinar.
+Nada pendiente de decisión en lo que ya existe. Los próximos módulos (`envio.ts`
+compuesto, `reglas.ts`, `metricas.ts`, `reunion.ts`) llegan con sus etapas.
 
 ## Correr los tests
 

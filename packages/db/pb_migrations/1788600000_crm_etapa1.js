@@ -119,6 +119,11 @@ migrate(
               txt('ciudad'),
               txt('resumen'),
               { name: 'foto', type: 'file', maxSelect: 1, maxSize: 5242880 },
+              // Telefono: identidad de la persona, no de la relacion (D08/D29).
+              // Un WhatsApp entrante se busca UNA vez aca, no por cada lead.
+              txt('telefono'),
+              txt('telefono_raw'),
+              bool('telefono_valido'),
               // Freno global: ninguna cuenta lo contacta nunca mas (D33).
               bool('no_contactar'),
               txt('no_contactar_motivo'),
@@ -131,6 +136,9 @@ migrate(
               "CREATE UNIQUE INDEX idx_perfil_slug ON perfil (slug) WHERE slug != ''",
               "CREATE UNIQUE INDEX idx_perfil_urn ON perfil (urn) WHERE urn != ''",
               'CREATE INDEX idx_perfil_huella ON perfil (huella)',
+              // NO unico: dos perfiles pueden compartir un telefono por error de
+              // carga (linea de recepcion, celular compartido). Sugiere, no fusiona.
+              "CREATE INDEX idx_perfil_telefono ON perfil (telefono) WHERE telefono != ''",
             ],
           },
           reglas,
@@ -172,8 +180,8 @@ migrate(
               txt('lista'),
               num('pagina_origen', { onlyInt: true }),
               bool('nota_r0'),
-              // Contacto propio de esta relacion
-              txt('telefono'),
+              // Contacto propio de esta relacion. El telefono vive en perfil (D08/D29):
+              // es identidad de la persona, no de esta cuenta.
               txt('email'),
               txt('email2'),
               txt('email3'),
