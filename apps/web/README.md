@@ -54,6 +54,18 @@ Esto es la primera pasada: funciona de verdad, pero no es el prototipo completo.
 
 No hay ningún botón que simule funcionar: lo que no está construido, no está puesto.
 
+## Tamaño del texto
+
+El prototipo está dibujado muy denso (9 a 13 px), que en pantallas reales queda
+chico. Los tamaños originales se conservan pero multiplicados por una variable.
+Para agrandar o achicar TODA la interfaz, cambiá un solo número en
+:
+
+
+
+Los altos fijos que acompañan al texto (header, avatares) usan la misma escala,
+así nada se desborda.
+
 ## Fidelidad al prototipo
 
 La maqueta sigue las medidas reales de `docs/prototipo/`: grid de filas en la

@@ -79,11 +79,25 @@ export function EnviarMensaje({ lead, plantillas, nonceEnviar, onRegistrado }: P
     setTexto(resuelto.hay ? resuelto.texto : '');
   }, [resuelto, tocado]);
 
-  // Se resetea la edición manual al cambiar de lead o de paso.
+  // Se resetea la edición manual al cambiar de paso.
   useEffect(() => {
     setTocado(false);
     setPlantillaId(undefined);
-  }, [lead.id, paso]);
+  }, [paso]);
+
+  /**
+   * Al cambiar de lead hay que volver a calcular el paso y el idioma: `useState`
+   * solo usa su valor inicial, así que sin esto el selector se queda con los del
+   * lead anterior y se puede registrar el R equivocado.
+   */
+  useEffect(() => {
+    setPaso(sugerido);
+    setIdioma(idiomaEfectivo({ pais: perfil?.pais ?? '' }));
+    setTocado(false);
+    setPlantillaId(undefined);
+    setError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lead.id]);
 
   const canal: Canal =
     paso === 'agradecimiento'

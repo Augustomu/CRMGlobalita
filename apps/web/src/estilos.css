@@ -1,5 +1,35 @@
 /* Estilos de la app. Regla 5 del CLAUDE.md: ningún color suelto — todo sale de
-   las variables de public/design-tokens.css (copia de docs/design/tokens.css). */
+   las variables de public/design-tokens.css (copia de docs/design/tokens.css).
+
+   ── Tamaño del texto ──────────────────────────────────────────────────────
+   El prototipo está dibujado muy denso (9 a 13 px). En pantallas reales eso
+   queda chico, así que los tamaños originales se multiplican por --escala-texto.
+
+   Para agrandar o achicar TODA la interfaz, cambiá ese único número:
+     1     = idéntico al prototipo
+     1.25  = actual
+     1.4   = bastante más grande
+   ──────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --escala-texto: 1.25;
+
+  --txt-micro: calc(7px  * var(--escala-texto));
+  --txt-xs:    calc(9px  * var(--escala-texto));
+  --txt-sm:    calc(10px * var(--escala-texto));
+  --txt-md:    calc(11px * var(--escala-texto));
+  --txt-base:  calc(12px * var(--escala-texto));
+  --txt-lg:    calc(13px * var(--escala-texto));
+  --txt-xl:    calc(14px * var(--escala-texto));
+  --txt-2xl:   calc(18px * var(--escala-texto));
+
+  /* Acompañan al texto para que no se desborde. */
+  --alto-header:   calc(44px * var(--escala-texto));
+  --avatar-chico:  calc(14px * var(--escala-texto));
+  --avatar-grande: calc(30px * var(--escala-texto));
+}
+
+body { font-size: var(--txt-base); }
 
 html, body, #root { height: 100%; }
 
@@ -7,7 +37,7 @@ html, body, #root { height: 100%; }
 
 /* ---------- header (§7.1: 44 px fijos, nada envuelve) ---------- */
 .header {
-  height: 44px;
+  height: var(--alto-header);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -16,14 +46,14 @@ html, body, #root { height: 100%; }
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
-.header-marca { font-size: 13px; color: var(--text); white-space: nowrap; }
+.header-marca { font-size: var(--txt-lg); color: var(--text); white-space: nowrap; }
 .header-tabs { display: flex; gap: 2px; }
 .header-derecha { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 
 .tab {
   padding: 0 11px;
-  font-size: 13px;
-  line-height: 42px;
+  font-size: var(--txt-lg);
+  line-height: calc(var(--alto-header) - 2px);
   border-bottom: 2px solid transparent;
   white-space: nowrap;
 }
@@ -61,7 +91,7 @@ html, body, #root { height: 100%; }
   padding: 0 8px;
   border: .5px solid var(--border);
   border-radius: 8px;
-  font-size: 12px;
+  font-size: var(--txt-base);
 }
 .boton-icono {
   width: 28px;
@@ -96,7 +126,7 @@ html, body, #root { height: 100%; }
 .chip-pastilla {
   padding: 1px 8px;
   border-radius: 10px;
-  font-size: 10px;
+  font-size: var(--txt-sm);
   font-weight: 500;
   white-space: nowrap;
   background: var(--surface);
@@ -115,7 +145,7 @@ html, body, #root { height: 100%; }
   gap: 5px;
   padding: 2px 9px 2px 4px;
   border-radius: 12px;
-  font-size: 10px;
+  font-size: var(--txt-sm);
   font-weight: 500;
   white-space: nowrap;
   background: transparent;
@@ -128,12 +158,12 @@ html, body, #root { height: 100%; }
 .chip-avatar:hover { background: var(--surface); }
 .chip-avatar-on { background: var(--surface); color: var(--text); border-color: var(--accent); font-weight: 600; }
 .avatar {
-  width: 14px;
-  height: 14px;
+  width: var(--avatar-chico);
+  height: var(--avatar-chico);
   border-radius: 50%;
   background: var(--muted);
   color: var(--surface);
-  font-size: 7px;
+  font-size: var(--txt-micro);
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -158,7 +188,7 @@ html, body, #root { height: 100%; }
   min-width: 0;
   padding: 2px 6px;
   border-radius: 10px;
-  font-size: 10px;
+  font-size: var(--txt-sm);
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -196,7 +226,7 @@ html, body, #root { height: 100%; }
 .fila-sin-leer { border-left: 3px solid var(--warning); padding-left: 9px; }
 .fila-arriba { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .fila-nombre {
-  font-size: 13px;
+  font-size: var(--txt-lg);
   font-weight: 500;
   color: var(--text);
   white-space: nowrap;
@@ -207,7 +237,7 @@ html, body, #root { height: 100%; }
 }
 .fila-on .fila-nombre { font-weight: 600; }
 .fila-duenio {
-  font-size: 9px;
+  font-size: var(--txt-xs);
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 8px;
@@ -220,7 +250,7 @@ html, body, #root { height: 100%; }
 .fila-nuevo { background: var(--badge-await); color: var(--badge-await-text); border-color: transparent; }
 .fila-abajo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .fila-cuenta, .fila-etapa, .fila-contacto {
-  font-size: 10px;
+  font-size: var(--txt-sm);
   color: var(--muted);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -232,7 +262,7 @@ html, body, #root { height: 100%; }
 .lista-pie {
   padding: 6px 10px;
   border-top: .5px solid var(--border);
-  font-size: 9px;
+  font-size: var(--txt-xs);
   color: var(--hint);
   font-variant-numeric: tabular-nums;
 }
@@ -257,13 +287,13 @@ html, body, #root { height: 100%; }
 }
 .popover-cabecera { display: flex; align-items: center; gap: 8px; }
 .popover-titulo {
-  font-size: 11px;
+  font-size: var(--txt-md);
   font-weight: 600;
   color: var(--text);
   text-transform: uppercase;
   letter-spacing: .05em;
 }
-.popover-conteo { font-size: 9px; color: var(--hint); font-variant-numeric: tabular-nums; }
+.popover-conteo { font-size: var(--txt-xs); color: var(--hint); font-variant-numeric: tabular-nums; }
 .popover-grupo {
   display: flex;
   flex-direction: column;
@@ -279,7 +309,7 @@ html, body, #root { height: 100%; }
   border: .5px solid var(--border);
   background: transparent;
   color: var(--muted);
-  font-size: 9px;
+  font-size: var(--txt-xs);
   cursor: pointer;
   font-family: inherit;
   white-space: nowrap;
@@ -298,7 +328,7 @@ html, body, #root { height: 100%; }
 }
 .ficha-titulo-fila { display: flex; align-items: center; gap: 8px; }
 .ficha-nombre {
-  font-size: 14px;
+  font-size: var(--txt-xl);
   font-weight: 600;
   color: var(--text);
   letter-spacing: -.01em;
@@ -327,7 +357,7 @@ html, body, #root { height: 100%; }
 .ficha-pie .boton-principal { margin-left: auto; }
 
 /* ---------- bloques colapsables ---------- */
-.bloque { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
+.bloque { flex-shrink: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
 .bloque-cabecera {
   width: 100%;
   display: flex;
@@ -338,14 +368,14 @@ html, body, #root { height: 100%; }
   border: none;
   cursor: pointer;
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--txt-md);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text);
 }
 .bloque-cabecera:hover { background: var(--accent-light); }
-.bloque-flecha { color: var(--hint); font-size: 9px; }
+.bloque-flecha { color: var(--hint); font-size: var(--txt-xs); }
 .bloque-cuerpo {
   padding: 10px 12px 12px;
   border-top: 1px solid var(--border);
@@ -357,20 +387,20 @@ html, body, #root { height: 100%; }
 /* ---------- campos ---------- */
 .campo { display: flex; flex-direction: column; gap: 3px; }
 .campo-label {
-  font-size: 9px;
+  font-size: var(--txt-xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--hint);
   font-weight: 600;
 }
-.campo-ayuda { font-size: 10px; color: var(--hint); }
+.campo-ayuda { font-size: var(--txt-sm); color: var(--hint); }
 .nota-tecnica {
-  font-size: 10px;
+  font-size: var(--txt-sm);
   color: var(--hint);
   border-left: 2px solid var(--border);
   padding-left: 8px;
 }
-.texto-largo { font-size: 12px; line-height: 1.55; color: var(--text); }
+.texto-largo { font-size: var(--txt-base); line-height: 1.55; color: var(--text); }
 
 input, textarea, .buscador {
   width: 100%;
@@ -379,7 +409,7 @@ input, textarea, .buscador {
   border-radius: 8px;
   background: var(--bg);
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--txt-base);
   font-family: inherit;
 }
 input:focus, textarea:focus { outline: none; border-color: var(--accent); }
@@ -390,7 +420,7 @@ textarea { resize: vertical; }
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--txt-md);
   color: var(--muted);
 }
 .filtro-check input { width: auto; }
@@ -403,7 +433,7 @@ textarea { resize: vertical; }
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--txt-sm);
   font-family: inherit;
   cursor: pointer;
 }
@@ -415,7 +445,7 @@ textarea { resize: vertical; }
   border-radius: 7px;
   border: 1px solid var(--border);
   background: var(--bg);
-  font-size: 10px;
+  font-size: var(--txt-sm);
   color: var(--muted);
   white-space: nowrap;
 }
@@ -428,7 +458,7 @@ textarea { resize: vertical; }
 .boton-principal, .boton-secundario, .boton-whatsapp {
   padding: 6px 12px;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: var(--txt-md);
   font-family: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -465,27 +495,27 @@ textarea { resize: vertical; }
   border: 1px solid var(--border);
   border-radius: 14px;
 }
-.login-titulo { font-size: 18px; color: var(--text); }
-.login-sub { font-size: 12px; color: var(--hint); margin-top: -8px; }
+.login-titulo { font-size: var(--txt-2xl); color: var(--text); }
+.login-sub { font-size: var(--txt-base); color: var(--hint); margin-top: -8px; }
 .login-error {
-  font-size: 11px;
+  font-size: var(--txt-md);
   color: var(--error);
   background: var(--error-light);
   padding: 6px 8px;
   border-radius: 8px;
 }
-.login-pista { font-size: 10px; color: var(--hint); line-height: 1.5; }
-code { font-family: ui-monospace, monospace; font-size: 10px; }
+.login-pista { font-size: var(--txt-sm); color: var(--hint); line-height: 1.5; }
+code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 
 /* ---------- varios ---------- */
-.vacio { padding: 16px; font-size: 12px; color: var(--hint); }
+.vacio { padding: 16px; font-size: var(--txt-base); color: var(--hint); }
 .aviso-error {
   margin: 20px;
   padding: 14px;
   border: 1px solid var(--error);
   background: var(--error-light);
   border-radius: 12px;
-  font-size: 12px;
+  font-size: var(--txt-base);
   color: var(--text);
   display: flex;
   flex-direction: column;
@@ -502,7 +532,7 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
   border-radius: 8px;
   background: var(--bg);
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--txt-base);
   font-family: inherit;
 }
 .enviar-acciones { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
@@ -519,7 +549,7 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
 
 /* §5.2: cuando falta el texto se avisa, no se inventa. */
 .aviso-suave {
-  font-size: 11px;
+  font-size: var(--txt-md);
   color: var(--warning);
   background: var(--warning-light);
   border-radius: 8px;
@@ -536,10 +566,10 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
   border-bottom: 1px solid var(--border);
 }
 .envio-fila:last-child { border-bottom: none; }
-.envio-fecha { font-size: 10px; color: var(--hint); font-variant-numeric: tabular-nums; }
+.envio-fecha { font-size: var(--txt-sm); color: var(--hint); font-variant-numeric: tabular-nums; }
 .envio-texto {
   flex-basis: 100%;
-  font-size: 11px;
+  font-size: var(--txt-md);
   color: var(--muted);
   line-height: 1.5;
   margin-top: 2px;
@@ -553,21 +583,21 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
   flex-wrap: wrap;
 }
 .ficha-avatar {
-  width: 30px;
-  height: 30px;
+  width: var(--avatar-grande);
+  height: var(--avatar-grande);
   flex-shrink: 0;
   border-radius: 50%;
   border: .5px dashed var(--border);
   background: var(--bg);
   color: var(--hint);
-  font-size: 10px;
+  font-size: var(--txt-sm);
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .ficha-cuenta {
-  font-size: 10px;
+  font-size: var(--txt-sm);
   font-weight: 700;
   letter-spacing: .04em;
   padding: 3px 7px;
@@ -586,7 +616,7 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
   border-radius: 8px;
   border: .5px solid var(--border);
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--txt-sm);
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
@@ -596,6 +626,9 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
 
 /* ---------- colapsable con chips editables (prototipo: Colapsable.dc.html) ---------- */
 .colapsable {
+  /* En una columna flex con scroll, los hijos se comprimen por defecto y el
+     contenido queda cortado. Cada bloque conserva su alto natural. */
+  flex-shrink: 0;
   background: var(--surface);
   border: .5px solid var(--border);
   border-radius: 12px;
@@ -615,9 +648,9 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
   transition: background 150ms ease-out;
 }
 .colapsable-cabecera:hover { background: var(--accent-light); }
-.colapsable-flecha { font-size: 9px; color: var(--hint); width: 10px; flex-shrink: 0; }
+.colapsable-flecha { font-size: var(--txt-xs); color: var(--hint); width: 10px; flex-shrink: 0; }
 .colapsable-titulo {
-  font-size: 11px;
+  font-size: var(--txt-md);
   font-weight: 600;
   color: var(--text);
   text-transform: uppercase;
@@ -626,7 +659,7 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
 }
 .colapsable-resumen {
   margin-left: auto;
-  font-size: 10px;
+  font-size: var(--txt-sm);
   color: var(--hint);
   font-variant-numeric: tabular-nums;
 }
@@ -671,10 +704,10 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
   border: none;
   border-radius: 6px;
   background: var(--bg);
-  font-size: 11px;
+  font-size: var(--txt-md);
 }
 .chip-campo-label {
-  font-size: 9px;
+  font-size: var(--txt-xs);
   text-transform: uppercase;
   letter-spacing: .04em;
   color: var(--hint);
@@ -684,18 +717,18 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
 }
 .chip-campo-editando .chip-campo-label { color: var(--accent); }
 .chip-campo-valor {
-  font-size: 11px;
+  font-size: var(--txt-md);
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.chip-campo-placeholder { font-size: 11px; color: var(--hint); white-space: nowrap; }
+.chip-campo-placeholder { font-size: var(--txt-md); color: var(--hint); white-space: nowrap; }
 
 .colapsable-bloque { display: flex; flex-direction: column; gap: 4px; }
 .colapsable-bloque-cabecera { display: flex; align-items: center; gap: 6px; }
 .colapsable-origen {
-  font-size: 9px;
+  font-size: var(--txt-xs);
   color: var(--hint);
   padding: 0 5px;
   border-radius: 8px;
@@ -703,7 +736,7 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
   white-space: nowrap;
 }
 .colapsable-texto {
-  font-size: 12px;
+  font-size: var(--txt-base);
   color: var(--text);
   line-height: 1.55;
   overflow-wrap: break-word;
@@ -714,7 +747,7 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
   padding: 8px 10px;
 }
 .colapsable-texto-vacio {
-  font-size: 11px;
+  font-size: var(--txt-md);
   color: var(--hint);
   border: .5px dashed var(--border);
   border-radius: 8px;
@@ -761,7 +794,7 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
   color: var(--muted);
   cursor: pointer;
   font-family: inherit;
-  font-size: 10px;
+  font-size: var(--txt-sm);
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
@@ -789,7 +822,7 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
 }
 .boton-deshacer svg { width: 13px; height: 13px; flex-shrink: 0; }
 .boton-deshacer span {
-  font-size: 10px;
+  font-size: var(--txt-sm);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -807,7 +840,7 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: var(--txt-sm);
   font-weight: 700;
   cursor: help;
 }
@@ -828,11 +861,11 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
   animation: om-abrir 140ms ease-out;
 }
 .ficha-info-fila { display: contents; }
-.ficha-info-valor { font-size: 11px; color: var(--text); font-variant-numeric: tabular-nums; }
+.ficha-info-valor { font-size: var(--txt-md); color: var(--text); font-variant-numeric: tabular-nums; }
 
 .ficha-etiquetas { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; min-width: 0; }
 .chip-etiqueta {
-  font-size: 10px;
+  font-size: var(--txt-sm);
   font-weight: 500;
   padding: 2px 8px;
   border-radius: 10px;
@@ -846,6 +879,7 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
 
 /* ---------- banner de propuesta (§5.10 punto 4) ---------- */
 .propuesta {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -857,7 +891,7 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
   animation: om-abrir 160ms ease-out;
 }
 .propuesta-tag {
-  font-size: 9px;
+  font-size: var(--txt-xs);
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 8px;
@@ -865,7 +899,7 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
   color: var(--surface);
   white-space: nowrap;
 }
-.propuesta-texto { font-size: 11px; color: var(--text); line-height: 1.5; flex: 1; min-width: 160px; }
+.propuesta-texto { font-size: var(--txt-md); color: var(--text); line-height: 1.5; flex: 1; min-width: 160px; }
 .propuesta-aceptar {
   height: 26px;
   padding: 0 11px;
@@ -873,7 +907,7 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
   border: none;
   background: var(--accent);
   color: var(--surface);
-  font-size: 10px;
+  font-size: var(--txt-sm);
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
@@ -886,7 +920,7 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
   border: .5px solid var(--border);
   background: var(--surface);
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--txt-sm);
   cursor: pointer;
   font-family: inherit;
   white-space: nowrap;

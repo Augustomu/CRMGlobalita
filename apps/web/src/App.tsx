@@ -14,8 +14,8 @@ export function App() {
   const { leads, cargando, error, recargar } = useLeads(auth.usuario);
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const [tema, setTema] = useState(0);
-  const plantillas = usePlantillas();
-  const catalogoEtiquetas = useEtiquetas();
+  const plantillas = usePlantillas(auth.usuario);
+  const catalogoEtiquetas = useEtiquetas(auth.usuario);
 
   useEffect(() => {
     document.body.className = TEMAS[tema]!;
