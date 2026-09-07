@@ -28,6 +28,18 @@ etapa: 4
 - Después de R8 sin respuesta la cadencia **termina** (queda en Fase 2 sin próximo paso automático).
 - Si el lead **responde** en cualquier punto, la cadencia automática se detiene y el seguimiento pasa a ser manual desde la ficha. → [[D17-estado-de-cadencia]]
 
+
+## Manual primero, automatico despues
+
+Hoy **la mayoria de los R se mandan a mano** desde la ficha. La cadencia es, antes que nada,
+un **motor de recordatorios**: calcula a quien le toca hoy, con que texto y en que idioma, y al
+enviar propone la proxima fecha y pone la etiqueta. Lo que el equipo necesita que pase siempre
+es eso: **que la fecha se mueva y que quede la etiqueta**.
+
+La automatizacion de envio es una capa encima, que hace exactamente lo mismo sin intervencion.
+La diferencia es solo quien aprieta el boton, nunca el calculo. Por eso [[vencimientos]] es una
+pantalla de primera linea y no un accesorio.
+
 ## De dónde sale el texto
 
 Un solo lugar de verdad: el [[plantilla|repositorio de mensajes]]. La automatización busca la plantilla cuyo nombre empieza con `R{n} · `. Si no existe, el paso **no tiene texto y hay que avisarlo, no inventarlo**. El nombre del paso en Automatizaciones es solo una etiqueta de ese panel.

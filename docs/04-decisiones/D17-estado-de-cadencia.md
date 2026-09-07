@@ -1,19 +1,43 @@
 ---
 tipo: decision
 seccion: "§3.2, §5.1"
-estado: abierta
+estado: cerrada
 impacto: 1-bloqueante
-recomendada: "Eje estado_cadencia separado de etapa"
+resuelta: "Dos ejes: etapa (dónde está) y situacion (qué hacer con él)"
 ---
 
 # D17 · `etapa` no alcanza como estado
 
-**Problema.** Un lead que responde sale de la cadencia pero su `etapa` sigue diciendo R3. Uno que terminó R8 "queda en Fase 2", igual que uno que recién entró. Uno cancelado esperando recontacto no tiene dónde vivir. No se puede distinguir "esperando R5" de "agotado".
+**Problema.** El lead guarda un solo dato de avance. Un lead que respondió sigue diciendo "R2", igual que uno que nunca contestó. Uno que agotó R8 dice "Fase 2", igual que uno que recién entra a Fase 2 y todavía tiene cuatro pasos por delante. Un cancelado esperando los 60 días no tiene dónde vivir.
 
-**Recomendación.** Dos ejes:
+**Decidido (2026-09-06).** Dos ejes independientes:
 
-- `etapa` = en qué paso está (R0…R8).
-- `estado_cadencia` = **activa** / **detenida_por_respuesta** / **pausada** / **agotada** / **cancelada_esperando_recontacto** / **fase_2**.
+- **`etapa`** — dónde está en el recorrido: R0…R8.
+- **`situacion`** — qué hay que hacer con él.
 
-Resuelve de paso [[D03-fecha-de-cancelacion]] y [[D04-fase-2-existe-dos-veces]]. Es la decisión que más consultas simplifica.
+## Las seis situaciones
 
+| Situación | Qué significa | ¿Sale algo automático? |
+|---|---|---|
+| `en_curso` | sigue la cadencia normalmente | sí, cuando vence |
+| `contesto` | respondió; el seguimiento pasa a ser manual | no |
+| `pausado` | frenado a propósito (por el paso o por el lead) | no |
+| `agotado` | terminó R8 sin respuesta | no |
+| `esperando_recontacto` | invitación cancelada; cumple los 60 días y vuelve como Recontacto | sí, al cumplirse la espera |
+| `descartado` | no target, o pidió no ser contactado | **nunca** |
+
+## Qué resuelve
+
+- **"¿A quién le toca hoy?"** pasa a ser una sola consulta: `situacion = en_curso AND proximo_contacto <= hoy`.
+- Los **cancelados** ya tienen dónde vivir, junto con `cancelada_en` de [[D03-fecha-de-cancelacion]].
+- **Fase 2** deja de ser una etapa y pasa a ser lo que realmente es: estar en R5–R8. Se muestra como chip en la interfaz, pero no es un estado aparte. → [[D04-fase-2-existe-dos-veces]]
+- **`descartado`** le da salida a los que no sirven, que hoy no la tienen. → [[D33-borrado-de-leads]]
+
+## `descartado` y `no_contactar`
+
+Son dos cosas distintas y hace falta tener las dos:
+
+- **`situacion = descartado`** es del [[D01-base-compartida-vs-lead|lead]]: esta cuenta no lo trabaja más. Lleva motivo (no target, empresa equivocada, pidió no ser contactado).
+- **`no_contactar`** es del **perfil**: nadie lo contacta, desde ninguna de las 10 cuentas, nunca. Se prende cuando la persona lo pide, y descarta todos sus leads de una.
+
+La etiqueta *No target* sigue existiendo para filtrar, pero la que manda es la situación: una etiqueta la puede sacar cualquiera, y no debería alcanzar para que alguien vuelva a la cola de reinvitación.
