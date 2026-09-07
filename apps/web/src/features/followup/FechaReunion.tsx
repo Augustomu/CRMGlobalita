@@ -147,9 +147,14 @@ export function FechaReunion({ lead, usuario, editable, onCambio }: Props) {
           <span className="campo-label">Próxima reunión</span>
           <div className="reunion-fila">
             <span className="venc-fecha">
+              {/* D23: la hora se muestra en la zona en que se agendó, no en la
+                  del navegador. Sin `timeZone` la pastilla de al lado decía
+                  "America/Argentina/Buenos_Aires" al lado de las 6:30 para una
+                  reunión de las 9:30: el cartel y la hora se contradecían. */}
               {new Date(proxima.inicio).toLocaleString('es-AR', {
                 dateStyle: 'short',
                 timeStyle: 'short',
+                timeZone: proxima.zona || ZONA,
               })}
             </span>
             <span className="pastilla">{proxima.duracion_min} min</span>
@@ -234,7 +239,11 @@ export function FechaReunion({ lead, usuario, editable, onCambio }: Props) {
           {pasadas.map((r) => (
             <div key={r.id} className="reunion-fila">
               <span className="envio-fecha">
-                {new Date(r.inicio).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
+                {new Date(r.inicio).toLocaleString('es-AR', {
+                  dateStyle: 'short',
+                  timeStyle: 'short',
+                  timeZone: r.zona || ZONA,
+                })}
               </span>
               <span
                 className={`pastilla ${

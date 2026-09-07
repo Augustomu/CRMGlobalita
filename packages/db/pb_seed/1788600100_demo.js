@@ -65,21 +65,27 @@ migrate(
     // 6 vinculadas de 10 slots. AMU con la sesion de WhatsApp caida: es el caso
     // que prueba los avisos (seccion 12 del manual).
     const cuentas = {};
+    //
+    // La linea va en la cuenta y el lead la hereda. Se carga ACA y no en la
+    // migracion 1788600800: esa corre ANTES del seed, asi que las cuentas que
+    // nacen aca no las alcanza, y una cuenta sin linea no la ve ningun
+    // observador limitado a un negocio.
     const slots = [
-      ['AL', 'Alberto Cordoba', 'activa', 'activa'],
-      ['DL', 'Diego Lamas', 'activa', 'activa'],
-      ['FR', 'Franco Ruiz', 'activa', 'activa'],
-      ['ED', 'Elena Duarte', 'activa', 'activa'],
-      ['AU', 'Augusto Unzaga', 'activa', 'activa'],
-      ['AMU', 'A. M. Unzaga', 'activa', 'caida'],
+      ['AL', 'Alberto Cordoba', 'activa', 'activa', 'inversiones'],
+      ['DL', 'Diego Lamas', 'activa', 'activa', 'ia'],
+      ['FR', 'Franco Ruiz', 'activa', 'activa', 'ia'],
+      ['ED', 'Elena Duarte', 'activa', 'activa', 'ia'],
+      ['AU', 'Augusto Unzaga', 'activa', 'activa', 'ia'],
+      ['AMU', 'A. M. Unzaga', 'activa', 'caida', 'ia'],
     ];
-    slots.forEach(([abrev, nombre_perfil, estado_sesion, sesion_wa], i) => {
+    slots.forEach(([abrev, nombre_perfil, estado_sesion, sesion_wa, linea_negocio], i) => {
       cuentas[abrev] = nuevo('cuenta', {
         abrev,
         nombre_perfil,
         slot: i + 1,
         estado_sesion,
         sesion_wa,
+        linea_negocio,
         cupo_diario: 40,
         objetivo_semanal: 200,
       });
@@ -235,13 +241,21 @@ migrate(
     for (const g of gente_demo) {
       const datosPerfil = Object.assign({ slug: '', urn: '' }, g.perfil);
       // La huella se calcula igual que en packages/core/src/dedupe.ts (D02).
-      const compactar = (s) =>
-        (s || '')
-          .normalize('NFD')
-          .replace(/\p{M}/gu, '')
-          .toLowerCase()
-          .replace(/[^a-z0-9\s]/g, ' ')
-          .replace(/\s+/g, '');
+      //
+      // Las tildes se sacan con una tabla y no con normalize('NFD'): el motor
+      // JS de PocketBase no implementa esa normalizacion —no falla, devuelve el
+      // texto igual— y la huella quedaba con acentos, asi que nunca iba a
+      // coincidir con la que calcula core al importar un CSV.
+      const ACENTOS = 'áàäâãÁÀÄÂÃéèëêÉÈËÊíìïîÍÌÏÎóòöôõÓÒÖÔÕúùüûÚÙÜÛñÑçÇ';
+      const LLANOS = 'aaaaaAAAAAeeeeEEEEiiiiIIIIoooooOOOOOuuuuUUUUnNcC';
+      const compactar = (s) => {
+        let r = '';
+        for (const c of String(s || '')) {
+          const i = ACENTOS.indexOf(c);
+          r += i >= 0 ? LLANOS[i] : c;
+        }
+        return r.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, '');
+      };
       datosPerfil.huella = `${compactar(g.perfil.nombre)}|${compactar(g.perfil.empresa)}`;
       const perfilId = nuevo('perfil', datosPerfil);
       perfiles[g.perfil.nombre] = perfilId;

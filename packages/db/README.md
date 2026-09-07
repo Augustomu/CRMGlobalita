@@ -36,7 +36,37 @@ npm run db:dev
 ```
 
 Crea `.pb/` (fuera de git), aplica las migraciones y arranca PocketBase en
-http://127.0.0.1:8090/_/ . Con `--seed` carga además los datos de demo del manual.
+http://127.0.0.1:8090/_/ . Con `--seed` carga además los datos de demo.
+
+## Los datos de demo
+
+```
+node packages/db/dev.mjs --reset --seed
+```
+
+Son inventados y sirven para mirar el diseño con la pantalla llena: 20 personas,
+21 leads, 13 proyectos y 32 reuniones, en `pb_seed/`.
+
+- `1788600100_demo.js` — los siete casos del manual (§12): uno por cada
+  combinación de los dos ejes de D17, más el nombre larguísimo que prueba el
+  truncado y la ficha a medio cargar.
+- `1788601000_control_demo.js` — los proyectos y reuniones de
+  `docs/prototipo/Control.dc.html`. **Las fechas se corren solas** al día en que
+  se corre el seed, así que la foto es siempre la misma: los congelados siguen
+  congelados y la reunión "de hoy" es hoy.
+
+Todos entran con la clave `demo12345`:
+
+| Usuario | Rol | Qué se mira con él |
+|---|---|---|
+| `alberto@globalita.test` | administrador | todo, las dos líneas de negocio |
+| `sofia@globalita.test` | colaborador | Follow-up con leads asignados |
+| `ignacio@globalita.test` | observador · Globalita | Control filtrado: 9 proyectos |
+| `renata@globalita.test` | observador · SENG | Control filtrado: 4 proyectos |
+
+Los dos observadores son el par que hace falta para comprobar que el alcance por
+línea de negocio se nota: cada uno ve su negocio y **los datos del otro ni
+siquiera llegan al navegador**.
 
 La primera vez pide crear un superusuario desde la consola web.
 
