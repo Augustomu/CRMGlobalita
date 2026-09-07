@@ -4,6 +4,7 @@ import { Login } from './features/auth/Login';
 import { useLeads, puedeUsuario } from './features/followup/useLeads';
 import { ListaContactos } from './features/followup/ListaContactos';
 import { FichaLead } from './features/followup/FichaLead';
+import { usePlantillas } from './features/followup/usePlantillas';
 
 const TEMAS = ['tema-claro', 'tema-oscuro', 'tema-noche'] as const;
 
@@ -12,6 +13,7 @@ export function App() {
   const { leads, cargando, error, recargar } = useLeads(auth.usuario);
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const [tema, setTema] = useState(0);
+  const plantillas = usePlantillas();
 
   useEffect(() => {
     document.body.className = TEMAS[tema]!;
@@ -79,7 +81,7 @@ export function App() {
               onSeleccionar={setSeleccionado}
             />
             {lead ? (
-              <FichaLead lead={lead} onGuardado={recargar} />
+              <FichaLead lead={lead} plantillas={plantillas} onGuardado={recargar} />
             ) : (
               <section className="ficha">
                 <p className="vacio">Elegí un lead de la lista.</p>

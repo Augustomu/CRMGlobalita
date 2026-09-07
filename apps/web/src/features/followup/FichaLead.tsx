@@ -3,8 +3,9 @@ import { tocaHoy } from '@crm/core/cadencia';
 import { idiomaEfectivo } from '@crm/core/idioma';
 import { linkWhatsApp } from '@crm/core/telefono';
 import { pb } from '../../lib/pocketbase';
-import type { LeadRecord } from '../../lib/types';
+import type { EnvioRecord, LeadRecord, PlantillaRecord } from '../../lib/types';
 import { NOMBRE_SITUACION } from './ListaContactos';
+import { EnviarMensaje } from './EnviarMensaje';
 
 const HOY = new Date().toISOString().slice(0, 10);
 
@@ -36,14 +37,36 @@ function borradorDe(lead: LeadRecord): Borrador {
   };
 }
 
-export function FichaLead({ lead, onGuardado }: { lead: LeadRecord; onGuardado: () => void }) {
+export function FichaLead({
+  lead,
+  plantillas,
+  onGuardado,
+}: {
+  lead: LeadRecord;
+  plantillas: PlantillaRecord[];
+  onGuardado: () => void;
+}) {
   const [borrador, setBorrador] = useState<Borrador>(() => borradorDe(lead));
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [envios, setEnvios] = useState<EnvioRecord[]>([]);
 
   useEffect(() => {
     setBorrador(borradorDe(lead));
     setError(null);
+  }, [lead.id, lead.updated]);
+
+  // El historial de envíos es la base de la analítica (§3.2); acá se muestra
+  // como lo que el equipo necesita ver: qué se mandó y cuándo.
+  useEffect(() => {
+    let vivo = true;
+    pb.collection('envio')
+      .getFullList<EnvioRecord>({ filter: `lead = "${lead.id}"`, sort: '-enviado_en' })
+      .then((r) => vivo && setEnvios(r))
+      .catch(() => vivo && setEnvios([]));
+    return () => {
+      vivo = false;
+    };
   }, [lead.id, lead.updated]);
 
   const p = lead.expand?.perfil;
@@ -208,6 +231,25 @@ export function FichaLead({ lead, onGuardado }: { lead: LeadRecord; onGuardado: 
               <span className="vacio">Sin etiquetas.</span>
             )}
           </div>
+        </Bloque>
+
+        <Bloque titulo="Enviar mensaje">
+          <EnviarMensaje lead={lead} plantillas={plantillas} onRegistrado={onGuardado} />
+        </Bloque>
+
+        <Bloque titulo={`Historial de envíos (${envios.length})`}>
+          {envios.length === 0 && <span className="vacio">Todavía no se registró ningún envío.</span>}
+          {envios.map((e) => (
+            <div key={e.id} className="envio-fila">
+              <span className="pastilla">{e.paso}</span>
+              <span className={`pastilla ${e.canal === 'whatsapp' ? 'pastilla-wa' : 'pastilla-li'}`}>
+                {e.canal}
+              </span>
+              <span className="pastilla">{e.idioma}</span>
+              <span className="envio-fecha">{String(e.enviado_en).slice(0, 10)}</span>
+              <p className="envio-texto">{e.texto}</p>
+            </div>
+          ))}
         </Bloque>
 
         <Bloque titulo="Nota">

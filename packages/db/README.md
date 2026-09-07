@@ -11,10 +11,11 @@ Esquema de PocketBase. Una migración por cambio, en `pb_migrations/`.
 | `cuenta` | los 10 slots de LinkedIn/WhatsApp | — |
 | `etiqueta` | catálogo libre | D04 |
 | `envio` | historial de envíos: la base de la analítica | §3.2 |
+| `plantilla` | el repositorio de mensajes, atado al paso por campo | D16 |
 | `configuracion` | esperas, cupos, zona horaria. Nunca constantes | CLAUDE.md regla 2 |
 | `users` | se le agregan rol, estado, permisos | §3.1 |
 
-Faltan las de etapas siguientes: `plantilla`, `reunion`, `lista`, `tarea`,
+Faltan las de etapas siguientes: `reunion`, `lista`, `tarea`,
 `chat_personal`, `entrante`, `regla`, `actividad`.
 
 ## Índices que importan

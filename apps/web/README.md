@@ -31,6 +31,11 @@ Entrar con `alberto@globalita.test` (administrador, ve los 8 leads) o
   el chip de idioma de `idiomaEfectivo()`, el botón de WhatsApp de `linkWhatsApp()`.
   Si no hay teléfono válido, se muestra **tachado con el motivo**, no oculto (§9.7).
 - **Los tres temas** (claro / oscuro / noche) desde `docs/design/tokens.css`.
+- **Enviar mensaje (Etapa 2).** Arma el texto desde el repositorio, con el idioma
+  sugerido y las variables ya resueltas; te lleva al chat real; y registra el envío
+  aplicando todo §5.10 de una. La próxima fecha **se propone**: hay un botón para
+  aceptarla y otro para registrar sin mover la fecha.
+- **Historial de envíos** del lead, con paso, canal, idioma y plantilla usada.
 
 ## Qué NO hay todavía, y por qué
 
@@ -43,7 +48,6 @@ Esto es la primera pasada: funciona de verdad, pero no es el prototipo completo.
 | Deshacer y log de ediciones | necesita la pila de `docs/02-modelo/deshacer-y-revertir.md` |
 | Aviso de cambios sin guardar | va junto con lo anterior |
 | Atajos de teclado | §9.1, transversal |
-| Enviar mensaje | necesita la colección `plantilla` y `envio.ts`, que son Etapa 2 |
 | Reunión y agenda | colección `reunion`, Etapa 3 |
 | Editar etiquetas | se muestran, todavía no se agregan ni se quitan desde acá |
 

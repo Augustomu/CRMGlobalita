@@ -293,3 +293,56 @@ code { font-family: ui-monospace, monospace; font-size: 10px; }
   flex-direction: column;
   gap: 6px;
 }
+
+/* ---------- enviar mensaje (§5.10) ---------- */
+.enviar { display: flex; flex-direction: column; gap: 8px; }
+.enviar-fila { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.campo-chico { width: auto; min-width: 90px; }
+.campo-chico select {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+}
+.enviar-acciones { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.enviar-registrar {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.pastilla-li { background: var(--brand-linkedin-light); color: var(--brand-linkedin); border-color: transparent; font-weight: 600; }
+.pastilla-wa { background: var(--success-light); color: var(--brand-whatsapp); border-color: transparent; font-weight: 600; }
+
+/* §5.2: cuando falta el texto se avisa, no se inventa. */
+.aviso-suave {
+  font-size: 11px;
+  color: var(--warning);
+  background: var(--warning-light);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+/* ---------- historial de envíos ---------- */
+.envio-fila {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.envio-fila:last-child { border-bottom: none; }
+.envio-fecha { font-size: 10px; color: var(--hint); font-variant-numeric: tabular-nums; }
+.envio-texto {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-top: 2px;
+}

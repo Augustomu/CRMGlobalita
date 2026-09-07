@@ -95,3 +95,26 @@ export interface LeadRecord {
   updated: string;
   expand?: LeadExpand;
 }
+
+export interface PlantillaRecord {
+  id: string;
+  nombre: string;
+  paso: string;
+  por_defecto: boolean;
+  textos: Partial<Record<'es' | 'pt' | 'en', string>>;
+  destacado: string;
+  orden: number;
+}
+
+export interface EnvioRecord {
+  id: string;
+  lead: string;
+  paso: string;
+  enviado_en: string;
+  canal: 'linkedin' | 'whatsapp';
+  plantilla: string;
+  idioma: 'es' | 'pt' | 'en';
+  texto: string;
+  a_mano: boolean;
+  created: string;
+}
