@@ -118,7 +118,7 @@ responde. **Si la bitácora no da 200, avisame antes de seguir.**
 
 ---
 
-## Paso 5 · Crear tu usuario administrador
+## Paso 5 · Crear los usuarios
 
 ```bash
 ssh -i ~/.ssh/bitacora_vps root@45.90.108.64 \
@@ -127,6 +127,19 @@ ssh -i ~/.ssh/bitacora_vps root@45.90.108.64 \
 
 Te pide mail y contraseña. **Esa clave no queda guardada en ningún archivo del
 proyecto** — anotala donde guardes tus contraseñas.
+
+**OJO: eso crea el superusuario del PANEL (`/_/`), no un usuario de la app.**
+Son dos cosas distintas:
+
+| Para | Colección | Dónde se entra |
+|---|---|---|
+| Administrar la base | `_superusers` | `/_/` |
+| Usar el CRM | `users` | la app |
+
+Para entrar al CRM hay que crear además un registro en `users` desde el panel
+(**Colecciones → users → Nuevo registro**), con `rol`, `estado: activo` y
+`verified` tildado. Sin eso, la pantalla de login rechaza todo: la colección
+está vacía.
 
 ---
 
