@@ -148,3 +148,34 @@ export function momentosDeAviso(inicioIso: string, avisos: AvisosReunion): { que
   // "asistió" (§5.11), y eso lo decide una persona.
   return salida.sort((a, b) => a.cuando.localeCompare(b.cuando));
 }
+
+/**
+ * El reloj de pared de un instante, en la zona en que ocurrió: `2026-04-24T17:00`.
+ *
+ * Hace falta porque la base guarda todo en UTC. Una reunión de las 17:00 en
+ * México vuelve como `2026-04-24 23:00:00Z`, y leer la hora del texto la manda
+ * a la franja equivocada; peor todavía, para las de la tarde la FECHA se corre
+ * un día. Es exactamente lo que D23 quería evitar, y solo se nota mirando los
+ * datos.
+ */
+export function enSuZona(instanteIso: string, zona: string): string {
+  const d = new Date(instanteIso.replace(' ', 'T'));
+  if (Number.isNaN(d.getTime())) return String(instanteIso).slice(0, 16);
+
+  try {
+    const partes = new Intl.DateTimeFormat('en-CA', {
+      timeZone: zona || 'UTC',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    }).formatToParts(d);
+
+    const v = (t: string) => partes.find((p) => p.type === t)?.value ?? '';
+    // `hour: '2-digit'` con hour12 falso devuelve 24 a medianoche en algunos
+    // motores; se normaliza para que la franja no caiga fuera de rango.
+    const hora = v('hour') === '24' ? '00' : v('hour');
+    return `${v('year')}-${v('month')}-${v('day')}T${hora}:${v('minute')}`;
+  } catch {
+    // Zona inválida: mejor el instante crudo que romper la pantalla.
+    return d.toISOString().slice(0, 16);
+  }
+}

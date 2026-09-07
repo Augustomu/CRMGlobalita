@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   AVISOS_POR_DEFECTO, descripcionEvento, finDe, momentosDeAviso, primeraReunion,
-  tituloEvento, verBloque,
+  tituloEvento, verBloque,  enSuZona,
 } from '../src/reunion.ts';
 
 test('el título del evento es "Lead / Cuenta / Vos", con solo el primer nombre de los dos últimos', () => {
@@ -84,4 +84,19 @@ test('§5.11 · sin recordatorio configurado, ese aviso no se programa', () => {
     recordatorio_horas: 0,
   });
   assert.deepEqual(m.map((x) => x.que), ['confirmacion', 'aviso']);
+});
+
+test('D23 · la hora se lee en la zona de la reunión, no en UTC', () => {
+  // La base guarda en UTC. Una reunión de las 17:00 en México vuelve como
+  // 23:00Z: leer el texto crudo la manda a la franja equivocada.
+  assert.equal(enSuZona('2026-04-24 23:00:00.000Z', 'America/Mexico_City'), '2026-04-24T17:00');
+});
+
+test('D23 · sin esto la fecha se corre un día', () => {
+  // 00:00Z del 15 es todavía el 14 a las 18:00 en México.
+  assert.equal(enSuZona('2026-05-15 00:00:00.000Z', 'America/Mexico_City'), '2026-05-14T18:00');
+});
+
+test('una zona inválida no rompe la pantalla', () => {
+  assert.equal(enSuZona('2026-05-15 00:00:00.000Z', 'No/Existe').slice(0, 10), '2026-05-15');
 });

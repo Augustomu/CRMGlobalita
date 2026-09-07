@@ -9,28 +9,58 @@ import { Vencimientos, leadsVencidos } from './features/vencimientos/Vencimiento
 import { Usuarios } from './features/usuarios/Usuarios';
 import { Repositorio } from './features/repositorio/Repositorio';
 import { useEtiquetas } from './features/followup/useEtiquetas';
+import { Control } from './features/control/Control';
+import { seccionInicial } from '@crm/core/permisos';
 import { Duplicados } from './features/duplicados/Duplicados';
 import { useDuplicados } from './features/duplicados/useDuplicados';
 
 const TEMAS = ['tema-claro', 'tema-oscuro', 'tema-noche'] as const;
 
+type Seccion = 'followup' | 'control' | 'usuarios';
+
 export function App() {
   const auth = useAuth();
-  const { leads, cargando, error, recargar } = useLeads(auth.usuario);
+
+  // Los datos de prospeccion solo se piden si el usuario tiene Follow-up.
+  // El Observador tiene verTodosLeads pero NO followup, y §7 dice que no ve
+  // telefonos, emails ni links: si igual se bajaran, estarian en su navegador
+  // aunque ninguna pantalla los dibuje.
+  const usuarioDeFollowup = puedeUsuario(auth.usuario, 'followup') ? auth.usuario : null;
+
+  const { leads, cargando, error, recargar } = useLeads(usuarioDeFollowup);
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const [tema, setTema] = useState(0);
   const [vencAbierto, setVencAbierto] = useState(false);
   const [repoAbierto, setRepoAbierto] = useState(false);
   const [dupAbierto, setDupAbierto] = useState(false);
-  const [seccion, setSeccion] = useState<'followup' | 'usuarios'>('followup');
-  const plantillas = usePlantillas(auth.usuario);
-  const catalogoEtiquetas = useEtiquetas(auth.usuario);
-  // Se carga siempre: el contador del header tiene que estar sin abrir nada.
-  const duplicados = useDuplicados(auth.usuario);
+  // §5.2: la primera seccion visible es la primera de la lista de permitidas,
+  // no Follow-up fijo. Al entrar, el Observador cae en Control.
+  const [seccion, setSeccion] = useState<Seccion | null>(null);
+  const plantillas = usePlantillas(usuarioDeFollowup);
+  const catalogoEtiquetas = useEtiquetas(usuarioDeFollowup);
+  // Se carga sin abrir nada, para el contador del header, pero solo para quien
+  // puede resolverlos.
+  const duplicados = useDuplicados(
+    puedeUsuario(auth.usuario, 'importarLeads') ? auth.usuario : null,
+  );
 
   useEffect(() => {
     document.body.className = TEMAS[tema]!;
   }, [tema]);
+
+  // Al entrar (o al cambiar de usuario) se elige la sección de arranque una vez.
+  // Si el usuario no tiene ninguna de las tres, queda en null y se le dice.
+  useEffect(() => {
+    if (!auth.usuario) {
+      setSeccion(null);
+      return;
+    }
+    const inicial = seccionInicial({
+      rol: auth.usuario.rol as never,
+      permisos: auth.usuario.permisos ?? {},
+    });
+    setSeccion(inicial === 'waPersonal' ? null : inicial);
+  }, [auth.usuario?.id]);
 
   // Si el lead seleccionado deja de estar en la lista (cambió el filtro o el
   // usuario), se cae a la primera fila en vez de quedar en una ficha fantasma.
@@ -56,6 +86,15 @@ export function App() {
               onClick={() => setSeccion('followup')}
             >
               Follow-up
+            </button>
+          )}
+          {puedeUsuario(auth.usuario, 'control') && (
+            <button
+              type="button"
+              className={`tab ${seccion === 'control' ? 'tab-on' : 'tab-off'}`}
+              onClick={() => setSeccion('control')}
+            >
+              Control
             </button>
           )}
           {puedeUsuario(auth.usuario, 'automatizaciones') && (
@@ -123,8 +162,8 @@ export function App() {
       </header>
 
       <main className="cuerpo">
-        {cargando && <p className="vacio">Cargando leads…</p>}
-        {error && (
+        {seccion !== 'control' && cargando && <p className="vacio">Cargando leads…</p>}
+        {seccion !== 'control' && error && (
           <div className="aviso-error">
             <strong>No se pudo leer la base.</strong>
             <p>{error}</p>
@@ -133,6 +172,8 @@ export function App() {
             </p>
           </div>
         )}
+        {seccion === 'control' && auth.usuario && <Control usuario={auth.usuario} />}
+
         {!cargando && !error && seccion === 'usuarios' && auth.usuario && (
           <Usuarios usuarioActual={auth.usuario} leads={leads} onCambio={recargar} />
         )}

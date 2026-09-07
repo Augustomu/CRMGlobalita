@@ -371,18 +371,22 @@ class Component extends DCLogic {
     { k: 'baseCompartida', que: 'Base compartida', detalle: 'Todos los perfiles ya invitados' },
     { k: 'cuentasConectadas', que: 'Cuentas conectadas', detalle: 'QR y vincular números' },
     { k: 'usuarios', que: 'Usuarios y permisos', detalle: 'Esta pantalla' },
+    { k: 'control', que: 'Control de proyectos', detalle: 'Proyectos, reuniones y prototipos, sin editar' },
+    { k: 'followup', que: 'Follow-up', detalle: 'Lista de leads y ficha' },
+    { k: 'waPersonal', que: 'WA Personal', detalle: 'Pestaña de amigos y familia' },
     { k: 'tareas', que: 'Tareas', detalle: 'Lista de tareas' },
     { k: 'agenda', que: 'Agenda', detalle: 'Sus reuniones y las del admin como ocupado' }
   ];
 
   static PORROL = {
     Administrador: { todo: true },
-    Colaborador: { tareas: true, agenda: true }
+    Colaborador: { tareas: true, agenda: true, followup: true, waPersonal: true },
+    Observador: { control: true, verTodosLeads: true }
   };
 
   static porRol(rol, k) {
     if (rol === 'Administrador') return true;
-    return !!(Component.PORROL.Colaborador || {})[k];
+    return !!(Component.PORROL[rol] || Component.PORROL.Colaborador || {})[k];
   }
 
   static puede(us, k) {
@@ -431,7 +435,7 @@ class Component extends DCLogic {
     const q = this.state.buscar.trim().toLowerCase();
     const ql = this.state.buscarLead.trim().toLowerCase();
     const chipDe = u => u.estado === 'activo'
-      ? { chip: u.rol === 'Administrador' ? 'Admin' : 'Colab', bg: u.rol === 'Administrador' ? 'var(--accent-light)' : 'var(--info-light)', fg: u.rol === 'Administrador' ? 'var(--accent)' : 'var(--muted)' }
+      ? { chip: u.rol === 'Administrador' ? 'Admin' : (u.rol === 'Observador' ? 'IT' : 'Colab'), bg: u.rol === 'Administrador' ? 'var(--accent-light)' : 'var(--info-light)', fg: u.rol === 'Administrador' ? 'var(--accent)' : 'var(--muted)' }
       : (u.estado === 'pendiente'
         ? { chip: 'pendiente', bg: 'var(--warning-light)', fg: 'var(--warning)' }
         : { chip: 'suspendido', bg: 'var(--error-light)', fg: 'var(--error)' });
@@ -515,7 +519,7 @@ class Component extends DCLogic {
         this.guardar(resto);
       },
 
-      roles: ['Administrador', 'Colaborador'].map(r => ({
+      roles: ['Administrador', 'Colaborador', 'Observador'].map(r => ({
         label: r,
         fondo: sel.rol === r ? 'var(--accent)' : 'var(--surface)',
         color: sel.rol === r ? 'var(--surface)' : 'var(--muted)',
@@ -523,7 +527,9 @@ class Component extends DCLogic {
       })),
       textoRol: esAdminSel
         ? 'Ve y edita todo: automatizaciones, base compartida, vencimientos, repositorio, cuentas conectadas y esta pantalla.'
-        : 'Entra solo a Follow-up y WA Personal, con tareas y agenda. Sin cola de envíos, sin automatizaciones, sin base compartida.',
+        : (sel.rol === 'Observador'
+          ? 'Solo lectura. Entra a Control de proyectos (proyectos, reuniones y prototipos) y a la agenda. No ve la prospección ni edita nada.'
+          : 'Entra solo a Follow-up y WA Personal, con tareas y agenda. Sin cola de envíos, sin automatizaciones, sin base compartida.'),
       selNombreCorto: (sel.nombre || '').split(' ')[0],
       hayOverrides: Object.keys((sel.permisos || {})).length > 0,
       volverAlRol: () => this.cambiar(sel.id, { permisos: {} }),
@@ -676,7 +682,7 @@ class Component extends DCLogic {
       fEmail: this.state.fEmail,
       setFNombre: e => this.setState({ fNombre: e.target.value }),
       setFEmail: e => this.setState({ fEmail: e.target.value }),
-      fRoles: ['Administrador', 'Colaborador'].map(r => ({
+      fRoles: ['Administrador', 'Colaborador', 'Observador'].map(r => ({
         label: r,
         fondo: this.state.fRol === r ? 'var(--accent)' : 'var(--surface)',
         color: this.state.fRol === r ? 'var(--surface)' : 'var(--muted)',

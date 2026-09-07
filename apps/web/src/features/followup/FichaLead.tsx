@@ -5,6 +5,7 @@ import { linkWhatsApp } from '@crm/core/telefono';
 import { pb } from '../../lib/pocketbase';
 import type { EnvioRecord, EtiquetaRecord, LeadRecord, PlantillaRecord, UsuarioRecord } from '../../lib/types';
 import { puedeEditar, puedeUsuario } from './useLeads';
+import { AbrirProyecto } from './AbrirProyecto';
 import { NOMBRE_SITUACION, iniciales } from './ListaContactos';
 import { EnviarMensaje, type Propuesta } from './EnviarMensaje';
 import { Colapsable, type Chip } from './Colapsable';
@@ -257,6 +258,9 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuar
         </div>
 
         <div className="ficha-botonera">
+          {puedeUsuario(usuario, 'control') && (
+            <AbrirProyecto lead={lead} puedeEditar={editable} />
+          )}
           {veLinks && linkPerfil && (
             <a className="boton-icono-26" href={linkPerfil} target="_blank" rel="noreferrer" title="Abrir perfil de LinkedIn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">

@@ -16,6 +16,8 @@ CRM de prospección saliente en LinkedIn y WhatsApp. Equipo de 1 administrador y
 - **Las pantallas** → carpeta `03-pantallas/`. Empezar por [[followup]].
 - **Lo que falta decidir** → carpeta `04-decisiones/`. Tablero acá abajo.
 - **Cómo se opera** → carpeta `05-operacion/`.
+- **Control de proyectos** → es un anexo posterior al manual: [[proyectos-y-estados]] (reglas),
+  [[control]] (pantalla) y `MANUAL-control-proyectos.md` con el texto original.
 - **El prototipo** → `prototipo/Dashboard.dc.html` es la entrada. Es la fuente de verdad **visual**; este vault es la fuente de verdad de las **reglas**.
 
 ## Tablero de decisiones abiertas
