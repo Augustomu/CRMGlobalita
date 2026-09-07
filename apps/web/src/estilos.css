@@ -925,3 +925,141 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   font-family: inherit;
   white-space: nowrap;
 }
+
+/* ---------- overlays (prototipo: Vencimientos.dc.html) ---------- */
+.overlay-fondo {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.overlay-caja {
+  width: calc(600px * var(--escala-texto));
+  max-width: 94vw;
+  max-height: 86vh;
+  background: var(--surface);
+  border: .5px solid var(--border);
+  border-radius: 12px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  animation: om-agendada 240ms cubic-bezier(.4, 0, .2, 1);
+}
+.overlay-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border-bottom: .5px solid var(--border);
+}
+.overlay-titulo { font-size: var(--txt-xl); font-weight: 500; color: var(--text); white-space: nowrap; }
+.overlay-progreso {
+  font-size: var(--txt-sm);
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--accent-light);
+  color: var(--accent);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.barra {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: .5px solid var(--border);
+  overflow: hidden;
+}
+.barra-avance { height: 100%; background: var(--accent); border-radius: 8px; transition: width 240ms ease-out; }
+
+.overlay-cuerpo {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.overlay-final { align-items: center; justify-content: center; text-align: center; padding: 36px 16px; }
+.overlay-pie {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: .5px solid var(--border);
+  background: var(--bg);
+}
+
+.venc-titulo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.venc-nombre { font-size: var(--txt-xl); font-weight: 600; color: var(--text); text-wrap: pretty; }
+.venc-vencimiento {
+  margin-left: auto;
+  font-size: var(--txt-sm);
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: var(--error-light);
+  color: var(--error);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.venc-tarjetas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.venc-tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: .5px solid var(--border);
+}
+.venc-tarjeta-acento { background: var(--accent-light); border-color: var(--accent-br); }
+.venc-tarjeta-acento .campo-label, .venc-tarjeta-acento .venc-fecha, .venc-tarjeta-acento .campo-ayuda {
+  color: var(--accent);
+}
+.venc-fecha { font-size: var(--txt-base); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.venc-mensaje-cabecera { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+.selector-idioma {
+  margin-left: auto;
+  display: flex;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.selector-idioma button {
+  height: 24px;
+  padding: 0 10px;
+  border: none;
+  font-size: var(--txt-sm);
+  cursor: pointer;
+  font-family: inherit;
+}
+.idioma-on { background: var(--accent); color: var(--surface); font-weight: 600; }
+.idioma-off { background: var(--surface); color: var(--muted); }
+.idioma-off:hover { background: var(--accent-light); color: var(--accent); }
+
+/* Badge del botón de vencimientos en el header. */
+.boton-badge { position: relative; }
+.badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--error);
+  color: var(--surface);
+  font-size: var(--txt-micro);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+}

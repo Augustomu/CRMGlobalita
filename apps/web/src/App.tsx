@@ -5,6 +5,7 @@ import { useLeads, puedeUsuario } from './features/followup/useLeads';
 import { ListaContactos } from './features/followup/ListaContactos';
 import { FichaLead } from './features/followup/FichaLead';
 import { usePlantillas } from './features/followup/usePlantillas';
+import { Vencimientos, leadsVencidos } from './features/vencimientos/Vencimientos';
 import { useEtiquetas } from './features/followup/useEtiquetas';
 
 const TEMAS = ['tema-claro', 'tema-oscuro', 'tema-noche'] as const;
@@ -14,6 +15,7 @@ export function App() {
   const { leads, cargando, error, recargar } = useLeads(auth.usuario);
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const [tema, setTema] = useState(0);
+  const [vencAbierto, setVencAbierto] = useState(false);
   const plantillas = usePlantillas(auth.usuario);
   const catalogoEtiquetas = useEtiquetas(auth.usuario);
 
@@ -31,6 +33,7 @@ export function App() {
   if (!auth.usuario) return <Login auth={auth} />;
 
   const lead = leads.find((l) => l.id === seleccionado) ?? null;
+  const nVencidos = leadsVencidos(leads).length;
 
   return (
     <div className="app">
@@ -47,6 +50,17 @@ export function App() {
         </nav>
 
         <div className="header-derecha">
+          {puedeUsuario(auth.usuario, 'vencimientos') && (
+            <button
+              type="button"
+              className="boton-secundario boton-badge"
+              onClick={() => setVencAbierto(true)}
+              title="Vencimientos de mensajes"
+            >
+              vencimientos
+              {nVencidos > 0 && <span className="badge">{nVencidos}</span>}
+            </button>
+          )}
           <span className="pastilla pastilla-suave">
             {auth.usuario.name} · {auth.usuario.rol}
           </span>
@@ -99,6 +113,15 @@ export function App() {
           </>
         )}
       </main>
+
+      {vencAbierto && (
+        <Vencimientos
+          leads={leads}
+          plantillas={plantillas}
+          onCerrar={() => setVencAbierto(false)}
+          onCambio={recargar}
+        />
+      )}
     </div>
   );
 }
