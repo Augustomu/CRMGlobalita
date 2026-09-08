@@ -5049,26 +5049,65 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 }
 .notif-vacio { font-size: var(--txt-md); color: var(--hint); padding: 14px 6px; text-align: center; }
 
-.overlay-cuentas { width: min(94vw, calc(720px * var(--escala-texto))); }
-.cc-lista { overflow-y: auto; padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 2px; }
-.cc-cabeza,
+/* El prototipo la dibuja angosta (380 px): son dos listas cortas, no una
+   tabla. Acá va un poco más ancha porque el nombre del perfil no se trunca. */
+.overlay-cuentas { width: min(94vw, calc(520px * var(--escala-texto))); }
+.cc-cuerpo { overflow-y: auto; padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 2px; }
+.cc-seccion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 2px 4px;
+  border-bottom: .5px solid var(--border);
+}
 .cc-fila {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1.4fr) 90px 90px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 42px minmax(0, 1fr) 84px minmax(0, 90px) auto;
+  gap: 8px;
   align-items: center;
-  padding: 7px 4px;
+  padding: 7px 2px;
+  border-bottom: .5px solid var(--border);
 }
-.cc-cabeza { border-bottom: .5px solid var(--border); }
-.cc-fila { border-bottom: .5px solid var(--border); }
 .cc-fila:hover { background: var(--bg); }
 .cc-perfil { font-size: var(--txt-md); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cc-estado { font-size: var(--txt-sm); font-weight: 600; }
+/* El punto de color hace que el estado se lea sin leer la palabra: con seis
+   cuentas, lo que se busca es la que está roja. */
+.cc-estado { font-size: var(--txt-sm); font-weight: 600; display: flex; align-items: center; gap: 5px; }
+.cc-punto { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.cc-punto-ok { background: var(--success); }
+.cc-punto-mal { background: var(--error); }
 .cc-ok { color: var(--success); }
 .cc-mal { color: var(--error); }
-.cc-tibio { color: var(--warning); }
-.cc-qr { font-size: var(--txt-xs); color: var(--hint); cursor: help; }
+.cc-detalle { font-size: var(--txt-xs); color: var(--hint); white-space: nowrap; }
 .cc-vacio { padding: 18px; text-align: center; color: var(--hint); font-size: var(--txt-md); }
+
+.cc-qr-panel {
+  margin-top: 10px;
+  padding: 10px;
+  border: .5px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.cc-qr-caja {
+  width: 140px;
+  height: 140px;
+  border: .5px dashed var(--border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: var(--txt-sm);
+  color: var(--hint);
+  line-height: 1.5;
+}
+/* La consecuencia, que es para lo que uno entra a esta pantalla. */
+.cc-resumen { font-size: var(--txt-md); color: var(--muted); line-height: 1.45; text-wrap: pretty; }
+.cc-resumen-alerta { color: var(--warning); font-weight: 500; }
 
 /* La barra de «viendo como»: no se puede perder de vista. */
 .vercomo {
