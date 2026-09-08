@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { resolverTexto } from '@crm/core/plantilla';
+import {
+  escribirAlcance,
+  leerAlcance,
+  nombreDeAlcance,
+  reordenar,
+  resolverTexto,
+  type Alcance,
+} from '@crm/core/plantilla';
 import type { Idioma } from '@crm/core/tipos';
 import { pb } from '../../lib/pocketbase';
 import type { PlantillaRecord } from '../../lib/types';
@@ -35,6 +42,13 @@ export function Repositorio({ onCerrar, onCambio }: Props) {
   const [sucio, setSucio] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Qué plantilla tiene abierto el selector de alcance del destacado. */
+  const [alcanceDe, setAlcanceDe] = useState<string | null>(null);
+  const [eligiendo, setEligiendo] = useState<string[]>([]);
+  /** El id que se está arrastrando, y sobre cuál está parado. */
+  const [arrastrando, setArrastrando] = useState<string | null>(null);
+  const [sobre, setSobre] = useState<string | null>(null);
+  const [cuentas, setCuentas] = useState<string[]>([]);
 
   async function recargar() {
     try {
@@ -48,7 +62,44 @@ export function Repositorio({ onCerrar, onCambio }: Props) {
 
   useEffect(() => {
     void recargar();
+    // Las abreviaturas del selector de alcance salen de la base: escribir la
+    // lista a mano la deja vieja en cuanto se suma una cuenta.
+    pb.collection('cuenta')
+      .getFullList<{ abrev: string }>({ sort: 'slot' })
+      .then((cs) => setCuentas(cs.map((c) => c.abrev)))
+      .catch(() => setCuentas([]));
   }, []);
+
+  async function guardarAlcance(id: string, a: Alcance) {
+    setAlcanceDe(null);
+    setEligiendo([]);
+    await pb.collection('plantilla').update(id, { destacado: escribirAlcance(a) });
+    await recargar();
+    onCambio();
+  }
+
+  /**
+   * Arrastrar dentro del grupo del paso.
+   *
+   * Se renumera el grupo entero y no el par que se cruza: guardando solo los
+   * dos quedan números repetidos y el orden pasa a decidirlo el desempate.
+   */
+  async function soltar(destinoId: string, delPaso: PlantillaRecord[]) {
+    const cambios = reordenar(delPaso, arrastrando ?? '', destinoId);
+    setArrastrando(null);
+    setSobre(null);
+    if (!cambios.length) return;
+    for (const c of cambios) await pb.collection('plantilla').update(c.id, { orden: c.orden });
+    await recargar();
+    onCambio();
+  }
+
+  async function borrar(id: string) {
+    await pb.collection('plantilla').delete(id);
+    if (seleccionada === id) setSeleccionada(null);
+    await recargar();
+    onCambio();
+  }
 
   const plantilla = plantillas.find((p) => p.id === seleccionada) ?? null;
 
@@ -174,20 +225,146 @@ export function Repositorio({ onCerrar, onCambio }: Props) {
                       +
                     </button>
                   </div>
-                  {delPaso.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className={`repo-item ${seleccionada === p.id ? 'repo-item-on' : ''}`}
-                      onClick={() => setSeleccionada(p.id)}
-                    >
-                      <span className="repo-nombre">{p.nombre}</span>
-                      <span className="repo-idiomas">
-                        {IDIOMAS.filter((i) => p.textos?.[i]).join(' ') || '—'}
-                      </span>
-                      {p.por_defecto && <span className="repo-defecto">★</span>}
-                    </button>
-                  ))}
+                  {delPaso.map((p) => {
+                    const alcance = leerAlcance(p.destacado);
+                    return (
+                      <div
+                        key={p.id}
+                        className={[
+                          'repo-item',
+                          seleccionada === p.id ? 'repo-item-on' : '',
+                          arrastrando === p.id ? 'repo-item-yendo' : '',
+                          sobre === p.id && arrastrando !== p.id ? 'repo-item-blanco' : '',
+                        ].join(' ')}
+                        draggable
+                        onDragStart={() => setArrastrando(p.id)}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          if (sobre !== p.id) setSobre(p.id);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          void soltar(p.id, delPaso);
+                        }}
+                        onDragEnd={() => {
+                          setArrastrando(null);
+                          setSobre(null);
+                        }}
+                        onClick={() => setSeleccionada(p.id)}
+                      >
+                        <span className="repo-agarre" title="Arrastrar para reordenar">
+                          &#10495;
+                        </span>
+                        <span className="repo-nombre">{p.nombre}</span>
+                        <span className="repo-idiomas">
+                          {IDIOMAS.filter((i) => p.textos?.[i]).join(' ') || '—'}
+                        </span>
+                        {p.por_defecto && (
+                          <span className="repo-defecto" title="La principal del paso (D16)">
+                            ★
+                          </span>
+                        )}
+                        <span className="relativo">
+                          <button
+                            type="button"
+                            className={
+                              alcance.tipo !== 'ninguno' ? 'repo-destacar repo-destacar-on' : 'repo-destacar'
+                            }
+                            title={
+                              alcance.tipo === 'ninguno'
+                                ? 'Destacar este mensaje'
+                                : 'Destacado en ' + nombreDeAlcance(alcance)
+                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAlcanceDe(alcanceDe === p.id ? null : p.id);
+                              setEligiendo(alcance.tipo === 'cuentas' ? alcance.cuentas : []);
+                            }}
+                          >
+                            ★
+                          </button>
+                          {alcanceDe === p.id && (
+                            <>
+                              <div
+                                className="popover-fondo"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setAlcanceDe(null);
+                                }}
+                              />
+                              <div
+                                className="popover popover-anclado repo-alcance"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <span className="campo-label">¿Para qué cuentas?</span>
+                                <button
+                                  type="button"
+                                  className="lot-opcion"
+                                  onClick={() => void guardarAlcance(p.id, { tipo: 'todas' })}
+                                >
+                                  Todas las cuentas
+                                  <span className="campo-ayuda al-final">{cuentas.length}</span>
+                                </button>
+                                <span className="campo-label">O elegí cuáles</span>
+                                <div className="chips">
+                                  {cuentas.map((c) => (
+                                    <button
+                                      key={c}
+                                      type="button"
+                                      className={eligiendo.includes(c) ? 'chip chip-on' : 'chip'}
+                                      onClick={() =>
+                                        setEligiendo((sel) =>
+                                          sel.includes(c) ? sel.filter((x) => x !== c) : [...sel, c],
+                                        )
+                                      }
+                                    >
+                                      {c}
+                                    </button>
+                                  ))}
+                                </div>
+                                <div className="repo-alcance-pie">
+                                  {alcance.tipo !== 'ninguno' && (
+                                    <button
+                                      type="button"
+                                      className="boton-mini"
+                                      onClick={() => void guardarAlcance(p.id, { tipo: 'ninguno' })}
+                                    >
+                                      Quitar destaque
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    className="boton-mini al-final"
+                                    disabled={!eligiendo.length}
+                                    onClick={() =>
+                                      void guardarAlcance(p.id, { tipo: 'cuentas', cuentas: eligiendo })
+                                    }
+                                  >
+                                    Aplicar
+                                  </button>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </span>
+                        {/* La principal del paso no se borra: dejaría el paso sin
+                            texto y la cadencia sin qué mandar (D16). */}
+                        {!p.por_defecto && (
+                          <button
+                            type="button"
+                            className="pet-icono pet-icono-borrar"
+                            title="Eliminar esta variante"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void borrar(p.id);
+                            }}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                   {delPaso.length === 0 && <span className="repo-vacio">sin plantilla</span>}
                 </div>
               );

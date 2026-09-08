@@ -74,6 +74,8 @@ export function Vencimientos({ leads, plantillas, onCerrar, onCambio }: Props) {
   const terminado = indice >= pendientes.length;
 
   const catalogo = useMemo(() => plantillas.map(aPlantilla), [plantillas]);
+  /** El idioma que sale del pais, contra el que se compara el elegido. */
+  const sugerido = idiomaEfectivo({ pais: perfil?.pais ?? '' });
   const paso = (lead ? siguientePaso(cfg, lead.etapa) ?? lead.etapa : 'R1') as Paso;
   const destacados = useMemo(() => plantillasDe(catalogo, paso), [catalogo, paso]);
 
@@ -266,6 +268,22 @@ export function Vencimientos({ leads, plantillas, onCerrar, onCambio }: Props) {
                 <span className="campo-label">Mensaje que toca</span>
                 <span className="pastilla">
                   {resuelto?.hay ? resuelto.plantilla.nombre : 'sin plantilla'}
+                </span>
+                {/* §7.7: el idioma se detecta por el país del perfil y se
+                    puede cambiar. El chip dice CUÁL se detectó y por qué, para
+                    que cambiarlo sea una decisión y no una corrección a ciegas.
+                    Cuando el elegido no es el detectado, se avisa: mandarle en
+                    español a un brasileño es el error que esta pantalla existe
+                    para no repetir 40 veces por día. */}
+                <span
+                  className={idioma === sugerido ? 'venc-idioma' : 'venc-idioma venc-idioma-cambiado'}
+                  title={
+                    perfil?.pais
+                      ? `Detectado por el país del perfil: ${perfil.pais}`
+                      : 'El perfil no tiene país cargado: se asume español'
+                  }
+                >
+                  {idioma === sugerido ? `detectado ${sugerido}` : `detectado ${sugerido} · vas a mandar ${idioma}`}
                 </span>
                 <div className="selector-idioma">
                   {IDIOMAS.map((i) => (

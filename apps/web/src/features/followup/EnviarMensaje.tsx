@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { CADENCIA_POR_DEFECTO, canalDe, siguientePaso } from '@crm/core/cadencia';
 import { planDeEnvio } from '@crm/core/envio';
 import { idiomaEfectivo } from '@crm/core/idioma';
-import { plantillasDe, resolverParaPaso, type Plantilla } from '@crm/core/plantilla';
+import {
+  estaDestacadaPara, plantillasDe, resolverParaPaso, type Plantilla } from '@crm/core/plantilla';
 import type { Canal, Idioma, Paso } from '@crm/core/tipos';
 import { pb } from '../../lib/pocketbase';
 import type { EnvioRecord, LeadRecord, PlantillaRecord } from '../../lib/types';
@@ -66,6 +67,16 @@ export function EnviarMensaje({ lead, plantillas, envios, nonceEnviar, onRegistr
 
   const catalogo = useMemo(() => plantillas.map(aPlantilla), [plantillas]);
   const delPaso = useMemo(() => plantillasDe(catalogo, paso), [catalogo, paso]);
+
+  /**
+   * Los destacados que valen para la cuenta de este lead.
+   *
+   * Se filtran por alcance, no se muestran todos: un destacado de otra cuenta
+   * en esta pantalla es un texto que no corresponde a esta conversación.
+   */
+  const destacados = plantillas.filter((p) =>
+    estaDestacadaPara(p.destacado, lead.expand?.cuenta?.abrev ?? ''),
+  );
 
   const resuelto = useMemo(
     () =>
@@ -249,6 +260,30 @@ export function EnviarMensaje({ lead, plantillas, envios, nonceEnviar, onRegistr
               title={p.por_defecto ? 'Por defecto' : 'Variante'}
             >
               {p.nombre}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* §7.2: los mensajes destacados de ESTA cuenta. Reemplazan el texto de
+          un clic. El alcance importa: AL trabaja directores financieros y ED
+          maquinaria, y un chip que aparece en la cuenta equivocada se usa una
+          vez, sale mal, y después nadie usa los chips. */}
+      {destacados.length > 0 && (
+        <div className="chips">
+          <span className="campo-label">Destacados</span>
+          {destacados.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className="chip chip-destacado"
+              title={`Reemplaza el texto con «${p.nombre}»`}
+              onClick={() => {
+                setTexto(p.textos?.[idioma] ?? p.textos?.es ?? '');
+                setTocado(true);
+              }}
+            >
+              ★ {p.nombre}
             </button>
           ))}
         </div>

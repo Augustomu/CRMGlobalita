@@ -1,7 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  plantillasDe, primerNombre, resolverParaPaso, resolverTexto, type Plantilla,
+  SIN_ALCANCE,
+  escribirAlcance,
+  estaDestacadaPara,
+  leerAlcance,
+  plantillasDe,
+  primerNombre,
+  reordenar,
+  resolverParaPaso,
+  resolverTexto,
+  type Plantilla,
 } from '../src/plantilla.ts';
 
 const plantillas: Plantilla[] = [
@@ -97,4 +106,51 @@ test('§5.2 · una plantilla sin ese idioma avisa, no cae a otro idioma en silen
   assert.equal(r.hay, false);
   assert.equal(r.hay === false && r.motivo, 'sin_idioma');
   assert.equal(r.hay === false && r.plantilla?.id, 'p-r3');
+});
+
+test('§7.2 · el alcance del destacado sobrevive a como este escrito', () => {
+  // Un dato de configuracion que se rompe porque alguien puso una mayuscula
+  // es un dato que va a estar roto.
+  assert.deepEqual(leerAlcance('todas las cuentas'), { tipo: 'todas' });
+  assert.deepEqual(leerAlcance('TODAS'), { tipo: 'todas' });
+  assert.deepEqual(leerAlcance('AL, dl'), { tipo: 'cuentas', cuentas: ['AL', 'DL'] });
+  assert.deepEqual(leerAlcance('AL,DL'), { tipo: 'cuentas', cuentas: ['AL', 'DL'] });
+  assert.deepEqual(leerAlcance(''), { tipo: 'ninguno' });
+  assert.deepEqual(leerAlcance(null), { tipo: 'ninguno' });
+});
+
+test('un destacado de una cuenta NO aparece en otra', () => {
+  // AL trabaja directores financieros y ED maquinaria: un chip que aparece en
+  // la cuenta equivocada se usa una vez, sale mal, y despues nadie usa los chips.
+  assert.equal(estaDestacadaPara('DL', 'DL'), true);
+  assert.equal(estaDestacadaPara('DL', 'AL'), false);
+  assert.equal(estaDestacadaPara('AL,DL', 'dl'), true);
+  assert.equal(estaDestacadaPara('todas', 'AL'), true);
+  assert.equal(estaDestacadaPara('', 'AL'), false);
+  // Sin cuenta activa, solo las de "todas": mostrar las de una cuenta
+  // cualquiera seria mostrar el chip de otro.
+  assert.equal(estaDestacadaPara('todas', ''), true);
+  assert.equal(estaDestacadaPara('DL', ''), false);
+});
+
+test('escribir y leer el alcance es ida y vuelta', () => {
+  for (const a of [SIN_ALCANCE, { tipo: 'todas' }, { tipo: 'cuentas', cuentas: ['AL', 'ED'] }] as const) {
+    assert.deepEqual(leerAlcance(escribirAlcance(a)), a);
+  }
+});
+
+test('reordenar renumera TODOS, no solo el par que se cruza', () => {
+  const lista = [
+    { id: 'a', orden: 1 },
+    { id: 'b', orden: 2 },
+    { id: 'c', orden: 3 },
+  ];
+  assert.deepEqual(reordenar(lista, 'c', 'a'), [
+    { id: 'c', orden: 1 },
+    { id: 'a', orden: 2 },
+    { id: 'b', orden: 3 },
+  ]);
+  // Soltar sobre si mismo no toca nada.
+  assert.deepEqual(reordenar(lista, 'a', 'a'), []);
+  assert.deepEqual(reordenar(lista, 'a', 'z'), []);
 });

@@ -4189,3 +4189,39 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   border-top: .5px solid var(--border);
   background: var(--bg);
 }
+
+/* ---------- repositorio: destacados, orden y baja (§7.9) ---------- */
+.repo-item { display: flex; align-items: center; gap: 6px; }
+.repo-agarre { color: var(--hint); cursor: grab; font-size: var(--txt-sm); line-height: 1; flex-shrink: 0; }
+.repo-item-yendo { opacity: .45; }
+/* El destino del arrastre se marca con una linea, no con un fondo: el fondo ya
+   lo usa el seleccionado y dos fondos distintos a la vez no se distinguen. */
+.repo-item-blanco { box-shadow: inset 0 -2px 0 var(--accent); }
+.repo-destacar {
+  border: none;
+  background: transparent;
+  color: var(--hint);
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: var(--txt-md);
+  line-height: 1;
+  flex-shrink: 0;
+}
+.repo-destacar-on { color: var(--accent); }
+.repo-alcance { width: 240px; display: flex; flex-direction: column; gap: 7px; }
+.repo-alcance-pie { display: flex; align-items: center; gap: 6px; padding-top: 6px; border-top: .5px solid var(--border); }
+.chip-destacado { border-color: var(--accent-br); color: var(--accent); }
+
+/* El chip de idioma detectado de Vencimientos (§7.7) */
+.venc-idioma {
+  font-size: var(--txt-xs);
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--hint);
+  white-space: nowrap;
+  cursor: help;
+}
+/* Cambiar el idioma a mano es legitimo, pero tiene que verse: mandarle en
+   espanol a un brasileno es el error que la pantalla existe para no repetir. */
+.venc-idioma-cambiado { background: var(--warning-light); color: var(--warning); font-weight: 600; }

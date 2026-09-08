@@ -133,3 +133,84 @@ export function resolverParaPaso(
 
   return { hay: true, plantilla: elegida, idioma, texto: resolverTexto(bruto, ctx, idioma) };
 }
+
+// ---------------------------------------------------------------- destacados
+//
+// Un mensaje destacado aparece como chip en «Enviar mensaje» y reemplaza el
+// texto de un clic. El ALCANCE dice para qué cuentas: no todas mandan lo mismo
+// —AL trabaja directores financieros y ED maquinaria— y un chip que aparece en
+// la cuenta equivocada se usa una vez, sale mal, y después nadie usa los chips.
+
+export type Alcance =
+  | { tipo: 'ninguno' }
+  | { tipo: 'todas' }
+  | { tipo: 'cuentas'; cuentas: string[] };
+
+export const SIN_ALCANCE: Alcance = { tipo: 'ninguno' };
+
+/** El texto que se guarda en `plantilla.destacado`. */
+export function escribirAlcance(a: Alcance): string {
+  if (a.tipo === 'ninguno') return '';
+  if (a.tipo === 'todas') return 'todas';
+  return a.cuentas.join(',');
+}
+
+/**
+ * Lee el alcance guardado.
+ *
+ * Tolera lo escrito a mano y lo viejo: «todas las cuentas», «TODAS», «AL, DL»
+ * con o sin espacios. Un dato de configuración que se rompe porque alguien
+ * puso una mayúscula es un dato que va a estar roto.
+ */
+export function leerAlcance(texto: string | null | undefined): Alcance {
+  const t = String(texto ?? '').trim();
+  if (!t) return SIN_ALCANCE;
+  if (/^todas/i.test(t)) return { tipo: 'todas' };
+  const cuentas = t
+    .split(',')
+    .map((c) => c.trim().toUpperCase())
+    .filter(Boolean);
+  return cuentas.length ? { tipo: 'cuentas', cuentas } : SIN_ALCANCE;
+}
+
+/** Cómo se lee el alcance en la pantalla. */
+export function nombreDeAlcance(a: Alcance): string {
+  if (a.tipo === 'ninguno') return '';
+  if (a.tipo === 'todas') return 'todas las cuentas';
+  return a.cuentas.join(', ');
+}
+
+/**
+ * Si esta plantilla se destaca en esa cuenta.
+ *
+ * Sin cuenta activa se muestran solo las de alcance «todas»: mostrar las de
+ * una cuenta cualquiera sería mostrar el chip de otro.
+ */
+export function estaDestacadaPara(destacado: string | null | undefined, cuentaAbrev: string): boolean {
+  const a = leerAlcance(destacado);
+  if (a.tipo === 'ninguno') return false;
+  if (a.tipo === 'todas') return true;
+  return Boolean(cuentaAbrev) && a.cuentas.includes(cuentaAbrev.trim().toUpperCase());
+}
+
+/**
+ * Mover un mensaje a la posición de otro.
+ *
+ * Devuelve el `orden` de TODOS, igual que las listas de invitación: guardando
+ * solo el par que se cruza, dos arrastres seguidos dejan números repetidos y
+ * el orden pasa a decidirlo el desempate, que no es lo que nadie eligió.
+ */
+export function reordenar(
+  lista: { id: string; orden?: number }[],
+  origenId: string,
+  destinoId: string,
+): { id: string; orden: number }[] {
+  if (origenId === destinoId) return [];
+  const orden = lista.slice().sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+  const i = orden.findIndex((m) => m.id === origenId);
+  const j = orden.findIndex((m) => m.id === destinoId);
+  if (i < 0 || j < 0) return [];
+  const [item] = orden.splice(i, 1);
+  orden.splice(j, 0, item);
+  return orden.map((m, k) => ({ id: m.id, orden: k + 1 }));
+}
