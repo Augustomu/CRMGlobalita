@@ -4275,3 +4275,20 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   flex-wrap: wrap;
 }
 .ctrl-leads-filtros .bc-buscar { max-width: 320px; }
+
+/* El bloque de otro calendario: gris, sin acento, sin cursor de arrastre.
+   Tiene que leerse como "acá no puedo", no como una reunion apagada. */
+.agenda-evento-ajeno {
+  border-left-color: var(--border);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--bg),
+    var(--bg) 5px,
+    var(--surface) 5px,
+    var(--surface) 10px
+  );
+  cursor: default;
+}
+.agenda-evento-ajeno .agenda-evento-hora,
+.agenda-evento-ajeno .agenda-evento-nombre { color: var(--hint); font-weight: 500; }
+.agenda-calendarios { margin-left: 4px; }

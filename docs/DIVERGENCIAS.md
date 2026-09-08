@@ -16,7 +16,38 @@ sección B.
 
 ## A · Lo que expone datos que no debería
 
-### A.1 · La agenda muestra las reuniones de todos, con nombre y empresa
+### A.1 · La agenda muestra las reuniones de todos — ✅ **resuelto el 08/09**
+
+Se resolvió con una **colección de vista** `ocupado`, que expone solo
+`id, calendario, inicio, duracion_min, zona`. Una regla de PocketBase no
+servía: las reglas filtran FILAS y acá hacía falta filtrar COLUMNAS — el
+colaborador tiene que recibir el horario y no el nombre.
+
+Ahora:
+
+- El colaborador pide `reunion` **con filtro** (`calendario = él || lead.asignado = él`), así que el detalle ajeno no le llega.
+- Los horarios de otro calendario salen de `ocupado`: verificado en la respuesta de red, no viene `nombre`, ni `perfil`, ni `expand`.
+- Se agregó el **switch de calendario** por administrador (§6.3, §8.6), y los bloques ajenos se dibujan grises, sin nombre, sin arrastre y sin tarjeta de hover.
+- La ficha también pedía todas las reuniones para calcular disponibilidad, y el registro trae `titulo_evento` —que lleva el nombre del lead adentro—, `invitado_email` e `invitados_copia`. Ahora usa la misma vista.
+
+### A.2 · El resto del alcance sigue siendo del lado del cliente
+
+Lo de arriba arregla la agenda y la ficha. **Las demás pantallas filtran
+después de recibir todo**, y eso sigue abierto:
+
+- `useControl` trae todos los proyectos y todas las reuniones y recién ahí
+  aplica el alcance por casa. Al partner de Seng le llegan los datos de
+  Globalita, aunque no los dibuje. El comentario del archivo dice que se filtra
+  «antes de que lleguen al navegador» y no es cierto.
+- `useLeads` trae todos los leads y filtra por asignación en el cliente.
+- `Automatizaciones` trae todas las reuniones y todos los envíos.
+
+La solución de fondo es la misma en los tres casos: reglas de `listRule` en
+las colecciones, o vistas como `ocupado` donde haga falta recortar columnas.
+No se hizo ahora porque cambiar `listRule` toca todas las pantallas a la vez y
+conviene hacerlo con las pantallas ya estables.
+
+### A.1-bis · Lo que decía este documento antes
 
 **Lo que dice el manual** (§6.3 y §8.6): la agenda de un colaborador muestra sus
 reuniones, más las de cada administrador **como bloques «Ocupado», sin nombre ni

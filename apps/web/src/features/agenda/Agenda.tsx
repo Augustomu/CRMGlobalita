@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { LeadRecord } from '../../lib/types';
+import type { UsuarioRecord, LeadRecord } from '../../lib/types';
 import { leadsConSeguimiento, useAgenda, type EventoAgenda } from './useAgenda';
 
 /**
@@ -61,6 +61,8 @@ function fechaLarga(iso: string): string {
 
 interface Props {
   leads: LeadRecord[];
+  /** Quién mira: decide qué reuniones ve con detalle y cuáles como «Ocupado». */
+  usuario: UsuarioRecord | null;
   onCerrar: () => void;
   onIrAlLead: (id: string) => void;
 }
@@ -71,8 +73,9 @@ interface Props {
  * Es un sidebar de Follow-up, no una sección: se abre al lado de la lista para
  * poder mirar la semana sin perder de vista en qué lead se estaba.
  */
-export function Agenda({ leads, onCerrar, onIrAlLead }: Props) {
-  const { eventos, cargando, error, mover, cambiarEstado } = useAgenda(true);
+export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
+  const { eventos, cargando, error, mover, cambiarEstado, calendarios, calendario, setCalendario } =
+    useAgenda(true, usuario);
   const [vista, setVista] = useState<Vista>('Semanal');
   const [offset, setOffset] = useState(0);
   const [arrastrando, setArrastrando] = useState<EventoAgenda | null>(null);
@@ -151,6 +154,29 @@ export function Agenda({ leads, onCerrar, onIrAlLead }: Props) {
             </button>
           ))}
         </div>
+
+        {/* §6.3: un ítem por administrador, más el propio. Solo aparece si
+            hay otro calendario que mirar — con un solo usuario sería un
+            control de una opción. */}
+        {calendarios.length > 1 && (
+          <div className="reunion-segmentado agenda-calendarios">
+            {calendarios.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={(calendario ?? usuario?.id) === c.id ? 'reunion-seg-on' : ''}
+                title={
+                  c.propio
+                    ? 'Tus reuniones, con todo el detalle'
+                    : 'Solo los horarios tomados: sin nombre ni empresa'
+                }
+                onClick={() => setCalendario(c.propio ? null : c.id)}
+              >
+                {c.propio ? 'Mío' : c.nombre.replace('Calendario de ', '')}
+              </button>
+            ))}
+          </div>
+        )}
 
         {vista === 'Lista' ? (
           // El filtro de check es una caja SIN TEXTO en tres estados. El title
@@ -388,6 +414,22 @@ function Evento({
   onEstado: (id: string, estado: string) => Promise<void>;
   onIrAlLead: (id: string) => void;
 }) {
+  // §6.3: el bloque de otro calendario dice CUÁNDO y nada más. No se arrastra
+  // —no es tuyo—, no abre ficha —no hay lead que abrir— y no tiene tarjeta de
+  // hover, porque no hay nada que mostrar ahí.
+  if (e.ajeno) {
+    return (
+      <div
+        className="agenda-evento agenda-evento-ajeno"
+        style={{ marginTop: `${desplazado}%` }}
+        title="Ocupado en ese calendario"
+      >
+        <span className="agenda-evento-hora tabular">{e.hora}</span>
+        <span className="agenda-evento-nombre">Ocupado</span>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`agenda-evento agenda-evento-${e.estado}`}

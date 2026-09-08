@@ -527,6 +527,7 @@ export function App() {
             {agendaAbierta && (
               <Agenda
                 leads={leads}
+                usuario={auth.usuario}
                 onCerrar={() => setAgendaAbierta(false)}
                 onIrAlLead={(id) => irA(() => setSeleccionado(id))}
               />

@@ -116,20 +116,36 @@ export function FechaReunion({
 
   async function recargar() {
     try {
-      const [mias, todas] = await Promise.all([
+      const [mias, ocupados] = await Promise.all([
         pb.collection('reunion').getFullList<ReunionRecord>({
           filter: `lead = "${lead.id}"`,
           sort: '-inicio',
         }),
-        // Las de los demás leads son las que ocupan la agenda. Mientras Google
-        // no esté conectado, esto es toda la disponibilidad que hay.
-        pb.collection('reunion').getFullList<ReunionRecord>({
-          filter: `lead != "${lead.id}" && estado != "cancelada"`,
+        // La disponibilidad sale de la vista `ocupado`, no de `reunion`.
+        //
+        // Para saber que un horario está tomado alcanza con la hora y la
+        // duración. Pidiendo la reunión entera venían además el título del
+        // evento —que lleva el nombre del lead adentro—, el mail del invitado y
+        // los de la copia: datos de gente que quien agenda no tiene por qué
+        // ver. La vista expone solo el horario.
+        pb.collection('ocupado').getFullList<{ id: string; inicio: string; zona: string; duracion_min: number }>({
           sort: 'inicio',
         }),
       ]);
       setReuniones(mias);
-      setOcupadas(todas);
+      // Las propias se sacan acá y no en el filtro: la vista no tiene columna
+      // `lead`, y agregársela volvería a atar cada horario a una persona.
+      const propias = new Set(mias.map((m) => m.id));
+      setOcupadas(
+        ocupados
+          .filter((o) => !propias.has(o.id))
+          .map((o) => ({
+            id: o.id,
+            inicio: o.inicio,
+            zona: o.zona,
+            duracion_min: o.duracion_min,
+          })) as unknown as ReunionRecord[],
+      );
     } catch {
       setReuniones([]);
       setOcupadas([]);
