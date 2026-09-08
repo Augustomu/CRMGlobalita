@@ -13,6 +13,7 @@ import {
   type ReglasDeReunion,
 } from '@crm/core/regla';
 import { pb } from '../../lib/pocketbase';
+import { useEscape } from '../../lib/useEscape';
 
 interface ConfigRecord {
   id: string;
@@ -58,6 +59,7 @@ function Chips({
  * sería peor que no tenerlo.
  */
 export function Reglas({ onCerrar }: Props) {
+  useEscape(onCerrar);
   const [reglas, setReglas] = useState<Regla[]>([]);
   const [config, setConfig] = useState<ConfigRecord | null>(null);
   const [creando, setCreando] = useState(false);
@@ -117,7 +119,7 @@ export function Reglas({ onCerrar }: Props) {
         accion,
         activa: true,
         de_fabrica: false,
-        corridas: 0,
+        corridas_semana: 0,
       });
       setCreando(false);
       setNombre('');
@@ -200,7 +202,11 @@ export function Reglas({ onCerrar }: Props) {
                   </span>
                 )}
                 <span className="campo-ayuda tabular al-final">
-                  {r.activa ? (r.corridas ? `${r.corridas} corridas` : 'sin correr aún') : 'apagada'}
+                  {r.activa
+                    ? r.corridas_semana
+                      ? `${r.corridas_semana} esta semana`
+                      : 'sin correr esta semana'
+                    : 'apagada'}
                 </span>
                 <button
                   type="button"

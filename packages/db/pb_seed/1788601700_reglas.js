@@ -12,7 +12,7 @@
 
 migrate(
   (app) => {
-    // id fijo, nombre, disparador, condicion, accion, activa, de_fabrica, corridas
+    // id fijo, nombre, disparador, condicion, accion, activa, de_fabrica, corridas de la semana
     const REGLAS = [
       [
         'Etiqueta «Contacto» sugiere el proximo R',
@@ -56,7 +56,7 @@ migrate(
       r.set('accion', accion);
       r.set('activa', activa);
       r.set('de_fabrica', fabrica);
-      r.set('corridas', corridas);
+      r.set('corridas_semana', corridas);
       app.save(r);
     }
   },

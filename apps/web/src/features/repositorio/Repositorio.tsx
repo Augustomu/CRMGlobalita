@@ -11,6 +11,7 @@ import {
 import type { Idioma } from '@crm/core/tipos';
 import { pb } from '../../lib/pocketbase';
 import { useAncho } from '../../lib/useAncho';
+import { useEscape } from '../../lib/useEscape';
 import type { PlantillaRecord } from '../../lib/types';
 
 const IDIOMAS: { k: Idioma; label: string }[] = [
@@ -89,11 +90,7 @@ export function Repositorio({ onCerrar, onCambio }: Props) {
       .catch(() => setCuentas([]));
   }, []);
 
-  useEffect(() => {
-    const f = (e: KeyboardEvent) => e.key === 'Escape' && !sucio && onCerrar();
-    document.addEventListener('keydown', f);
-    return () => document.removeEventListener('keydown', f);
-  }, [onCerrar, sucio]);
+  useEscape(onCerrar, sucio);
 
   const plantilla = plantillas.find((p) => p.id === abierta) ?? null;
 

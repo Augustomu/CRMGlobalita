@@ -53,7 +53,14 @@ export interface Regla {
    */
   de_fabrica: boolean;
   /** Cuántas veces corrió. Lo escribe el worker. */
-  corridas?: number;
+  /**
+   * Cuántas veces corrió ESTA SEMANA (§3.8: `corridas_semana`).
+   *
+   * El total acumulado no dice nada: una regla que corrió 4.000 veces desde
+   * marzo y ninguna desde el lunes se ve igual de viva que una que corre todos
+   * los días. Lo que se quiere saber es si está funcionando ahora.
+   */
+  corridas_semana?: number;
 }
 
 /**
@@ -64,7 +71,7 @@ export interface Regla {
  * están cableadas y cuáles no — desde el panel se ven todas las
  * automatizaciones que existen, y ésas dos además se pueden apagar.
  */
-export const DE_FABRICA: Omit<Regla, 'activa' | 'corridas'>[] = [
+export const DE_FABRICA: Omit<Regla, 'activa' | 'corridas_semana'>[] = [
   {
     id: 'sugerir-proximo-r',
     nombre: 'Etiqueta «Contacto» sugiere el próximo R',

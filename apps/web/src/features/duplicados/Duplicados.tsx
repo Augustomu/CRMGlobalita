@@ -6,6 +6,7 @@ import {
   type PerfilFusionable,
 } from '@crm/core/fusion';
 import { pb } from '../../lib/pocketbase';
+import { useEscape } from '../../lib/useEscape';
 import type { PerfilMarcado, useDuplicados } from './useDuplicados';
 
 /** Lo que se compara en pantalla, en el orden en que sirve mirarlo. */
@@ -79,11 +80,7 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
     setFallo(null);
   }, [grupo?.id]);
 
-  useEffect(() => {
-    const f = (e: KeyboardEvent) => e.key === 'Escape' && !trabajando && onCerrar();
-    document.addEventListener('keydown', f);
-    return () => document.removeEventListener('keydown', f);
-  }, [onCerrar, trabajando]);
+  useEscape(onCerrar, trabajando);
 
   const elegidos = useMemo(
     () => (grupo?.perfiles ?? []).filter((p) => !excluidos.includes(p.id)),

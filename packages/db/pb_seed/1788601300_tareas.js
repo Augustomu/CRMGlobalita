@@ -34,22 +34,26 @@ migrate(
     } catch (_) {}
 
     const TAREAS = [
-      // nombre, prioridad, dias hasta el vencimiento (null = sin fecha), hecha, notas, notifica, conLead
-      ['Preparar la propuesta de Opus CM', 5, -3, false, 'Pidieron alcance de una planta, no de las tres.', true, true],
-      ['Llamar a compras de Sao Paulo', 4, -1, false, '', true, false],
-      ['Revisar los 75 duplicados del import', 3, 0, false, 'Salieron de la recuperacion del Calendar.', true, false],
-      ['Mandar el caso de la planta de Cordoba', 5, 0, false, '', false, true],
-      ['Actualizar el repositorio con el R4 nuevo', 2, 2, false, '', false, false],
-      ['Pedir el QR de la cuenta AMU', 4, 3, false, 'La sesion de WhatsApp se cayo el martes.', true, false],
-      ['Armar el informe de septiembre', 3, 12, false, '', false, false],
-      ['Ver si Villagran responde antes del viernes', 1, 4, false, '', false, false],
-      ['Cargar los telefonos que faltan', 2, null, false, 'Solo el 12% de la base tiene telefono.', false, false],
-      ['Definir el tope diario por cuenta', 3, null, false, '', false, false],
-      ['Renovar el acceso a Sales Navigator', 5, -8, true, 'Ya esta pago hasta marzo.', false, false],
-      ['Escribir el mensaje de agradecimiento', 2, -5, true, '', false, false],
+      // nombre, prioridad, dias hasta el vencimiento (null = sin fecha), hecha, notas, notifica, conLead, etiquetas
+      //
+      // Las etiquetas son libres (§3.7) y se ven en la fila. No todas las
+      // tareas llevan: una lista donde todas tienen etiqueta no muestra que la
+      // columna puede estar vacia, que es el caso mas comun.
+      ['Preparar la propuesta de Opus CM', 5, -3, false, 'Pidieron alcance de una planta, no de las tres.', true, true, 'propuesta, AL'],
+      ['Llamar a compras de Sao Paulo', 4, -1, false, '', true, false, 'llamada'],
+      ['Revisar los 75 duplicados del import', 3, 0, false, 'Salieron de la recuperacion del Calendar.', true, false, 'datos'],
+      ['Mandar el caso de la planta de Cordoba', 5, 0, false, '', false, true, 'propuesta'],
+      ['Actualizar el repositorio con el R4 nuevo', 2, 2, false, '', false, false, 'mensajes'],
+      ['Pedir el QR de la cuenta AMU', 4, 3, false, 'La sesion de WhatsApp se cayo el martes.', true, false, 'cuentas, urgente'],
+      ['Armar el informe de septiembre', 3, 12, false, '', false, false, 'informe'],
+      ['Ver si Villagran responde antes del viernes', 1, 4, false, '', false, false, ''],
+      ['Cargar los telefonos que faltan', 2, null, false, 'Solo el 12% de la base tiene telefono.', false, false, 'datos'],
+      ['Definir el tope diario por cuenta', 3, null, false, '', false, false, ''],
+      ['Renovar el acceso a Sales Navigator', 5, -8, true, 'Ya esta pago hasta marzo.', false, false, 'cuentas'],
+      ['Escribir el mensaje de agradecimiento', 2, -5, true, '', false, false, 'mensajes'],
     ];
 
-    for (const [nombre, prioridad, dias, hecha, notas, notifica, conLead] of TAREAS) {
+    for (const [nombre, prioridad, dias, hecha, notas, notifica, conLead, etiquetas] of TAREAS) {
       const r = new Record(app.findCollectionByNameOrId('tarea'));
       r.set('nombre', nombre);
       r.set('prioridad', prioridad);
@@ -57,6 +61,7 @@ migrate(
       // El inicio es una semana antes del vencimiento, o nada si no vence.
       r.set('inicio', dias === null ? '' : mover(dias - 7));
       r.set('notas', notas);
+      r.set('etiquetas', etiquetas);
       r.set('notificar', notifica);
       r.set('hecha', hecha);
       r.set('usuario', usuario);

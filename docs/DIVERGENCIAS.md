@@ -275,15 +275,12 @@ El manual define `mensajes_li[]` y `mensajes_wa[]` en el lead, cada mensaje
 Es la misma falta que hace que el Análisis del perfil no pueda mostrar el texto
 del mensaje que trajo la respuesta. Las dos cosas se resuelven juntas.
 
-### D.4 · Enviar mensaje (§7.2)
+### D.4 · Enviar mensaje (§7.2) — ✅ **resuelto el 08/09**
 
-Faltan cuatro cosas del bloque:
-
-- Los chips de destacados **arrastrables para reordenar**.
-- **«Destacar mensajes»**: checklist sobre *todos* los mensajes del repositorio,
-  que guarda para la cuenta activa.
-- **«Guardar»**: crea el mensaje en el repositorio desde acá.
-- Después de guardar, preguntar si **cargarlo en otro idioma** y si destacarlo.
+Las cuatro están: los chips arrastrables, la checklist «+ destacados» que
+guarda **el delta** para la cuenta activa —tocar un mensaje destacado en otra
+cuenta no puede sacárselo—, «Guardar en el repositorio», y el panel que después
+pregunta por el otro idioma y por el destaque.
 
 ### D.5 · Agenda (§7.6) — ✅ **resuelto el 08/09**
 
@@ -333,14 +330,34 @@ todavía — y los bloques de OTRO calendario nunca van a llevar nombre, porque
   contiene. Medido: al observador le quedan exactamente los dos controles que
   §7.1 nombra, **tema y chip de usuario**.
 
-### D.7 · Detalles menores
+### D.7 · Detalles menores — ✅ **resuelto el 08/09**
 
-- **Tareas**: el manual (§3.7 y §7.10) las quiere con `etiquetas[]` en la fila.
-  El campo existe, no se dibuja.
-- **Actividad**: retención de 90 días (§3.10, decisión #14). No está.
-- **Regla**: el manual pide `corridas_semana`; hay `corridas` sin ventana.
-- **Usuarios de demo**: el manual nombra a Alejandro Ruiz como observador; el
-  seed tiene otros nombres.
+- **Tareas** con `etiquetas` en la fila (§3.7, §7.10). El campo existía y no se
+  dibujaba, así que una tarea etiquetada se veía igual que una sin etiquetar. Y
+  el seed no le ponía ninguna: ahora ocho de doce llevan, y cuatro no — una
+  lista donde todas tienen etiqueta no muestra que la columna puede estar
+  vacía, que es el caso más común.
+- **Actividad**: retención de 90 días (§3.10, decisión #14), en
+  `pb_hooks/retencion.pb.js`. Corre a las 3 de la mañana, dentro de PocketBase:
+  si dependiera de que alguien tenga el CRM abierto, la tabla crecería mientras
+  nadie mira, que es cuando más crece. Registra cuántas borró — un barrido
+  silencioso que un día borra de más no deja rastro de haber corrido.
+- **Regla**: `corridas` pasó a `corridas_semana` (§3.8), con su migración. El
+  acumulado no dice nada: una regla que corrió 4.000 veces desde marzo y
+  ninguna desde el lunes se ve igual de viva que una que corre todos los días.
+- **Usuarios de demo**: Alejandro Ruiz ya está en el seed como observador. El
+  punto estaba viejo.
+
+### D.8 · Y una que apareció escribiendo el panel de atajos
+
+El panel que lista los atajos prometía «Esc · cerrar el panel abierto», y
+Escape sólo cerraba **dos overlays de siete**. Una tecla que funciona a veces
+es peor que una que no funciona: se la aprende y después falla justo cuando se
+confía en ella.
+
+Ahora está en `lib/useEscape.ts` y la usan los seis: Tareas, Repositorio,
+Cuentas conectadas, Reglas, Base compartida y Duplicados. Con el mismo cuidado
+que ya tenía el repositorio: si hay cambios sin guardar, Escape no los tira.
 
 ---
 

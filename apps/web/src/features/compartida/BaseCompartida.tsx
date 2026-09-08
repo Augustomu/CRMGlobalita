@@ -11,6 +11,7 @@ import {
 } from '@crm/core/compartida';
 import { ddmm } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
+import { useEscape } from '../../lib/useEscape';
 
 interface LeadRecord {
   id: string;
@@ -78,6 +79,7 @@ interface Props {
  * es exactamente la forma de que la respuesta se pierda.
  */
 export function BaseCompartida({ onCerrar }: Props) {
+  useEscape(onCerrar);
   const [leads, setLeads] = useState<LeadRecord[]>([]);
   const [envios, setEnvios] = useState<EnvioRecord[]>([]);
   const [q, setQ] = useState('');

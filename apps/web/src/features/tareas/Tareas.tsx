@@ -13,6 +13,7 @@ import {
 } from '@crm/core/tarea';
 import { ddmm } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
+import { useEscape } from '../../lib/useEscape';
 import type { UsuarioRecord } from '../../lib/types';
 
 interface TareaRecord extends Tarea {
@@ -68,6 +69,7 @@ interface Props {
  * lo único que sirve una lista de pendientes.
  */
 export function Tareas({ usuario, onCerrar }: Props) {
+  useEscape(onCerrar);
   const [tareas, setTareas] = useState<TareaRecord[]>([]);
   const [filtro, setFiltro] = useState<FiltroTarea>('Abiertas');
   const [orden, setOrden] = useState<ClaveOrden[]>(['vencimiento']);
@@ -276,6 +278,21 @@ export function Tareas({ usuario, onCerrar }: Props) {
                 </span>
                 <span className="tarea-alerta" title={t.notificar ? 'Notifica al vencer' : 'Sin aviso'}>
                   {t.notificar ? '🔔' : ''}
+                </span>
+
+                {/* §3.7 y §7.10: las etiquetas van EN LA FILA. El campo existía
+                    y no se dibujaba, así que una tarea etiquetada se veía igual
+                    que una sin etiquetar y el filtro no tenía de dónde salir. */}
+                <span className="tarea-etiquetas">
+                  {String(t.etiquetas ?? '')
+                    .split(',')
+                    .map((x) => x.trim())
+                    .filter(Boolean)
+                    .map((x) => (
+                      <span key={x} className="chip-etiqueta">
+                        {x}
+                      </span>
+                    ))}
                 </span>
 
                 <Estrellas valor={t.prioridad} />

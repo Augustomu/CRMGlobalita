@@ -2777,7 +2777,18 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 }
 .tarea-fila {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) calc(46px * var(--escala-texto)) calc(46px * var(--escala-texto)) 16px 16px auto;
+  /* §7.10: check, nombre, fechas, vencimiento, etiquetas, alertas y prioridad
+     en columnas rectas. Con la fila libre, las fechas bailan según el largo del
+     nombre y no se pueden comparar de un vistazo. */
+  grid-template-columns:
+    18px
+    minmax(0, 1fr)
+    calc(46px * var(--escala-texto))
+    calc(46px * var(--escala-texto))
+    16px
+    16px
+    minmax(0, 0.9fr)
+    auto;
   gap: 8px;
   align-items: center;
   padding: 6px 2px;

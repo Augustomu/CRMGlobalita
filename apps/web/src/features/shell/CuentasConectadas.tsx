@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { pb } from '../../lib/pocketbase';
+import { useEscape } from '../../lib/useEscape';
 
 /**
  * Cuentas conectadas (§7.10): LinkedIn y WhatsApp por cuenta, con QR.
@@ -39,6 +40,7 @@ function tono(estado: string): string {
 }
 
 export function CuentasConectadas({ onCerrar }: { onCerrar: () => void }) {
+  useEscape(onCerrar);
   const [cuentas, setCuentas] = useState<CuentaRecord[]>([]);
   const [cargando, setCargando] = useState(true);
 
