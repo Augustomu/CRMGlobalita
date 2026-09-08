@@ -1,7 +1,8 @@
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { tocaHoy } from '@crm/core/cadencia';
 import type { LeadRecord, UsuarioRecord } from '../../lib/types';
 import { BurbujaWhatsApp } from './IconosCanal';
+import { pb } from '../../lib/pocketbase';
 
 const HOY = new Date().toISOString().slice(0, 10);
 
@@ -74,7 +75,61 @@ export function ListaContactos({
   const [cuenta, setCuenta] = useState('todas');
   const [colaborador, setColaborador] = useState('todos');
   const [soloVencidos, setSoloVencidos] = useState(false);
-  const [soloWa, setSoloWa] = useState(false);
+  // Los ocho filtros de §7.2. Los cuatro de abajo son listas que salen de los
+  // datos, no opciones fijas: el catálogo de roles y ciudades lo define la base.
+  const [wa, setWa] = useState<'todos' | 'con' | 'sin'>('todos');
+  const [reunion, setReunion] = useState<'todas' | 'con' | 'sin' | 'asistio' | 'no-asistio'>('todas');
+  const [orden, setOrden] = useState<'nuevo' | 'viejo'>('nuevo');
+  const [rol, setRol] = useState<string | null>(null);
+  const [pais, setPais] = useState<string | null>(null);
+  const [ciudad, setCiudad] = useState<string | null>(null);
+  const [etiqueta, setEtiqueta] = useState<string | null>(null);
+
+  /**
+   * La reunión de cada lead. Hace falta para dos cosas: el filtro por reunión y
+   * la fecha con color en la fila (§7.2, verde asistió / rojo no asistió).
+   *
+   * Se traen todas de una y se indexan, en vez de una consulta por lead: son
+   * pocas comparadas con los leads y así la lista no dispara N pedidos.
+   */
+  const [reuniones, setReuniones] = useState<Map<string, { inicio: string; zona: string; estado: string }>>(
+    new Map(),
+  );
+  useEffect(() => {
+    let vivo = true;
+    pb.collection('reunion')
+      .getFullList<{ lead: string; inicio: string; zona: string; estado: string }>({ sort: '-inicio' })
+      .then((rs) => {
+        if (!vivo) return;
+        const m = new Map<string, { inicio: string; zona: string; estado: string }>();
+        // Ordenadas de más nueva a más vieja: la primera de cada lead gana.
+        for (const r of rs) if (!m.has(r.lead)) m.set(r.lead, r);
+        setReuniones(m);
+      })
+      .catch(() => vivo && setReuniones(new Map()));
+    return () => {
+      vivo = false;
+    };
+  }, [leads]);
+
+  const reunionDe = useCallback((leadId: string) => reuniones.get(leadId) ?? null, [reuniones]);
+
+  /** Las opciones de rol, país, ciudad y etiqueta salen de los datos. */
+  const grupos = useMemo(() => {
+    const unicos = (vals: (string | undefined)[], vacio: string) =>
+      [...new Set(vals.map((v) => v || vacio))].sort((a, b) => a.localeCompare(b));
+    return [
+      { label: 'Rol', valor: rol, set: setRol, opciones: unicos(leads.map((l) => l.expand?.perfil?.cargo), 'sin cargo') },
+      { label: 'País', valor: pais, set: setPais, opciones: unicos(leads.map((l) => l.expand?.perfil?.pais), '—') },
+      { label: 'Ciudad', valor: ciudad, set: setCiudad, opciones: unicos(leads.map((l) => l.expand?.perfil?.ciudad), '—') },
+      {
+        label: 'Etiquetas',
+        valor: etiqueta,
+        set: setEtiqueta,
+        opciones: [...new Set(leads.flatMap((l) => (l.expand?.etiquetas ?? []).map((e) => e.nombre)))].sort(),
+      },
+    ];
+  }, [leads, rol, pais, ciudad, etiqueta]);
   const [filtrosAbierto, setFiltrosAbierto] = useState(false);
   const [pos, setPos] = useState({ left: 0, top: 0 });
   const botonFiltros = useRef<HTMLButtonElement>(null);
@@ -93,24 +148,55 @@ export function ListaContactos({
 
   const visibles = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
-    return leads.filter((l) => {
-      const p = l.expand?.perfil;
-      if (cuenta !== 'todas' && l.expand?.cuenta?.abrev !== cuenta) return false;
-      if (colaborador !== 'todos' && l.asignado !== colaborador) return false;
-      if (
-        soloVencidos &&
-        !tocaHoy({ situacion: l.situacion, proximo_contacto: l.proximo_contacto || null }, HOY)
-      ) {
-        return false;
-      }
-      if (soloWa && !p?.telefono_valido) return false;
-      if (!q) return true;
-      // §7.2: nombre, empresa, teléfono y ciudad.
-      return [p?.nombre, p?.empresa, p?.telefono, p?.ciudad]
-        .filter(Boolean)
-        .some((v) => String(v).toLowerCase().includes(q));
-    });
-  }, [leads, busqueda, cuenta, colaborador, soloVencidos, soloWa]);
+    return leads
+      .filter((l) => {
+        const p = l.expand?.perfil;
+        if (cuenta !== 'todas' && l.expand?.cuenta?.abrev !== cuenta) return false;
+        if (colaborador !== 'todos' && l.asignado !== colaborador) return false;
+        if (
+          soloVencidos &&
+          !tocaHoy({ situacion: l.situacion, proximo_contacto: l.proximo_contacto || null }, HOY)
+        ) {
+          return false;
+        }
+        // El teléfono decide, no el permiso: si el filtro dependiera de
+        // `veTelefono` daría resultados distintos según quién mira.
+        const tieneWa = Boolean(p?.telefono_valido);
+        if (wa === 'con' && !tieneWa) return false;
+        if (wa === 'sin' && tieneWa) return false;
+
+        const r = reunionDe(l.id);
+        if (reunion === 'con' && !r) return false;
+        if (reunion === 'sin' && r) return false;
+        if (reunion === 'asistio' && r?.estado !== 'asistio') return false;
+        if (reunion === 'no-asistio' && r?.estado !== 'no-asistio') return false;
+
+        // Los cuatro por valor. El vacío tiene su propia opción —«sin cargo»,
+        // «—»— para poder buscar justamente lo que falta, que en esta base es
+        // la mayoría.
+        if (rol && (p?.cargo || 'sin cargo') !== rol) return false;
+        if (pais && (p?.pais || '—') !== pais) return false;
+        if (ciudad && (p?.ciudad || '—') !== ciudad) return false;
+        if (etiqueta && !(l.expand?.etiquetas ?? []).some((e) => e.nombre === etiqueta)) return false;
+
+        if (!q) return true;
+        // §7.2: nombre, empresa, teléfono y ciudad.
+        return [p?.nombre, p?.empresa, p?.telefono, p?.ciudad]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(q));
+      })
+      // Los vencidos primero SIEMPRE; dentro de cada grupo manda el orden
+      // elegido. Es del prototipo: lo que ya venció no puede quedar sepultado
+      // abajo porque alguien cambió el orden.
+      .sort((a, b) => {
+        const x = a.proximo_contacto || '9999';
+        const y = b.proximo_contacto || '9999';
+        const venA = x < HOY ? 0 : 1;
+        const venB = y < HOY ? 0 : 1;
+        if (venA !== venB) return venA - venB;
+        return orden === 'nuevo' ? y.localeCompare(x) : x.localeCompare(y);
+      });
+  }, [leads, busqueda, cuenta, colaborador, soloVencidos, wa, reunion, rol, pais, ciudad, etiqueta, orden, reunionDe]);
 
   // §7.2: los últimos leads editados, como accesos rápidos.
   const ultimos = useMemo(
@@ -118,8 +204,29 @@ export function ListaContactos({
     [leads],
   );
 
+  // Cuántos filtros hay puestos, para el número del botón (§7.2). El ORDEN no
+  // cuenta: siempre hay uno elegido, así que sumarlo daría "1 filtro" con la
+  // lista entera a la vista.
   const nFiltros =
-    (cuenta !== 'todas' ? 1 : 0) + (colaborador !== 'todos' ? 1 : 0) + (soloVencidos ? 1 : 0) + (soloWa ? 1 : 0);
+    (cuenta !== 'todas' ? 1 : 0) +
+    (colaborador !== 'todos' ? 1 : 0) +
+    (soloVencidos ? 1 : 0) +
+    (wa !== 'todos' ? 1 : 0) +
+    (reunion !== 'todas' ? 1 : 0) +
+    [rol, pais, ciudad, etiqueta].filter(Boolean).length;
+
+  /** Deja todo como al entrar. */
+  function limpiarFiltros() {
+    setCuenta('todas');
+    setColaborador('todos');
+    setSoloVencidos(false);
+    setWa('todos');
+    setReunion('todas');
+    setRol(null);
+    setPais(null);
+    setCiudad(null);
+    setEtiqueta(null);
+  }
 
   // §9.5: el popover se posiciona con coordenadas calculadas desde el botón,
   // para que no lo recorte el scroll de la columna.
@@ -206,18 +313,11 @@ export function ListaContactos({
               <span className="popover-conteo">
                 {nFiltros} activos · {visibles.length} leads
               </span>
-              <button
-                type="button"
-                className="boton-mini"
-                onClick={() => {
-                  setCuenta('todas');
-                  setColaborador('todos');
-                  setSoloVencidos(false);
-                  setSoloWa(false);
-                }}
-              >
-                Limpiar
-              </button>
+              {nFiltros > 0 && (
+                <button type="button" className="boton-mini" onClick={limpiarFiltros}>
+                  Limpiar
+                </button>
+              )}
             </div>
             <div className="popover-grupo">
               <span className="campo-label">Próximo contacto</span>
@@ -239,24 +339,94 @@ export function ListaContactos({
               </div>
             </div>
             <div className="popover-grupo">
-              <span className="campo-label">WhatsApp</span>
+              <span className="campo-label">Orden</span>
               <div className="chips">
-                <button
-                  type="button"
-                  className={`chip ${!soloWa ? 'chip-on' : ''}`}
-                  onClick={() => setSoloWa(false)}
-                >
-                  todos
-                </button>
-                <button
-                  type="button"
-                  className={`chip ${soloWa ? 'chip-on' : ''}`}
-                  onClick={() => setSoloWa(true)}
-                >
-                  solo con WhatsApp
-                </button>
+                {(
+                  [
+                    ['nuevo', 'más nuevo'],
+                    ['viejo', 'más viejo'],
+                  ] as const
+                ).map(([v, texto]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className={`chip ${orden === v ? 'chip-on' : ''}`}
+                    onClick={() => setOrden(v)}
+                  >
+                    {texto}
+                  </button>
+                ))}
               </div>
             </div>
+
+            <div className="popover-grupo">
+              <span className="campo-label">WhatsApp</span>
+              <div className="chips">
+                {(
+                  [
+                    ['todos', 'Todos'],
+                    ['con', 'Con WhatsApp'],
+                    ['sin', 'Sin WhatsApp'],
+                  ] as const
+                ).map(([v, texto]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className={`chip ${wa === v ? 'chip-on' : ''}`}
+                    onClick={() => setWa(v)}
+                  >
+                    {texto}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="popover-grupo">
+              <span className="campo-label">Reunión</span>
+              <div className="chips">
+                {(
+                  [
+                    ['todas', 'Todas'],
+                    ['con', 'Con reunión'],
+                    ['sin', 'Sin reunión'],
+                    ['asistio', 'Asistió'],
+                    ['no-asistio', 'No asistió'],
+                  ] as const
+                ).map(([v, texto]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className={`chip ${reunion === v ? 'chip-on' : ''}`}
+                    onClick={() => setReunion(v)}
+                  >
+                    {texto}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Rol, país, ciudad y etiquetas: las opciones salen de los datos.
+                Tocar la que ya está puesta la saca, que es como se limpia sin
+                tener que ir al botón de arriba. */}
+            {grupos.map((g) =>
+              g.opciones.length === 0 ? null : (
+                <div key={g.label} className="popover-grupo">
+                  <span className="campo-label">{g.label}</span>
+                  <div className="chips">
+                    {g.opciones.map((o) => (
+                      <button
+                        key={o}
+                        type="button"
+                        className={`chip ${g.valor === o ? 'chip-on' : ''}`}
+                        onClick={() => g.set(g.valor === o ? null : o)}
+                      >
+                        {o}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ),
+            )}
           </div>
         </>
       )}
