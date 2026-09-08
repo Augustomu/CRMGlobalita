@@ -15,8 +15,15 @@ Esquema de PocketBase. Una migración por cambio, en `pb_migrations/`.
 | `configuracion` | esperas, cupos, zona horaria. Nunca constantes | CLAUDE.md regla 2 |
 | `users` | se le agregan rol, estado, permisos | §3.1 |
 
-Faltan las de etapas siguientes: `reunion`, `lista`, `tarea`,
-`chat_personal`, `entrante`, `regla`, `actividad`.
+| `edicion` | el log de ediciones del perfil: campo, valor anterior, quién y cuándo | cambio 14 |
+
+`edicion` **no se puede editar ni borrar por la API** (`updateRule` y
+`deleteRule` en `null`): un historial que se puede reescribir no es un
+historial. Revertir un cambio no borra la entrada, agrega otra en sentido
+inverso.
+
+Faltan las de etapas siguientes: `lista`, `tarea`, `chat_personal`,
+`entrante`, `regla`, `actividad`.
 
 ## Índices que importan
 

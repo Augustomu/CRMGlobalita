@@ -224,6 +224,24 @@ export function FechaReunion({
     setGuardando(true);
     try {
       await pb.collection('reunion').update(r.id, { estado });
+
+      // Cambio 12: marcar asistió o no asistió ARCHIVA la ficha. Cancelada no,
+      // porque una cancelada se reagenda y el lead sigue vivo.
+      //
+      // Se archiva, no se descarta: la situación del lead queda como estaba
+      // —contestó, agotado— y la archivada dice otra cosa, que ya no hay nada
+      // que hacer con él en la columna de trabajo. Mezclarlas perdería el
+      // motivo por el que el lead terminó donde terminó.
+      if (estado === 'asistio' || estado === 'no-asistio') {
+        await pb.collection('lead').update(lead.id, {
+          archivada: true,
+          archivada_motivo:
+            estado === 'asistio'
+              ? `Reunión del ${ddmm(enSuZona(r.inicio, r.zona || ZONA))}: asistió`
+              : `Reunión del ${ddmm(enSuZona(r.inicio, r.zona || ZONA))}: no asistió`,
+        });
+      }
+
       await recargar();
       onCambio();
     } finally {

@@ -1,0 +1,64 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { CUANTAS_RECIENTES, recientes, sePuedeSacar, type Etiqueta } from '../src/etiqueta.ts';
+
+const catalogo: Etiqueta[] = [
+  { id: 'a', nombre: 'Caliente', usada_en: '2026-09-06' },
+  { id: 'b', nombre: 'Tibio', usada_en: '2026-09-01' },
+  { id: 'c', nombre: 'Frio', usada_en: '2026-08-20' },
+  { id: 'd', nombre: 'Decisor', usada_en: '2026-09-05' },
+  { id: 'e', nombre: 'Contacto', usada_en: '2026-09-04' },
+  { id: 'f', nombre: 'Periodico', usada_en: '2026-09-03' },
+  { id: 'g', nombre: 'Reagendar', usada_en: '2026-09-02' },
+  { id: 'h', nombre: 'No target', usada_en: null },
+  { id: 'i', nombre: 'Recordatorio', del_sistema: true, usada_en: '2026-09-07' },
+];
+
+test('cambio 8 · ofrece las seis usadas más recientemente', () => {
+  const r = recientes(catalogo, []);
+  assert.equal(r.length, CUANTAS_RECIENTES);
+  assert.deepEqual(
+    r.map((e) => e.nombre),
+    ['Caliente', 'Decisor', 'Contacto', 'Periodico', 'Reagendar', 'Tibio'],
+  );
+});
+
+test('las que el lead ya tiene no se vuelven a ofrecer: el atajo es para poner', () => {
+  const r = recientes(catalogo, ['a', 'd']);
+  assert.ok(!r.some((e) => e.id === 'a' || e.id === 'd'));
+  // Del catálogo quedan cinco candidatas, no seis: se ofrecen las que hay.
+  assert.deepEqual(
+    r.map((e) => e.nombre),
+    ['Contacto', 'Periodico', 'Reagendar', 'Tibio', 'Frio'],
+  );
+});
+
+test('D04 · las del sistema no se ofrecen aunque sean las más recientes', () => {
+  // "Recordatorio" es del sistema y tiene la fecha más nueva de todas.
+  assert.ok(!recientes(catalogo, []).some((e) => e.nombre === 'Recordatorio'));
+});
+
+test('una etiqueta que nunca se usó no entra: sin fecha no hay con qué ordenarla', () => {
+  assert.ok(!recientes(catalogo, []).some((e) => e.nombre === 'No target'));
+});
+
+test('a igual fecha ordena alfabético, para que la fila no baile entre renders', () => {
+  const empatadas: Etiqueta[] = [
+    { id: '1', nombre: 'Zeta', usada_en: '2026-09-06' },
+    { id: '2', nombre: 'Alfa', usada_en: '2026-09-06' },
+  ];
+  assert.deepEqual(
+    recientes(empatadas, []).map((e) => e.nombre),
+    ['Alfa', 'Zeta'],
+  );
+});
+
+test('con menos de seis usadas devuelve las que hay, sin rellenar', () => {
+  assert.equal(recientes(catalogo.slice(0, 2), []).length, 2);
+});
+
+test('cambio 9 · la × solo aparece en las que se pueden sacar', () => {
+  assert.equal(sePuedeSacar({ id: 'a', nombre: 'Caliente' }), true);
+  // La cadencia la vuelve a poner en el próximo envío: el botón no haría nada.
+  assert.equal(sePuedeSacar({ id: 'i', nombre: 'Recordatorio', del_sistema: true }), false);
+});

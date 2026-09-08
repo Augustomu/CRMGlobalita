@@ -54,6 +54,21 @@ export interface EtiquetaRecord {
   id: string;
   nombre: string;
   del_sistema: boolean;
+  /** Ultima vez que se aplico a un lead. Ordena las seis que se ofrecen. */
+  usada_en: string | null;
+}
+
+/** Una entrada del log de ediciones del perfil (cambio 14). */
+export interface EdicionRecord {
+  id: string;
+  perfil: string;
+  lead: string;
+  usuario: string;
+  campo: string;
+  antes: string;
+  despues: string;
+  created: string;
+  expand?: { usuario?: { name?: string } };
 }
 
 export interface UsuarioRecord {
@@ -97,6 +112,9 @@ export interface LeadRecord {
   link_chat: string;
   sin_leer_li: boolean;
   sin_leer_wa: boolean;
+  /** Cambio 12: marcar asistio o no asistio la archiva. */
+  archivada: boolean;
+  archivada_motivo: string;
   etiquetas: string[];
   nota: string;
   f_invitacion: string;

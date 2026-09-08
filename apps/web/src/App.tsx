@@ -47,7 +47,7 @@ export function App() {
   // no Follow-up fijo. Al entrar, el Observador cae en Control.
   const [seccion, setSeccion] = useState<Seccion | null>(null);
   const plantillas = usePlantillas(usuarioDeFollowup);
-  const catalogoEtiquetas = useEtiquetas(usuarioDeFollowup);
+  const { etiquetas: catalogoEtiquetas, recargar: recargarEtiquetas } = useEtiquetas(usuarioDeFollowup);
   // Se carga sin abrir nada, para el contador del header, pero solo para quien
   // puede resolverlos.
   const duplicados = useDuplicados(
@@ -349,6 +349,7 @@ export function App() {
                 catalogoEtiquetas={catalogoEtiquetas}
                 usuario={auth.usuario}
                 onGuardado={recargar}
+                onEtiquetasCambiadas={recargarEtiquetas}
               />
             ) : (
               <section className="ficha">

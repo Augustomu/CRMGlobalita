@@ -283,6 +283,30 @@ migrate(
       leadDe[clave] = lead.id;
     }
 
+    // ---------------------------------------------- cuando se uso cada etiqueta
+    //
+    // De aca salen las seis que la ficha ofrece a mano (cambio 8). El backfill
+    // de la migracion no alcanza: esa corre ANTES del seed, sobre una base
+    // vacia, asi que sin esto el catalogo queda sin fechas y la fila de atajos
+    // sale vacia hasta que alguien etiquete a mano.
+    //
+    // Las fechas se escalonan para que el orden se note: la primera etiqueta
+    // del lead mas nuevo queda arriba.
+    const usoDe = {};
+    let dias = 0;
+    for (const l of app.findAllRecords('lead')) {
+      for (const id of l.get('etiquetas') || []) {
+        if (usoDe[id]) continue;
+        usoDe[id] = mover(HOY_PROTOTIPO, -dias);
+        dias += 1;
+      }
+    }
+    for (const e of app.findAllRecords('etiqueta')) {
+      if (!usoDe[e.id]) continue;
+      e.set('usada_en', usoDe[e.id]);
+      app.save(e);
+    }
+
     // --------------------------------------------------------- proyectos
 
     const TIPO = { pib: 'fabript_piv', parceria: 'parceria', prototipo: 'prototipo', inversion: 'inversion' };

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { tocaHoy } from '@crm/core/cadencia';
 import { idiomaEfectivo } from '@crm/core/idioma';
 import { linkWhatsApp } from '@crm/core/telefono';
+import { recientes, sePuedeSacar } from '@crm/core/etiqueta';
 import { pb } from '../../lib/pocketbase';
 import type { EnvioRecord, EtiquetaRecord, LeadRecord, PlantillaRecord, UsuarioRecord } from '../../lib/types';
 import { puedeEditar, puedeUsuario } from './useLeads';
@@ -12,6 +13,7 @@ import { Colapsable, type Chip } from './Colapsable';
 import { FechaReunion } from './FechaReunion';
 import { useFicha } from './useFicha';
 import { useAtajos } from './useAtajos';
+import { LogEdiciones } from './LogEdiciones';
 
 const HOY = new Date().toISOString().slice(0, 10);
 
@@ -58,9 +60,11 @@ interface Props {
   catalogoEtiquetas: EtiquetaRecord[];
   usuario: UsuarioRecord | null;
   onGuardado: () => void;
+  /** Aplicar una etiqueta cambia su fecha de uso: hay que releer el catálogo. */
+  onEtiquetasCambiadas?: () => void;
 }
 
-export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuardado }: Props) {
+export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuardado, onEtiquetasCambiadas }: Props) {
   // Dos ejes independientes: si puede editar ESTE lead, y qué campos ve.
   const editable = puedeEditar(usuario, lead);
   const veTelefono = puedeUsuario(usuario, 'verTelefono');
@@ -134,6 +138,30 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuar
         nota: valores.nota,
         proximo_contacto: valores.proximo_contacto || null,
       });
+
+      // Cambio 14: cada campo que cambió deja su entrada en el log, con el
+      // valor anterior. Se calcula por diferencia contra `original` en vez de
+      // usar la pila de deshacer, porque la pila tiene los pasos intermedios
+      // —escribir "Meta", después "Metalúrgica"— y el log quiere el salto que
+      // de verdad quedó guardado.
+      //
+      // Va DESPUÉS de guardar y sin await bloqueante: que falle el log no
+      // puede hacer que se pierda la edición.
+      for (const clave of Object.keys(valores) as (keyof Valores)[]) {
+        if (valores[clave] === original[clave]) continue;
+        void pb
+          .collection('edicion')
+          .create({
+            perfil: p?.id ?? '',
+            lead: lead.id,
+            usuario: usuario?.id ?? '',
+            campo: etiquetaDe(clave),
+            antes: original[clave],
+            despues: valores[clave],
+          })
+          .catch(() => null);
+      }
+
       ficha.limpiar(); // §9.2: guardar limpia la pila de deshacer
       onGuardado();
     } catch (e) {
@@ -148,6 +176,13 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuar
     if (poner) ids.add(et.id);
     else ids.delete(et.id);
     await pb.collection('lead').update(lead.id, { etiquetas: [...ids] });
+    // Se marca cuándo se usó, que es lo que ordena las seis que se ofrecen.
+    // Solo al PONER: sacarla no es usarla, y si contara, quitar una etiqueta
+    // la empujaría al principio de la fila de atajos.
+    if (poner) {
+      await pb.collection('etiqueta').update(et.id, { usada_en: HOY }).catch(() => null);
+      onEtiquetasCambiadas?.();
+    }
     onGuardado();
   }
 
@@ -358,15 +393,45 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuar
           )}
         </div>
 
-        {/* Chips de las etiquetas aplicadas, debajo de la botonera. */}
-        {etiquetasAplicadas.length > 0 && (
-          <div className="ficha-etiquetas">
-            {etiquetasAplicadas.map((e) => (
-              <span key={e.id} className="chip-etiqueta">
-                {e.nombre}
-              </span>
+        {/* Las aplicadas, cada una con su × (cambio 9), y detrás las seis
+            usadas más recientemente para poner de un clic (cambio 8). Van en
+            la misma fila a propósito: es el mismo gesto —etiquetar— y separarlo
+            en dos filas duplicaría el espacio para lo mismo. */}
+        <div className="ficha-etiquetas">
+          {etiquetasAplicadas.map((e) => (
+            <span key={e.id} className="chip-etiqueta">
+              {e.nombre}
+              {editable && sePuedeSacar(e) && (
+                <button
+                  type="button"
+                  className="chip-etiqueta-x"
+                  title={`Sacar ${e.nombre}`}
+                  onClick={() => void cambiarEtiqueta(e, false)}
+                >
+                  ×
+                </button>
+              )}
+            </span>
+          ))}
+
+          {editable &&
+            recientes(catalogoEtiquetas, lead.etiquetas ?? []).map((e) => (
+              <button
+                key={e.id}
+                type="button"
+                className="chip-etiqueta chip-etiqueta-sugerida"
+                title={`Poner ${e.nombre}`}
+                onClick={() => void cambiarEtiqueta(e as EtiquetaRecord, true)}
+              >
+                + {e.nombre}
+              </button>
             ))}
-          </div>
+        </div>
+
+        {lead.archivada && (
+          <span className="pastilla pastilla-suave" title={lead.archivada_motivo}>
+            archivada
+          </span>
         )}
 
         <div className="ficha-chips">
@@ -482,13 +547,17 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuar
           />
         )}
 
-        {logAbierto && (
-          <div className="aviso-suave">
-            El log de ediciones todavía no se guarda en la base: la pila de deshacer vive solo
-            mientras la ficha está abierta. Falta la colección de log (§3.2) y la decisión D21.
-          </div>
-        )}
       </div>
+
+      {logAbierto && p && (
+        <LogEdiciones
+          perfilId={p.id}
+          leadId={lead.id}
+          editable={editable}
+          onCerrar={() => setLogAbierto(false)}
+          onRevertido={onGuardado}
+        />
+      )}
 
       <footer className="ficha-pie">
         {error && <span className="login-error">{error}</span>}
@@ -525,6 +594,7 @@ function etiquetaDe(clave: string): string {
     email: 'Email',
     email2: 'Email 2',
     email3: 'Email 3',
+    telefono: 'Teléfono',
     nota: 'Nota',
     proximo_contacto: 'Próximo contacto',
   };
