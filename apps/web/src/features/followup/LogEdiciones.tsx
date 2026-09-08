@@ -34,7 +34,6 @@ interface Props {
   perfilId: string;
   leadId: string;
   editable: boolean;
-  onCerrar: () => void;
   onRevertido: () => void;
 }
 
@@ -46,7 +45,7 @@ interface Props {
  * al cerrarla, y la pregunta que este panel contesta —"¿quién le cambió la
  * empresa, y qué decía antes?"— llega tres semanas después.
  */
-export function LogEdiciones({ perfilId, leadId, editable, onCerrar, onRevertido }: Props) {
+export function LogEdiciones({ perfilId, leadId, editable, onRevertido }: Props) {
   const [entradas, setEntradas] = useState<EdicionRecord[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,19 +95,11 @@ export function LogEdiciones({ perfilId, leadId, editable, onCerrar, onRevertido
     }
   }
 
+  // §7.2: es uno de los seis bloques de la ficha, no un overlay. El log se
+  // consulta para entender qué se tocó ANTES de volver a tocarlo, y para eso
+  // hay que poder verlo junto al campo.
   return (
-    <div className="overlay-fondo" onClick={onCerrar}>
-      <div className="overlay-caja overlay-log" onClick={(ev) => ev.stopPropagation()}>
-        <div className="overlay-header">
-          <span className="overlay-titulo">Log de ediciones</span>
-          <span className="campo-ayuda">
-            {cargando ? 'cargando…' : entradas.length ? `${entradas.length} cambios` : ''}
-          </span>
-          <button type="button" className="boton-icono-28 al-final" title="Cerrar" onClick={onCerrar}>
-            ×
-          </button>
-        </div>
-
+    <div className="log-bloque">
         <div className="log-lista">
           {error && <div className="login-error">{error}</div>}
           {!cargando && entradas.length === 0 && (
@@ -155,7 +146,6 @@ export function LogEdiciones({ perfilId, leadId, editable, onCerrar, onRevertido
               )}
             </div>
           ))}
-        </div>
       </div>
     </div>
   );

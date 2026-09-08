@@ -2422,12 +2422,15 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 
 /* ---------- log de ediciones (cambio 14) ---------- */
 .overlay-log { width: min(94vw, calc(560px * var(--escala-texto))); max-height: 82vh; }
-.log-lista { flex: 1; overflow-y: auto; padding: 4px 0; }
+/* Bloque de la ficha (§7.2). El tope de 260px es para que el log no empuje
+   el análisis fuera de la pantalla: es consulta, no la razón de la ficha. */
+.log-bloque { display: flex; flex-direction: column; min-width: 0; }
+.log-lista { max-height: 260px; overflow-y: auto; padding: 4px 0; }
 .log-fila {
   display: grid;
   grid-template-columns: calc(110px * var(--escala-texto)) 1fr auto;
   gap: 2px 12px;
-  padding: 8px 16px;
+  padding: 8px 2px;
   border-bottom: .5px solid var(--border);
   align-items: start;
 }
@@ -4037,7 +4040,8 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 
 /* ---------- paneles chicos de la ficha (§7.2) ---------- */
 /* Panel de etiquetas: el catalogo entero, no solo aplicar. */
-.pet { width: 320px; display: flex; flex-direction: column; gap: 7px; }
+/* Bloque de la ficha (§7.2), no popover: el ancho lo pone la columna. */
+.pet { width: 100%; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
 .pet-header { display: flex; align-items: center; gap: 8px; }
 .pet-nueva { display: flex; gap: 5px; }
 .pet-nueva input {
@@ -4055,7 +4059,10 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 }
 .pet-nueva input:focus { border-color: var(--accent); }
 .pet-error { font-size: var(--txt-sm); color: var(--error); }
-.pet-lista { display: flex; flex-direction: column; gap: 3px; max-height: 300px; overflow-y: auto; }
+/* 220px y no 300: como popover flotaba encima de todo y podia ser alto, como
+   bloque empuja el analisis y el enviar mensaje fuera de la pantalla. El
+   catalogo se recorre, no se lee entero. */
+.pet-lista { display: flex; flex-direction: column; gap: 3px; max-height: 220px; overflow-y: auto; }
 .pet-fila { display: flex; align-items: center; gap: 5px; }
 .pet-fila input {
   flex: 1;

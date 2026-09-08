@@ -99,9 +99,7 @@ export function FichaLead({
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [envios, setEnvios] = useState<EnvioRecord[]>([]);
-  const [etiquetasAbierto, setEtiquetasAbierto] = useState(false);
   const [linksAbierto, setLinksAbierto] = useState(false);
-  const [logAbierto, setLogAbierto] = useState(false);
   const [infoVisible, setInfoVisible] = useState(false);
   const [propuesta, setPropuesta] = useState<Propuesta | null>(null);
   const [nonceEnviar, setNonceEnviar] = useState(0);
@@ -122,8 +120,6 @@ export function FichaLead({
 
   // Cambiar de lead cierra todos los paneles, como el prototipo.
   useEffect(() => {
-    setEtiquetasAbierto(false);
-    setLogAbierto(false);
     setInfoVisible(false);
     setPropuesta(null);
     setError(null);
@@ -241,7 +237,7 @@ export function FichaLead({
       },
       deshacer: ficha.deshacer,
     },
-    etiquetasAbierto || logAbierto,
+    false,
   );
 
   // Exactamente los cinco del prototipo. El país NO es un chip: ahí solo se usa
@@ -307,17 +303,6 @@ export function FichaLead({
           {lead.expand?.asignado?.name?.split(' ')[0] ?? 'sin asignar'}
         </span>
 
-        <button
-          type="button"
-          className="boton-icono-26"
-          title="Log de ediciones"
-          onClick={() => setLogAbierto((a) => !a)}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 7v5l3 2" />
-          </svg>
-        </button>
 
         {/* Solo aparece cuando hay algo que deshacer, como el prototipo. */}
         {ficha.hayDeshacer && (
@@ -399,30 +384,6 @@ export function FichaLead({
               )}
             </div>
           )}
-
-          <div className="relativo">
-            <button
-              type="button"
-              className="boton-chico"
-              title="Etiquetas del perfil"
-              onClick={() => setEtiquetasAbierto((a) => !a)}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
-                <path d="M20 12l-8 8-8-8V4h8l8 8z" />
-                <circle cx="8.5" cy="8.5" r="1.2" />
-              </svg>
-              <span className="tabular">{etiquetasAplicadas.length}</span>
-            </button>
-            {etiquetasAbierto && (
-              <PanelEtiquetas
-                catalogo={catalogoEtiquetas}
-                aplicadas={lead.etiquetas ?? []}
-                onAlternar={(et, poner) => void cambiarEtiqueta(et as EtiquetaRecord, poner)}
-                onCatalogoCambiado={() => onEtiquetasCambiadas?.()}
-                onCerrar={() => setEtiquetasAbierto(false)}
-              />
-            )}
-          </div>
 
           {/* §9.7: sin teléfono, apagado con el motivo en el title — nunca
               oculto. Es un icono de 26px y no un botón con texto: en la fila
@@ -594,8 +555,38 @@ export function FichaLead({
           </div>
         )}
 
-        {/* §7.2: el último bloque colapsable de la ficha. Va después de
-            Enviar mensaje porque es consulta, no acción. */}
+        {/* §7.2 los enumera: «Datos · Contacto · Fecha de reunión ·
+            Etiquetas · Log de ediciones · Análisis del perfil». Son seis, y
+            este es el orden.
+
+            Etiquetas era un popover y el log un overlay. Los dos se consultan
+            MIENTRAS se trabaja el lead —qué etiquetas tiene, qué se le tocó
+            antes de volver a tocarlo— y las dos formas tapan justamente lo que
+            uno está mirando. */}
+        <Colapsable
+          titulo="Etiquetas"
+          contactoId={lead.id}
+          resumen={`${etiquetasAplicadas.length} en este lead`}
+        >
+          <PanelEtiquetas
+            catalogo={catalogoEtiquetas}
+            aplicadas={lead.etiquetas ?? []}
+            onAlternar={(et, poner) => void cambiarEtiqueta(et as EtiquetaRecord, poner)}
+            onCatalogoCambiado={() => onEtiquetasCambiadas?.()}
+          />
+        </Colapsable>
+
+        {p && (
+          <Colapsable titulo="Log de ediciones" contactoId={lead.id} resumen="qué se editó y quién">
+            <LogEdiciones
+              perfilId={p.id}
+              leadId={lead.id}
+              editable={editable}
+              onRevertido={onGuardado}
+            />
+          </Colapsable>
+        )}
+
         <Colapsable titulo="Análisis del perfil" contactoId={lead.id} resumen="qué pasó con este lead">
           <AnalisisPerfil lead={lead} leads={leads} />
         </Colapsable>
@@ -615,16 +606,6 @@ export function FichaLead({
         )}
 
       </div>
-
-      {logAbierto && p && (
-        <LogEdiciones
-          perfilId={p.id}
-          leadId={lead.id}
-          editable={editable}
-          onCerrar={() => setLogAbierto(false)}
-          onRevertido={onGuardado}
-        />
-      )}
 
       <footer className="ficha-pie">
         {error && <span className="login-error">{error}</span>}

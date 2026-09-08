@@ -13,7 +13,6 @@ interface Props {
   aplicadas: string[];
   onAlternar: (etiqueta: Etiqueta, poner: boolean) => void;
   onCatalogoCambiado: () => void;
-  onCerrar: () => void;
 }
 
 
@@ -24,7 +23,7 @@ interface Props {
  * aplicar en un solo lugar. Antes esto era un popover de solo aplicar, y
  * corregir un nombre mal escrito obligaba a ir a la base.
  */
-export function PanelEtiquetas({ catalogo, aplicadas, onAlternar, onCatalogoCambiado, onCerrar }: Props) {
+export function PanelEtiquetas({ catalogo, aplicadas, onAlternar, onCatalogoCambiado }: Props) {
   const [nueva, setNueva] = useState('');
   const [editando, setEditando] = useState<string | null>(null);
   const [borrador, setBorrador] = useState('');
@@ -78,15 +77,11 @@ export function PanelEtiquetas({ catalogo, aplicadas, onAlternar, onCatalogoCamb
     }
   }
 
+  // §7.2 lo lista entre los seis bloques colapsables de la ficha, no como
+  // popover: el catálogo de etiquetas se mira y se edita mientras se trabaja
+  // el lead, y un popover se cierra en cuanto se toca cualquier otra cosa.
   return (
-    <>
-      <div className="popover-fondo" onClick={onCerrar} />
-      <div className="popover popover-anclado pet">
-        <div className="pet-header">
-          <span className="campo-label">Etiquetas</span>
-          <span className="campo-ayuda al-final">{aplicadas.length} en este lead</span>
-        </div>
-
+    <div className="pet">
         <div className="pet-nueva">
           <input
             value={nueva}
@@ -167,8 +162,7 @@ export function PanelEtiquetas({ catalogo, aplicadas, onAlternar, onCatalogoCamb
               </div>
             );
           })}
-        </div>
       </div>
-    </>
+    </div>
   );
 }

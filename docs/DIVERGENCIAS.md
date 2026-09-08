@@ -475,14 +475,26 @@ aparece un panel que pregunta:
 el botón «+ destacados», sin ×, sin arrastre, sin idioma en el chip, sin el hint,
 y sin nada del flujo de guardar al repositorio.
 
-### G.1 · Y los bloques de la ficha tampoco son los que pide el manual
+### G.1 · Los bloques de la ficha — ✅ **resuelto el 08/09**
 
 §7.2: *«Bloques colapsables: Datos · Contacto · Fecha de reunión · **Etiquetas**
-· **Log de ediciones** · Análisis del perfil»*. Son **seis**.
+· **Log de ediciones** · Análisis del perfil»*. Son **seis**, y ahora son seis,
+en ese orden.
 
-Lo que hay: tres colapsables (Datos, Contacto, Análisis) más Fecha de reunión
-como bloque propio. **Etiquetas es un popover** desde un botón del encabezado y
-**Log de ediciones es un overlay**. Los dos tendrían que ser bloques de la ficha.
+Etiquetas era un popover y el log un overlay. Los dos se consultan MIENTRAS se
+trabaja el lead —qué etiquetas tiene, qué se le tocó antes de volver a
+tocarlo— y las dos formas tapan justamente lo que uno está mirando. Los botones
+que los abrían salieron del encabezado, que en §7.2 no los lista.
+
+**Acá el manual y el prototipo no dicen lo mismo.** En
+`FollowupDetalle.dc.html` sólo Datos y Contacto son colapsables; Análisis y Log
+son overlays y Etiquetas un popover. El manual es del 08/09/2026 y es explícito
+en los seis, así que mandó el manual. Queda anotado en §H.
+
+De paso: la colección `edicion` estaba **vacía en la demo**, así que el bloque
+decía siempre «sin ediciones registradas» y no había forma de ver si andaba.
+Ahora tiene las once entradas que el prototipo trae en el `log` de cada
+contacto.
 
 ---
 
@@ -520,7 +532,13 @@ arreglarlas del lado del documento.
    mensajes desde R0», pero su hilo tiene uno solo. Sembré lo que el hilo
    muestra: es lo único verificable.
 
-7. **`demoraRespuesta: 'mismo día'` para Gonzalo** (`Dashboard.dc.html:467`),
+7. **La ficha: seis bloques o dos.** El manual §7.2 enumera seis colapsables
+   —Datos, Contacto, Fecha de reunión, Etiquetas, Log de ediciones, Análisis—;
+   `FollowupDetalle.dc.html` tiene dos, y resuelve Etiquetas con un popover y
+   Análisis y Log con overlays. Seguí al manual: es del 08/09/2026 y es
+   explícito.
+
+8. **`demoraRespuesta: 'mismo día'` para Gonzalo** (`Dashboard.dc.html:467`),
    que no aceptó ninguna invitación y cuyo primer mensaje es entrante. El propio
    prototipo usa **«escribió primero»** para el mismo caso en los leads de WA
    Personal (líneas 977 y 993). Implementé «escribió primero», que es lo que
