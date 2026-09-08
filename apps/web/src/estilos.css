@@ -3860,3 +3860,79 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 }
 .imp-fin-titulo { font-size: var(--txt-base); font-weight: 600; color: var(--text); }
 .imp-fin-detalle { font-size: var(--txt-md); color: var(--muted); text-align: center; text-wrap: pretty; }
+
+/* ---------- Reglas y acciones rapidas (§7.9, ReglasAcciones.dc.html) ---------- */
+.reg { width: 640px; max-width: 96vw; max-height: 86vh; display: flex; flex-direction: column; }
+.reg-cuerpo { display: flex; flex-direction: column; gap: 8px; padding: 12px 15px 16px; }
+.reg-nueva {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: .5px solid var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+  font-family: inherit;
+  font-size: var(--txt-md);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.reg-nueva-caja {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px 12px;
+  border-radius: 11px;
+  border: .5px solid var(--accent);
+  background: var(--accent-light);
+}
+.reg-nueva-caja input {
+  height: 30px;
+  padding: 0 9px;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--txt-base);
+  outline: none;
+}
+.reg-nueva-caja input:focus { border-color: var(--accent); }
+.reg-titulo-acento {
+  font-size: var(--txt-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--accent);
+}
+.reg-campo { display: flex; flex-direction: column; gap: 5px; }
+.reg-acciones { display: flex; align-items: center; gap: 8px; }
+
+.reg-fila {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 11px;
+  border-radius: 11px;
+  border: .5px solid var(--border);
+  background: var(--bg);
+}
+/* La regla activa se ve activa: el borde y el fondo dicen si esta corriendo
+   sin tener que leer el chip. */
+.reg-fila-on { border-color: var(--accent-br); background: var(--info-light); }
+.reg-fila-header { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.reg-nombre { font-size: var(--txt-base); font-weight: 600; color: var(--text); }
+.reg-frase { font-size: var(--txt-md); color: var(--muted); line-height: 1.45; text-wrap: pretty; }
+
+.reg-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px 12px;
+  border-radius: 11px;
+  border: .5px solid var(--border);
+  background: var(--surface);
+  margin-top: 4px;
+}
+.reg-toggle { display: flex; align-items: flex-start; gap: 8px; }
+.reg-toggle-texto { display: flex; flex-direction: column; gap: 1px; font-size: var(--txt-md); color: var(--text); }

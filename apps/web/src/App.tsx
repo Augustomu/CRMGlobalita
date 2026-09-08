@@ -20,6 +20,7 @@ import { Automatizaciones } from './features/automatizaciones/Automatizaciones';
 import { WaPersonal } from './features/wapersonal/WaPersonal';
 import { BaseCompartida } from './features/compartida/BaseCompartida';
 import { ImportarCsv } from './features/importar/ImportarCsv';
+import { Reglas } from './features/reglas/Reglas';
 
 const TEMAS = ['tema-claro', 'tema-oscuro', 'tema-noche'] as const;
 
@@ -53,6 +54,7 @@ export function App() {
   const [tareasAbierto, setTareasAbierto] = useState(false);
   const [compartidaAbierta, setCompartidaAbierta] = useState(false);
   const [importarAbierto, setImportarAbierto] = useState(false);
+  const [reglasAbiertas, setReglasAbiertas] = useState(false);
   /**
    * Qué canal de conversación está abierto, o ninguno. Vive en el header
    * porque la conversación se abre en la columna 1, arriba de la lista: es un
@@ -301,11 +303,17 @@ export function App() {
                       <span>Base compartida</span>
                     </button>
                   )}
+                  {puedeUsuario(auth.usuario, 'automatizaciones') && (
+                    <button
+                      type="button"
+                      className="header-mas-item"
+                      onClick={() => irA(() => setReglasAbiertas(true))}
+                    >
+                      <span>Reglas y acciones rápidas</span>
+                    </button>
+                  )}
                   {(
-                    [
-                      ['cuentasConectadas', 'Cuentas conectadas'],
-                      ['automatizaciones', 'Reglas y acciones rápidas'],
-                    ] as const
+                    [['cuentasConectadas', 'Cuentas conectadas']] as const
                   ).map(([clave, texto]) =>
                     puedeUsuario(auth.usuario, clave) ? (
                       <span key={clave} className="header-mas-item header-mas-off">
@@ -538,6 +546,8 @@ export function App() {
       )}
 
       {compartidaAbierta && <BaseCompartida onCerrar={() => setCompartidaAbierta(false)} />}
+
+      {reglasAbiertas && <Reglas onCerrar={() => setReglasAbiertas(false)} />}
 
       {importarAbierto && (
         <ImportarCsv
