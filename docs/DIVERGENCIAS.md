@@ -231,16 +231,25 @@ valores `ia | inversiones`, justamente para esto. Su comentario dice:
 *«Globalita (ia) … SENG (inversiones) … El socio de IT de Globalita no tiene por
 qué ver los proyectos de SENG, ni al revés»*.
 
-**El problema**: hoy hay **dos vocabularios para la misma división**, y no
-filtran por lo mismo.
+**CORRECCIÓN a lo que escribí en la primera versión de esta sección.** Dije que
+los dos vocabularios «no filtran por lo mismo». **Es falso** y lo verifiqué
+después: `useControl.ts:28` tiene un puente `LINEA_DE_CASA`
+(`globalita → ia`, `seng → inversiones`), y el filtro corre sobre la
+`casa` **del proyecto**, no sobre la línea de la cuenta. El alcance del
+partner **ya funciona hoy**, y además filtra antes de que los datos lleguen al
+navegador. Lo que sigue siendo cierto es que tener dos nombres para un mismo
+concepto es innecesario; no que esté mal filtrado.
+
+**Lo que sí queda por resolver**: hay **dos vocabularios para la misma
+división**.
 
 | | Valores | Cuelga de | Origen |
 |---|---|---|---|
-| `linea_control` / `linea_negocio` | `ia` \| `inversiones` | usuario / **cuenta** | código, 06/09 |
-| `casa` | `globalita` \| `seng` | **proyecto** | manual nuevo, §3.13.1 |
+| `linea_control` | `ia` \| `inversiones` | usuario (el alcance) | código, 06/09 |
+| `casa` | `globalita` \| `seng` | proyecto (lo filtrado) | manual nuevo, §3.13.1 |
 
-Un proyecto de Seng abierto desde una cuenta de Globalita queda clasificado de
-una forma por el mecanismo viejo y de otra por el nuevo.
+Los dos se cruzan en `LINEA_DE_CASA`. Funciona, pero obliga a leer dos
+nombres para entender una sola idea.
 
 **Recomendación**: quedarse con `casa`, que es lo que dice el manual y lo que
 además es correcto — la casa la elige quien abre el proyecto, no se hereda de
