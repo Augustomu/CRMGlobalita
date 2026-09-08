@@ -11,66 +11,52 @@ ya cerrado contra el manual y el prototipo; acá va lo que falta.
 
 ---
 
-## 0 · Lo que hay que decidir antes de programar
+## 0 · Decisiones
 
-Nada de esto es difícil de hacer; es que **hacerlo mal cuesta un refactor**.
+### ✅ Cerradas el 08/09 — ya están en el manual
 
-### ❓ 0.1 · El alcance de los mensajes destacados
+- **Asignación múltiple**: responsable (uno) + acompañantes. `verTodosLeads`
+  pasa a leerse *«sólo ve los leads en los que figura»*. → [[D27-asignacion-multiple]]
+- **El alcance de Control tiene tres formas**: todo, por casa, y **por
+  cuenta**. El dueño de una cuenta ve lo suyo **con** datos de contacto; el
+  partner por casa **sin** ellos, porque no es su gente.
+  → [[D26-alcance-de-control]]
+  - Esto **también responde** la pregunta que estaba abierta sobre *«las
+    reuniones que aplican sólo al perfil de Alberto Córdoba»*: es el mismo
+    mecanismo acotado a la cuenta AL. No hace falta una regla aparte.
+- **Etiquetas y Log vuelven a ser iconos**, no bloques colapsables. Choca con
+  §7.2 del PDF y por eso está anotado en el registro de cambios del manual.
+- **Los estados de proyecto se van a poder administrar** (nombre + qué
+  significa). Eso resuelve solo la discusión de *«estamos viendo el
+  prototipo»*: agregar un estado deja de ser un cambio de código.
 
-Augusto: *«si el perfil viene de la cuenta de Alberto, mostrame los destacados
-de la cuenta de Alberto; si viene de Globalita —Bruno, Alejandro, Edith, David,
-Francisco— comparten los mismos mensajes, salvo que un chip sea sólo para una
-cuenta»*.
+### ❓ 0.1 · La única que sigue abierta: el alcance de los destacados
 
-Hoy el alcance es **por cuenta** (`todas las cuentas` | lista de abreviaturas).
-Lo que describe es **por casa, con excepción por cuenta**: Seng (AL) tiene los
-suyos, Globalita comparte, y un mensaje puede clavarse a una cuenta puntual.
+**Hoy**: un mensaje destacado se marca «todas las cuentas» o con una lista de
+cuentas puntuales (`AL, DL`).
 
-Son dos modelos distintos. El actual puede expresar el nuevo (listando las
-cinco cuentas de Globalita), pero entonces cada cuenta nueva hay que agregarla
-a mano en cada mensaje. Habría que sumar un alcance `casa`.
+**Lo que hace falta**: que Seng (la cuenta de Alberto) tenga su propio juego de
+destacados, que las cinco cuentas de Globalita compartan el mismo, y que igual
+se pueda clavar un mensaje a **una** cuenta.
 
-**Falta decidir**: ¿el alcance pasa a ser `todas | casa | cuentas`?
+Con el modelo de hoy eso se puede escribir —listando las cinco cuentas de
+Globalita en cada mensaje— pero **cada cuenta nueva hay que agregarla a mano en
+cada mensaje destacado**, y el día que alguien se olvide, esa cuenta trabaja
+con menos mensajes sin que nadie se entere.
 
-### ❓ 0.2 · ¿Seng puede tener «Parcería»?
+**La propuesta**: que el alcance tenga tres formas en vez de dos.
 
-Augusto: *«podríamos sumar otra etiqueta que sea parcerías… puedo tener
-parcerías dentro de Seng»*.
+| Alcance | Qué significa |
+|---|---|
+| `todas` | Todas las cuentas, como hoy |
+| `casa: globalita` / `casa: seng` | Todas las cuentas de esa empresa propia, **incluidas las que se agreguen después** |
+| `cuentas: AL, DL` | Cuentas puntuales, como hoy |
 
-Hoy el mapeo etiqueta → casa está fijo: `PIV` y `Parcería` son Globalita,
-`Inversión` es Seng. Si Seng también puede tener parcerías, ese mapeo se rompe
-y la casa deja de deducirse de la etiqueta.
+Es exactamente el mismo patrón que el alcance de Control (D26), y por eso
+conviene decidirlo igual.
 
-Es la pieza sobre la que se apoyan la vista `confirmado` y el alcance del
-partner, así que conviene resolverlo antes de tocar Control.
-
-**Falta decidir**: ¿la casa se elige aparte de la etiqueta, o hay etiquetas
-distintas por casa (`Parcería Globalita` / `Parcería Seng`)?
-
-### ❓ 0.3 · ¿Dónde se cargan los textos de la cadencia?
-
-Pregunta del propio Augusto: *«¿dónde administro qué mensaje se les va a
-enviar? El repositorio está conectado con R0, R1, R2. ¿Dónde lo termino de
-cargar y dónde lo edito?»*.
-
-Hoy: el repositorio es el único lugar de verdad (§5.2), y Automatizaciones sólo
-muestra el nombre del paso. Así que **ya se administra en el repositorio** —
-pero no se ve desde Automatizaciones, que es donde uno lo busca.
-
-**Propuesta**: desde cada paso de la cadencia, un enlace que abra el
-repositorio con ese mensaje abierto. Un solo lugar de edición, dos puertas.
-
-### ❓ 0.4 · Asignar un lead a más de una persona
-
-Ya estaba pedido. Hoy `lead.asignado` es de uno.
-
-Toca la ficha, la lista, Usuarios y el alcance: la regla *«sin `verTodosLeads`
-sólo ve los leads asignados»* pasa a ser *«donde figura»*.
-
-**Falta decidir**: ¿los asignados son iguales o hay un responsable y
-acompañantes? El modelo ya tiene `nivel_asignacion`, que quizá alcance.
-
----
+**Depende de**: si una cuenta puede pertenecer a más de una casa. Hoy no:
+`cuenta.linea_negocio` es un valor.
 
 ## 1 · Follow-up · columna 2 (la ficha)
 
@@ -260,14 +246,12 @@ Empezado: el cálculo del turno se extrajo a `core/cola.ts` (`turnosDeLote`,
 
 ## 14 · Lo que sigue esperando a Augusto
 
-- **«Estamos viendo el prototipo»** (F.2 en DIVERGENCIAS): propuse un octavo
-  estado en vez de una etiqueta. ¿Cuenta como activo? ¿Se congela a los 30
-  días? Y si un proyecto puede estar *viendo el prototipo* **y** *esperando
-  presupuesto* a la vez, hace falta etiqueta de proyecto. Se resuelve solo si
-  se hace el administrador de estados (8).
-- **«Las reuniones que aplican sólo al perfil de Alberto Córdoba»** (F.3):
-  sigo sin entender si es el partner de Seng viendo sólo la cuenta AL, o el
-  dashboard filtrado por cuenta.
+- **El alcance de los destacados** (0.1). Es la única decisión abierta.
+- **«Estamos viendo el prototipo»**: se resuelve solo cuando exista el
+  administrador de estados (8). Queda la pregunta de si un proyecto puede estar
+  en dos situaciones a la vez —*viendo el prototipo* **y** *esperando
+  presupuesto*—; si la respuesta es sí, hace falta etiqueta de proyecto además
+  del estado.
 
 ---
 
