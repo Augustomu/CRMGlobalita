@@ -34,6 +34,18 @@ migrate(
     const dow = new Date(Date.parse(HOY)).getUTCDay(); // 0 = domingo
     const desdeLunes = dow === 0 ? 6 : dow - 1;
 
+    // El campo `date` de PocketBase guarda fecha Y hora. Los seeds escribian
+    // solo la fecha, o sea todo a medianoche, y por eso el analisis de "cuando
+    // responden" no podia salir por franja horaria (§5.5): no habia hora que
+    // agrupar. No hacia falta migrar nada, hacia falta escribirla.
+    //
+    // Las horas van dentro del horario de trabajo (8 a 20) y repartidas de
+    // forma despareja a proposito: si cayeran parejas, las cuatro franjas
+    // darian 25% cada una y el grafico no distinguiria nada.
+    const HORAS_RESPUESTA = [9, 10, 10, 11, 12, 15, 15, 16, 18, 19];
+    const conHora = (fecha, hora, minuto) =>
+      fecha + ' ' + String(hora).padStart(2, '0') + ':' + String(minuto).padStart(2, '0') + ':00.000Z';
+
     const NOMBRES = [
       'Adriana', 'Bruno', 'Carla', 'Diego', 'Elena', 'Fabio', 'Gabriela', 'Hernan',
       'Ines', 'Joaquin', 'Karina', 'Leandro', 'Marisa', 'Nicolas', 'Olga', 'Pablo',
@@ -139,7 +151,7 @@ migrate(
       lead.set('lista', 'Relleno de demo');
       lead.set('etiquetas', etiquetas.length ? [etiquetas[i % etiquetas.length]] : []);
       lead.set('sin_leer_li', i % 11 === 0);
-      lead.set('f_ultimo_contacto', mover(-((i % 30) + 1)));
+      lead.set('f_ultimo_contacto', conHora(mover(-((i % 30) + 1)), 9 + (i % 9), (i * 7) % 60));
 
       // El ciclo de la invitacion, que es lo que mide Automatizaciones (§7.3).
       //
@@ -175,12 +187,14 @@ migrate(
         diasAtras = 95 + ((i * 11) % 70); // 5% pasadas de los 90 sin aceptar
         esVieja = true;
       }
-      lead.set('f_invitacion', mover(-diasAtras));
+      lead.set('f_invitacion', conHora(mover(-diasAtras), 8 + (i % 4), (i * 13) % 60));
 
       // ~60% acepta, entre 1 y 9 dias despues. Las viejas y las canceladas no:
       // son justamente las que nadie acepto.
       const acepta = !esVieja && !yaCancelada && i % 5 !== 0 && i % 7 !== 0;
-      if (acepta) lead.set('f_aceptacion', mover(-diasAtras + 1 + (i % 9)));
+      if (acepta) {
+        lead.set('f_aceptacion', conHora(mover(-diasAtras + 1 + (i % 9)), 9 + (i % 10), (i * 11) % 60));
+      }
 
       // Los envios de la cadencia hasta la etapa donde esta parado.
       //
@@ -194,7 +208,7 @@ migrate(
         for (let k = 1; k <= etapaIdx; k++) {
           const cuando = -diasAtras + 1 + (i % 9) + k * 3;
           if (cuando > 0) break; // no se manda en el futuro
-          enviosDelLead.push([`R${k}`, mover(cuando)]);
+          enviosDelLead.push([`R${k}`, conHora(mover(cuando), 9 + ((i + k) % 8), ((i + k) * 19) % 60)]);
         }
       }
 
@@ -204,7 +218,8 @@ migrate(
       // semana; si no, "cuando responden" sale como una sola barra al 100%.
       if (acepta && i % 4 === 0 && enviosDelLead.length) {
         const cual = enviosDelLead[i % enviosDelLead.length];
-        lead.set('f_respuesta', mover(Math.min(0, Math.round((Date.parse(cual[1]) - Date.parse(HOY)) / DIA) + 1 + (i % 5))));
+        const dia = mover(Math.min(0, Math.round((Date.parse(cual[1]) - Date.parse(HOY)) / DIA) + 1 + (i % 5)));
+        lead.set('f_respuesta', conHora(dia, HORAS_RESPUESTA[i % HORAS_RESPUESTA.length], (i * 17) % 60));
       }
 
       // Las ya canceladas vuelven como Recontacto cuando cumplen la espera de

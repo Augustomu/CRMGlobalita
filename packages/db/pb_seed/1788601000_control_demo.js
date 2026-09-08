@@ -52,6 +52,21 @@ migrate(
     const mover = (iso, mas) =>
       new Date(Date.parse(iso) + (CORRIMIENTO + (mas || 0)) * DIA).toISOString().slice(0, 10);
 
+    // El campo `date` de PocketBase guarda fecha Y hora; los seeds escribian
+    // solo la fecha y todo caia a medianoche. Sin hora, el analisis de "cuando
+    // responden" (§5.5) no puede separar la manana de la tarde.
+    //
+    // La hora se deriva del nombre del contacto en vez de sortearse: el seed
+    // tiene que dar siempre lo mismo, y ademas asi las respuestas se reparten
+    // sin quedar todas en la misma franja.
+    const horaEstable = (semilla, desde, cuantas) => {
+      let suma = 0;
+      for (let k = 0; k < String(semilla).length; k++) suma += String(semilla).charCodeAt(k);
+      const hora = desde + (suma % cuantas);
+      const minuto = (suma * 7) % 60;
+      return ' ' + String(hora).padStart(2, '0') + ':' + String(minuto).padStart(2, '0') + ':00.000Z';
+    };
+
     /** El prototipo escribe las notas en DD/MM. Todas son de 2026. */
     const dm = (s) => {
       const p = String(s).split('/');
@@ -150,7 +165,7 @@ migrate(
       ['wellington', 'Wellington Abner Simões', 'Gerente de Operaciones', 'Opus CM', 'Brasil', 'São Paulo', 'Construcción / Manufactura', 'AL', 'Alberto Cordoba', '5511955550101'],
       ['gonzalo', 'Gonzalo Adrián Núñez', 'Jefe de Planta', 'Metalúrgica del Sur', 'Argentina', 'Rosario', 'Metalurgia', 'AU', 'Sofia Ferrer', '5493415550102'],
       // Nombre larguisimo a proposito: es el que prueba el truncado.
-      ['largo', 'María de los Ángeles Fernández Villagrán de Echeverría - Gerente de Compras y Abastecimiento', 'Directora de Operaciones', 'Grupo Industrial Villagrán', 'México', 'Monterrey', 'Maquinaria', 'ED', 'Sofia Ferrer', '528115550103'],
+      ['largo', 'María de los Ángeles Fernández Villagrán de Gonçalves Sobrinho — Directora de Operaciones y Cadena de Suministro LATAM', 'Directora de Operaciones y Cadena de Suministro LATAM', 'Grupo Industrial Villagrán y Asociados S.A. de C.V.', 'México', 'Monterrey', 'Maquinaria Industrial', 'ED', 'Sofia Ferrer', '528115550103'],
       ['lucia', 'Lucía Gonçalves', 'Consultora Senior', 'Pinheiro & Asoc.', 'Uruguay', 'Montevideo', 'Consultoría', 'AMU', 'Alberto Cordoba', '598995550104'],
       // Ficha a medio cargar: sin empresa y sin cargo. Es el caso que muestra
       // como se ve un campo vacio, que en el prototipo dice "sin dato".
@@ -278,8 +293,10 @@ migrate(
           // origen ni nota de R0 (D26).
           lista: 'Contacto directo',
           nota_r0: false,
-          f_respuesta: mover('2026-06-01'),
-          f_ultimo_contacto: mover('2026-08-20'),
+          // La hora sale del nombre del contacto, no de un random: asi el mismo
+          // seed da siempre lo mismo y las cuatro franjas de §5.5 se pueblan.
+          f_respuesta: mover('2026-06-01') + horaEstable(clave, 8, 12),
+          f_ultimo_contacto: mover('2026-08-20') + horaEstable(clave, 9, 9),
         });
         lead = app.findRecordById('lead', id);
       } else if (!lead.get('asignado')) {

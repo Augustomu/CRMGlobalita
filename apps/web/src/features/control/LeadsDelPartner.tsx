@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { coincide } from '@crm/core/busqueda';
 import { NOMBRE_CASA, type Casa } from '@crm/core/proyecto';
 import type { LeadDeControl } from './useControl';
 
@@ -35,14 +36,9 @@ export function LeadsDelPartner({ leads }: Props) {
   );
 
   const vistos = useMemo(() => {
-    const busca = q.trim().toLowerCase();
     return leads.filter((l) => {
       if (etiqueta && !l.etiquetas.includes(etiqueta)) return false;
-      if (!busca) return true;
-      return [l.nombre, l.empresa, l.cargo, l.industria, l.ciudad, l.pais]
-        .join(' ')
-        .toLowerCase()
-        .includes(busca);
+      return coincide([l.nombre, l.empresa, l.cargo, l.industria, l.ciudad, l.pais], q);
     });
   }, [leads, etiqueta, q]);
 

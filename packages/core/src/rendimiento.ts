@@ -178,10 +178,12 @@ const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', '
 /**
  * Qué día contestan.
  *
- * EL PROTOTIPO MUESTRA FRANJAS HORARIAS («Martes 18–20 h») Y ACÁ NO ESTÁN.
- * `f_respuesta` guarda solo la fecha: la hora de la respuesta llega recién con
- * la integración de LinkedIn y WhatsApp, que es la que ve el mensaje entrar. Se
- * muestra por día, que sí es un dato real, en vez de inventar una hora.
+ * Es el corte grueso, por día nada más. El fino —día + franja horaria, que es
+ * lo que pide §5.5— está en `cuandoRespondenDetallado`, y necesita que la
+ * respuesta tenga hora de verdad.
+ *
+ * Los dos conviven porque no siempre hay hora: lo importado y lo cargado a
+ * mano no la tienen, y ahí este corte sigue diciendo algo cierto.
  */
 export function cuandoResponden(leads: LeadMedido[]): FilaAnalisis[] {
   const cuenta = new Map<string, number>();
@@ -247,3 +249,107 @@ export function industriasQueConvierten(
  * es poco, pero es la diferencia entre una tasa y una anécdota.
  */
 export const MINIMO_PARA_TASA = 3;
+
+/**
+ * Las cuatro franjas horarias del manual (§7.11.2).
+ *
+ * No son cuartos iguales del día: salen de cómo trabaja la gente a la que se
+ * le escribe. «Última hora» es corta a propósito — lo que llega a las 19:30 se
+ * comporta distinto de lo que llega a las 15.
+ */
+export const FRANJAS: { nombre: string; desde: number; hasta: number }[] = [
+  { nombre: 'mañana', desde: 8, hasta: 11 },
+  { nombre: 'mediodía', desde: 11, hasta: 14 },
+  { nombre: 'tarde', desde: 14, hasta: 17 },
+  { nombre: 'última hora', desde: 17, hasta: 20 },
+];
+
+/** En qué franja cae una hora, o `null` si está fuera del horario de trabajo. */
+export function franjaDe(iso: string): string | null {
+  const s = String(iso ?? '');
+  if (s.length < 13) return null;
+  const h = Number(s.slice(11, 13));
+  if (!Number.isFinite(h)) return null;
+  return FRANJAS.find((f) => h >= f.desde && h < f.hasta)?.nombre ?? null;
+}
+
+/**
+ * Si un timestamp trae hora de verdad o es una fecha con medianoche puesta.
+ *
+ * Importa porque los dos se guardan igual. Con datos importados —o con los que
+ * quedaron de antes de guardar la hora— TODO caería en la franja de las 00:00,
+ * y el gráfico diría con total seguridad algo que nadie midió. Es preferible
+ * decir que no se sabe.
+ */
+export function tieneHora(iso: string): boolean {
+  const s = String(iso ?? '');
+  // Un texto sin parte horaria no es «tiene hora»: el slice devuelve vacío y
+  // vacío !== '00:00:00' daba true. Lo agarró el test antes que la pantalla.
+  if (s.length < 19) return false;
+  return s.slice(11, 19) !== '00:00:00';
+}
+
+/**
+ * Cuándo responden: día de la semana y franja horaria (§5.5).
+ *
+ * Solo cuenta los que tienen hora. Los de medianoche se informan aparte, en
+ * `sinHora`, para que el que mira sepa sobre cuántos se calculó.
+ */
+export function cuandoRespondenDetallado(leads: LeadMedido[]): {
+  filas: FilaAnalisis[];
+  sinHora: number;
+} {
+  const cuenta = new Map<string, number>();
+  let total = 0;
+  let sinHora = 0;
+  for (const l of leads) {
+    if (!l.f_respuesta) continue;
+    if (!tieneHora(l.f_respuesta)) {
+      sinHora++;
+      continue;
+    }
+    const d = new Date(Date.parse(l.f_respuesta.slice(0, 10)));
+    const franja = franjaDe(l.f_respuesta);
+    if (!franja) continue;
+    const clave = `${DIAS[d.getUTCDay()]} ${franja}`;
+    cuenta.set(clave, (cuenta.get(clave) ?? 0) + 1);
+    total++;
+  }
+  return { filas: ranking(cuenta, 5, (n) => `${porcentaje(n, total)}%`), sinHora };
+}
+
+/**
+ * Una demora en lenguaje natural: «8 h», «3 días», «2 meses» (§3.2).
+ *
+ * Cambia de unidad según el tamaño porque «312 h» no le dice nada a nadie, y
+ * «0 días» —que es lo que da una respuesta de la misma tarde contada en días—
+ * dice algo falso: que fue instantánea.
+ */
+export function duracionNatural(minutos: number): string {
+  if (minutos < 60) return `${minutos} min`;
+  // Las horas se truncan, no se redondean: 8 h 38 es «8 h». Sale del
+  // prototipo, que trae los cuatro casos escritos —«10 min», «5 h», «8 h»,
+  // «18 días»— y el de Alexandre son 8 h 38 dichas como 8 h. Los días sí
+  // redondean: los suyos son «18 días» sobre 17 d 20 h.
+  const horas = Math.floor(minutos / 60);
+  if (horas < 48) return `${horas} h`;
+  const dias = Math.round(horas / 24);
+  if (dias < 60) return `${dias} días`;
+  return `${Math.round(dias / 30)} meses`;
+}
+
+/** Los minutos entre dos timestamps, o null si alguno falta o van al revés. */
+export function minutosEntre(
+  desde: string | null | undefined,
+  hasta: string | null | undefined,
+): number | null {
+  const a = Date.parse(String(desde ?? ''));
+  const b = Date.parse(String(hasta ?? ''));
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b < a) return null;
+  return Math.round((b - a) / 60_000);
+}
+
+export function demoraNatural(desde: string | null | undefined, hasta: string | null | undefined): string | null {
+  const m = minutosEntre(desde, hasta);
+  return m === null ? null : duracionNatural(m);
+}

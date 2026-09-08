@@ -120,68 +120,79 @@ migrate(
       {
         // Respondio rapido y freno por el area de compras.
         perfil: {
-          slug: 'alexandre-jordao-9f21', nombre: 'Alexandre Jordao',
-          cargo: 'Gerente de Manutencao', empresa: 'Metalurgica Jordao',
-          industria: 'Metalurgia', pais: 'Brasil', ciudad: 'Sao Paulo',
+          // Ficha a medio cargar: sin cargo ni empresa. Es el caso que muestra
+          // cómo se ve un campo vacío.
+          slug: 'alexandre-jordao', nombre: 'Alexandre Jordao',
+          cargo: '', empresa: '',
+          industria: 'Automotriz', pais: 'Brasil', ciudad: 'Rio de Janeiro',
           telefono: '5511987654321', telefono_raw: '5511987654321', telefono_valido: true,
         },
         lead: {
-          cuenta: 'DL', etapa: 'R3', situacion: 'contesto', asignado: 'sofia',
-          lista: 'Sales Navigator - Gerentes SP', pagina_origen: 3, nota_r0: true,
+          cuenta: 'DL', etapa: 'R3', situacion: 'contesto',
+          lista: 'Sales Navigator · Lista Automotriz BR', pagina_origen: 26, nota_r0: false,
           proximo_contacto: '2026-09-08',
-          f_invitacion: '2026-05-12', f_aceptacion: '2026-05-20', f_respuesta: '2026-05-20',
-          f_ultimo_contacto: '2026-08-14',
-          etiquetas: ['Tibio', 'Contacto', 'Compras SP'],
+          f_invitacion: '2026-08-05 09:40:00.000Z', f_aceptacion: '2026-08-12 10:02:00.000Z',
+          f_respuesta: '2026-08-12 18:40:00.000Z',
+          f_ultimo_contacto: '2026-08-18 10:20:00.000Z',
+          sin_leer_li: true,
+          etiquetas: ['Tibio', 'Compras SP'],
         },
       },
       {
         // El mas avanzado: con reunion agendada (la coleccion reunion llega en la etapa 3).
         perfil: {
-          slug: 'wellington-abner-simoes-4a2b91', nombre: 'Wellington Abner Simoes',
-          cargo: 'Diretor Industrial', empresa: 'GlobalTec',
-          industria: 'Alimentos', pais: 'Brasil', ciudad: 'Campinas',
+          slug: 'wellington-abner-simoes', nombre: 'Wellington Abner Simoes',
+          cargo: 'Gerente de Operaciones', empresa: 'Opus CM',
+          industria: 'Construccion / Manufactura', pais: 'Brasil', ciudad: 'Sao Paulo',
           telefono: '5519998877665', telefono_raw: '5519998877665', telefono_valido: true,
         },
         lead: {
           cuenta: 'AL', etapa: 'R2', situacion: 'contesto',
-          lista: 'Sales Navigator - Diretores industriais', pagina_origen: 1, nota_r0: true,
-          proximo_contacto: '2026-09-09',
-          f_invitacion: '2026-07-01', f_aceptacion: '2026-07-02', f_respuesta: '2026-07-02',
-          f_ultimo_contacto: '2026-08-28',
-          etiquetas: ['Caliente', 'Decisor'],
+          lista: 'Sales Navigator · Gerentes SP', pagina_origen: 9, nota_r0: true,
+          proximo_contacto: '2026-09-16',
+          f_invitacion: '2026-08-14 11:15:00.000Z', f_aceptacion: '2026-08-21 09:12:00.000Z',
+          f_respuesta: '2026-08-21 14:12:00.000Z',
+          f_ultimo_contacto: '2026-09-02 11:40:00.000Z',
+          etiquetas: ['Caliente'],
         },
       },
       {
         // Acepto y nunca respondio: agoto la cadencia entera.
         perfil: {
+          // Sin cargo ni empresa y sin teléfono: el único canal es LinkedIn.
           urn: 'ACwAAAB7x2sBb', nombre: 'Herik Pires',
-          cargo: 'Coordenador de Suprimentos', empresa: 'Braskem',
-          industria: 'Quimica', pais: 'Brasil', ciudad: 'Salvador',
+          cargo: '', empresa: '',
+          industria: 'Automotriz', pais: 'Brasil', ciudad: 'Belo Horizonte',
         },
         lead: {
           cuenta: 'FR', etapa: 'R8', situacion: 'agotado',
-          lista: 'Sales Navigator - Suprimentos BA', pagina_origen: 7, nota_r0: false,
-          proximo_contacto: null,
-          f_invitacion: '2025-06-10', f_aceptacion: '2025-06-18',
-          f_ultimo_contacto: '2026-08-02',
-          etiquetas: ['Frio', 'Fase 2', 'Recordatorio'],
+          lista: 'Sales Navigator · Automotriz MG', pagina_origen: 21, nota_r0: false,
+          // Fase 2: el próximo contacto se corre tres meses, no se borra.
+          proximo_contacto: '2026-10-04',
+          f_invitacion: '2026-06-28 08:20:00.000Z', f_aceptacion: '2026-07-04 08:44:00.000Z',
+          f_ultimo_contacto: '2026-07-04 08:50:00.000Z',
+          etiquetas: ['Periodico', 'Fase 2'],
         },
       },
       {
         // Nombre deliberadamente larguisimo, para probar el truncado en la vista.
         perfil: {
-          slug: 'maria-de-los-angeles-fernandez-villagran',
-          nombre: 'Maria de los Angeles Fernandez Villagran de Echeverria - Gerente de Compras y Abastecimiento',
-          cargo: 'Gerente de Compras', empresa: 'Industrias del Norte',
-          industria: 'Manufactura', pais: 'Mexico', ciudad: 'Monterrey',
+          slug: 'maria-villagran',
+          nombre: 'Maria de los Angeles Fernandez Villagran de Goncalves Sobrinho - Directora de Operaciones y Cadena de Suministro LATAM',
+          cargo: 'Directora de Operaciones y Cadena de Suministro LATAM',
+          empresa: 'Grupo Industrial Villagran y Asociados S.A. de C.V.',
+          industria: 'Maquinaria Industrial', pais: 'Mexico', ciudad: 'Monterrey',
           telefono: '528112345678', telefono_raw: '528112345678', telefono_valido: true,
         },
         lead: {
           cuenta: 'ED', etapa: 'R1', situacion: 'contesto', asignado: 'sofia',
-          lista: 'Sales Navigator - Compras MX', pagina_origen: 2, nota_r0: true,
+          lista: 'Sales Navigator · Maquinaria MX Norte', pagina_origen: 13, nota_r0: true,
           proximo_contacto: '2026-09-05',
-          f_invitacion: '2026-08-20', f_aceptacion: '2026-08-21', f_respuesta: '2026-08-22',
-          f_ultimo_contacto: '2026-08-21',
+          f_invitacion: '2026-08-25 16:30:00.000Z', f_aceptacion: '2026-09-01 08:05:00.000Z',
+          // Contestó a los diez minutos de aceptar, antes de que le
+          // escribiéramos: es el caso que muestra el escalón «min».
+          f_respuesta: '2026-09-01 08:15:00.000Z',
+          f_ultimo_contacto: '2026-09-01 09:40:00.000Z',
           sin_leer_li: true,
           etiquetas: ['Caliente', 'Decisor', 'MX Norte'],
         },
@@ -190,34 +201,38 @@ migrate(
         // Referido que llego por WhatsApp: nunca hubo invitacion, no tiene pagina_origen (D26).
         perfil: {
           nombre: 'Gonzalo Adrian Nunez', cargo: 'Jefe de Planta',
-          empresa: 'Aceros del Plata', industria: 'Siderurgia',
+          empresa: 'Metalurgica del Sur', industria: 'Metalurgia',
           pais: 'Argentina', ciudad: 'Rosario',
           telefono: '5493411234567', telefono_raw: '5493411234567', telefono_valido: true,
         },
         lead: {
           cuenta: 'AU', etapa: 'R4', situacion: 'contesto',
-          lista: 'Referido - WhatsApp directo', nota_r0: false,
-          proximo_contacto: '2026-09-11',
-          f_respuesta: '2026-06-30', f_ultimo_contacto: '2026-08-30',
-          etiquetas: ['Caliente', 'Contacto'],
+          lista: 'Referido · WhatsApp directo', nota_r0: false,
+          proximo_contacto: '2026-09-12',
+          // Escribió él primero: no hay invitación ni aceptación de las que
+          // restar, y la ficha lo dice con esas palabras.
+          f_respuesta: '2026-08-28 19:20:00.000Z',
+          f_ultimo_contacto: '2026-08-28 19:35:00.000Z',
+          sin_leer_wa: true,
+          etiquetas: ['Caliente'],
         },
       },
       {
         // Respondio tarde y no asistio a la reunion. Vencido: le toca hoy.
         perfil: {
-          slug: 'lucia-goncalves-3d77', nombre: 'Lucia Goncalves',
-          cargo: 'Compradora Senior', empresa: 'Vale S.A.',
-          industria: 'Mineria', pais: 'Brasil', ciudad: 'Belo Horizonte',
+          slug: 'lucia-goncalves', nombre: 'Lucia Goncalves',
+          cargo: 'Consultora Senior', empresa: 'Pinheiro & Asoc.',
+          industria: 'Consultoria', pais: 'Uruguay', ciudad: 'Montevideo',
           telefono: '5531988776655', telefono_raw: '5531988776655', telefono_valido: true,
         },
         lead: {
           cuenta: 'AMU', etapa: 'R5', situacion: 'en_curso',
-          lista: 'Sales Navigator - Mineria MG', pagina_origen: 5, nota_r0: false,
-          proximo_contacto: '2026-09-01',
-          f_invitacion: '2025-11-03', f_aceptacion: '2025-11-25', f_respuesta: '2026-01-14',
-          f_ultimo_contacto: '2026-08-17',
-          sin_leer_wa: true,
-          etiquetas: ['Tibio', 'Reagendar', 'Recordatorio'],
+          lista: 'Sales Navigator · Consultoría LATAM', pagina_origen: 6, nota_r0: false,
+          proximo_contacto: '2026-09-19',
+          f_invitacion: '2026-08-02 10:00:00.000Z', f_aceptacion: '2026-08-09 12:30:00.000Z',
+          f_respuesta: '2026-08-27 09:10:00.000Z',
+          f_ultimo_contacto: '2026-08-19 10:00:00.000Z',
+          etiquetas: ['Reagendar'],
         },
       },
       {
@@ -230,7 +245,8 @@ migrate(
         lead: {
           cuenta: 'DL', etapa: 'R0', situacion: 'esperando_recontacto',
           lista: 'Sales Navigator - Operacoes PR', pagina_origen: 4, nota_r0: false,
-          f_invitacion: '2026-05-01', f_cancelada: '2026-07-30',
+          f_invitacion: '2026-05-01 08:20:00.000Z', f_cancelada: '2026-07-30 03:00:00.000Z',
+          f_ultimo_contacto: '2026-05-01 08:20:00.000Z',
           proximo_contacto: '2026-09-28',
           etiquetas: [],
         },
@@ -277,9 +293,9 @@ migrate(
       etapa: 'R0',
       situacion: 'descartado',
       motivo_descarte: 'Ya lo trabaja AL',
-      lista: 'Sales Navigator - Diretores industriais',
-      pagina_origen: 1,
-      f_invitacion: '2026-07-03',
+      lista: 'Sales Navigator · Construccion BR',
+      pagina_origen: 14,
+      f_invitacion: '2026-07-03 10:40:00.000Z',
       etiquetas: [],
     });
 
@@ -289,13 +305,25 @@ migrate(
       app.findFirstRecordByFilter('lead', `perfil.nombre = {:n}`, { n: nombre }).id;
 
     const envios = [
-      ['Alexandre Jordao', 'R1', '2026-05-21', 'linkedin', 'pt'],
-      ['Alexandre Jordao', 'R2', '2026-06-08', 'linkedin', 'pt'],
-      ['Alexandre Jordao', 'R3', '2026-08-14', 'linkedin', 'pt'],
-      ['Wellington Abner Simoes', 'R1', '2026-07-03', 'linkedin', 'pt'],
-      ['Wellington Abner Simoes', 'R2', '2026-08-28', 'linkedin', 'pt'],
-      ['Lucia Goncalves', 'R4', '2026-05-19', 'whatsapp', 'pt'],
-      ['Lucia Goncalves', 'R5', '2026-08-17', 'linkedin', 'pt'],
+      ['Alexandre Jordao', 'R1', '2026-08-12 10:14:00.000Z', 'linkedin', 'pt'],
+      ['Alexandre Jordao', 'R2', '2026-08-13 09:02:00.000Z', 'linkedin', 'pt'],
+      ['Alexandre Jordao', 'R3', '2026-08-18 10:20:00.000Z', 'whatsapp', 'pt'],
+      ['Wellington Abner Simoes', 'R1', '2026-08-21 09:30:00.000Z', 'linkedin', 'pt'],
+      ['Wellington Abner Simoes', 'R2', '2026-09-02 11:40:00.000Z', 'whatsapp', 'pt'],
+      ['Herik Pires', 'R1', '2026-07-04 08:50:00.000Z', 'linkedin', 'pt'],
+      // Contestó ella a los diez minutos de aceptar: el R1 salió DESPUÉS de la
+      // respuesta, y por eso la ficha no le atribuye ningún paso.
+      [
+        'Maria de los Angeles Fernandez Villagran de Goncalves Sobrinho - Directora de Operaciones y Cadena de Suministro LATAM',
+        'R1',
+        '2026-09-01 09:40:00.000Z',
+        'linkedin',
+        'es',
+      ],
+      // El referido escribió primero; lo único nuestro es la respuesta.
+      ['Gonzalo Adrian Nunez', 'R4', '2026-08-28 19:35:00.000Z', 'whatsapp', 'es'],
+      ['Lucia Goncalves', 'R1', '2026-08-10 10:00:00.000Z', 'linkedin', 'es'],
+      ['Lucia Goncalves', 'R2', '2026-08-19 10:00:00.000Z', 'linkedin', 'es'],
     ];
     for (const [nombre, paso, fecha, canal, idioma] of envios) {
       nuevo('envio', {

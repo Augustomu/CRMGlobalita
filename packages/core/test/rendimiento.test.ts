@@ -4,6 +4,10 @@ import {
   anchoDeTasa,
   colorDeTasa,
   cuandoResponden,
+  cuandoRespondenDetallado,
+  demoraNatural,
+  franjaDe,
+  tieneHora,
   industriasQueConvierten,
   lunesDe,
   metricasSemanales,
@@ -162,4 +166,51 @@ test('cuando responden sale por dia: la hora no existe en los datos todavia', ()
   const filas = cuandoResponden(leads);
   assert.deepEqual(filas[0], { que: 'martes', valor: '67%', ancho: 100 });
   assert.equal(filas[1].que, 'miércoles');
+});
+
+test('§7.11.2 · las cuatro franjas del manual, y lo de afuera no entra', () => {
+  assert.equal(franjaDe('2026-09-08 09:15:00.000Z'), 'mañana');
+  assert.equal(franjaDe('2026-09-08 11:00:00.000Z'), 'mediodía');
+  assert.equal(franjaDe('2026-09-08 16:59:00.000Z'), 'tarde');
+  assert.equal(franjaDe('2026-09-08 19:30:00.000Z'), 'última hora');
+  // Fuera del horario de trabajo no hay franja: no se fuerza a la mas cercana.
+  assert.equal(franjaDe('2026-09-08 03:00:00.000Z'), null);
+  assert.equal(franjaDe('2026-09-08 21:00:00.000Z'), null);
+  assert.equal(franjaDe('2026-09-08'), null);
+});
+
+test('una fecha con medianoche NO es una hora medida', () => {
+  // Los dos se guardan igual. Sin distinguirlos, todo lo importado caeria en
+  // la franja de las 00:00 y el grafico diria con seguridad algo que nadie
+  // midio.
+  assert.equal(tieneHora('2026-09-08 00:00:00.000Z'), false);
+  assert.equal(tieneHora('2026-09-08 09:15:00.000Z'), true);
+  assert.equal(tieneHora(''), false);
+});
+
+test('cuando responden cuenta solo los que tienen hora, y dice cuantos no', () => {
+  const conHora = (id: string, f: string) => ({
+    id, cuenta: 'c1', etapa: 'R1', situacion: 'en_curso', f_respuesta: f,
+  });
+  const r = cuandoRespondenDetallado([
+    conHora('a', '2026-09-08 09:00:00.000Z'),
+    conHora('b', '2026-09-15 10:00:00.000Z'),
+    conHora('c', '2026-09-09 15:00:00.000Z'),
+    conHora('sin', '2026-09-10 00:00:00.000Z'),
+  ]);
+  assert.equal(r.sinHora, 1);
+  assert.deepEqual(r.filas[0], { que: 'martes mañana', valor: '67%', ancho: 100 });
+});
+
+test('la demora cambia de unidad para no decir «0 dias»', () => {
+  // Una respuesta de la misma tarde contada en dias da 0, que dice algo falso.
+  assert.equal(demoraNatural('2026-09-08 09:00:00Z', '2026-09-08 09:40:00Z'), '40 min');
+  assert.equal(demoraNatural('2026-09-08 09:00:00Z', '2026-09-08 17:00:00Z'), '8 h');
+  assert.equal(demoraNatural('2026-09-01 09:00:00Z', '2026-09-19 09:00:00Z'), '18 días');
+  assert.equal(demoraNatural('2026-01-01 09:00:00Z', '2026-06-01 09:00:00Z'), '5 meses');
+  // Sin uno de los dos extremos no hay demora que calcular.
+  assert.equal(demoraNatural(null, '2026-09-08'), null);
+  assert.equal(demoraNatural('2026-09-08', null), null);
+  // Al reves tampoco: seria una demora negativa.
+  assert.equal(demoraNatural('2026-09-08', '2026-09-01'), null);
 });

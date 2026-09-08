@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { coincide } from '@crm/core/busqueda';
 import { tocaHoy } from '@crm/core/cadencia';
 import type { LeadRecord, UsuarioRecord } from '../../lib/types';
 import { BurbujaWhatsApp } from './IconosCanal';
@@ -154,7 +155,7 @@ export function ListaContactos({
   }, [leads]);
 
   const visibles = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
+    const q = busqueda.trim();
     return leads
       .filter((l) => {
         const p = l.expand?.perfil;
@@ -186,11 +187,10 @@ export function ListaContactos({
         if (ciudad && (p?.ciudad || '—') !== ciudad) return false;
         if (etiqueta && !(l.expand?.etiquetas ?? []).some((e) => e.nombre === etiqueta)) return false;
 
-        if (!q) return true;
-        // §7.2: nombre, empresa, teléfono y ciudad.
-        return [p?.nombre, p?.empresa, p?.telefono, p?.ciudad]
-          .filter(Boolean)
-          .some((v) => String(v).toLowerCase().includes(q));
+        // §7.2: nombre, empresa, teléfono y ciudad. Sin tildes: la base está
+        // llena de «Gonçalves» y «Villagrán», y nadie los escribe con acento
+        // cuando los está buscando.
+        return coincide([p?.nombre, p?.empresa, p?.telefono, p?.ciudad], q);
       })
       // Los vencidos primero SIEMPRE; dentro de cada grupo manda el orden
       // elegido. Es del prototipo: lo que ya venció no puede quedar sepultado

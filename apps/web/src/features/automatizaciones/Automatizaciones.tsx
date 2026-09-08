@@ -16,7 +16,7 @@ import {
 import {
   anchoDeTasa,
   colorDeTasa,
-  cuandoResponden,
+  cuandoRespondenDetallado,
   industriasQueConvierten,
   metricasSemanales,
   perfilesConMasReuniones,
@@ -186,7 +186,7 @@ export function Automatizaciones() {
       if (conReunion.has(l.id)) aceptadosConReunion.set(i, (aceptadosConReunion.get(i) ?? 0) + 1);
     }
     return {
-      cuando: cuandoResponden(leads),
+      cuando: cuandoRespondenDetallado(leads),
       perfiles: perfilesConMasReuniones(conPerfil),
       industrias: industriasQueConvierten(aceptados, aceptadosConReunion),
     };
@@ -440,8 +440,12 @@ export function Automatizaciones() {
               <div className="auto-analisis">
                 <TarjetaAnalisis
                   titulo="Cuándo responden"
-                  filas={analisis.cuando}
-                  pie="Por día. La hora de la respuesta no está en los datos: llega con la integración de LinkedIn y WhatsApp."
+                  filas={analisis.cuando.filas}
+                  pie={
+                    analisis.cuando.sinHora
+                      ? `Día y franja horaria. ${analisis.cuando.sinHora} respuestas quedaron afuera: se cargaron sin hora.`
+                      : 'Día y franja horaria: mañana 8–11, mediodía 11–14, tarde 14–17, última hora 17–20.'
+                  }
                 />
                 <TarjetaAnalisis
                   titulo="Perfiles con más reuniones"

@@ -8,6 +8,7 @@
 // De ahí sale la marca de compartido: un perfil con leads en más de una cuenta
 // ya fue invitado por otro, y eso hay que verlo antes de mandar nada.
 
+import { coincide } from './busqueda.ts';
 import { esFase2 } from './cadencia.ts';
 import type { Paso } from './tipos.ts';
 
@@ -65,15 +66,6 @@ export function grupoDeEtapa(f: FilaCompartida): GrupoEtapa {
  * termina usándose desde un hook o una migración, hay que reemplazarla por una
  * tabla de caracteres explícita (hay una en `pb_seed/1788600100_demo.js`).
  */
-const MARCAS = new RegExp('[\\u0300-\\u036f]', 'g');
-
-function sinAcentos(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(MARCAS, '');
-}
-
 /**
  * Filtra la tabla.
  *
@@ -88,12 +80,10 @@ export function visibles(
   etapa: FiltroEtapa,
   busqueda: string,
 ): FilaCompartida[] {
-  const q = sinAcentos(busqueda.trim());
   return filas.filter((f) => {
     if (cuenta !== 'todas' && !f.cuentas.includes(cuenta)) return false;
     if (etapa !== 'todas' && grupoDeEtapa(f) !== etapa) return false;
-    if (!q) return true;
-    return sinAcentos([f.nombre, f.empresa, f.cargo, f.ciudad, f.industria, f.pais].join(' ')).includes(q);
+    return coincide([f.nombre, f.empresa, f.cargo, f.ciudad, f.industria, f.pais], busqueda);
   });
 }
 

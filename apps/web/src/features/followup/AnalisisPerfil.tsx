@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   cohorteDe,
   concluir,
+  demoraDeRespuesta,
   dondeSeCorto,
   frecuenciaDeEnvio,
   pasoQueRespondio,
-  tardanzaEnResponder,
   type EnvioDelLead,
   type LeadAnalizado,
 } from '@crm/core/analisis';
@@ -86,7 +86,6 @@ export function AnalisisPerfil({ lead, leads }: Props) {
   const siguiente = siguientePaso(CADENCIA_POR_DEFECTO, lead.etapa as Paso);
   const conclusion = concluir(yo, mios, cohorte, siguiente);
 
-  const tardanza = tardanzaEnResponder(mios, lead.f_respuesta);
   const frecuencia = frecuenciaDeEnvio(mios);
   const corte = dondeSeCorto(mios, lead.f_respuesta);
   const respondio = pasoQueRespondio(mios, lead.f_respuesta);
@@ -105,7 +104,10 @@ export function AnalisisPerfil({ lead, leads }: Props) {
           <span className="auto-th">Respuestas</span>
         </div>
         <div className="ana-metrica">
-          <span className="ana-numero tabular">{tardanza != null ? `${tardanza} d` : '—'}</span>
+          {/* Manual p. 6: `respuesta − aceptacion`, en lenguaje natural. «0
+              días» para una respuesta de la misma tarde dice algo falso —que
+              fue instantánea—; «8 h» dice lo que pasó. */}
+          <span className="ana-numero tabular">{demoraDeRespuesta(yo, mios) ?? '—'}</span>
           <span className="auto-th">Tardó en contestar</span>
         </div>
         <div className="ana-metrica">
@@ -135,9 +137,7 @@ export function AnalisisPerfil({ lead, leads }: Props) {
             <span>Envíos promedio</span>
             <span className="tabular">{cohorte.enviosPromedio}</span>
             <span>Tardan</span>
-            <span className="tabular">
-              {cohorte.tardanzaPromedio != null ? `${cohorte.tardanzaPromedio} d` : '—'}
-            </span>
+            <span className="tabular">{cohorte.demoraPromedio ?? '—'}</span>
           </div>
         </div>
       ) : (
