@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from './features/auth/useAuth';
 import { Login } from './features/auth/Login';
 import { useLeads, puedeUsuario } from './features/followup/useLeads';
-import { ListaContactos } from './features/followup/ListaContactos';
+import { ListaContactos, iniciales } from './features/followup/ListaContactos';
 import { FichaLead } from './features/followup/FichaLead';
 import { usePlantillas } from './features/followup/usePlantillas';
 import { Vencimientos, leadsVencidos } from './features/vencimientos/Vencimientos';
@@ -33,6 +33,16 @@ export function App() {
   const [vencAbierto, setVencAbierto] = useState(false);
   const [repoAbierto, setRepoAbierto] = useState(false);
   const [dupAbierto, setDupAbierto] = useState(false);
+  const [masAbierto, setMasAbierto] = useState(false);
+  const [usuarioAbierto, setUsuarioAbierto] = useState(false);
+  /**
+   * Qué canal de conversación está abierto, o ninguno. Vive en el header
+   * porque la conversación se abre en la columna 1, arriba de la lista: es un
+   * solo lugar para los dos canales, y el switch elige cuál.
+   */
+  const [conv, setConv] = useState<'linkedin' | 'whatsapp' | null>(null);
+  /** Los dos filtros de la columna 1: todos, o solo los que tienen sin leer. */
+  const [subtab, setSubtab] = useState<'todos' | 'sinleer'>('todos');
   // §5.2: la primera seccion visible es la primera de la lista de permitidas,
   // no Follow-up fijo. Al entrar, el Observador cae en Control.
   const [seccion, setSeccion] = useState<Seccion | null>(null);
@@ -69,24 +79,57 @@ export function App() {
     else if (!leads.some((l) => l.id === seleccionado)) setSeleccionado(leads[0]!.id);
   }, [leads, seleccionado]);
 
+  // Cambiar de seccion cierra los menus del header.
+  useEffect(() => {
+    setMasAbierto(false);
+    setUsuarioAbierto(false);
+  }, [seccion]);
+
   if (!auth.usuario) return <Login auth={auth} />;
 
-  const lead = leads.find((l) => l.id === seleccionado) ?? null;
   const nVencidos = leadsVencidos(leads).length;
+  const nSinLeerLi = leads.filter((l) => l.sin_leer_li).length;
+  const nSinLeerWa = leads.filter((l) => l.sin_leer_wa).length;
+  const nSinLeer = leads.filter((l) => l.sin_leer_li || l.sin_leer_wa).length;
+
+  // El subtab filtra la lista de verdad, no solo el conteo del header.
+  const visibles = subtab === 'sinleer' ? leads.filter((l) => l.sin_leer_li || l.sin_leer_wa) : leads;
+  const lead = visibles.find((l) => l.id === seleccionado) ?? null;
 
   return (
     <div className="app">
       <header className="header">
-        <strong className="header-marca">CRM Globalita</strong>
+        {/* El prototipo NO tiene marca en el header: los 44px de alto son para
+            trabajar, no para el logo. Arranca con el switch de conversación. */}
+        {seccion === 'followup' && (
+          <div
+            className="header-conv"
+            title="Abrir la conversación del lead. El switch elige el canal (G)"
+          >
+            {(['linkedin', 'whatsapp'] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                className={`header-conv-boton ${conv === c ? `header-conv-${c}` : ''}`}
+                onClick={() => setConv((a) => (a === c ? null : c))}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                  <path d="M20 15a3 3 0 01-3 3H8l-4 3V6a3 3 0 013-3h10a3 3 0 013 3z" />
+                </svg>
+                {c === 'linkedin' ? 'in' : 'wa'}
+                <span className="tabular">{c === 'linkedin' ? nSinLeerLi : nSinLeerWa}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* El orden es el del prototipo, no el mío: Automatizaciones, Control,
+            Follow-up, WA Personal, Usuarios. */}
         <nav className="header-tabs">
-          {puedeUsuario(auth.usuario, 'followup') && (
-            <button
-              type="button"
-              className={`tab ${seccion === 'followup' ? 'tab-on' : 'tab-off'}`}
-              onClick={() => setSeccion('followup')}
-            >
-              Follow-up
-            </button>
+          {puedeUsuario(auth.usuario, 'automatizaciones') && (
+            <span className="tab tab-off tab-pendiente" title="Etapa 5, todavía no construida">
+              Automatizaciones
+            </span>
           )}
           {puedeUsuario(auth.usuario, 'control') && (
             <button
@@ -97,8 +140,19 @@ export function App() {
               Control
             </button>
           )}
-          {puedeUsuario(auth.usuario, 'automatizaciones') && (
-            <span className="tab tab-off" title="Etapa 5, todavía no construida">Automatizaciones</span>
+          {puedeUsuario(auth.usuario, 'followup') && (
+            <button
+              type="button"
+              className={`tab ${seccion === 'followup' ? 'tab-on' : 'tab-off'}`}
+              onClick={() => setSeccion('followup')}
+            >
+              Follow-up
+            </button>
+          )}
+          {puedeUsuario(auth.usuario, 'waPersonal') && (
+            <span className="tab tab-off tab-pendiente" title="Todavía no construida">
+              WA Personal
+            </span>
           )}
           {puedeUsuario(auth.usuario, 'usuarios') && (
             <button
@@ -111,53 +165,151 @@ export function App() {
           )}
         </nav>
 
+        {/* Los dos filtros de la columna 1, con su conteo. Solo en Follow-up. */}
+        {seccion === 'followup' && (
+          <div className="header-subtabs">
+            {(
+              [
+                ['todos', 'Follow Up', leads.length],
+                ['sinleer', 'Sin leer', nSinLeer],
+              ] as const
+            ).map(([clave, texto, n]) => (
+              <button
+                key={clave}
+                type="button"
+                className={`header-subtab ${subtab === clave ? 'header-subtab-on' : ''}`}
+                onClick={() => setSubtab(clave)}
+              >
+                {texto}
+                <span className="tabular">{n}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="header-derecha">
-          {puedeUsuario(auth.usuario, 'repositorio') && (
+          <div className="relativo">
             <button
               type="button"
-              className="boton-secundario"
-              onClick={() => setRepoAbierto(true)}
-              title="Repositorio de mensajes"
+              className="boton-icono-28"
+              title="Más herramientas"
+              onClick={() => setMasAbierto((a) => !a)}
             >
-              repositorio
+              <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <circle cx="5" cy="12" r="1.7" />
+                <circle cx="12" cy="12" r="1.7" />
+                <circle cx="19" cy="12" r="1.7" />
+              </svg>
+              {duplicados.grupos.length > 0 && (
+                <span className="badge-punto tabular">{duplicados.grupos.length}</span>
+              )}
             </button>
-          )}
-          {puedeUsuario(auth.usuario, 'importarLeads') && duplicados.grupos.length > 0 && (
-            <button
-              type="button"
-              className="boton-secundario boton-badge"
-              onClick={() => setDupAbierto(true)}
-              title="Perfiles que podrían ser la misma persona"
-            >
-              duplicados
-              <span className="badge">{duplicados.grupos.length}</span>
-            </button>
-          )}
+            {masAbierto && (
+              <>
+                <div className="popover-fondo" onClick={() => setMasAbierto(false)} />
+                <div className="popover popover-anclado header-mas">
+                  {puedeUsuario(auth.usuario, 'importarLeads') && (
+                    <button
+                      type="button"
+                      className="header-mas-item"
+                      onClick={() => {
+                        setDupAbierto(true);
+                        setMasAbierto(false);
+                      }}
+                    >
+                      <span>Duplicados sin resolver</span>
+                      {duplicados.grupos.length > 0 && (
+                        <span className="chip-mini chip-mini-alerta tabular">
+                          {duplicados.grupos.length}
+                        </span>
+                      )}
+                    </button>
+                  )}
+                  {/* Las que todavía no existen se listan igual, con el motivo:
+                      esconderlas haría creer que el sistema no las contempla. */}
+                  {(
+                    [
+                      ['baseCompartida', 'Base compartida'],
+                      ['cuentasConectadas', 'Cuentas conectadas'],
+                      ['tareas', 'Tareas'],
+                      ['agenda', 'Agenda'],
+                      ['colaEnvios', 'Cola de envíos'],
+                    ] as const
+                  ).map(([clave, texto]) =>
+                    puedeUsuario(auth.usuario, clave) ? (
+                      <span key={clave} className="header-mas-item header-mas-off">
+                        <span>{texto}</span>
+                        <span className="chip-mini">falta</span>
+                      </span>
+                    ) : null,
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
           {puedeUsuario(auth.usuario, 'vencimientos') && (
             <button
               type="button"
-              className="boton-secundario boton-badge"
+              className="boton-icono-28"
               onClick={() => setVencAbierto(true)}
               title="Vencimientos de mensajes"
             >
-              vencimientos
-              {nVencidos > 0 && <span className="badge">{nVencidos}</span>}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2" />
+              </svg>
+              {nVencidos > 0 && <span className="badge-punto tabular">{nVencidos}</span>}
             </button>
           )}
-          <span className="pastilla pastilla-suave">
-            {auth.usuario.name} · {auth.usuario.rol}
-          </span>
+
+          {puedeUsuario(auth.usuario, 'repositorio') && (
+            <button
+              type="button"
+              className="boton-icono-28"
+              onClick={() => setRepoAbierto(true)}
+              title="Repositorio de mensajes"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                <rect x="3.5" y="4" width="17" height="16" rx="2" />
+                <path d="M3.5 9h17M9 9v11" />
+              </svg>
+            </button>
+          )}
+
           <button
             type="button"
-            className="boton-secundario"
+            className="boton-icono-28"
             onClick={() => setTema((t) => (t + 1) % TEMAS.length)}
-            title="claro → oscuro → noche"
+            title="Tema: claro → oscuro → noche"
           >
-            tema
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+              <path d="M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z" />
+            </svg>
           </button>
-          <button type="button" className="boton-secundario" onClick={auth.salir}>
-            salir
-          </button>
+
+          <div className="relativo">
+            <button
+              type="button"
+              className="header-avatar"
+              title={`${auth.usuario.name} · ${auth.usuario.rol}`}
+              onClick={() => setUsuarioAbierto((a) => !a)}
+            >
+              {iniciales(auth.usuario.name)}
+            </button>
+            {usuarioAbierto && (
+              <>
+                <div className="popover-fondo" onClick={() => setUsuarioAbierto(false)} />
+                <div className="popover popover-anclado header-usuario">
+                  <span className="header-usuario-nombre">{auth.usuario.name}</span>
+                  <span className="campo-ayuda">{auth.usuario.rol}</span>
+                  <button type="button" className="boton-mini" onClick={auth.salir}>
+                    Salir
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -181,7 +333,9 @@ export function App() {
         {!cargando && !error && seccion === 'followup' && (
           <>
             <ListaContactos
-              leads={leads}
+              leads={visibles}
+              conversacion={conv}
+              onCerrarConversacion={() => setConv(null)}
               seleccionado={seleccionado}
               onSeleccionar={setSeleccionado}
               usuario={auth.usuario}

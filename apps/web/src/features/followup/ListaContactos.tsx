@@ -50,10 +50,20 @@ interface Props {
   /** Sin permiso de ver el teléfono tampoco se muestra la burbuja: el icono
    *  revelaría que el dato existe. */
   veTelefono: boolean;
+  /**
+   * Qué conversación está abierta, o ninguna. Las dos —LinkedIn y WhatsApp—
+   * se abren en el MISMO lugar, arriba de la lista: el switch del header elige
+   * el canal. Es la convención del prototipo y evita dos paneles compitiendo
+   * por el mismo espacio.
+   */
+  conversacion?: 'linkedin' | 'whatsapp' | null;
+  onCerrarConversacion?: () => void;
 }
 
 export function ListaContactos({
   leads,
+  conversacion = null,
+  onCerrarConversacion,
   seleccionado,
   onSeleccionar,
   usuario,
@@ -119,8 +129,53 @@ export function ListaContactos({
     setFiltrosAbierto((a) => !a);
   }
 
+  const abierto = conversacion ? (leads.find((l) => l.id === seleccionado) ?? null) : null;
+
   return (
     <aside className="columna-lista">
+      {/* Se dibuja siempre: vacío ocupa 0 y así el resto de las filas del grid
+          no se corren cuando la conversación se abre o se cierra. */}
+      <div className={abierto ? 'conv-panel' : ''}>
+        {abierto && (
+          <>
+          <div className="conv-cabecera">
+            <span className="colapsable-flecha">▾</span>
+            <span className="colapsable-titulo">Conversación</span>
+            <span
+              className={`pastilla ${conversacion === 'whatsapp' ? 'pastilla-wa' : 'pastilla-li'}`}
+            >
+              {conversacion === 'whatsapp' ? 'WhatsApp' : 'LinkedIn'}
+            </span>
+            <span className="conv-fecha al-final tabular">
+              {abierto.f_ultimo_contacto ? String(abierto.f_ultimo_contacto).slice(0, 10) : 'sin contacto'}
+            </span>
+            <button type="button" className="boton-icono-22" title="Cerrar" onClick={onCerrarConversacion}>×</button>
+          </div>
+          {/* Honesto: el hilo todavía no se guarda en el CRM. Leerlo requiere
+              la sesión de la cuenta, que llega con el worker. Lo que sí hay es
+              el acceso directo al chat real, que es el atajo H. */}
+          <div className="conv-vacio">
+            <span>El hilo todavía no se guarda en el CRM: se lee en el chat real.</span>
+            <a
+              className="boton-mini"
+              href={
+                conversacion === 'whatsapp'
+                  ? `https://wa.me/${(abierto.expand?.perfil?.telefono ?? '').replace(/\D/g, '')}`
+                  : abierto.link_chat ||
+                    (abierto.expand?.perfil?.slug
+                      ? `https://www.linkedin.com/in/${abierto.expand.perfil.slug}`
+                      : '#')
+              }
+              target="_blank"
+              rel="noreferrer"
+            >
+              Abrir el chat
+            </a>
+          </div>
+          </>
+        )}
+      </div>
+
       {/* fila 2 del grid: buscador de 52px */}
       <div className="lista-buscador">
         <input

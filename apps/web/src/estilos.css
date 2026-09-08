@@ -36,7 +36,7 @@
   /* Acompañan al texto para que no se desborde. */
   /* El header NO escala con el texto: en el prototipo son 44px fijos y con la
      escala quedaba desproporcionado contra los botones de la derecha. */
-  --alto-header:   46px;
+  --alto-header:   44px;
   --avatar-chico:  calc(14px * var(--escala-texto));
   --avatar-grande: calc(30px * var(--escala-texto));
 }
@@ -56,11 +56,163 @@ html, body, #root { height: 100%; }
   gap: 12px;
   padding: 0 12px;
   background: var(--surface);
-  border-bottom: .5px solid var(--border);
+  /* 1px, no .5px: es la unica linea de 1px del prototipo y separa el header
+     del area de trabajo. */
+  border-bottom: 1px solid var(--border);
 }
+/* El prototipo no tiene marca en el header: los 44px son para trabajar. La
+   regla queda por si alguna pantalla suelta la necesita. */
 .header-marca { font-size: var(--txt-md); color: var(--text); white-space: nowrap; }
-.header-tabs { display: flex; gap: 2px; }
-.header-derecha { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.header-tabs { display: flex; align-items: stretch; margin-left: 10px; flex-shrink: 0; overflow: hidden; }
+.header-derecha {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 1;
+  min-width: 0;
+  padding-left: 14px;
+  justify-content: flex-end;
+}
+
+/* Switch de conversacion: los dos canales abren en el MISMO lugar y este
+   switch elige cual. Pintado con el color de cada marca cuando esta activo. */
+.header-conv {
+  display: flex;
+  align-items: center;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  align-self: center;
+  flex-shrink: 0;
+}
+.header-conv-boton {
+  height: 26px;
+  padding: 0 10px;
+  border: none;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--txt-sm);
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 150ms ease-out;
+}
+.header-conv-boton svg { width: 12px; height: 12px; }
+.header-conv-boton:hover { background: var(--accent-light); color: var(--accent); }
+.header-conv-linkedin { background: var(--brand-linkedin); color: var(--surface); font-weight: 600; }
+.header-conv-linkedin:hover { background: var(--brand-linkedin); color: var(--surface); }
+.header-conv-whatsapp { background: var(--brand-whatsapp); color: var(--surface); font-weight: 600; }
+.header-conv-whatsapp:hover { background: var(--brand-whatsapp); color: var(--surface); }
+
+/* Los dos filtros de la columna 1, con su conteo al lado. */
+.header-subtabs {
+  display: flex;
+  align-items: center;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-left: 10px;
+  flex-shrink: 0;
+  align-self: center;
+}
+.header-subtab {
+  height: 26px;
+  padding: 0 10px;
+  border: none;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--txt-sm);
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 150ms ease-out;
+}
+.header-subtab span { font-size: var(--txt-xs); }
+.header-subtab:hover { background: var(--accent-light); color: var(--accent); }
+.header-subtab-on { background: var(--accent); color: var(--surface); font-weight: 600; }
+.header-subtab-on:hover { background: var(--accent); color: var(--surface); }
+
+/* Avatar del usuario: reemplaza al texto "Nombre · rol", que ocupaba el ancho
+   de tres botones para decir algo que ya se sabe. */
+.header-avatar {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: .5px solid var(--accent-br);
+  background: var(--accent-light);
+  color: var(--accent);
+  font-family: inherit;
+  font-size: var(--txt-sm);
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.header-avatar:hover { background: var(--accent); color: var(--surface); }
+.header-usuario { width: 190px; }
+.header-usuario-nombre { font-size: var(--txt-base); font-weight: 600; color: var(--text); }
+.header-mas { width: 238px; padding: 7px; gap: 2px; }
+.header-mas-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--txt-base);
+  color: var(--text);
+  text-align: left;
+  width: 100%;
+  transition: background 150ms ease-out;
+}
+.header-mas-item span:first-child { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-mas-item:hover { background: var(--bg); }
+.header-mas-off { color: var(--hint); cursor: default; }
+.header-mas-off:hover { background: transparent; }
+.chip-mini {
+  font-size: var(--txt-xs);
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--hint);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.chip-mini-alerta { background: var(--error-light); color: var(--error); }
+
+/* El badge chico de los botones de icono del header. */
+.badge-punto {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: var(--error);
+  color: var(--surface);
+  font-size: var(--txt-xs);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.header-derecha .boton-icono-28 { position: relative; }
 
 /* En el prototipo la pestaña es SOLO texto con una línea abajo. Sin resetear
    `border` y `background` se ve el botón por defecto del navegador, y con un
@@ -72,7 +224,9 @@ html, body, #root { height: 100%; }
   align-items: center;
   padding: 0 11px;
   font-family: inherit;
-  font-size: var(--txt-md);
+  /* 13px en el prototipo: las pestanas son lo mas grande del header. */
+  font-size: var(--txt-lg);
+  font-weight: 500;
   border: none;
   background: none;
   border-bottom: 2px solid transparent;
@@ -90,9 +244,13 @@ html, body, #root { height: 100%; }
   flex-shrink: 0;
   border-right: .5px solid var(--border);
   background: var(--surface);
-  /* Prototipo: grid de filas, no flex. Cada seccion ocupa su fila. */
+  /* Prototipo: grid de filas, no flex. Cada seccion ocupa su fila.
+     La primera es la conversacion: se dibuja SIEMPRE, vacia cuando esta
+     cerrada, y una fila auto sin contenido mide 0. Si se montara y
+     desmontara, el resto de las filas se correria una posicion y el panel
+     se comeria los 52px del buscador. */
   display: grid;
-  grid-template-rows: 52px auto auto auto minmax(120px, 1fr) auto;
+  grid-template-rows: auto 52px auto auto auto minmax(120px, 1fr) auto;
   min-height: 0;
   overflow: hidden;
 }
@@ -2087,3 +2245,30 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
    trae el suyo propio. */
 .colapsable-cuerpo-pelado { padding: 0; }
 .overlay-medio { width: calc(440px * var(--escala-texto)); }
+
+/* Panel de conversación, arriba de la lista (columna 1). Los dos canales usan
+   el mismo lugar: el switch del header elige cuál, y así no hay dos paneles
+   peleando por el mismo espacio. */
+.conv-panel {
+  flex-shrink: 0;
+  border-bottom: .5px solid var(--border);
+  background: var(--surface);
+}
+.conv-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+}
+.conv-fecha { font-size: var(--txt-sm); color: var(--hint); }
+.conv-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0 12px 12px;
+  font-size: var(--txt-md);
+  color: var(--hint);
+  line-height: 1.45;
+  text-wrap: pretty;
+}
