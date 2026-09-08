@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NOMBRE_TIPO, proyectoDesdeLead, type TipoProyecto } from '@crm/core/proyecto';
 import { pb } from '../../lib/pocketbase';
+import { ProyectosDelLead } from './ProyectosDelLead';
 import type { LeadRecord } from '../../lib/types';
 
 const HOY = new Date().toISOString().slice(0, 10);
@@ -137,6 +138,15 @@ export function AbrirProyecto({ lead, puedeEditar }: Props) {
             <span className="campo-ayuda">
               Queda visible en Control al instante, en estado En conversación.
             </span>
+
+            {/* Los proyectos se EDITAN acá, no en la columna. El prototipo no
+                tiene una sección «Proyectos» en la ficha —dejó solo «Abrir
+                proyecto» en las acciones— pero Control es de solo lectura, así
+                que sin este panel un proyecto no se podría actualizar desde
+                ningún lado. */}
+            {existentes.length > 0 && (
+              <ProyectosDelLead lead={lead} editable={puedeEditar} onCambio={() => void cargar()} />
+            )}
           </div>
         </>
       )}

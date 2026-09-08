@@ -223,8 +223,7 @@ export function ProyectosDelLead({ lead, editable, onCambio }: Props) {
                   )}
                   <button
                     type="button"
-                    className="boton-principal"
-                    style={{ marginLeft: 'auto' }}
+                    className="boton-principal al-final"
                     onClick={() => void agregar(p)}
                     disabled={guardando || !(borrador[p.id] ?? '').trim()}
                   >

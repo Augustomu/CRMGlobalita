@@ -279,8 +279,7 @@ export function Repositorio({ onCerrar, onCambio }: Props) {
           )}
           <button
             type="button"
-            className="boton-principal"
-            style={{ marginLeft: 'auto' }}
+            className="boton-principal al-final"
             disabled={!sucio || guardando}
             onClick={() => void guardar()}
           >

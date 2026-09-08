@@ -382,8 +382,7 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
             <>
               <button
                 type="button"
-                className="boton-secundario"
-                style={{ marginLeft: 'auto' }}
+                className="boton-secundario al-final"
                 onClick={siguiente}
                 disabled={trabajando}
               >
@@ -410,8 +409,7 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
           ) : (
             <button
               type="button"
-              className="boton-principal"
-              style={{ marginLeft: 'auto' }}
+              className="boton-principal al-final"
               onClick={onCerrar}
             >
               Listo

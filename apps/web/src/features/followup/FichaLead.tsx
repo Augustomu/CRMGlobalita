@@ -6,7 +6,6 @@ import { pb } from '../../lib/pocketbase';
 import type { EnvioRecord, EtiquetaRecord, LeadRecord, PlantillaRecord, UsuarioRecord } from '../../lib/types';
 import { puedeEditar, puedeUsuario } from './useLeads';
 import { AbrirProyecto } from './AbrirProyecto';
-import { ProyectosDelLead } from './ProyectosDelLead';
 import { NOMBRE_SITUACION, iniciales } from './ListaContactos';
 import { EnviarMensaje, type Propuesta } from './EnviarMensaje';
 import { Colapsable, type Chip } from './Colapsable';
@@ -27,6 +26,7 @@ interface Valores {
   industria: string;
   ciudad: string;
   pais: string;
+  telefono: string;
   email: string;
   email2: string;
   email3: string;
@@ -43,6 +43,7 @@ function valoresDe(lead: LeadRecord): Valores {
     industria: p?.industria ?? '',
     ciudad: p?.ciudad ?? '',
     pais: p?.pais ?? '',
+    telefono: p?.telefono ?? '',
     email: lead.email ?? '',
     email2: lead.email2 ?? '',
     email3: lead.email3 ?? '',
@@ -77,7 +78,7 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuar
   const [infoVisible, setInfoVisible] = useState(false);
   const [propuesta, setPropuesta] = useState<Propuesta | null>(null);
   const [nonceEnviar, setNonceEnviar] = useState(0);
-  const refProximo = useRef<HTMLInputElement>(null);
+  const refProximo = useRef<HTMLButtonElement>(null);
 
   const p = lead.expand?.perfil;
 
@@ -123,6 +124,7 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuar
           industria: valores.industria,
           ciudad: valores.ciudad,
           pais: valores.pais,
+          telefono: valores.telefono,
         });
       }
       await pb.collection('lead').update(lead.id, {
@@ -153,7 +155,8 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuar
     {
       guardar: () => void guardar(),
       enviar: () => setNonceEnviar((n) => n + 1),
-      proximoContacto: () => refProximo.current?.showPicker?.() ?? refProximo.current?.focus(),
+      // Ahora es un boton que abre el calendario doble, no un <input type=date>.
+      proximoContacto: () => refProximo.current?.click(),
       verPerfil: () => linkPerfil && window.open(linkPerfil, '_blank'),
       irAlChat: () => {
         const url = wa ?? lead.link_chat ?? linkPerfil;
@@ -164,26 +167,46 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuar
     etiquetasAbierto || logAbierto,
   );
 
+  // Exactamente los cinco del prototipo. El país NO es un chip: ahí solo se usa
+  // para normalizar el teléfono y sugerir el idioma, y los dos ya se ven.
   const datosChips: Chip[] = [
     { clave: 'cargo', label: 'Cargo', valor: valores.cargo },
     { clave: 'empresa', label: 'Empresa', valor: valores.empresa },
     { clave: 'web', label: 'Web', valor: valores.web },
     { clave: 'industria', label: 'Industria', valor: valores.industria },
     { clave: 'ciudad', label: 'Ciudad', valor: valores.ciudad },
-    { clave: 'pais', label: 'País', valor: valores.pais },
   ];
 
+  // El teléfono va PRIMERO y es un chip, no un input con texto de ayuda: solo
+  // el 12% de la base tiene teléfono, así que lo que más se ve de este bloque
+  // es el estado vacío, y un chip punteado lo dice sin ocupar tres renglones.
   const contactoChips: Chip[] = [
-    { clave: 'email', label: 'Email', valor: valores.email },
-    { clave: 'email2', label: 'Email 2', valor: valores.email2 },
-    { clave: 'email3', label: 'Email 3', valor: valores.email3 },
+    {
+      clave: 'telefono',
+      label: 'Teléfono',
+      valor: veTelefono ? valores.telefono : '· · · · ·',
+      editable: veTelefono,
+      titulo: !veTelefono
+        ? 'El teléfono no está habilitado para tu usuario'
+        : valores.telefono && !p?.telefono_valido
+          ? `A revisar. Original: ${p?.telefono_raw || '—'}`
+          : 'Vive en el perfil, no en el lead (D08). Se normaliza al guardar (D29)',
+    },
+    { clave: 'email', label: 'Email', valor: valores.email, editable: veEmails },
+    { clave: 'email2', label: 'Email 2', valor: valores.email2, editable: veEmails },
+    { clave: 'email3', label: 'Email 3', valor: valores.email3, editable: veEmails },
   ];
 
-  /** Los hitos que el prototipo muestra en el tooltip del nombre. */
+  /**
+   * Los hitos del tooltip del nombre. «Lista» va primero, como en el prototipo:
+   * es de dónde salió el lead, y era lo único que justificaba la sección
+   * «Seguimiento» que sobraba en la columna.
+   */
   const hitos = [
+    ['Lista', lead.lista || 'sin registrar'],
     ['Invitación', lead.f_invitacion],
-    ['Aceptación', lead.f_aceptacion],
-    ['Respuesta', lead.f_respuesta],
+    ['Aceptada', lead.f_aceptacion],
+    ['Respondió', lead.f_respuesta],
     ['Último contacto', lead.f_ultimo_contacto],
     ['Cancelada', lead.f_cancelada],
   ].filter(([, v]) => v) as [string, string][];
@@ -307,17 +330,30 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuar
             )}
           </div>
 
-          {/* §9.7: sin teléfono, deshabilitado con motivo — nunca oculto. */}
+          {/* §9.7: sin teléfono, apagado con el motivo en el title — nunca
+              oculto. Es un icono de 26px y no un botón con texto: en la fila
+              del prototipo todo mide lo mismo, y una pastilla verde de 100px
+              la partía en dos renglones. */}
           {veTelefono && wa ? (
-            <a className="boton-whatsapp" href={wa} target="_blank" rel="noreferrer">
-              WhatsApp
+            <a
+              className="boton-icono-26 boton-wa-on"
+              href={wa}
+              target="_blank"
+              rel="noreferrer"
+              title="Abrir el chat de WhatsApp"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                <path d="M21 11.5a8.5 8.5 0 01-12.6 7.4L3 20.5l1.7-5.2A8.5 8.5 0 1121 11.5z" />
+              </svg>
             </a>
           ) : (
             <span
-              className="boton-whatsapp boton-off"
+              className="boton-icono-26 boton-off"
               title={p?.telefono ? `Teléfono a revisar: ${p.telefono_raw || p.telefono}` : 'Sin teléfono cargado'}
             >
-              WhatsApp
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                <path d="M21 11.5a8.5 8.5 0 01-12.6 7.4L3 20.5l1.7-5.2A8.5 8.5 0 1121 11.5z" />
+              </svg>
             </span>
           )}
         </div>
@@ -346,11 +382,40 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuar
         </div>
       </header>
 
+      {/*
+        El orden es el del documento de diseño, y no es cosmético:
+
+          Datos      colapsado
+          Contacto   colapsado
+          Fecha de reunión
+          Enviar mensaje
+
+        Con Datos y Contacto abiertos —como estaba— la fecha de reunión queda
+        abajo de todo. Y la reunión es a lo que apunta toda la cadencia: tiene
+        que verse sin hacer scroll.
+
+        Se fueron tres bloques que yo había inventado y el prototipo no tiene:
+        «Seguimiento» (el próximo contacto vive adentro de Fecha de reunión y
+        el origen pasó al tooltip del nombre), «Historial de envíos» y «Nota»
+        (ahora es el bloque «Acerca de» de Datos). «Proyectos» pasó al menú de
+        acciones, que es donde lo puso el prototipo nuevo.
+      */}
       <div className="ficha-cuerpo">
         <Colapsable
           titulo="Datos"
+          contactoId={lead.id}
           chips={datosChips}
-          bloques={p?.resumen ? [{ label: 'Resumen', valor: p.resumen, origen: 'extraído de LinkedIn' }] : []}
+          bloques={[
+            {
+              label: 'Acerca de',
+              // Lo que escribió el equipo gana sobre lo extraído: si alguien se
+              // tomó el trabajo de resumir el perfil, eso es lo que vale.
+              valor: valores.nota || p?.resumen || '',
+              origen: !valores.nota && p?.resumen ? 'extraído de LinkedIn' : undefined,
+              vacioTexto: 'el perfil no tiene sección «Acerca de»',
+              clave: 'nota',
+            },
+          ]}
           onEditar={
             editable
               ? (clave, valor) => aplicar({ [clave]: valor } as Partial<Valores>, etiquetaDe(clave))
@@ -360,57 +425,24 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuar
 
         <Colapsable
           titulo="Contacto"
-          chips={veEmails ? contactoChips : []}
+          contactoId={lead.id}
+          chips={contactoChips}
           onEditar={
             editable
               ? (clave, valor) => aplicar({ [clave]: valor } as Partial<Valores>, etiquetaDe(clave))
               : undefined
           }
-        >
-          {!veEmails && (
-            <span className="campo-ayuda">Los emails no están habilitados para tu usuario.</span>
-          )}
-          <div className="campo">
-            <span className="campo-label">Teléfono</span>
-            <input value={veTelefono ? (p?.telefono ?? '') : '· · · · ·'} readOnly />
-            <span className="campo-ayuda">
-              {!veTelefono
-                ? 'El teléfono no está habilitado para tu usuario.'
-                : p?.telefono
-                  ? p.telefono_valido
-                    ? 'Normalizado (D29). Vive en el perfil, no en el lead (D08).'
-                    : `A revisar. Original: ${p.telefono_raw || '—'}`
-                  : 'Sin teléfono cargado.'}
-            </span>
-          </div>
-        </Colapsable>
+        />
 
-        <Colapsable titulo="Seguimiento" resumen={valores.proximo_contacto || 'sin fecha'}>
-          <div className="campo">
-            <span className="campo-label">Próximo contacto</span>
-            <input
-              ref={refProximo}
-              type="date"
-              value={valores.proximo_contacto}
-              onChange={(e) => aplicar({ proximo_contacto: e.target.value }, 'Próximo contacto')}
-            />
-          </div>
-          <div className="campo">
-            <span className="campo-label">Origen</span>
-            <input value={lead.lista || '—'} readOnly />
-          </div>
-        </Colapsable>
-
-        {/* No se gatea con `control`: §7 dice que el colaborador abre y edita
-            los proyectos de SUS leads, y no tiene esa clave. Quien manda es
-            `editable`, que ya excluye al Observador. */}
-        <Colapsable titulo="Proyectos" abiertoPorDefecto={false}>
-          <ProyectosDelLead lead={lead} editable={editable} onCambio={onGuardado} />
-        </Colapsable>
-
-        <Colapsable titulo="Fecha de reunión">
-          <FechaReunion lead={lead} usuario={usuario} editable={editable} onCambio={onGuardado} />
-        </Colapsable>
+        <FechaReunion
+          lead={lead}
+          usuario={usuario}
+          editable={editable}
+          proximoContacto={valores.proximo_contacto}
+          onProximoContacto={(f: string) => aplicar({ proximo_contacto: f }, 'Próximo contacto')}
+          refProximo={refProximo}
+          onCambio={onGuardado}
+        />
 
         {/* El banner de propuesta del prototipo: aparece DESPUÉS de registrar
             un envío, con las dos salidas de §5.10 punto 4. */}
@@ -438,42 +470,17 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuar
         )}
 
         {editable && puedeUsuario(usuario, 'enviarMensajes') && (
-        <Colapsable titulo="Enviar mensaje">
           <EnviarMensaje
             lead={lead}
             plantillas={plantillas}
+            envios={envios}
             nonceEnviar={nonceEnviar}
             onRegistrado={(prop) => {
               setPropuesta(prop);
               onGuardado();
             }}
           />
-        </Colapsable>
         )}
-
-        <Colapsable titulo={`Historial de envíos`} resumen={String(envios.length)} abiertoPorDefecto={false}>
-          {envios.length === 0 && <span className="vacio">Todavía no se registró ningún envío.</span>}
-          {envios.map((e) => (
-            <div key={e.id} className="envio-fila">
-              <span className="pastilla">{e.paso}</span>
-              <span className={`pastilla ${e.canal === 'whatsapp' ? 'pastilla-wa' : 'pastilla-li'}`}>
-                {e.canal}
-              </span>
-              <span className="pastilla">{e.idioma}</span>
-              <span className="envio-fecha">{String(e.enviado_en).slice(0, 10)}</span>
-              <p className="envio-texto">{e.texto}</p>
-            </div>
-          ))}
-        </Colapsable>
-
-        <Colapsable titulo="Nota" abiertoPorDefecto={false}>
-          <textarea
-            rows={5}
-            value={valores.nota}
-            onChange={(e) => aplicar({ nota: e.target.value }, 'Nota')}
-            placeholder="Resumen del perfil, escrito a mano."
-          />
-        </Colapsable>
 
         {logAbierto && (
           <div className="aviso-suave">

@@ -5,17 +5,17 @@ import {
   tituloEvento, verBloque,  enSuZona,
 } from '../src/reunion.ts';
 
-test('el título del evento es "Lead / Cuenta / Vos", con solo el primer nombre de los dos últimos', () => {
+test('el título del evento es "Lead · Cuenta · Vos", con solo el primer nombre de los dos últimos', () => {
   assert.equal(
     tituloEvento('Marcelo Carneiro', 'Francisco Herrera', 'Augusto Unzaga'),
-    'Marcelo Carneiro / Francisco / Augusto',
+    'Marcelo Carneiro · Francisco · Augusto',
   );
 });
 
 test('el nombre completo del lead se conserva aunque sea largo', () => {
   assert.equal(
     tituloEvento('Maria de los Angeles Fernandez Villagran', 'Edith', 'Augusto'),
-    'Maria de los Angeles Fernandez Villagran / Edith / Augusto',
+    'Maria de los Angeles Fernandez Villagran · Edith · Augusto',
   );
 });
 

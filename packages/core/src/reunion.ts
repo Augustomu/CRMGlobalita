@@ -24,8 +24,13 @@ export const PASO_DURACION = 15;
  *
  * Formato pedido por Augusto y confirmado contra el histórico del Calendar:
  *
- *     "Marcelo / Francisco / Augusto"
+ *     "Marcelo · Francisco · Augusto"
  *      lead      cuenta      vos
+ *
+ * El separador es un punto medio, no una barra: es lo que dice el prototipo
+ * nuevo (FechaReunion.dc.html) y lo que se muestra en la ficha antes de crear
+ * el evento. Los eventos historicos del Calendar usan " / ": los viejos quedan
+ * como estan, los nuevos salen asi.
  *
  * Del lead va el nombre completo; de la cuenta de origen, solo el primer
  * nombre. Es lo que permitió recuperar 28 personas del histórico: el título
@@ -43,7 +48,7 @@ export function tituloEvento(
     primerNombre(nombrePropio),
   ]
     .filter(Boolean)
-    .join(' / ');
+    .join(' · ');
 }
 
 /**

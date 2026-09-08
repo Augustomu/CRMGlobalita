@@ -329,8 +329,7 @@ export function Vencimientos({ leads, plantillas, onCerrar, onCambio }: Props) {
             <>
               <button
                 type="button"
-                className="boton-secundario"
-                style={{ marginLeft: 'auto' }}
+                className="boton-secundario al-final"
                 onClick={() => {
                   setSaltados((n) => n + 1);
                   siguiente();
@@ -348,7 +347,7 @@ export function Vencimientos({ leads, plantillas, onCerrar, onCambio }: Props) {
               </button>
             </>
           ) : (
-            <button type="button" className="boton-principal" style={{ marginLeft: 'auto' }} onClick={onCerrar}>
+            <button type="button" className="boton-principal al-final" onClick={onCerrar}>
               Listo
             </button>
           )}

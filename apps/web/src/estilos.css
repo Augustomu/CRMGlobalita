@@ -2,29 +2,36 @@
    las variables de public/design-tokens.css (copia de docs/design/tokens.css).
 
    ── Tamaño del texto ──────────────────────────────────────────────────────
-   El prototipo está dibujado muy denso (9 a 13 px). En pantallas reales eso
-   queda chico, así que los tamaños originales se multiplican por --escala-texto.
+   La escala es 1: los tamaños son EXACTAMENTE los del prototipo.
 
-   Para agrandar o achicar TODA la interfaz, cambiá ese único número:
-     1     = idéntico al prototipo (9-13 px)
-     1.2   = actual. El cuerpo queda en 13 px: los dos puntos que hacían falta
-             para leerlo cómodo, sin perder la densidad, que es lo que define
-             este diseño.
-     1.45  = se probó y quedó grande: el cuerpo iba a 16 px y entraban cinco
-             filas menos en la columna 1.
+   Estuvo en 1.45 y después en 1.2, buscando que se leyera más cómodo. Estaba
+   mal por dos razones que dice el documento de diseño:
+
+     · «Font-size: solo 9, 10, 11, 12, 13, 14, 17px». Con escala 1.2 el cuerpo
+       de 11px caía en 13.2px, que no es ninguno de esos.
+     · El objetivo es una laptop de 14" (1366×768 útil), donde se trabaja todo
+       el día. La densidad no es un detalle del diseño: es el diseño. Agrandar
+       un 20% saca cinco filas de la columna 1 y desarma las medidas del
+       prototipo, que están pensadas para esos px y no para otros.
+
+   El número sigue acá para poder mirar la pantalla de cerca en una demo, pero
+   lo que se entrega es 1.
    ──────────────────────────────────────────────────────────────────────── */
 
 :root {
-  --escala-texto: 1.2;
+  --escala-texto: 1;
 
-  --txt-micro: calc(7px  * var(--escala-texto));
+  /* 8px: fuera de la escala 9-17 del documento a proposito. Es el unico
+     tamano para las flechitas decorativas (el caret de un boton), y es el que
+     usa el prototipo. Texto de verdad no se pone nunca en este tamano. */
+  --txt-micro: calc(8px  * var(--escala-texto));
   --txt-xs:    calc(9px  * var(--escala-texto));
   --txt-sm:    calc(10px * var(--escala-texto));
   --txt-md:    calc(11px * var(--escala-texto));
   --txt-base:  calc(12px * var(--escala-texto));
   --txt-lg:    calc(13px * var(--escala-texto));
   --txt-xl:    calc(14px * var(--escala-texto));
-  --txt-2xl:   calc(18px * var(--escala-texto));
+  --txt-2xl:   calc(17px * var(--escala-texto));
 
   /* Acompañan al texto para que no se desborde. */
   /* El header NO escala con el texto: en el prototipo son 44px fijos y con la
@@ -333,13 +340,21 @@ html, body, #root { height: 100%; }
 
 /* ---------- ficha (§7.2 columna 2) ---------- */
 .ficha { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+/* Una sola fila que envuelve, como el prototipo: avatar, cuenta, asignación,
+   log, nombre, botonera y etiquetas. Estaba declarada dos veces —acá en
+   `column` y más abajo en `row` con wrap— y como la segunda no pisaba
+   `flex-direction`, la cabecera quedaba apilada en seis renglones. */
 .ficha-header {
   padding: 8px 14px 9px;
   border-bottom: .5px solid var(--border);
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 7px;
+  flex-wrap: wrap;
   background: var(--surface);
+  position: relative;
+  z-index: 5;
 }
 .ficha-titulo-fila { display: flex; align-items: center; gap: 8px; }
 .ficha-nombre {
@@ -538,7 +553,27 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 }
 
 /* ---------- enviar mensaje (§5.10) ---------- */
-.enviar { display: flex; flex-direction: column; gap: 8px; }
+/* Tarjeta propia, hermana de Datos, Contacto y Reunión: ya no vive adentro de
+   un colapsable. Va última, debajo de Reunión, como pide el documento. */
+.enviar {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface);
+  border: .5px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 12px 12px;
+}
+.enviar-cabecera { display: flex; align-items: center; gap: 8px; }
+.enviar-conteo { margin-left: auto; font-size: var(--txt-sm); color: var(--hint); }
+.enviar-historial {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: .5px solid var(--border);
+  padding-top: 8px;
+}
 .enviar-fila { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
 .campo-chico { width: auto; min-width: 90px; }
 .campo-chico select {
@@ -770,12 +805,6 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 }
 
 /* ---------- botones del encabezado de la ficha ---------- */
-.ficha-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  flex-wrap: wrap;
-}
 .ficha-botonera { display: flex; align-items: center; gap: 6px; flex-shrink: 0; white-space: nowrap; }
 .relativo { position: relative; flex-shrink: 0; }
 
@@ -1143,28 +1172,267 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 /* Apagada, no oculta: §9.7. El title dice por qué. */
 .burbuja-off { color: var(--border); }
 
-/* ---------- reunión (§3.2) ---------- */
-.reunion { display: flex; flex-direction: column; gap: 10px; }
-.reunion-proxima { display: flex; flex-direction: column; gap: 6px; }
-.reunion-fila { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.reunion-agendar { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
-.reunion-vista { display: flex; flex-direction: column; gap: 4px; }
-.reunion-preview {
-  background: var(--bg);
+/* ---------- reunión (§3.2) ----------
+   Portado de docs/prototipo/FechaReunion.dc.html. Es una tarjeta hermana de
+   Datos y Contacto, no un bloque adentro de ellas: el día se elige en un
+   calendario, donde se ve de un vistazo lo que ya está ocupado. */
+.reunion-caja {
+  flex-shrink: 0;
+  background: var(--surface);
   border: .5px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: var(--txt-md);
-  color: var(--text);
+  border-radius: 12px;
 }
-.reunion-preview pre {
-  margin: 4px 0 0;
-  font-family: ui-monospace, monospace;
+.reunion-cabecera { display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 12px; }
+.reunion-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  min-width: 0;
+  text-align: left;
+}
+.reunion-badge {
   font-size: var(--txt-sm);
-  color: var(--muted);
-  white-space: pre-wrap;
-  word-break: break-all;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--badge-meeting);
+  color: var(--badge-meeting-text);
+  white-space: nowrap;
 }
+.reunion-pendiente { font-size: var(--txt-sm); color: var(--hint); white-space: nowrap; }
+.reunion-acciones { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-right: auto; }
+
+.boton-icono-28,
+.boton-icono-24,
+.boton-icono-22 {
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-family: inherit;
+  text-decoration: none;
+  transition: background 150ms ease-out;
+}
+.boton-icono-28 { width: 28px; height: 28px; }
+.boton-icono-24 { width: 24px; height: 24px; font-size: var(--txt-md); }
+.boton-icono-22 { width: 22px; height: 22px; font-size: var(--txt-sm); }
+.boton-icono-28 svg { width: 13px; height: 13px; }
+.boton-icono-28:hover,
+.boton-icono-24:hover,
+.boton-icono-22:hover { background: var(--accent-light); border-color: var(--accent-br); color: var(--accent); }
+.boton-icono-ok { border-color: var(--accent-br); background: var(--accent-light); color: var(--accent); }
+.boton-icono-ok:hover:not(:disabled) { background: var(--accent); color: var(--surface); }
+.boton-icono-28:disabled { opacity: .5; cursor: not-allowed; background: transparent; border-color: var(--border); color: var(--hint); }
+
+/* Los tres estados van pegados, en un solo marco: son una decisión, no tres. */
+.reunion-estados { display: flex; gap: 0; border: .5px solid var(--border); border-radius: 8px; overflow: hidden; }
+.reunion-estado {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--hint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 150ms ease-out, color 150ms ease-out;
+}
+.reunion-estado svg { width: 13px; height: 13px; }
+.reunion-estado:hover:not(:disabled) { background: var(--bg); color: var(--text); }
+.reunion-estado:disabled { cursor: not-allowed; opacity: .55; }
+.reunion-estado.on-ok { background: var(--success-light); color: var(--success); }
+.reunion-estado.on-error { background: var(--error-light); color: var(--error); }
+.reunion-estado.on-warning { background: var(--warning-light); color: var(--warning); }
+
+.reunion-historial { width: 280px; display: flex; flex-direction: column; gap: 2px; }
+.reunion-hist-fila { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 8px; }
+.reunion-hist-fila:hover { background: var(--bg); }
+.reunion-hist-vacio { font-size: var(--txt-md); color: var(--hint); padding: 12px 6px; text-align: center; }
+
+.reunion-proximo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-top: .5px solid var(--border);
+  flex-wrap: wrap;
+}
+.reunion-proximo-boton {
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--txt-sm);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 150ms ease-out;
+}
+.reunion-proximo-boton:hover { background: var(--accent-light); border-color: var(--accent-br); color: var(--accent); }
+.reunion-caret { font-size: var(--txt-micro); color: var(--hint); }
+.reunion-nota { margin-left: auto; font-size: var(--txt-sm); color: var(--hint); white-space: nowrap; }
+
+.reunion-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 2px 4px;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  font-size: var(--txt-sm);
+  font-weight: 500;
+  color: var(--muted);
+  transition: border-color 150ms ease-out;
+}
+.reunion-check:hover { border-color: var(--accent-br); }
+.reunion-check-caja { width: 14px; height: 14px; border-radius: 4px; border: .5px solid var(--border); background: var(--surface); flex-shrink: 0; }
+.reunion-check-on { border-color: var(--accent-br); background: var(--accent-light); color: var(--accent); font-weight: 600; }
+.reunion-check-on .reunion-check-caja { background: var(--accent); border-color: var(--accent); }
+
+/* Lo que se va a escribir en Google, antes de escribirlo. Sin esto no hay
+   forma de darse cuenta de que falta el link del perfil hasta que el evento
+   ya salió mal. */
+.reunion-evento {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 12px;
+  border-top: .5px solid var(--border);
+  background: var(--bg);
+}
+.reunion-evento-titulo { font-size: var(--txt-base); font-weight: 600; color: var(--text); line-height: 1.35; text-wrap: pretty; }
+.reunion-evento-link {
+  font-size: var(--txt-sm);
+  color: var(--brand-linkedin);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.reunion-evento-falta { font-size: var(--txt-sm); color: var(--warning); }
+.reunion-evento-ayuda { font-size: var(--txt-sm); color: var(--hint); line-height: 1.45; text-wrap: pretty; }
+
+.reunion-cuerpo {
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+  gap: 14px;
+  padding: 10px 12px 12px;
+  border-top: .5px solid var(--border);
+}
+.reunion-mes { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.reunion-mes-nav { display: flex; align-items: center; gap: 4px; }
+.reunion-mes-titulo { flex: 1; text-align: center; font-size: var(--txt-md); font-weight: 600; color: var(--text); }
+.reunion-grilla { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; justify-items: center; }
+.reunion-dow { font-size: var(--txt-xs); color: var(--hint); text-align: center; font-weight: 600; text-transform: uppercase; }
+.reunion-dia-vacio { display: block; width: 26px; height: 26px; }
+.reunion-dia {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--txt-md);
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 150ms ease-out;
+}
+.reunion-dia:hover { background: var(--accent-light); border-color: var(--accent-br); color: var(--accent); }
+.reunion-dia-ocupado {
+  background: var(--bg);
+  color: var(--hint);
+  text-decoration: line-through;
+  cursor: help;
+}
+.reunion-dia-ocupado:hover { background: var(--bg); color: var(--hint); border-color: var(--border); }
+/* Tiene reuniones pero todavía entra otra: se marca sin bloquear. */
+.reunion-dia-con-carga { border-color: var(--accent-br); font-weight: 600; }
+.reunion-dia-on {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--surface);
+  font-weight: 600;
+}
+.reunion-dia-on:hover { background: var(--accent); color: var(--surface); }
+.reunion-dia-pasado { opacity: .45; }
+
+.reunion-derecha { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.reunion-fila-control { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.reunion-segmentado { display: flex; gap: 0; border: .5px solid var(--border); border-radius: 8px; overflow: hidden; }
+.reunion-segmentado button {
+  height: 24px;
+  padding: 0 9px;
+  border: none;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--txt-sm);
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 150ms ease-out;
+}
+.reunion-segmentado button:hover { background: var(--accent-light); color: var(--accent); }
+.reunion-segmentado .reunion-seg-on { background: var(--accent); color: var(--surface); font-weight: 600; }
+.reunion-segmentado .reunion-seg-on:hover { background: var(--accent); color: var(--surface); }
+
+.reunion-horas { display: flex; flex-wrap: wrap; gap: 4px; }
+.reunion-hora {
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--txt-sm);
+  font-family: inherit;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition: background 150ms ease-out;
+}
+.reunion-hora:hover { background: var(--accent-light); border-color: var(--accent-br); color: var(--accent); }
+.reunion-hora-on { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 600; }
+.reunion-hora-on:hover { background: var(--accent); color: var(--surface); }
+.reunion-hora-tomada { background: var(--bg); color: var(--hint); text-decoration: line-through; }
+.reunion-sin-dia {
+  font-size: var(--txt-md);
+  color: var(--hint);
+  border: .5px dashed var(--border);
+  border-radius: 8px;
+  padding: 18px 10px;
+  text-align: center;
+}
+
+.reunion-prox-panel { width: 452px; right: auto; left: 0; padding: 10px 12px; gap: 9px; }
+.reunion-prox-cabecera { display: flex; align-items: center; gap: 8px; }
+.reunion-prox-cabecera .boton-icono-22:first-of-type { margin-left: auto; }
+.reunion-prox-meses { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
 .pastilla-ok { background: var(--success-light); color: var(--success); border-color: transparent; font-weight: 600; }
 
 /* ---------- repositorio de mensajes (§7.9) ---------- */
@@ -1805,3 +2073,17 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .proyecto-item .boton-mini { flex-shrink: 0; }
 /* Una accion hecha se tacha en vez de desaparecer: el historial es el valor. */
 .proyecto-item-hecha { text-decoration: line-through; color: var(--hint); }
+
+/* El icono de WhatsApp en la cabecera de la ficha: verde de marca cuando se
+   puede usar, apagado con el motivo en el title cuando no (§9.7). */
+.boton-wa-on { color: var(--brand-whatsapp); }
+.boton-wa-on:hover { background: var(--brand-whatsapp); border-color: var(--brand-whatsapp); color: var(--surface); }
+
+/* Utilidades. Existen para que ningun componente tenga que escribir un style
+   inline con un valor fijo, que es lo que prohibe el documento de diseno. */
+.al-final { margin-left: auto; }
+.sin-cursor { cursor: default; }
+/* El cuerpo del colapsable sin su padding: lo usa la tabla de permisos, que
+   trae el suyo propio. */
+.colapsable-cuerpo-pelado { padding: 0; }
+.overlay-medio { width: calc(440px * var(--escala-texto)); }

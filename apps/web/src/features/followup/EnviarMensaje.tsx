@@ -5,7 +5,7 @@ import { idiomaEfectivo } from '@crm/core/idioma';
 import { plantillasDe, resolverParaPaso, type Plantilla } from '@crm/core/plantilla';
 import type { Canal, Idioma, Paso } from '@crm/core/tipos';
 import { pb } from '../../lib/pocketbase';
-import type { LeadRecord, PlantillaRecord } from '../../lib/types';
+import type { EnvioRecord, LeadRecord, PlantillaRecord } from '../../lib/types';
 
 const HOY = new Date().toISOString().slice(0, 10);
 const IDIOMAS: Idioma[] = ['es', 'pt', 'en'];
@@ -32,6 +32,12 @@ export interface Propuesta {
 interface Props {
   lead: LeadRecord;
   plantillas: PlantillaRecord[];
+  /**
+   * El historial de envíos. Vive acá adentro y no en una sección aparte: es lo
+   * que se mira JUSTO antes de escribir el siguiente mensaje, y tenerlo tres
+   * bloques más abajo obligaba a subir y bajar para no repetirse.
+   */
+  envios: EnvioRecord[];
   /** Se incrementa con el atajo S para disparar el registro (SS9.1). */
   nonceEnviar: number;
   onRegistrado: (propuesta: Propuesta | null) => void;
@@ -42,7 +48,7 @@ interface Props {
  * arma el texto, te lleva al chat real, y después registra que lo mandaste.
  * No envía nada por su cuenta — eso llega con el worker, en la Etapa 5.
  */
-export function EnviarMensaje({ lead, plantillas, nonceEnviar, onRegistrado }: Props) {
+export function EnviarMensaje({ lead, plantillas, envios, nonceEnviar, onRegistrado }: Props) {
   const perfil = lead.expand?.perfil;
   const cfg = CADENCIA_POR_DEFECTO;
 
@@ -187,6 +193,14 @@ export function EnviarMensaje({ lead, plantillas, nonceEnviar, onRegistrado }: P
 
   return (
     <div className="enviar">
+      <div className="enviar-cabecera">
+        <span className="colapsable-titulo">Enviar mensaje</span>
+        <span className={`pastilla ${canal === 'whatsapp' ? 'pastilla-wa' : 'pastilla-li'}`}>
+          {canal}
+        </span>
+        <span className="enviar-conteo tabular">{envios.length} enviados</span>
+      </div>
+
       <div className="enviar-fila">
         <label className="campo campo-chico">
           <span className="campo-label">Paso</span>
@@ -295,6 +309,23 @@ export function EnviarMensaje({ lead, plantillas, nonceEnviar, onRegistrado }: P
         El CRM <strong>no manda el mensaje</strong>: lo mandás vos desde el chat real y acá
         queda registrado. El envío automático llega con el worker (Etapa 5).
       </p>
+
+      {/* Lo ya mandado, al pie de donde se escribe lo próximo: es el único
+          lugar donde mirarlo sirve de algo. */}
+      {envios.length > 0 && (
+        <div className="enviar-historial">
+          {envios.map((e) => (
+            <div key={e.id} className="envio-fila">
+              <span className="pastilla">{e.paso}</span>
+              <span className={`pastilla ${e.canal === 'whatsapp' ? 'pastilla-wa' : 'pastilla-li'}`}>
+                {e.canal}
+              </span>
+              <span className="envio-fecha tabular">{String(e.enviado_en).slice(0, 10)}</span>
+              <p className="envio-texto">{e.texto}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {error && <div className="login-error">{error}</div>}
     </div>

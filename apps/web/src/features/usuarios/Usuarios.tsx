@@ -282,10 +282,10 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
 
               {GRUPOS.map((g) => (
                 <div key={g.titulo} className="colapsable">
-                  <div className="colapsable-cabecera" style={{ cursor: 'default' }}>
+                  <div className="colapsable-cabecera sin-cursor">
                     <span className="colapsable-titulo">{g.titulo}</span>
                   </div>
-                  <div className="colapsable-cuerpo" style={{ padding: 0 }}>
+                  <div className="colapsable-cuerpo colapsable-cuerpo-pelado">
                     {g.claves.map((c) => {
                       const activo = puede(
                         { rol: usuario.rol as Rol, permisos: usuario.permisos ?? {} },
@@ -320,7 +320,7 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
 
               {puede({ rol: usuario.rol as Rol, permisos: usuario.permisos ?? {} }, 'control') && (
                 <div className="colapsable">
-                  <div className="colapsable-cabecera" style={{ cursor: 'default' }}>
+                  <div className="colapsable-cabecera sin-cursor">
                     <span className="colapsable-titulo">Qué negocio ve en Control</span>
                     <span className="colapsable-resumen">
                       {usuario.linea_control ? NOMBRE_LINEA[usuario.linea_control] : 'los dos'}
@@ -363,7 +363,7 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
                 </div>
               )}
               <div className="colapsable">
-                <div className="colapsable-cabecera" style={{ cursor: 'default' }}>
+                <div className="colapsable-cabecera sin-cursor">
                   <span className="colapsable-titulo">Leads asignados</span>
                   <span className="colapsable-resumen">{susLeads.length}</span>
                 </div>
@@ -404,8 +404,7 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
               </span>
               <button
                 type="button"
-                className="boton-secundario"
-                style={{ marginLeft: 'auto' }}
+                className="boton-secundario al-final"
                 onClick={() => void volverAlPreset()}
                 disabled={guardando || usuario.id === usuarioActual.id}
               >
@@ -464,7 +463,7 @@ function AltaUsuario({ onCerrar, onCreado }: { onCerrar: () => void; onCreado: (
 
   return (
     <div className="overlay-fondo" onClick={onCerrar}>
-      <div className="overlay-caja" style={{ width: 440 }} onClick={(e) => e.stopPropagation()}>
+      <div className="overlay-caja overlay-medio" onClick={(e) => e.stopPropagation()}>
         <header className="overlay-header">
           <span className="overlay-titulo">Invitar usuario</span>
           <button type="button" className="boton-icono-26" onClick={onCerrar}>
@@ -510,8 +509,7 @@ function AltaUsuario({ onCerrar, onCreado }: { onCerrar: () => void; onCreado: (
           </button>
           <button
             type="button"
-            className="boton-principal"
-            style={{ marginLeft: 'auto' }}
+            className="boton-principal al-final"
             disabled={!nombre || !email || clave.length < 8 || creando}
             onClick={() => void crear()}
           >
