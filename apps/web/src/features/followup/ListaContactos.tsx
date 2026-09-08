@@ -62,6 +62,8 @@ interface Props {
   onCerrarConversacion?: () => void;
   /** §7.2: la cola va al pie, y solo con el permiso `colaEnvios`. */
   veCola: boolean;
+  /** Sin permiso de importar no se pasa la función y el botón no existe. */
+  onImportar?: () => void;
 }
 
 export function ListaContactos({
@@ -74,6 +76,7 @@ export function ListaContactos({
   verColaboradores,
   veTelefono,
   veCola,
+  onImportar,
 }: Props) {
   const [busqueda, setBusqueda] = useState('');
   const [cuenta, setCuenta] = useState('todas');
@@ -306,6 +309,16 @@ export function ListaContactos({
             <path d="M4 6h16M7 12h10M10 18h4" />
           </svg>
         </button>
+        {/* §7.2: importar CSV vive acá, al lado del buscador, y solo con
+            permiso. Es donde entra la base. */}
+        {onImportar && (
+          <button type="button" title="Importar leads desde CSV" className="boton-icono" onClick={onImportar}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+              <path d="M12 15V4M8 8l4-4 4 4" />
+              <path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {filtrosAbierto && (

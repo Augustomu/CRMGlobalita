@@ -3754,3 +3754,109 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   font-size: var(--txt-sm);
   color: var(--muted);
 }
+
+/* ---------- Importar CSV (§7.6, ImportarCsv.dc.html) ---------- */
+.imp { width: 640px; max-width: 96vw; max-height: 88vh; display: flex; flex-direction: column; }
+.imp-cuerpo { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; }
+.imp-ayuda { font-size: var(--txt-md); color: var(--muted); line-height: 1.5; text-wrap: pretty; }
+.imp-ayuda b { color: var(--text); }
+.imp-zona {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 110px;
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  cursor: pointer;
+  font-size: var(--txt-md);
+  color: var(--muted);
+  transition: border-color 150ms ease-out;
+}
+.imp-zona:hover { border-color: var(--accent-br); }
+.imp-icono { font-size: var(--txt-2xl); color: var(--hint); line-height: 1; }
+.imp-error {
+  font-size: var(--txt-sm);
+  color: var(--error);
+  background: var(--error-light);
+  border: .5px solid var(--error);
+  border-radius: 8px;
+  padding: 6px 9px;
+}
+.imp-resumen { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--txt-md); color: var(--text); }
+.imp-pill {
+  font-size: var(--txt-xs);
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.imp-pill-nuevo { background: var(--success-light); color: var(--success); }
+.imp-pill-dup { background: var(--warning-light); color: var(--warning); }
+/* Lo que el archivo trae y no se usa se dice: una columna ignorada en silencio
+   es un dato que alguien creyo que estaba cargando. */
+.imp-avisos {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: .5px solid var(--border);
+  font-size: var(--txt-sm);
+  color: var(--muted);
+}
+.imp-lista { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; }
+.imp-fila {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 118px 74px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: .5px solid var(--border);
+}
+.imp-fila-fuera { background: var(--bg); opacity: .55; }
+.imp-check {
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  border: .5px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  padding: 0;
+  font-size: var(--txt-xs);
+  line-height: 1;
+  color: var(--surface);
+}
+.imp-check-on { border: none; background: var(--accent); color: var(--surface); }
+.imp-quien { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.imp-nombre {
+  font-size: var(--txt-md);
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.imp-tel { font-size: var(--txt-sm); color: var(--muted); white-space: nowrap; }
+.imp-dup { font-size: var(--txt-xs); font-weight: 600; color: var(--warning); white-space: nowrap; }
+.imp-nuevo { font-size: var(--txt-xs); color: var(--success); white-space: nowrap; }
+.imp-acciones { display: flex; align-items: center; gap: 8px; padding-top: 8px; border-top: .5px solid var(--border); }
+.imp-fin { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 20px 0; }
+.imp-tilde {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--success-light);
+  color: var(--success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--txt-xl);
+}
+.imp-fin-titulo { font-size: var(--txt-base); font-weight: 600; color: var(--text); }
+.imp-fin-detalle { font-size: var(--txt-md); color: var(--muted); text-align: center; text-wrap: pretty; }

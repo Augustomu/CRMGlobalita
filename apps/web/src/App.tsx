@@ -19,6 +19,7 @@ import { useDuplicados } from './features/duplicados/useDuplicados';
 import { Automatizaciones } from './features/automatizaciones/Automatizaciones';
 import { WaPersonal } from './features/wapersonal/WaPersonal';
 import { BaseCompartida } from './features/compartida/BaseCompartida';
+import { ImportarCsv } from './features/importar/ImportarCsv';
 
 const TEMAS = ['tema-claro', 'tema-oscuro', 'tema-noche'] as const;
 
@@ -51,6 +52,7 @@ export function App() {
   const [agendaAbierta, setAgendaAbierta] = useState(false);
   const [tareasAbierto, setTareasAbierto] = useState(false);
   const [compartidaAbierta, setCompartidaAbierta] = useState(false);
+  const [importarAbierto, setImportarAbierto] = useState(false);
   /**
    * Qué canal de conversación está abierto, o ninguno. Vive en el header
    * porque la conversación se abre en la columna 1, arriba de la lista: es un
@@ -481,6 +483,11 @@ export function App() {
               verColaboradores={puedeUsuario(auth.usuario, 'verTodosLeads')}
               veTelefono={puedeUsuario(auth.usuario, 'verTelefono')}
               veCola={puedeUsuario(auth.usuario, 'colaEnvios')}
+              onImportar={
+                puedeUsuario(auth.usuario, 'importarLeads')
+                  ? () => irA(() => setImportarAbierto(true))
+                  : undefined
+              }
             />
             {lead ? (
               <FichaLead
@@ -531,6 +538,15 @@ export function App() {
       )}
 
       {compartidaAbierta && <BaseCompartida onCerrar={() => setCompartidaAbierta(false)} />}
+
+      {importarAbierto && (
+        <ImportarCsv
+          leads={leads}
+          cuenta={lead?.cuenta ?? leads[0]?.cuenta ?? ''}
+          onCerrar={() => setImportarAbierto(false)}
+          onImportado={recargar}
+        />
+      )}
 
       {pendiente && (
         <CambiosSinGuardar
