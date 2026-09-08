@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  DURACION_MAXIMA,
+  DURACION_MINIMA,
+  duracionAlEstirar,
   enMinutos,
   filasPorHora,
   hhmm,
@@ -99,4 +102,22 @@ test('hhmm y enMinutos son inversas', () => {
   assert.equal(hhmm(1065), '17:45');
   assert.equal(enMinutos('09:00'), 540);
   assert.equal(enMinutos('17:45'), 1065);
+});
+
+// §7.6 — estirar el bloque de la agenda cambia la duración, de a 15 minutos.
+test('la duración se estira de a un tramo, no píxel a píxel', () => {
+  // 22 px es un tramo. Media reunión estirada 44 px son dos tramos: +30 min.
+  assert.equal(duracionAlEstirar(30, 44), 60);
+  assert.equal(duracionAlEstirar(30, -22), 15);
+  // Los movimientos chicos no cambian nada: sin redondear a pasos, la duración
+  // termina en 37 minutos, que no es un horario que exista.
+  assert.equal(duracionAlEstirar(30, 5), 30);
+  assert.equal(duracionAlEstirar(30, -5), 30);
+});
+
+test('la duración no baja de 15 ni pasa de 180', () => {
+  assert.equal(duracionAlEstirar(30, -9000), DURACION_MINIMA);
+  assert.equal(duracionAlEstirar(30, 9000), DURACION_MAXIMA);
+  // Una reunión de más de tres horas taparía el día entero con un solo bloque.
+  assert.equal(DURACION_MAXIMA, 180);
 });

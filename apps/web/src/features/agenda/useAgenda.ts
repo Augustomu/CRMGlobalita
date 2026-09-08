@@ -229,6 +229,74 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
     [recargar],
   );
 
+  /**
+   * §7.6, vista Lista: el próximo contacto se edita ahí mismo.
+   *
+   * Es la mitad del sentido de esa vista: se recorre el seguimiento y se
+   * corrigen fechas sin abrir ficha por ficha.
+   */
+  const cambiarProximo = useCallback(
+    async (leadId: string, fecha: string) => {
+      await pb.collection('lead').update(leadId, { proximo_contacto: fecha || null });
+    },
+    [],
+  );
+
+  /** La nota del lead, editada desde la fila. */
+  const cambiarNota = useCallback(async (leadId: string, nota: string) => {
+    await pb.collection('lead').update(leadId, { nota });
+  }, []);
+
+  /**
+   * La foto del perfil, pegada del portapapeles (§7.6).
+   *
+   * Del portapapeles y no de un selector de archivos porque de LinkedIn la
+   * foto se copia, no se descarga: bajarla es abrir la imagen en otra pestaña,
+   * guardarla y después buscarla. Pegarla es un atajo.
+   */
+  const pegarFoto = useCallback(
+    async (perfilId: string) => {
+      const items = await navigator.clipboard.read();
+      for (const it of items) {
+        const tipo = it.types.find((t) => t.startsWith('image/'));
+        if (!tipo) continue;
+        const blob = await it.getType(tipo);
+        const datos = new FormData();
+        datos.append('foto', new File([blob], `foto.${tipo.split('/')[1]}`, { type: tipo }));
+        await pb.collection('perfil').update(perfilId, datos);
+        await recargar();
+        return true;
+      }
+      return false;
+    },
+    [recargar],
+  );
+
+  /** Una reunión nueva desde la fila, a las 10 del día elegido. */
+  const nuevaReunion = useCallback(
+    async (leadId: string, fecha: string) => {
+      if (!fecha) return;
+      await pb.collection('reunion').create({
+        lead: leadId,
+        inicio: new Date(`${fecha}T10:00:00`).toISOString(),
+        zona: ZONA,
+        duracion_min: 30,
+        estado: 'pendiente',
+      });
+      await recargar();
+    },
+    [recargar],
+  );
+
+  /** §7.6: estirar el bloque cambia la duración, y eso se guarda. */
+  const cambiarDuracion = useCallback(
+    async (id: string, duracion: number) => {
+      await pb.collection('reunion').update(id, { duracion_min: duracion });
+      await recargar();
+    },
+    [recargar],
+  );
+
   const guardarNotas = useCallback(
     async (id: string, notas: string) => {
       await pb.collection('reunion').update(id, { notas });
@@ -237,7 +305,23 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
     [recargar],
   );
 
-  return { eventos, cargando, error, recargar, mover, cambiarEstado, guardarNotas , calendarios, calendario, setCalendario };
+  return {
+    eventos,
+    cargando,
+    error,
+    recargar,
+    mover,
+    cambiarEstado,
+    cambiarDuracion,
+    cambiarProximo,
+    cambiarNota,
+    pegarFoto,
+    nuevaReunion,
+    guardarNotas,
+    calendarios,
+    calendario,
+    setCalendario,
+  };
 }
 
 /** Los leads con seguimiento, para la vista Lista. */

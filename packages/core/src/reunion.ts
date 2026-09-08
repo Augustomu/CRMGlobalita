@@ -20,6 +20,31 @@ export const DURACION_DEFECTO = 30;
 export const PASO_DURACION = 15;
 
 /**
+ * Los límites de una reunión al estirarla en la agenda (§7.6).
+ *
+ * 15 minutos es el paso de la grilla; 180 es el techo porque una reunión de
+ * más de tres horas no es una reunión, y dejarla crecer sin tope tapa el día
+ * entero de la agenda con un solo bloque.
+ */
+export const DURACION_MINIMA = 15;
+export const DURACION_MAXIMA = 180;
+
+/** Cuánto mide en pantalla un tramo de 15 minutos. Sale del prototipo. */
+export const ALTO_TRAMO = 22;
+
+/**
+ * La duración que resulta de estirar el bloque.
+ *
+ * Se cuenta por PASOS de 22 px y no por píxeles: sin eso la duración cambia
+ * con cada movimiento del mouse y termina en 37 minutos, que no es un horario
+ * que exista.
+ */
+export function duracionAlEstirar(base: number, deltaY: number): number {
+  const pasos = Math.round(deltaY / ALTO_TRAMO);
+  return Math.max(DURACION_MINIMA, Math.min(DURACION_MAXIMA, base + pasos * PASO_DURACION));
+}
+
+/**
  * El título del evento de Google Calendar.
  *
  * Formato pedido por Augusto y confirmado contra el histórico del Calendar:

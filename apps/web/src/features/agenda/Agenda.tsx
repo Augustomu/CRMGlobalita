@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { pb } from '../../lib/pocketbase';
 import { PANEL_AGENDA } from '@crm/core/anchos';
 import { diaLocal } from '@crm/core/fecha';
 import { useAncho } from '../../lib/useAncho';
-import { enMinutos, hhmm } from '@crm/core/reunion';
+import { duracionAlEstirar, enMinutos, hhmm } from '@crm/core/reunion';
 import type { UsuarioRecord, LeadRecord } from '../../lib/types';
 import { leadsConSeguimiento, useAgenda, type EventoAgenda } from './useAgenda';
 
@@ -70,7 +71,21 @@ interface Props {
  * poder mirar la semana sin perder de vista en qué lead se estaba.
  */
 export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
-  const { eventos, cargando, error, mover, cambiarEstado, calendarios, calendario, setCalendario } =
+  const {
+    eventos,
+    cargando,
+    error,
+    mover,
+    cambiarEstado,
+    cambiarDuracion,
+    cambiarProximo,
+    cambiarNota,
+    pegarFoto,
+    nuevaReunion,
+    calendarios,
+    calendario,
+    setCalendario,
+  } =
     useAgenda(true, usuario);
   const [vista, setVista] = useState<Vista>('Semanal');
   const [offset, setOffset] = useState(0);
@@ -79,6 +94,20 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
   const [hover, setHover] = useState<string | null>(null);
   /** Tres estados, sin texto: todos → con check → sin check (§7.6). */
   const [fCheck, setFCheck] = useState<'todos' | 'con' | 'sin'>('todos');
+  /** §7.6: filtro por cuenta. Con seis cuentas, la semana es ilegible sin él. */
+  const [fCuenta, setFCuenta] = useState<string>('todas');
+  /**
+   * La reunión que se está estirando, con su duración en vivo.
+   *
+   * Se dibuja desde acá mientras dura el arrastre y recién al soltar se
+   * guarda: un PATCH por cada píxel serían cientos de escrituras.
+   */
+  const [estirando, setEstirando] = useState<{ id: string; y0: number; base: number; dur: number } | null>(null);
+  /** Qué fila tiene abiertas las notas, en la vista Lista. */
+  const [notasDe, setNotasDe] = useState<string | null>(null);
+  /** Lo escrito sin guardar todavía, para no pedir un PATCH por tecla. */
+  const [borradorNota, setBorradorNota] = useState('');
+  const [avisoLista, setAvisoLista] = useState<string | null>(null);
   const [chequeados, setChequeados] = useState<Set<string>>(new Set());
 
   const hoy = diaLocal();
@@ -91,18 +120,64 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
     return Array.from({ length: 6 }, (_, i) => sumarDias(lunes, i));
   }, [vista, referencia]);
 
+  /** Las cuentas que aparecen de verdad. Un filtro que siempre da cero es ruido. */
+  const cuentas = useMemo(
+    () => [...new Set(eventos.map((e) => e.cuenta).filter(Boolean))].sort(),
+    [eventos],
+  );
+
+  const visibles = useMemo(
+    () =>
+      fCuenta === 'todas'
+        ? eventos
+        : // Los bloques ajenos no tienen cuenta y no se filtran: son huecos
+          // ocupados, no reuniones de nadie.
+          eventos.filter((e) => e.ajeno || e.cuenta === fCuenta),
+    [eventos, fCuenta],
+  );
+
   const porDia = useMemo(() => {
     const m = new Map<string, EventoAgenda[]>();
-    for (const e of eventos) m.set(e.fecha, [...(m.get(e.fecha) ?? []), e]);
+    for (const e of visibles) m.set(e.fecha, [...(m.get(e.fecha) ?? []), e]);
     return m;
-  }, [eventos]);
+  }, [visibles]);
+
+  /**
+   * El estirado, escuchado en `document`.
+   *
+   * Igual que los divisores: la manija mide 9 px y el mouse se le sale en
+   * cuanto uno se mueve en serio.
+   */
+  useEffect(() => {
+    if (!estirando) return;
+    const mover = (ev: MouseEvent) =>
+      setEstirando((s) =>
+        s ? { ...s, dur: duracionAlEstirar(s.base, ev.clientY - s.y0) } : s,
+      );
+    const soltar = () => {
+      setEstirando((s) => {
+        // Sólo se guarda si cambió: soltar sin mover no tiene que escribir.
+        if (s && s.dur !== s.base) void cambiarDuracion(s.id, s.dur);
+        return null;
+      });
+    };
+    document.addEventListener('mousemove', mover);
+    document.addEventListener('mouseup', soltar);
+    const antes = document.body.style.cursor;
+    document.body.style.cursor = 'ns-resize';
+    return () => {
+      document.removeEventListener('mousemove', mover);
+      document.removeEventListener('mouseup', soltar);
+      document.body.style.cursor = antes;
+    };
+  }, [estirando?.id, cambiarDuracion]);
 
   const titulo =
     vista === 'Semanal'
       ? `${fechaLarga(diasVisibles[0]!)} — ${fechaLarga(diasVisibles[5]!)}`
       : vista === 'Diaria'
         ? `${DIAS[(new Date(`${referencia}T12:00:00Z`).getUTCDay() + 6) % 7] ?? ''} ${fechaLarga(referencia)}`
-        : `${eventos.length} reuniones`;
+        : `${visibles.length} reuniones`;
 
   /** Dónde cae el puntero dentro de la celda, en cuartos de hora. */
   function cuartoDe(ev: React.DragEvent, hora: number): string {
@@ -176,6 +251,31 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
                 onClick={() => setCalendario(c.propio ? null : c.id)}
               >
                 {c.propio ? 'Mío' : c.nombre.replace('Calendario de ', '')}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* §7.6: filtro por cuenta. Con seis cuentas trabajando, la semana es
+            una pared de bloques y no se puede leer la de una sola. */}
+        {cuentas.length > 1 && (
+          <div className="reunion-segmentado agenda-cuentas">
+            <button
+              type="button"
+              className={fCuenta === 'todas' ? 'reunion-seg-on' : ''}
+              onClick={() => setFCuenta('todas')}
+            >
+              todas
+            </button>
+            {cuentas.map((c) => (
+              <button
+                key={c}
+                type="button"
+                className={fCuenta === c ? 'reunion-seg-on' : ''}
+                title={`Solo las reuniones de ${c}`}
+                onClick={() => setFCuenta(fCuenta === c ? 'todas' : c)}
+              >
+                {c}
               </button>
             ))}
           </div>
@@ -271,10 +371,12 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
                           // minutos: sin esto un movimiento a :15 o :30 no se
                           // vería y el arrastre parecería no haber hecho nada.
                           desplazado={(Number(e.hora.slice(3, 5)) / 60) * 100}
+                          duracion={estirando?.id === e.id ? estirando.dur : e.duracion}
                           abierto={hover === e.id}
                           onHover={setHover}
                           onArrastrar={setArrastrando}
                           onEstado={cambiarEstado}
+                          onEstirar={(x, y) => setEstirando({ id: x.id, y0: y, base: x.duracion, dur: x.duracion })}
                           onIrAlLead={onIrAlLead}
                         />
                       ))}
@@ -319,6 +421,7 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
                       key={e.id}
                       e={e}
                       desplazado={0}
+                      duracion={estirando?.id === e.id ? estirando.dur : e.duracion}
                       abierto={hover === e.id}
                       onHover={setHover}
                       onArrastrar={setArrastrando}
@@ -340,16 +443,31 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
             <span />
             <span>Última</span>
             <span>Próx.</span>
+            <span />
             <span>Lead</span>
+            <span>Nueva</span>
+            <span />
+            <span />
             <span>Etiquetas</span>
           </div>
+          {avisoLista && <div className="agenda-aviso">{avisoLista}</div>}
           {filas.length === 0 && <p className="vacio">Ningún lead con seguimiento.</p>}
           {filas.map((l) => {
             const suyas = eventos.filter((e) => e.lead === l.id);
             const pasadas = suyas.filter((e) => e.fecha <= hoy);
             const ultima = pasadas[pasadas.length - 1] ?? null;
+            const p = l.expand?.perfil;
+            const foto = p?.foto ? pb.files.getURL(p, p.foto, { thumb: '48x48' }) : '';
+            const iniciales = (p?.nombre ?? '?')
+              .split(' ')
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((x) => x[0])
+              .join('')
+              .toUpperCase();
             return (
-              <div key={l.id} className="agenda-lista-fila">
+              <div key={l.id} className="agenda-lista-envoltorio">
+              <div className="agenda-lista-fila">
                 <button
                   type="button"
                   className={`agenda-check ${chequeados.has(l.id) ? 'agenda-check-on' : ''}`}
@@ -368,22 +486,128 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
                 <span className={`agenda-lista-fecha tabular ${ultima?.estado === 'no-asistio' ? 'agenda-no-asistio' : ultima?.estado === 'asistio' ? 'agenda-asistio' : ''}`}>
                   {ultima ? `${ultima.fecha.slice(8, 10)}/${ultima.fecha.slice(5, 7)}` : '—'}
                 </span>
-                <span className="agenda-lista-fecha tabular">
-                  {l.proximo_contacto
-                    ? `${l.proximo_contacto.slice(8, 10)}/${l.proximo_contacto.slice(5, 7)}`
-                    : '—'}
-                </span>
+                {/* §7.6: el próximo contacto se EDITA acá. Es la mitad del
+                    sentido de esta vista: se recorre el seguimiento y se
+                    corrigen fechas sin abrir ficha por ficha. */}
+                <input
+                  type="date"
+                  className="agenda-lista-fechainput tabular"
+                  title="Fecha del próximo contacto"
+                  defaultValue={l.proximo_contacto ? String(l.proximo_contacto).slice(0, 10) : ''}
+                  onChange={(ev) => void cambiarProximo(l.id, ev.target.value)}
+                />
+
+                {/* La foto se PEGA del portapapeles: de LinkedIn se copia, no
+                    se descarga. Sin esto habría que abrir la imagen en otra
+                    pestaña, guardarla y después buscarla. */}
+                <button
+                  type="button"
+                  className="agenda-lista-foto"
+                  title={foto ? 'Pegar otra imagen del portapapeles' : 'Pegar una foto del portapapeles'}
+                  onClick={async () => {
+                    try {
+                      const ok = await pegarFoto(l.perfil);
+                      setAvisoLista(ok ? null : 'No hay ninguna imagen en el portapapeles.');
+                    } catch {
+                      setAvisoLista('El navegador no dejó leer el portapapeles.');
+                    }
+                  }}
+                >
+                  {foto ? <img src={foto} alt="" /> : iniciales}
+                </button>
+
                 <button type="button" className="agenda-lista-lead" onClick={() => onIrAlLead(l.id)}>
                   <span className="pastilla">{l.expand?.cuenta?.abrev}</span>
                   <span className="agenda-lista-nombre">{l.expand?.perfil?.nombre}</span>
                 </button>
+
+                <input
+                  type="date"
+                  className="agenda-lista-fechainput tabular"
+                  title="Agendar una reunión nueva ese día, a las 10"
+                  value=""
+                  onChange={(ev) => void nuevaReunion(l.id, ev.target.value)}
+                />
+
+                <button
+                  type="button"
+                  className={`agenda-lista-icono ${notasDe === l.id ? 'agenda-lista-icono-on' : ''}`}
+                  title="Notas"
+                  onClick={() => {
+                    setNotasDe(notasDe === l.id ? null : l.id);
+                    setBorradorNota(l.nota ?? '');
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                    <path d="M5 4h14v12l-4 4H5z" />
+                    <path d="M8 9h8M8 13h5" />
+                  </svg>
+                </button>
+
+                <div className="agenda-lista-links">
+                  <a
+                    className="agenda-lista-icono"
+                    href={
+                      l.expand?.perfil?.slug
+                        ? `https://www.linkedin.com/in/${l.expand.perfil.slug}`
+                        : '#'
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                    title="Perfil de LinkedIn"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path d="M7 17L17 7M17 7h-7M17 7v7" />
+                    </svg>
+                  </a>
+                  {/* Sin teléfono el icono queda apagado con el motivo, nunca
+                      oculto (§9.7): que falte un dato se dice. */}
+                  {l.expand?.perfil?.telefono_valido ? (
+                    <a
+                      className="agenda-lista-icono agenda-lista-wa"
+                      href={`https://wa.me/${String(l.expand?.perfil?.telefono ?? '').replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Abrir el WhatsApp del lead"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path d="M20 15a3 3 0 01-3 3H8l-4 3V6a3 3 0 013-3h10a3 3 0 013 3z" />
+                      </svg>
+                    </a>
+                  ) : (
+                    <span className="agenda-lista-icono agenda-lista-apagado" title="Sin teléfono cargado">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path d="M20 15a3 3 0 01-3 3H8l-4 3V6a3 3 0 013-3h10a3 3 0 013 3z" />
+                        <path d="M4 4l16 16" />
+                      </svg>
+                    </span>
+                  )}
+                </div>
+
                 <div className="chips">
                   {(l.expand?.etiquetas ?? []).map((e) => (
                     <span key={e.id} className="chip-etiqueta">
                       {e.nombre}
                     </span>
                   ))}
+                  {!(l.expand?.etiquetas ?? []).length && (
+                    <span className="campo-ayuda">sin etiquetas</span>
+                  )}
                 </div>
+              </div>
+
+              {notasDe === l.id && (
+                <div className="agenda-lista-notas">
+                  <textarea
+                    value={borradorNota}
+                    placeholder="Notas de la reunión…"
+                    onChange={(ev) => setBorradorNota(ev.target.value)}
+                    // Al salir, no a cada tecla: escribir la nota entera serían
+                    // decenas de PATCH.
+                    onBlur={() => void cambiarNota(l.id, borradorNota)}
+                  />
+                </div>
+              )}
               </div>
             );
           })}
@@ -403,18 +627,24 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
 function Evento({
   e,
   desplazado,
+  duracion,
   abierto,
   onHover,
   onArrastrar,
   onEstado,
+  onEstirar,
   onIrAlLead,
 }: {
   e: EventoAgenda;
   desplazado: number;
+  /** La de la reunión, o la que está tomando mientras se la estira. */
+  duracion: number;
   abierto: boolean;
   onHover: (id: string | null) => void;
   onArrastrar: (e: EventoAgenda | null) => void;
   onEstado: (id: string, estado: string) => Promise<void>;
+  /** Falta en la vista diaria, donde el alto lo pone la fila. */
+  onEstirar?: (e: EventoAgenda, y: number) => void;
   onIrAlLead: (id: string) => void;
 }) {
   // §6.3: el bloque de otro calendario dice CUÁNDO y nada más. No se arrastra
@@ -436,7 +666,10 @@ function Evento({
   return (
     <div
       className={`agenda-evento agenda-evento-${e.estado}`}
-      style={{ marginTop: `${desplazado}%` }}
+      // §7.6: el bloque MIDE lo que dura. Con todos del mismo alto, una
+      // reunión de dos horas y una de quince minutos se ven igual y la agenda
+      // no dice cuánto ocupa el día.
+      style={{ marginTop: `${desplazado}%`, height: `${Math.max(20, (duracion / 15) * 22 - 4)}px` }}
       draggable
       onDragStart={(ev) => {
         // Firefox no arranca el arrastre sin datos en el dataTransfer.
@@ -451,6 +684,22 @@ function Evento({
       <span className="agenda-evento-hora tabular">{e.hora}</span>
       <span className="agenda-evento-nombre">{e.nombre}</span>
 
+      {/* La manija de estirar. Va fuera del borde de abajo para poder
+          agarrarla sin tapar el texto del bloque. */}
+      {onEstirar && (
+        <span
+          className="agenda-estirar"
+          title="Estirar para cambiar la duración"
+          onMouseDown={(ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            onEstirar(e, ev.clientY);
+          }}
+        >
+          <span className="agenda-estirar-linea" />
+        </span>
+      )}
+
       {abierto && (
         <div className="agenda-hover" onClick={(ev) => ev.stopPropagation()}>
           <span className="agenda-hover-nombre">{e.nombre}</span>
@@ -460,7 +709,7 @@ function Evento({
           <div className="agenda-hover-datos">
             <span className="pastilla">{e.cuenta}</span>
             <span className="pastilla tabular">
-              {e.hora} · {e.duracion}′
+              {e.hora} · {duracion}′
             </span>
             {e.duenio && <span className="pastilla pastilla-suave">{e.duenio}</span>}
           </div>

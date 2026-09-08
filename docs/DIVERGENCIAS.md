@@ -285,13 +285,28 @@ Faltan cuatro cosas del bloque:
 - **«Guardar»**: crea el mensaje en el repositorio desde acá.
 - Después de guardar, preguntar si **cargarlo en otro idioma** y si destacarlo.
 
-### D.5 · Agenda (§7.6)
+### D.5 · Agenda (§7.6) — ✅ **resuelto el 08/09**
 
-- **Resize** del bloque para cambiar la duración (15 a 180 min, en pasos de 15).
-- Los **filtros** por estado de check y por cuenta.
-- La vista **Lista** completa: foto pegada del portapapeles, links, etiquetas, y
-  el filtro de check como caja de tres estados (vacía / check / cruz).
-- Los bloqueos de Google Calendar con el nombre del evento.
+- **Resize** del bloque: 15 a 180 minutos, de a 22 px por tramo de 15
+  (`duracionAlEstirar` en `core/reunion.ts`, con test). Se cuenta por PASOS y
+  no por píxeles: sin eso la duración termina en 37 minutos, que no es un
+  horario que exista. Y el bloque ahora **mide lo que dura** — con todos del
+  mismo alto, una reunión de dos horas y una de quince se ven igual.
+- **Filtro por cuenta**, además del de check que ya estaba. Con seis cuentas
+  trabajando, la semana es una pared de bloques.
+- La vista **Lista** completa, con las nueve columnas de §7.6: check, última,
+  próximo contacto **editable**, foto **pegada del portapapeles**, cuenta y
+  nombre, nueva reunión, notas (se despliegan debajo de la fila), links de
+  perfil y WhatsApp, y etiquetas.
+
+La foto se pega y no se sube porque de LinkedIn la foto se copia, no se
+descarga: bajarla es abrir la imagen en otra pestaña, guardarla y después
+buscarla.
+
+Queda **un solo punto** de los originales: los bloqueos de Google Calendar con
+el nombre del evento. Eso no es una omisión, es que la cuenta no está conectada
+todavía — y los bloques de OTRO calendario nunca van a llevar nombre, porque
+§6.3 dice que de un calendario ajeno se ve cuándo está tomado y nada más.
 
 ### D.6 · El shell (§4, §7.1, §7.10)
 

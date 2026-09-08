@@ -2691,7 +2691,19 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .agenda-lista-cabeza,
 .agenda-lista-fila {
   display: grid;
-  grid-template-columns: 26px calc(52px * var(--escala-texto)) calc(52px * var(--escala-texto)) minmax(0, 1.4fr) minmax(0, 1fr);
+  /* §7.6: check · última · próximo · foto · lead · nueva · notas · links ·
+     etiquetas. Nueve columnas en un sidebar de 340 px son imposibles, por eso
+     el panel se puede ensanchar hasta 900 (§9.4). */
+  grid-template-columns:
+    26px
+    calc(46px * var(--escala-texto))
+    calc(112px * var(--escala-texto))
+    26px
+    minmax(0, 1.4fr)
+    calc(112px * var(--escala-texto))
+    24px
+    52px
+    minmax(0, 1fr);
   gap: 8px;
   align-items: center;
   padding: 5px 12px;
@@ -4850,4 +4862,122 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   padding: 8px 12px;
   border-top: .5px solid var(--border);
   min-width: 0;
+}
+
+/* ---------- estirar el bloque de la agenda (§7.6) ---------- */
+/*
+ * La manija asoma 4px por debajo del bloque: adentro taparía el nombre, que en
+ * un bloque de 15 minutos es toda la altura que hay.
+ */
+.agenda-evento { position: relative; overflow: hidden; }
+.agenda-estirar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 11px;
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+}
+.agenda-estirar-linea {
+  width: 18px;
+  height: 2px;
+  border-radius: 1px;
+  background: transparent;
+  transition: background 150ms ease-out;
+}
+.agenda-evento:hover .agenda-estirar-linea { background: var(--border); }
+.agenda-estirar:hover .agenda-estirar-linea { background: var(--accent); }
+
+.agenda-cuentas button { padding: 0 7px; }
+
+/* ---------- vista Lista de la agenda (§7.6) ---------- */
+.agenda-lista-envoltorio { display: flex; flex-direction: column; }
+.agenda-lista-fechainput {
+  height: 22px;
+  min-width: 0;
+  padding: 0 4px;
+  border: .5px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: var(--txt-sm);
+  transition: border-color 150ms ease-out, background 150ms ease-out;
+}
+.agenda-lista-fechainput:hover { border-color: var(--border); background: var(--surface); }
+.agenda-lista-fechainput:focus { border-color: var(--accent); background: var(--surface); outline: none; }
+
+/* La foto: iniciales mientras no haya, no un hueco gris. */
+.agenda-lista-foto {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: .5px dashed var(--border);
+  background: var(--bg);
+  color: var(--hint);
+  font-size: var(--txt-xs);
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 150ms ease-out, color 150ms ease-out;
+}
+.agenda-lista-foto:hover { border-color: var(--accent); color: var(--accent); }
+.agenda-lista-foto img { width: 100%; height: 100%; object-fit: cover; }
+
+.agenda-lista-links { display: flex; gap: 2px; }
+.agenda-lista-icono {
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--hint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 150ms ease-out, color 150ms ease-out;
+}
+.agenda-lista-icono svg { width: 12px; height: 12px; }
+.agenda-lista-icono:hover { background: var(--accent-light); color: var(--accent); }
+.agenda-lista-icono-on { background: var(--accent-light); color: var(--accent); }
+.agenda-lista-wa:hover { background: var(--success-light); color: var(--success); }
+/* §9.7: sin teléfono se apaga con el motivo, nunca se oculta. */
+.agenda-lista-apagado { opacity: .4; cursor: help; }
+.agenda-lista-apagado:hover { background: transparent; color: var(--hint); }
+
+.agenda-lista-notas { padding: 0 8px 8px 34px; }
+.agenda-lista-notas textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 7px 9px;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--txt-md);
+  line-height: 1.5;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+}
+.agenda-lista-notas textarea:focus { border-color: var(--accent); }
+.agenda-aviso {
+  font-size: var(--txt-sm);
+  color: var(--warning);
+  padding: 6px 8px;
+  border-bottom: .5px solid var(--border);
 }
