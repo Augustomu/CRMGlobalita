@@ -56,6 +56,17 @@ Un lead puede tener **varios** proyectos (le vendemos Fabript/PIV y además arma
 
 ## 3. Estados del proyecto
 
+> **Cambio del 08/09/2026.** Los siete dejan de estar fijos en el código: hace
+> falta un **administrador de estados** donde se cargue el nombre **y qué
+> significa cada uno**. La leyenda del pie de Proyectos sale de ahí, así que
+> escribir un estado es escribir su explicación — no hay forma de agregar uno
+> sin decir qué quiere decir. Accesible desde Control y desde la ficha del
+> lead.
+>
+> Esto también resuelve la pregunta abierta sobre **«estamos viendo el
+> prototipo»**: deja de ser una discusión sobre si es estado o etiqueta, porque
+> agregar el estado pasa a ser una operación normal.
+
 Siete estados. La regla de cada uno es normativa: define cuándo el sistema (o el usuario) lo aplica.
 
 | Estado | Cuándo |
@@ -78,6 +89,20 @@ Reglas:
 ---
 
 ## 4. Sección Control
+
+> **Cambios del 08/09/2026 en la tabla:**
+>
+> - Faltan los **enlaces**: LinkedIn de la empresa, web de la empresa y perfil
+>   del prospecto. Sin ellos hay que salir del CRM para ver con quién se está
+>   hablando.
+> - La **cuenta de origen** se muestra abreviada (`AL`, `DL`): al pasar por
+>   encima tiene que decir el nombre completo. Quien no sabe qué significa la
+>   abreviatura no la entiende.
+> - **Sacar la columna «cantidad de reuniones»**; dejar última reunión, próximo
+>   contacto y fecha de la próxima.
+> - Sumar **notas**, el **histórico de reuniones** y las **etiquetas**.
+> - La tabla es **muy ancha**: hueco grande entre contacto y empresa y espacio
+>   muerto a la derecha. Achicar o alinear a la izquierda.
 
 Dos pestañas: **Proyectos** y **Reuniones**. Toda la sección es de **solo lectura** para cualquier rol (se edita desde la ficha del lead o desde el proyecto, no desde acá). El header lleva una pastilla "Solo lectura".
 
@@ -110,6 +135,23 @@ Estados de reunión: `asistió`, `no asistió`, `reagendada`, `pendiente` (futur
 ---
 
 ## 5. Rol Observador
+
+> **Cambio del 08/09/2026.** El alcance de Control pasa a tener **tres**
+> formas, no dos:
+>
+> | Alcance | Quién | Qué ve |
+> |---|---|---|
+> | **Todo** | Administrador | Las dos casas, todas las cuentas |
+> | **Por casa** | El partner de una empresa propia | Sólo Globalita, o sólo Seng. **Sin** datos de contacto |
+> | **Por cuenta** | El dueño de una cuenta de invitación | Sólo lo que salió de su cuenta, **con** todos los datos |
+>
+> La tercera sale de un caso concreto: *el dueño de una cuenta quiere ver lo
+> mismo que ve el partner, pero sólo de su cuenta*. Y es la respuesta a la
+> pregunta que había quedado abierta sobre *«la parte de reuniones que aplica
+> sólo al perfil de Alberto Córdoba»*: es el mismo mecanismo, acotado a AL.
+>
+> La diferencia que importa: el partner por casa **no ve datos de contacto**
+> —no es su gente—; el dueño de cuenta **sí**, porque son sus propios leads.
 
 Tercer rol fijo, junto a Administrador y Colaborador. Es de **solo lectura**.
 

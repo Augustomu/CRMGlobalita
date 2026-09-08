@@ -4,6 +4,14 @@ Documento de especificación para construir el sistema desde cero. Está escrito
 
 El prototipo de referencia vive en este proyecto como Design Components (`Dashboard.dc.html` como entrada). El prototipo es la fuente de verdad visual y de comportamiento; este manual es la fuente de verdad de las reglas.
 
+> **Este archivo es el manual VIVO.** `CRM Globalita manual.pdf` es la revisión
+> congelada del 08/09/2026; de ahí en adelante los cambios se escriben acá, con
+> su fecha y su motivo, y el **Registro de cambios** del final los lista. Donde
+> el PDF y este archivo digan cosas distintas, **manda este archivo**.
+>
+> Lo ya construido y lo que falta están en `docs/DIVERGENCIAS.md` y
+> `docs/PENDIENTES.md`.
+
 **El stack queda a criterio de quien implemente.** El manual no asume framework, base de datos ni proveedor de colas. Donde una decisión técnica es forzada por el negocio (por ejemplo: los envíos tienen que sobrevivir a que el navegador esté cerrado), está marcada como requisito, no como sugerencia.
 
 ---
@@ -386,22 +394,54 @@ El envío es una operación compuesta. Todo esto pasa en un solo paso:
 
 ## 6. Permisos y roles
 
-### 6.1 Las 12 claves de permiso
+### 6.1 Las 19 claves de permiso
+
+Cuatro grupos. Las cuatro últimas se separaron de los roles el **08/09/2026**:
+§10.24 pide que el Observador no vea datos de contacto, y §10.13 pide poder
+decidir cualquier permiso **por persona**. Con la visibilidad metida adentro del
+rol, «que Vera no vea teléfonos» sólo se podía resolver inventándole un rol.
+
+**Secciones**
 
 | Clave | Qué habilita |
 |---|---|
-| `verTodosLeads` | Sin esto, solo ve los leads asignados |
-| `enviarMensajes` | Redactar y enviar desde la ficha |
+| `followup` | Sección Follow-up |
+| `waPersonal` | Sección WA Personal |
+| `control` | Sección Control (proyectos y dashboard de reuniones) |
+| `automatizaciones` | Sección Automatizaciones + panel de reglas |
+| `usuarios` | Usuarios y permisos + reasignar leads |
+
+**Herramientas**
+
+| Clave | Qué habilita |
+|---|---|
 | `colaEnvios` | Ver la cola de envíos |
 | `importarLeads` | Importar CSV y carga masiva de teléfonos |
-| `automatizaciones` | Sección Automatizaciones + panel de reglas |
 | `vencimientos` | Vencimientos de mensajes |
 | `repositorio` | Repositorio y mensajes destacados |
 | `baseCompartida` | Base compartida de perfiles invitados |
 | `cuentasConectadas` | QR y vincular números |
-| `usuarios` | Usuarios y permisos (esta pantalla) + reasignar leads |
 | `tareas` | Lista de tareas |
 | `agenda` | Agenda propia y la del admin como ocupado |
+
+**Alcance y acciones**
+
+| Clave | Qué habilita |
+|---|---|
+| `verTodosLeads` | Sin esto, sólo ve los leads en los que figura |
+| `enviarMensajes` | Redactar y enviar desde la ficha |
+
+**Visibilidad de datos sensibles**
+
+| Clave | Qué habilita |
+|---|---|
+| `verTelefono` | El número y el botón de WhatsApp |
+| `verEmails` | Los correos de la ficha |
+| `verLinks` | El perfil de LinkedIn y el hilo del chat |
+| `verConversaciones` | El hilo de mensajes |
+
+Follow-up y WA Personal dejaron de ser secciones fijas: son permisos como el
+resto. Es lo que permite que un rol se quede sin ellas.
 
 ### 6.2 Resolución del permiso
 
@@ -410,25 +450,89 @@ El rol es un **preset**, no una jaula:
 ```
 puede(usuario, clave):
   si usuario.permisos tiene la clave explícita  → ese valor
-  si usuario.rol == Administrador               → true
-  si clave ∈ {tareas, agenda}                   → true      # preset colaborador
+  si el preset del rol la incluye               → true
   en otro caso                                  → false
 ```
 
-En la ficha del usuario cada permiso se muestra como "por rol" o "editado", con un botón para volver al preset del rol (que es simplemente borrar los overrides).
+En la ficha del usuario cada permiso se muestra como «por rol» o «editado», con
+un botón para volver al preset del rol (que es borrar los overrides).
+
+**Pendiente (08/09/2026):** hoy los presets están en el código. Augusto pidió
+poder **editar el preset de cada rol** desde la pantalla de Usuarios, para que
+al invitar a alguien como Colaborador ya se sepa qué trae. El ajuste por
+persona seguiría funcionando igual, encima del preset.
 
 ### 6.3 Qué implica ser Colaborador (con el preset por defecto)
 
-Ve: Follow-up, WA Personal, tareas, agenda, y solo sus leads (en la lista, en vencimientos y en notificaciones).
-No ve: automatizaciones, base compartida, vencimientos, repositorio y mensajes destacados, cuentas conectadas/QR, cola de envíos, importar CSV, enviar mensajes.
+Ve: Follow-up, WA Personal, tareas, agenda, y sólo sus leads (en la lista, en
+vencimientos y en notificaciones).
 
-**Agenda del colaborador**: sus reuniones, más las de cada administrador como bloques **Ocupado** sin nombre ni detalle. Un switch elige qué calendario mira: *Mi calendario* o *Calendario de {admin}* — un ítem por administrador. Al agendar, elige a qué calendario va la reunión, y la disponibilidad suma los días tomados de ese calendario.
+No ve: automatizaciones, base compartida, vencimientos, repositorio y mensajes
+destacados, cuentas conectadas/QR, cola de envíos, importar CSV, enviar
+mensajes.
+
+**Agenda del colaborador**: sus reuniones, más las de cada administrador como
+bloques **Ocupado** sin nombre ni detalle. Un switch elige qué calendario mira:
+*Mi calendario* o *Calendario de {admin}* — un ítem por administrador. Al
+agendar, elige a qué calendario va la reunión, y la disponibilidad suma los
+días tomados de ese calendario.
+
+### 6.3.1 El Observador, y el alcance de Control
+
+El Observador entra **sólo a Control**: proyectos, reuniones y la lista de
+leads que confirmaron interés. No ve Follow-up, ni la prospección, ni datos de
+contacto — nombre, cargo, empresa, industria y lugar sí; teléfono, email y
+links no (§10.24).
+
+**El alcance de Control tiene tres formas** (decidido el 08/09/2026):
+
+| Alcance | Quién | Qué ve |
+|---|---|---|
+| **Todo** | Administrador | Las dos casas, todas las cuentas |
+| **Por casa** | El partner de una empresa propia | Sólo Globalita, o sólo Seng |
+| **Por cuenta** | El dueño de una cuenta de invitación | Sólo lo que salió de su cuenta, **con todos los datos** |
+
+Las dos primeras ya estaban. La tercera es nueva y sale de un caso concreto:
+*Bruno Rocha, dueño de su cuenta, quiere ver lo mismo que ve Alejandro en
+Control pero sólo de su cuenta*. Es también la respuesta a la pregunta que
+quedó abierta sobre *«la parte de reuniones que aplica sólo al perfil de
+Alberto Córdoba»*: es el mismo mecanismo, Alberto acotado a la cuenta AL.
+
+**La diferencia que importa**: el partner por casa **no ve datos de contacto**
+—no es su gente—; el dueño de cuenta **sí**, porque son sus propios leads.
+
+El alcance es un dato del usuario, no un permiso: los permisos son sí/no y esto
+es un recorte. Hoy existe `users.linea_control` (la casa); falta el equivalente
+por cuenta.
+
+**El alcance se aplica en el servidor**, nunca al dibujar: las reglas de la base
+filtran las filas y las vistas recortan las columnas. Que una pantalla no
+muestre un dato no sirve de nada si el dato llegó al navegador.
 
 ### 6.4 Ver el CRM como otro usuario
 
 Un administrador puede entrar a la vista de un colaborador desde el chip de sesión. No persiste entre recargas; "Volver a mi usuario" regresa. Es una herramienta de soporte, no una suplantación auditada (aunque conviene registrarla en el log de actividad).
 
-### 6.5 Asignación masiva
+### 6.5 Asignación: responsable y acompañantes
+
+Un lead puede estar asignado a **más de una persona** (decidido el
+08/09/2026). No son iguales:
+
+- **Responsable**: uno solo. Es el que aparece en la columna 1, donde hay lugar
+  para un chip, y el que responde por el seguimiento.
+- **Acompañantes**: los que también lo trabajan y lo ven en su lista.
+
+§3.6 sigue valiendo: un lead sin asignación explícita pertenece al
+administrador, y el administrador ve todos siempre.
+
+Con esto, la regla de `verTodosLeads` pasa a leerse *«sin esto sólo ve los
+leads en los que figura»* — como responsable o como acompañante.
+
+En la lista y en la ficha, tocar el chip del agente abre la lista de gente para
+asignar. Cuando son varios, se muestra un icono y el detalle al pasar por
+encima.
+
+### 6.6 Asignación masiva
 
 Panel "Asignar en lote" en Usuarios:
 - Filtros combinables: cuenta (chips con el conteo de cada una), país, ciudad, industria — los tres últimos son **checklists multi-selección**, no selects de un valor.
@@ -437,7 +541,7 @@ Panel "Asignar en lote" en Usuarios:
 - Check por fila para el uno por uno.
 - La ficha del usuario muestra el reparto por cuenta (`AL 3 · DL 12`).
 
-### 6.6 Login y sesión
+### 6.7 Login y sesión
 
 - Usuario/email + contraseña.
 - "Mantener la sesión abierta" persiste la sesión localmente; si no, la sesión muere al cerrar.
@@ -470,7 +574,17 @@ Tres columnas, las dos últimas opcionales.
 - Chips de cuenta (`todas`, `AL`, `DL`, …).
 - Chips de colaborador (**solo para el administrador**): todos / cada colaborador activo. Cada lead asignado muestra un chip chico con el nombre del colaborador.
 - Últimos leads editados, como accesos rápidos.
-- La lista: nombre, próximo contacto, fecha de reunión con color según estado (verde asistió, rojo no asistió, neutro pendiente). Los entrantes sin leer salen con borde ámbar y etiqueta "nuevo".
+- La lista, por fila: **nombre de la persona** (sin el cargo que LinkedIn deja
+  pegado; el completo va en el `title`), **la cuenta de la que salió**,
+  próximo contacto, fecha de reunión con color según estado (verde asistió,
+  rojo no asistió, neutro pendiente), **el último mensaje enviado** —el R si
+  fue de la cadencia, `FU` si fue suelto—, **las etiquetas**, el **icono de
+  WhatsApp** cuando hay teléfono, y el **agente**. Los entrantes sin leer salen
+  con borde ámbar y etiqueta «nuevo».
+- **Lo que no entra, se despliega al pasar por encima.** Con muchos agentes o
+  muchas etiquetas la fila no alcanza: se muestra un icono y el detalle en el
+  hover. De las etiquetas se puede **elegir cuáles se ven y en qué orden**
+  cuando entran dos o tres.
 - **Escala**: la lista renderiza 80 leads y suma de 80 en 80 al acercarse al final del scroll. Si se selecciona un lead fuera de la ventana visible, la ventana se expande antes de hacer scroll a él. Con 1.500+ leads no hay paginado visible.
 - Al pie: cola de envíos (con permiso), con cuenta regresiva del próximo envío.
 - Arriba de todo, cuando está abierta: la **conversación** del lead activo, en el canal que elige el switch del header.
@@ -478,8 +592,35 @@ Tres columnas, las dos últimas opcionales.
 **Columna 2 — ficha del lead** (mínimo 440 px):
 
 - Encabezado: nombre, cuenta, etapa, links (perfil, chat), botón verde de WhatsApp si hay teléfono, chip "Asignado a" (reasignable, con opción *sin asignar*), botón de deshacer, botón de acciones rápidas.
-- Bloques colapsables: Datos · Contacto · Fecha de reunión · Etiquetas · Log de ediciones · Análisis del perfil.
-- **Enviar mensaje**: canal, idioma sugerido con chip, chips de mensajes destacados (reemplazan el texto, arrastrables para reordenar), "Destacar mensajes" (checklist sobre todos los mensajes del repositorio, guarda para la cuenta activa), "Guardar" (crea el mensaje en el repositorio y después pregunta si cargarlo en otro idioma y si destacarlo), y `↗ Ir al chat` (abre el chat real del canal elegido).
+- Bloques colapsables: **Datos · Contacto · Fecha de reunión · Análisis del
+  perfil**.
+
+  > **Cambio del 08/09/2026.** Antes eran seis: Etiquetas y Log de ediciones
+  > estaban en la lista. Volvieron a ser **iconos junto al perfil**, en el
+  > encabezado. La razón es de uso, no de gusto: los dos se consultan de
+  > refilón mientras se trabaja el lead —qué etiquetas tiene, qué se le tocó—
+  > y como bloques empujaban hacia abajo Enviar mensaje, que es lo que se usa
+  > todo el día. El icono del log **reemplaza al tooltip** del perfil.
+
+- El icono de **Etiquetas** agrega y **quita del lead** (nunca borra del
+  catálogo: eso se hace en el panel de etiquetas).
+- **Enviar mensaje**:
+  - **El switch de canal decide por dónde sale.** LinkedIn o WhatsApp: lo que
+    se elige es lo que se manda. No es una etiqueta de lo que va a pasar.
+  - **La secuencia, no un desplegable de paso.** Una fila `R0 ✓ · R1 ✓ · R2`
+    donde lo tildado ya se mandó y lo que falta se ve solo, cada uno con **el
+    idioma en que salió**. El que toca es el primero sin tilde.
+  - Chips de mensajes destacados (reemplazan el texto, arrastrables para
+    reordenar).
+  - «Destacar mensajes»: checklist sobre todos los mensajes del repositorio.
+  - «Guardar»: crea el mensaje en el repositorio y después pregunta si cargarlo
+    en otro idioma y si destacarlo.
+  - `↗ Ir al chat` **al lado del título** del bloque.
+
+  > **Cambio del 08/09/2026.** Se sacaron el botón «Copiar» y los tres textos
+  > de ayuda del pie («al registrar se agregan…», «el CRM no manda el
+  > mensaje…», «el envío automático llega con el worker»). Se leen una vez y
+  > después son ruido en el lugar donde se trabaja todo el día.
 - **Acciones rápidas** (rayo): todas las acciones del lead agrupadas — ficha (guardar, deshacer), contacto (enviar, cambiar canal, abrir el chat real, ver perfil), seguimiento (próximo contacto, reunión, análisis), asignación. Cada una con su atajo.
 - **Edición**: los campos se ven en vivo mientras se editan (no se ocultan hasta guardar). Toda edición apila su estado anterior; guardar limpia la pila.
 
@@ -514,6 +655,13 @@ Dos pestañas.
 **Actividad**: cuándo, usuario, acción, sobre qué lead y canal, con filtro por usuario. Registra ingresos, envíos, ediciones de ficha, reuniones y cambios de permisos. Retención 90 días.
 
 ### 7.6 Agenda
+
+> **Cambio del 08/09/2026.** La referencia de comportamiento pasa a ser
+> **Google Calendar**: arrastrar, estirar y ver la duración tienen que
+> funcionar como ahí. En particular el bloque **mide lo que dura** y puede
+> cruzar la hora siguiente — un evento de media hora a las 10:45 llega a las
+> 11:15 —, y se estira desde el borde de abajo **en las tres vistas**, no sólo
+> en la semanal.
 
 Tres vistas.
 
@@ -662,6 +810,17 @@ Estas son decisiones cerradas. Cambiarlas es rediseñar, no corregir.
 
 ---
 
+## 10.bis Transversales agregados el 08/09/2026
+
+- **Traducción al portugués** de todo el CRM. El equipo trabaja con Brasil y
+  parte de la operación se lee en portugués.
+- **Los textos de la cadencia se administran en el repositorio**, que es el
+  único lugar de verdad (§5.2). Desde cada paso de Automatizaciones tiene que
+  haber una puerta que abra ese mensaje: hoy se administran donde corresponde
+  pero no se ven desde donde uno los busca.
+
+---
+
 ## 11. Orden sugerido de construcción
 
 Cada etapa deja algo usable. El criterio del orden es: primero lo que hace que el equipo pueda trabajar aunque falte todo lo demás.
@@ -700,3 +859,42 @@ El prototipo usa constantes estáticas con fecha fija: **hoy es 04/09/2026**. Si
 - **4 usuarios**: Alberto Córdoba (administrador), Sofía Ferrer (colaboradora activa), Bruno Etchart (pendiente), Vera Molina (suspendida).
 - **10 plantillas** en el repositorio (R0–R8 más agradecimiento post reunión), con textos en español y algunos en portugués.
 - **Base compartida** con 27.412 perfiles declarados y una muestra cargada, incluyendo duplicados entre cuentas.
+
+---
+
+## Registro de cambios
+
+Lo que cambió después de la revisión congelada del PDF (08/09/2026). Cada línea
+dice **qué** cambió y **por qué**, que es lo que hace falta para poder
+discutirlo después.
+
+### 08/09/2026 — decisiones de Augusto sobre la app andando
+
+| § | Cambio | Por qué |
+|---|---|---|
+| 6.1 | Las claves pasan de 15 a **19**: se separan `verTelefono`, `verEmails`, `verLinks`, `verConversaciones` | §10.24 pide que el Observador no vea datos de contacto y §10.13 pide decidirlo por persona. Metido en el rol, «que Vera no vea teléfonos» obligaba a inventarle un rol |
+| 6.2 | Los **presets de rol** se van a poder editar desde Usuarios | Al invitar a alguien como Colaborador hay que saber qué trae, sin mirar el código |
+| 6.3.1 | El alcance de Control suma **por cuenta**, además de por casa | El dueño de una cuenta quiere ver Control como lo ve el partner, pero sólo lo suyo — y **con** datos de contacto, porque son sus leads |
+| 6.5 | Un lead puede tener **responsable y acompañantes** | Varias personas trabajan el mismo lead; la columna 1 tiene lugar para un chip, así que uno responde y el resto acompaña |
+| 7.2 | Etiquetas y Log de ediciones vuelven a ser **iconos**, no bloques | Como bloques empujaban Enviar mensaje hacia abajo, que es lo que se usa todo el día |
+| 7.2 | El **switch de canal manda de verdad**, y el paso se muestra como **secuencia con tildes** | El desplegable decía qué paso tocaba pero no dejaba elegir el canal; la secuencia muestra de un vistazo qué se mandó y qué falta |
+| 7.2 | La lista muestra cuenta, último mensaje (R o `FU`), etiquetas, WhatsApp y agente; lo que no entra va al hover | Con 1.500 leads la fila decide si hay que abrir la ficha o no |
+| 7.6 | La agenda se comporta **como Google Calendar** | Es el patrón que el equipo ya tiene en la mano |
+| 7.11 | **Administrador de estados** de proyecto, con nombre y significado | Los estados los lee gente que no los definió; la leyenda tiene que salir del mismo lugar donde se escriben |
+| 10.bis | **Portugués** | Parte de la operación se lee en portugués |
+
+### Pendiente de decisión
+
+- **El alcance de los mensajes destacados** (§3.5). Hoy es por cuenta; hace
+  falta que sea por **casa** con excepción por cuenta. Sin resolverlo, cada
+  cuenta nueva hay que agregarla a mano en cada mensaje.
+- **Si Seng puede tener «Parcería»** (§3.13). Si sí, la casa deja de deducirse
+  de la etiqueta y hay que elegirla aparte.
+
+### Nota sobre las secciones todavía sin sincronizar
+
+Este archivo venía de una revisión anterior al anexo de Control. Las secciones
+**§3 (modelo), §5 (reglas), §7.3–7.10, §8, §9, §10 y §12** siguen como estaban
+y el PDF del 08/09 es más nuevo en varias de ellas. Sincronizarlas está anotado
+en `docs/PENDIENTES.md`; lo de arriba es lo que cambió **por decisión**, que es
+lo que no está en ningún otro lado.
