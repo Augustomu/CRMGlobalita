@@ -2,6 +2,7 @@
 // y la decisión docs/04-decisiones/D16-plantilla-por-paso.md.
 
 import type { Idioma, Paso } from './tipos.ts';
+import { NOMBRE_CASA, type Casa } from './proyecto.ts';
 
 /** Una plantilla del repositorio. El `paso` la ata a la cadencia, no el nombre (D16). */
 export interface Plantilla {
@@ -141,9 +142,19 @@ export function resolverParaPaso(
 // —AL trabaja directores financieros y ED maquinaria— y un chip que aparece en
 // la cuenta equivocada se usa una vez, sale mal, y después nadie usa los chips.
 
+/**
+ * Dónde se destaca un mensaje.
+ *
+ * `casa` se agregó el 08/09/2026 y es la que resuelve el problema real: sin
+ * ella, «los mensajes de Globalita» había que escribirlos listando sus cinco
+ * cuentas, y **la cuenta que se sumara después empezaba sin ningún destacado**.
+ * Nadie se entera de eso: no hay error, simplemente a esa persona le faltan
+ * chips. Con `casa`, la cuenta nueva los hereda sola.
+ */
 export type Alcance =
   | { tipo: 'ninguno' }
   | { tipo: 'todas' }
+  | { tipo: 'casa'; casa: Casa }
   | { tipo: 'cuentas'; cuentas: string[] };
 
 export const SIN_ALCANCE: Alcance = { tipo: 'ninguno' };
@@ -152,6 +163,9 @@ export const SIN_ALCANCE: Alcance = { tipo: 'ninguno' };
 export function escribirAlcance(a: Alcance): string {
   if (a.tipo === 'ninguno') return '';
   if (a.tipo === 'todas') return 'todas';
+  // El prefijo distingue la casa de una abreviatura de cuenta: sin él,
+  // «seng» y una cuenta llamada SENG se guardarían igual.
+  if (a.tipo === 'casa') return `casa:${a.casa}`;
   return a.cuentas.join(',');
 }
 
@@ -166,6 +180,8 @@ export function leerAlcance(texto: string | null | undefined): Alcance {
   const t = String(texto ?? '').trim();
   if (!t) return SIN_ALCANCE;
   if (/^todas/i.test(t)) return { tipo: 'todas' };
+  const casa = /^casa:\s*(globalita|seng)$/i.exec(t);
+  if (casa) return { tipo: 'casa', casa: casa[1]!.toLowerCase() as Casa };
   const cuentas = t
     .split(',')
     .map((c) => c.trim().toUpperCase())
@@ -177,6 +193,7 @@ export function leerAlcance(texto: string | null | undefined): Alcance {
 export function nombreDeAlcance(a: Alcance): string {
   if (a.tipo === 'ninguno') return '';
   if (a.tipo === 'todas') return 'todas las cuentas';
+  if (a.tipo === 'casa') return `todo ${NOMBRE_CASA[a.casa]}`;
   return a.cuentas.join(', ');
 }
 
@@ -186,10 +203,17 @@ export function nombreDeAlcance(a: Alcance): string {
  * Sin cuenta activa se muestran solo las de alcance «todas»: mostrar las de
  * una cuenta cualquiera sería mostrar el chip de otro.
  */
-export function estaDestacadaPara(destacado: string | null | undefined, cuentaAbrev: string): boolean {
+export function estaDestacadaPara(
+  destacado: string | null | undefined,
+  cuentaAbrev: string,
+  casaDeLaCuenta?: Casa | null,
+): boolean {
   const a = leerAlcance(destacado);
   if (a.tipo === 'ninguno') return false;
   if (a.tipo === 'todas') return true;
+  // Sin saber de qué casa es la cuenta no se puede decidir, y adivinar sería
+  // mostrarle a alguien los chips de la otra empresa.
+  if (a.tipo === 'casa') return Boolean(casaDeLaCuenta) && a.casa === casaDeLaCuenta;
   return Boolean(cuentaAbrev) && a.cuentas.includes(cuentaAbrev.trim().toUpperCase());
 }
 
@@ -225,7 +249,9 @@ export function reordenar(
 export function conCuenta(a: Alcance, cuenta: string): Alcance {
   const c = cuenta.trim().toUpperCase();
   if (!c) return a;
-  if (a.tipo === 'todas') return a;
+  // «Todas» y «toda una casa» ya la incluyen o la deciden en bloque: agregarle
+  // una cuenta suelta no lo hace más grande, lo rompe.
+  if (a.tipo === 'todas' || a.tipo === 'casa') return a;
   const cuentas = a.tipo === 'cuentas' ? a.cuentas : [];
   return cuentas.includes(c) ? { tipo: 'cuentas', cuentas } : { tipo: 'cuentas', cuentas: [...cuentas, c] };
 }
@@ -245,6 +271,10 @@ export function conCuenta(a: Alcance, cuenta: string): Alcance {
 export function sinCuenta(a: Alcance, cuenta: string, todasLasCuentas: string[] = []): Alcance {
   const c = cuenta.trim().toUpperCase();
   if (!c || a.tipo === 'ninguno') return a;
+  // Sacar una cuenta de un alcance por casa lo desarmaría en una lista y le
+  // haría perder justamente lo que lo hace útil: que las cuentas nuevas lo
+  // hereden. Se cambia desde el Repositorio, donde se ve el alcance entero.
+  if (a.tipo === 'casa') return a;
   if (a.tipo === 'todas') {
     const resto = todasLasCuentas.map((x) => x.trim().toUpperCase()).filter((x) => x && x !== c);
     return resto.length ? { tipo: 'cuentas', cuentas: resto } : SIN_ALCANCE;

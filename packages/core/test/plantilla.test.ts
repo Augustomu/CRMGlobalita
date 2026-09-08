@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   SIN_ALCANCE,
@@ -7,6 +7,7 @@ import {
   escribirAlcance,
   estaDestacadaPara,
   leerAlcance,
+  nombreDeAlcance,
   plantillasDe,
   primerNombre,
   reordenar,
@@ -191,4 +192,46 @@ test('sacar una cuenta de un destacado «todas» no lo apaga para el resto', () 
   });
   // Salvo que no haya otras cuentas: ahi si queda sin destacar.
   assert.deepEqual(sinCuenta({ tipo: 'todas' }, 'AL', ['AL']), SIN_ALCANCE);
+});
+
+// §3.5 — el alcance por CASA (08/09/2026).
+//
+// El problema que resuelve: sin él, «los destacados de Globalita» se escribían
+// listando sus cinco cuentas, y la cuenta que se sumara después empezaba sin
+// ningún destacado. Nadie se entera: no hay error, simplemente le faltan chips.
+test('el alcance por casa alcanza a las cuentas de esa casa, incluidas las nuevas', () => {
+  const guardado = escribirAlcance({ tipo: 'casa', casa: 'globalita' });
+  assert.equal(guardado, 'casa:globalita');
+  assert.deepEqual(leerAlcance(guardado), { tipo: 'casa', casa: 'globalita' });
+  assert.equal(nombreDeAlcance(leerAlcance(guardado)), 'todo Globalita');
+
+  // Una cuenta de Globalita lo ve; una de Seng no. Y la cuenta nueva de
+  // Globalita —que no está escrita en ningún lado— lo hereda igual.
+  assert.equal(estaDestacadaPara(guardado, 'DL', 'globalita'), true);
+  assert.equal(estaDestacadaPara(guardado, 'NUEVA', 'globalita'), true);
+  assert.equal(estaDestacadaPara(guardado, 'AL', 'seng'), false);
+});
+
+test('sin saber la casa de la cuenta, un alcance por casa no se muestra', () => {
+  // Adivinar seria mostrarle a alguien los chips de la otra empresa.
+  assert.equal(estaDestacadaPara('casa:seng', 'AL'), false);
+  assert.equal(estaDestacadaPara('casa:seng', 'AL', null), false);
+  assert.equal(estaDestacadaPara('casa:seng', 'AL', 'seng'), true);
+});
+
+test('el prefijo distingue la casa de una abreviatura de cuenta', () => {
+  // Sin el prefijo, «seng» y una cuenta llamada SENG se guardarian igual.
+  assert.deepEqual(leerAlcance('SENG'), { tipo: 'cuentas', cuentas: ['SENG'] });
+  assert.deepEqual(leerAlcance('casa:seng'), { tipo: 'casa', casa: 'seng' });
+  // Y tolera mayusculas y espacios, como el resto.
+  assert.deepEqual(leerAlcance('CASA: Globalita'), { tipo: 'casa', casa: 'globalita' });
+});
+
+test('tocar la estrella de una cuenta no desarma un alcance por casa', () => {
+  const casa = leerAlcance('casa:globalita');
+  // Agregar una cuenta no lo hace mas grande: ya las incluye a todas.
+  assert.deepEqual(conCuenta(casa, 'DL'), casa);
+  // Y sacarla no lo convierte en una lista: perderia lo que lo hace util, que
+  // es que las cuentas nuevas lo hereden. Eso se cambia desde el Repositorio.
+  assert.deepEqual(sinCuenta(casa, 'DL', ['AL', 'DL', 'ED']), casa);
 });

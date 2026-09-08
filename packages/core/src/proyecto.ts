@@ -351,3 +351,27 @@ export function proyectoDesdeLead(
     ultimo_movimiento: hoy,
   };
 }
+
+/**
+ * Las dos formas de nombrar los mismos dos negocios.
+ *
+ * El PERMISO usa `ia | inversiones` (`users.linea_control`, `cuenta.linea_negocio`),
+ * porque así se cargó y así está en la base. El PROYECTO usa
+ * `globalita | seng`, que es como los nombra el equipo y como los nombra el
+ * prototipo.
+ *
+ * En vez de migrar el campo —tocar datos por renombrar dos palabras— se
+ * traducen acá, que es el único lugar donde los dos vocabularios se cruzan.
+ */
+export const LINEA_DE_CASA: Record<Casa, string> = {
+  globalita: 'ia',
+  seng: 'inversiones',
+};
+
+/** La casa de una línea de negocio. `null` si la línea viene vacía o rara. */
+export function casaDeLinea(linea: string | null | undefined): Casa | null {
+  const l = String(linea ?? '').trim().toLowerCase();
+  if (l === 'ia') return 'globalita';
+  if (l === 'inversiones') return 'seng';
+  return null;
+}

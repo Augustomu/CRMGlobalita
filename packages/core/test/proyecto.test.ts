@@ -1,6 +1,7 @@
-import { test } from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  casaDeLinea,
   casaSugerida,
   estadoEfectivo,
   NOMBRE_TIPO,
@@ -245,4 +246,17 @@ test('las notas NO son novedades del proyecto: son contexto sobre la persona', (
 
 test('un proyecto recién abierto no tiene actualización, y eso no es un error', () => {
   assert.equal(ultimaActualizacion(p({ updates: [] })), null);
+});
+
+// §3.13 — los dos vocabularios de los mismos dos negocios.
+test('la casa se traduce desde la linea de negocio de la cuenta', () => {
+  assert.equal(casaDeLinea('ia'), 'globalita');
+  assert.equal(casaDeLinea('inversiones'), 'seng');
+  // Tolera lo que venga de la base: mayusculas, espacios.
+  assert.equal(casaDeLinea(' IA '), 'globalita');
+  // Y lo que no es ninguna de las dos no se adivina: sin casa, un destacado
+  // por casa no se muestra, que es mejor que mostrar el de la otra empresa.
+  assert.equal(casaDeLinea(''), null);
+  assert.equal(casaDeLinea(null), null);
+  assert.equal(casaDeLinea('otra'), null);
 });

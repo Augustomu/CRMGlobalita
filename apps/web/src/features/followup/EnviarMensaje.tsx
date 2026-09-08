@@ -10,6 +10,7 @@ import {
   reordenar,
   sinCuenta,
   estaDestacadaPara, plantillasDe, resolverParaPaso, type Plantilla } from '@crm/core/plantilla';
+import { casaDeLinea } from '@crm/core/proyecto';
 import type { Canal, Idioma, Paso } from '@crm/core/tipos';
 import { diaLocal } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
@@ -96,10 +97,18 @@ export function EnviarMensaje({
    * en esta pantalla es un texto que no corresponde a esta conversación.
    */
   const cuenta = lead.expand?.cuenta?.abrev ?? '';
+  /**
+   * La casa de la cuenta del lead.
+   *
+   * Hace falta para los destacados con alcance por casa: sin saber de qué
+   * empresa es la cuenta no se puede decidir, y adivinar sería mostrarle a
+   * alguien los chips de la otra.
+   */
+  const casa = casaDeLinea(lead.expand?.cuenta?.linea_negocio);
   const destacados = useMemo(
     () =>
       plantillas
-        .filter((p) => estaDestacadaPara(p.destacado, cuenta))
+        .filter((p) => estaDestacadaPara(p.destacado, cuenta, casa))
         // El orden es el del repositorio: el mismo que se arrastra acá y allá,
         // así no hay dos ordenamientos distintos del mismo puñado de mensajes.
         .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0)),
@@ -487,7 +496,7 @@ export function EnviarMensaje({
                     // que ya estaba destacado en otra cuenta no puede sacárselo.
                     for (const m of plantillas) {
                       const antes = leerAlcance(m.destacado);
-                      const estaba = estaDestacadaPara(m.destacado, cuenta);
+                      const estaba = estaDestacadaPara(m.destacado, cuenta, casa);
                       const quiere = marcados.has(m.id);
                       if (estaba === quiere) continue;
                       const despues = quiere

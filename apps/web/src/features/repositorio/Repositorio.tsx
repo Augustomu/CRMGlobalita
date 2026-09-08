@@ -8,6 +8,7 @@ import {
   resolverTexto,
   type Alcance,
 } from '@crm/core/plantilla';
+import { NOMBRE_CASA, casaDeLinea, type Casa } from '@crm/core/proyecto';
 import type { Idioma } from '@crm/core/tipos';
 import { pb } from '../../lib/pocketbase';
 import { useAncho } from '../../lib/useAncho';
@@ -77,6 +78,8 @@ export function Repositorio({ onCerrar, onCambio, cuentaActual }: Props) {
   const [arrastrando, setArrastrando] = useState<string | null>(null);
   const [sobre, setSobre] = useState<string | null>(null);
   const [cuentas, setCuentas] = useState<string[]>([]);
+  /** Cuántas cuentas tiene cada casa hoy, para poder decirlo en la opción. */
+  const [porCasa, setPorCasa] = useState<Record<Casa, number>>({ globalita: 0, seng: 0 });
 
   // §9.4: 300–620, doble clic vuelve a 400, persistido.
   const anchoRepo = useAncho(PANEL_REPOSITORIO);
@@ -94,8 +97,16 @@ export function Repositorio({ onCerrar, onCambio, cuentaActual }: Props) {
     // Las abreviaturas del selector de alcance salen de la base: escribir la
     // lista a mano la deja vieja en cuanto se suma una cuenta.
     pb.collection('cuenta')
-      .getFullList<{ abrev: string }>({ sort: 'slot' })
-      .then((cs) => setCuentas(cs.map((c) => c.abrev)))
+      .getFullList<{ abrev: string; linea_negocio?: string }>({ sort: 'slot' })
+      .then((cs) => {
+        setCuentas(cs.map((c) => c.abrev));
+        const cuenta = { globalita: 0, seng: 0 } as Record<Casa, number>;
+        for (const c of cs) {
+          const casa = casaDeLinea(c.linea_negocio);
+          if (casa) cuenta[casa] += 1;
+        }
+        setPorCasa(cuenta);
+      })
       .catch(() => setCuentas([]));
   }, []);
 
@@ -402,6 +413,23 @@ export function Repositorio({ onCerrar, onCambio, cuentaActual }: Props) {
                     <span>Todas las cuentas</span>
                     <span className="campo-ayuda al-final">{cuentas.length} cuentas</span>
                   </button>
+
+                  {/* Por casa. Es el que evita el problema de fondo: con una
+                      lista de cuentas, la que se sume mañana empieza sin
+                      ningún destacado y nadie se entera. */}
+                  {(['globalita', 'seng'] as const).map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      className="repo-opcion"
+                      onClick={() => void guardarAlcance(p.id, { tipo: 'casa', casa: c })}
+                    >
+                      <span>Todo {NOMBRE_CASA[c]}</span>
+                      <span className="campo-ayuda al-final">
+                        {porCasa[c]} {porCasa[c] === 1 ? 'cuenta' : 'cuentas'} · y las nuevas
+                      </span>
+                    </button>
+                  ))}
                   {/* Sólo si hay un lead abierto: una opción que no sabe a
                       qué cuenta se refiere no es una opción. */}
                   {cuentaActual && (
