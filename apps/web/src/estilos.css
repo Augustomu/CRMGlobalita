@@ -3604,3 +3604,153 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .wap-enviar:hover { opacity: .85; }
 .wap-enviar:disabled { opacity: .4; cursor: not-allowed; }
 .wap-enviar svg { width: 13px; height: 13px; }
+
+/* ---------- Base compartida (§7.5, BaseCompartida.dc.html) ---------- */
+.bc {
+  width: 1180px;
+  max-width: 96vw;
+  height: 88vh;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+.bc-badge {
+  font-size: var(--txt-xs);
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--info-light);
+  color: var(--info);
+  border: .5px solid var(--info-br);
+  white-space: nowrap;
+}
+.bc-buscar {
+  flex: 1;
+  min-width: 180px;
+  height: 28px;
+  padding: 0 9px;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--txt-md);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 150ms ease-out;
+}
+.bc-buscar:focus { border-color: var(--accent); }
+.bc-filtros {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-bottom: .5px solid var(--border);
+  background: var(--bg);
+  flex-wrap: wrap;
+}
+.bc-sep { width: 1px; height: 16px; background: var(--border); margin: 0 2px; }
+
+.bc-scroll { min-height: 0; overflow: auto; }
+/* min-width fuerza el scroll horizontal en vez de apretar las columnas: una
+   tabla de nueve columnas apretada no se lee, se adivina. */
+.bc-tabla { min-width: 980px; display: flex; flex-direction: column; }
+.bc-encabezado,
+.bc-fila {
+  display: grid;
+  grid-template-columns: 150px 72px minmax(120px, 1fr) 108px 74px 78px 104px 84px 84px;
+  border-bottom: .5px solid var(--border);
+  align-items: center;
+}
+.bc-encabezado {
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.bc-encabezado .auto-th { padding: 7px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Ambar = ya lo trabaja otra cuenta. Es lo unico que la tabla tiene que gritar. */
+.bc-fila-compartida { background: var(--warning-light); }
+.bc-celda { padding: 6px 8px; min-width: 0; }
+.bc-lead, .bc-empresa, .bc-ultimo { display: flex; flex-direction: column; gap: 1px; }
+.bc-nombre {
+  font-size: var(--txt-md);
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bc-empresa > span:first-child {
+  font-size: var(--txt-md);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bc-cuentas { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+.bc-chip-cuenta {
+  font-size: var(--txt-xs);
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--brand-linkedin-light);
+  color: var(--brand-linkedin);
+  white-space: nowrap;
+}
+.bc-texto {
+  font-size: var(--txt-sm);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bc-fuerte { font-size: var(--txt-sm); color: var(--text); white-space: nowrap; }
+.bc-ultimo { cursor: pointer; border-radius: 6px; font-size: var(--txt-sm); color: var(--text); transition: background 150ms ease-out; }
+.bc-ultimo:hover { background: var(--accent-light); }
+.bc-proximo { font-size: var(--txt-sm); font-weight: 600; color: var(--accent); white-space: nowrap; }
+.bc-etapa {
+  font-size: var(--txt-xs);
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.bc-etapa-cadencia { background: var(--accent-light); color: var(--accent); }
+.bc-etapa-recontacto { background: var(--warning-light); color: var(--warning); }
+.bc-etapa-fase2 { background: var(--info-light); color: var(--info); }
+.bc-etapa-sin { background: var(--bg); color: var(--muted); }
+
+.bc-historial {
+  grid-column: 1 / -1;
+  padding: 8px 12px;
+  border-top: .5px solid var(--border);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.bc-historial-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.bc-paso {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: .5px solid var(--border);
+  min-width: 80px;
+  font-size: var(--txt-xs);
+  color: var(--muted);
+}
+.bc-paso b { color: var(--accent); font-weight: 700; }
+.bc-pie {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  border-top: .5px solid var(--border);
+  background: var(--bg);
+  flex-wrap: wrap;
+  font-size: var(--txt-sm);
+  color: var(--muted);
+}

@@ -18,6 +18,7 @@ import { Duplicados } from './features/duplicados/Duplicados';
 import { useDuplicados } from './features/duplicados/useDuplicados';
 import { Automatizaciones } from './features/automatizaciones/Automatizaciones';
 import { WaPersonal } from './features/wapersonal/WaPersonal';
+import { BaseCompartida } from './features/compartida/BaseCompartida';
 
 const TEMAS = ['tema-claro', 'tema-oscuro', 'tema-noche'] as const;
 
@@ -49,6 +50,7 @@ export function App() {
   const [usuarioAbierto, setUsuarioAbierto] = useState(false);
   const [agendaAbierta, setAgendaAbierta] = useState(false);
   const [tareasAbierto, setTareasAbierto] = useState(false);
+  const [compartidaAbierta, setCompartidaAbierta] = useState(false);
   /**
    * Qué canal de conversación está abierto, o ninguno. Vive en el header
    * porque la conversación se abre en la columna 1, arriba de la lista: es un
@@ -288,10 +290,18 @@ export function App() {
                       Agenda NO van acá: son botones sueltos del header.
                       Las que todavía no existen se listan igual, con el motivo:
                       esconderlas haría creer que el sistema no las contempla. */}
+                  {puedeUsuario(auth.usuario, 'baseCompartida') && (
+                    <button
+                      type="button"
+                      className="header-mas-item"
+                      onClick={() => irA(() => setCompartidaAbierta(true))}
+                    >
+                      <span>Base compartida</span>
+                    </button>
+                  )}
                   {(
                     [
                       ['cuentasConectadas', 'Cuentas conectadas'],
-                      ['baseCompartida', 'Base compartida'],
                       ['automatizaciones', 'Reglas y acciones rápidas'],
                     ] as const
                   ).map(([clave, texto]) =>
@@ -519,6 +529,8 @@ export function App() {
       {tareasAbierto && (
         <Tareas usuario={auth.usuario} onCerrar={() => setTareasAbierto(false)} />
       )}
+
+      {compartidaAbierta && <BaseCompartida onCerrar={() => setCompartidaAbierta(false)} />}
 
       {pendiente && (
         <CambiosSinGuardar
