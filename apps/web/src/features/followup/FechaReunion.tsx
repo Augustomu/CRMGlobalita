@@ -368,12 +368,20 @@ export function FechaReunion({
         descripcion_evento: descripcion,
         // Los destinatarios se eligen al confirmar y valen SOLO para esta
         // reunion: el primero es el invitado principal y el resto van en copia.
-        // No se guardan en la ficha porque la reunion suele sumar gente que no
-        // es el lead —el jefe, el tecnico— y meterlos ahi ensuciaria el
+        // Las COPIAS no se guardan en la ficha: la reunion suele sumar gente
+        // que no es el lead —el jefe, el tecnico— y meterlos ahi ensuciaria el
         // contacto con direcciones que no son suyas.
         invitado_email: destinatarios[0] ?? lead.email ?? '',
         invitados_copia: destinatarios.slice(1),
       });
+
+      // El principal SI, y solo si la ficha no tenia ninguno. Es el mail del
+      // lead: buscarlo para mandar la invitacion y no guardarlo obliga a
+      // buscarlo de nuevo la proxima vez. Es lo que dice el prototipo cuando
+      // avisa que la ficha esta sin mail.
+      if (!lead.email && destinatarios[0]) {
+        await pb.collection('lead').update(lead.id, { email: destinatarios[0] });
+      }
       // Una reunión agendada es una respuesta: el lead sale de la cadencia
       // automática (§5.1) y su próximo contacto lo maneja la reunión.
       await pb.collection('lead').update(lead.id, { situacion: 'contesto' });

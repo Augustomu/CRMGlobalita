@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CADENCIA_POR_DEFECTO, siguientePaso, tocaHoy } from '@crm/core/cadencia';
+import { CADENCIA_POR_DEFECTO, esFase2, siguientePaso, tocaHoy } from '@crm/core/cadencia';
 import { planDeEnvio } from '@crm/core/envio';
 import { idiomaEfectivo } from '@crm/core/idioma';
 import { plantillasDe, resolverParaPaso, type Plantilla } from '@crm/core/plantilla';
@@ -201,6 +201,18 @@ export function Vencimientos({ leads, plantillas, onCerrar, onCambio }: Props) {
               <span className="fila-duenio">
                 {lead.etapa} → {paso}
               </span>
+              {/* §5.10: «si el paso empuja a Fase 2, se agrega la etiqueta Fase
+                  2». Aprobar acá tiene una consecuencia más grande que de
+                  costumbre —el próximo contacto se corre tres meses— y eso hay
+                  que verlo ANTES de aprobar, no después. */}
+              {esFase2(paso) && !esFase2(lead.etapa as Paso) && (
+                <span
+                  className="venc-fase2"
+                  title="Cumplió el ciclo: pasa a Fase 2 y el próximo contacto se corre 3 meses"
+                >
+                  Fase 2
+                </span>
+              )}
               <span className="venc-vencimiento">{cuanto(lead.proximo_contacto)}</span>
             </div>
 

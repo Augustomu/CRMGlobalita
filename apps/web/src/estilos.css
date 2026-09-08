@@ -5294,3 +5294,19 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   animation: om-abrir 160ms ease-out;
 }
 .agenda-aviso-flotante svg { width: 9px; height: 9px; }
+
+/* §5.10: aprobar este vencimiento empuja el lead a Fase 2. Se avisa antes. */
+.venc-fase2 {
+  font-size: var(--txt-sm);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--warning-light);
+  color: var(--warning);
+  border: .5px solid var(--warning);
+  white-space: nowrap;
+  cursor: help;
+}
+
+/* §8.5: el toggle de Gmail, encendido. */
+.wap-gmail-on { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }

@@ -59,7 +59,8 @@ export function ConfirmarReunion({ emails, fecha, hora, duracion, onEnviar, onCe
         <div className="overlay-cuerpo cnf-cuerpo">
           {emails.filter(Boolean).length === 0 && (
             <span className="campo-ayuda">
-              La ficha no tiene mail cargado: escribí al menos uno para poder mandar la invitación.
+              El perfil no tiene email guardado. El que cargás como principal queda en la ficha; las
+              copias valen sólo para esta reunión.
             </span>
           )}
 

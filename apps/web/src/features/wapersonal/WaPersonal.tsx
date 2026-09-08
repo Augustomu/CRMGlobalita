@@ -53,6 +53,20 @@ interface Props {
  * después lo que sí, y al final el archivo.
  */
 export function WaPersonal({ onIrAlLead }: Props) {
+  /**
+   * El toggle de Gmail (§8.5, decisión #8).
+   *
+   * Es estado de interfaz y nada más: la decisión es explícita en que no hay
+   * pantalla de permisos ni elección de cuenta. Se guarda por navegador,
+   * igual que los anchos: depende de cómo trabaja cada uno, no de quién es.
+   */
+  const [gmail, setGmail] = useState(() => {
+    try {
+      return Boolean(localStorage.getItem('om.gmail'));
+    } catch {
+      return false;
+    }
+  });
   const [chats, setChats] = useState<ChatRecord[]>([]);
   const [entrantes, setEntrantes] = useState<EntranteRecord[]>([]);
   const [sel, setSel] = useState<string | null>(null);
@@ -192,12 +206,33 @@ export function WaPersonal({ onIrAlLead }: Props) {
           {pendientes.length > 0 ? (
             <div className="wap-nuevos">
               <span className="wap-nuevos-titulo">Números que no están en la base</span>
-              {/* §7.4: el prototipo ofrece guardar también en Gmail. Necesita la
-                  conexión de Google, que todavía no está (bloque D). Se deja a
-                  la vista y apagado en vez de sacarlo: el hueco es parte de lo
-                  que hay que ver. */}
-              <button type="button" className="wap-gmail" disabled title="Necesita la conexión de Google (etapa de integraciones)">
-                Conectar Gmail para agendar ahí también
+              {/* §8.5 y decisión #8: «Gmail queda como toggle de interfaz, sin
+                  flujo de permisos». Estaba deshabilitado esperando una conexión
+                  de Google que la decisión dice explícitamente que no hace
+                  falta. Es un estado, y como tal se guarda por navegador.
+
+                  El title dice lo que hoy es cierto: el guardado en Gmail llega
+                  con la integración. Prometer en el botón lo que todavía no
+                  pasa sería peor que no tenerlo. */}
+              <button
+                type="button"
+                className={gmail ? 'wap-gmail wap-gmail-on' : 'wap-gmail'}
+                title={
+                  gmail
+                    ? 'Desconectar Gmail. El guardado real llega con la integración.'
+                    : 'Marcarlo para agendar también en Gmail. El guardado real llega con la integración.'
+                }
+                onClick={() => {
+                  const v = !gmail;
+                  setGmail(v);
+                  try {
+                    localStorage.setItem('om.gmail', v ? '1' : '');
+                  } catch {
+                    // Ventana privada: vale para esta sesión y ya.
+                  }
+                }}
+              >
+                {gmail ? 'Gmail conectado · lo que agendes se guarda ahí' : 'Conectar Gmail para agendar ahí también'}
               </button>
 
               {pendientes.map((e) => (
