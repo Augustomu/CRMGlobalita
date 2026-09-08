@@ -112,14 +112,23 @@ Analisis del perfil ✅ · Panel de etiquetas completo ✅ · Evento de agenda �
 - **Guardar un contacto en Gmail** (WA Personal). Necesita la conexion de
   Google. El boton queda a la vista y apagado.
 
-### C · Completar las que estan a medias ← acá vamos
+### C · Completar las que estan a medias — ✅ cerrado
 
-- **Usuarios**: pestaña Actividad, asignacion en lote, reparto por cuenta.
-- **Repositorio**: destacados con alcance por cuenta, orden arrastrable, alta
-  y baja de mensajes.
-- **Vencimientos**: chip de idioma detectado.
-- **Duplicados**: rehacerla en el estilo nuevo. Es mia, el prototipo no tiene
-  equivalente; las reglas ya viven en `core/dedupe.ts` y `core/fusion.ts`.
+- **Usuarios**: pestaña Actividad ✅, asignacion en lote ✅, reparto por
+  cuenta ✅.
+- **Repositorio**: destacados con alcance por cuenta ✅, orden arrastrable ✅,
+  baja de variantes ✅.
+- **Vencimientos**: chip de idioma detectado ✅.
+- **Duplicados**: **no habia que rehacerla.** La auditoria decia que estaba en
+  un estilo viejo, pero mirandola con datos adentro esta al dia: la
+  comparacion lado a lado, los campos en desacuerdo marcados, la vista previa
+  de la fusion y las tres salidas. Lo que faltaba era el dato — sin un solo
+  perfil marcado siempre decia "no hay duplicados pendientes". Se sembraron
+  los tres casos que la base real produce.
+
+  **Hallazgo del seed**: el duplicado por slug igual NO existe y no hace falta
+  contemplarlo. `perfil.slug` tiene indice unico, asi que el segundo no llega
+  a guardarse. Es la unica clase de duplicado que el modelo ya previene solo.
 
 ### D · Recien ahi: escala e integraciones
 
