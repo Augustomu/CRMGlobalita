@@ -1,129 +1,111 @@
-# Plan de trabajo — el prototipo pasa a ser el front-end
+# Plan de trabajo
 
-Decidido el 07/09/2026. Reemplaza al plan anterior de reescribir el prototipo
-en React.
+Decidido el 07/09/2026.
 
-## La decisión
+## Qué es cada cosa
 
-El prototipo de Design Components **es** la interfaz. No se reescribe: se sirve.
-Se le enchufan los datos reales y las escrituras, y nada más.
+> **El prototipo es la especificación, no el código de producción.**
 
-**Por qué.** Se intentó lo otro. Reescribir a mano en React producía algo que
-funcionaba pero se veía distinto, y cada ronda terminaba en «esto no es lo que
-diseñé». La densidad, las medidas y el comportamiento ya están resueltos en el
-prototipo; copiarlos a mano es introducir error en cada paso.
+`docs/_bundle/CRM de prospeccion.html` contiene las 29 pantallas en Design
+Components. `support.js` es el runtime **compilado** que viene adentro: existe
+para que los `.dc.html` se abran y se puedan revisar en un navegador, y nada
+más. No es la base de la app y no se parchea — si una parte del runtime no
+alcanza, esa parte ya la estamos reimplementando nativa.
 
-**Qué se contradice.** `CAMBIOS-COMPLETOS-DISENO.md` pide React modular. Esta
-decisión lo deja sin efecto para la capa visual. Queda escrito acá para que
-dentro de dos semanas no parezca un olvido.
+La app se escribe en **nuestro stack**: React + TypeScript en `apps/web`,
+PocketBase en `packages/db`, las reglas en `packages/core` con sus tests.
 
-**Qué se probó antes de decidir.** El prototipo se sirvió como estático y se
-abrió en un navegador real: las cinco secciones, la conversación, la ficha, el
-calendario y la cola de envíos funcionan, con cero errores de consola. El
-runtime (`support.js`) tiene ciclo de vida completo — `componentDidMount`,
-`componentDidUpdate`, `setState`, `props`, `refs` — así que puede pedir datos.
+### La jerarquía de fuentes
 
----
-
-## El problema que hay que resolver bien: los re-exports
-
-Augusto sigue diseñando en Design Components y va a exportar versiones nuevas.
-Si el enchufe de datos vive **adentro** de `Dashboard.dc.html`, cada export
-nuevo lo pisa.
-
-La regla, entonces:
-
-> **El código de datos vive en archivos aparte. Los `.dc.html` se tocan lo
-> mínimo indispensable.**
-
-En la práctica: los 304 renglones de `static CONTACTOS = [...]` y compañía se
-reemplazan por una línea cada uno (`static CONTACTOS = []` + una carga en
-`componentDidMount`). Todo lo demás —el fetch, el mapeo, las escrituras— vive en
-`pb_public/datos.js`.
-
-Un export nuevo se aplica corriendo `node deploy/enchufar.mjs`, que vuelve a
-hacer ese reemplazo mecánico y avisa si el prototipo cambió de forma tal que ya
-no encaja.
-
----
-
-## Qué se tira y qué se queda
-
-### Se tira
-
-| | |
+| Fuente | Manda en |
 |---|---|
-| `apps/web/` | 6.429 líneas de TypeScript/React + 2.355 de CSS |
+| `docs/MANUAL.md` | las **reglas**: modelo, cadencia, permisos, integraciones |
+| `docs/MANUAL-control-proyectos.md` | el anexo: Proyecto, Control, rol Observador |
+| `docs/prototipo/ESTRUCTURA-Y-DECISIONES.md` | por qué cada cosa es como es |
+| El prototipo (`.dc.html`) | lo **visual y el comportamiento**: medidas, densidad, flujos |
 
-Se va entero. Lo reemplaza el prototipo. Sigue en el historial de git por si
-hace falta mirar cómo estaba resuelto algo.
-
-**La única pérdida real:** la pantalla de **Duplicados**, que es mía y el
-prototipo no tiene. Sus reglas NO se pierden: viven en
-`packages/core/src/dedupe.ts` y `fusion.ts`, con tests. Hay que rehacer la
-pantalla en formato DC (fase 3).
-
-### Se queda
-
-| | Por qué |
-|---|---|
-| `packages/core/` | las reglas de negocio, 158 tests. Pasan a correr del lado del servidor |
-| `packages/db/` | esquema, 11 migraciones, hooks de PocketBase, Google Calendar |
-| `docs/` | manual, auditoría, decisiones |
-| `deploy/` | publicación al VPS |
-| `packages/db/recuperacion/` | los scripts que recuperaron los 298 eventos |
+Para leer el prototipo: `node docs/desempacar.mjs` regenera `docs/prototipo/`
+(gitignored) desde el bundle.
 
 ---
 
-## Las fases
+## El shell, cerrado
 
-### Fase 0 — Limpiar *(esta)*
+`Dashboard.dc.html` es el único header vigente. Las capturas con marca
+«Globalita» y pestañas Tareas / Agenda / Reglas / Cuentas **se descartan**:
+«Globalita» es una de las dos empresas propias dentro de Control —la otra es
+Seng— no la marca del producto; y Tareas, Agenda y Reglas son paneles del
+header, no pestañas de navegación.
 
-- Borrar `apps/web/`.
-- El prototipo pasa a `pb_public/`, **con los archivos sueltos trackeados en
-  git**. Deja de ser un zip: cuando el HTML es el código fuente, git tiene que
-  poder mostrar qué cambió entre una versión y la siguiente.
-- El bundle se conserva en `docs/_bundle/` como el original tal como llegó.
-- Actualizar `CLAUDE.md`, el mapa, los scripts y el deploy.
+**Pestañas**, armadas según los permisos del usuario:
+`Automatizaciones · Control · Follow-up · WA Personal · Usuarios`
 
-### Fase 1 — Follow-up con datos reales
+**A la derecha, sueltos:** notificaciones · tareas · agenda · tema · chip de
+sesión.
+**En el menú `···`:** cuentas conectadas · vencimientos · base compartida ·
+repositorio · reglas · atajos.
 
-Es la pantalla de todos los días; si funciona, el resto es repetir.
+---
 
-1. `pb_public/datos.js` — capa fina contra la API de PocketBase.
-2. Login real contra la colección `users` (hoy la contraseña es `demo`).
-3. `static CONTACTOS` → los leads de verdad, con su perfil, cuenta y etiquetas.
-4. Las escrituras de la ficha: editar campos, etiquetas, próximo contacto.
-5. Agendar reunión contra la colección `reunion` (el hook de Google ya existe).
+## Estado
 
-### Fase 2 — El resto de lo que ya tiene backend
+Lo medido está en `docs/AUDITORIA.md`, hecha leyendo el bundle entero.
+Resumen: de 29 pantallas, **9 al día, 4 a medias, 16 sin construir**.
 
-Control · Usuarios y permisos · Vencimientos · Repositorio de mensajes.
-Las cuatro tienen colecciones y reglas hechas.
+---
+
+## El orden
+
+Primero lo que puede hacer perder datos, después lo que se rompe con volumen, y
+recién ahí pantallas nuevas.
+
+### Fase 1 — Follow-up, que es la pantalla de todos los días
+
+1. **Aviso de cambios sin guardar** (§9.3). Hoy cambiás de lead con la ficha
+   editada y lo escrito se pierde sin preguntar. El manual lo marca transversal
+   desde el día uno. Tres salidas: seguir editando / descartar / guardar y salir.
+2. **Renderizar de a 80** (§7.2). Hoy la columna 1 dibuja todos los leads. Con
+   los 21 de demo no se nota; el manual habla de 1.500+ activos y la base real
+   tiene 6.165 contactos.
+3. **Los seis filtros que faltan**: orden, reunión, rol, país, ciudad,
+   etiquetas. Hoy hay dos de ocho.
+4. **El header, corregido** a lo de arriba: hoy tiene vencimientos y repositorio
+   sueltos, y les faltan notificaciones, tareas y agenda.
+5. **El calendario de próximo contacto por carga**: pinta los días contra el
+   tope diario y ofrece los atajos de 1 a 4 semanas, corriendo la fecha cuando
+   el día ideal está lleno.
+
+### Fase 2 — Completar lo que ya tiene backend
+
+Usuarios (pestaña Actividad, asignación en lote) · Repositorio (destacados con
+alcance, orden arrastrable) · Vencimientos (idioma detectado) · el panel de
+etiquetas completo · Editar links · Confirmar reunión · Análisis del perfil.
 
 ### Fase 3 — Lo que necesita modelo nuevo
 
 Agenda · Tareas · WA Personal · Automatizaciones · Base compartida · Cola de
-envíos · Importar CSV · Reglas. Cada una necesita su colección y, varias, su
-módulo en `core/`: `cupos`, `cancelacion`, `reglas`, `tarea`, `agenda`,
-`actividad`.
+envíos · Importar CSV · Reglas.
 
-Acá también entra rehacer **Duplicados** en formato DC.
+Y los módulos de `core/` que el manual especifica y todavía no existen:
+`cupos`, `cancelacion`, `reglas`, `tarea`, `agenda`, `actividad`.
 
 ### Fase 4 — Lo que no depende de mí
 
-- El cliente OAuth de Google Cloud, para que la disponibilidad del calendario
+- El cliente OAuth en Google Cloud, para que la disponibilidad del calendario
   salga de la agenda real.
 - La decisión sobre el repositorio público y el histórico ya expuesto.
 - Baileys: WhatsApp y LinkedIn.
 
 ---
 
-## Lo que hace falta de Augusto
+## Nota sobre un rodeo que se dio
 
-1. **El `dc-runtime`**, si lo tiene. `support.js` dice *«GENERATED — do not
-   edit. Rebuild with `cd dc-runtime && bun run build`»*. Sin el fuente, un
-   límite del runtime no se puede arreglar. Con él, deja de ser un riesgo.
-2. **Cuál de los dos shells vale**: el de `Dashboard.dc.html` (sin marca, cinco
-   pestañas) o el de las capturas con marca «Globalita» y pestañas Tareas /
-   Agenda / Reglas / Cuentas.
+Durante unas horas se probó servir el prototipo como front-end y se borró
+`apps/web`. Augusto lo aclaró: el prototipo es la especificación. Se restauró
+todo desde el historial sin pérdida. Queda anotado porque la prueba dejó dos
+cosas útiles:
+
+- El prototipo **corre** servido como estático, con cero errores de consola.
+  Sirve para mirarlo al lado de lo construido, que es para lo que está.
+- Los datos de demo del prototipo están en 304 renglones de constantes al medio
+  de `Dashboard.dc.html`: son la mejor referencia de qué forma tiene cada cosa.
