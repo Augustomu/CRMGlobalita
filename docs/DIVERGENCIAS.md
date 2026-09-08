@@ -199,6 +199,175 @@ Para que la lista de arriba se lea en contexto. Verificado contra el manual:
 
 ---
 
+---
+
+# Segunda pasada — 08/09/2026
+
+Después de que Augusto planteara los roles Partner y los mensajes destacados.
+Leídos de nuevo: el manual PDF entero, `EnviarMensaje.dc.html`,
+`AdminUsuarios.dc.html`, `Control.dc.html`, `Dashboard.dc.html`,
+`FechaReunion.dc.html` y `ListaContactos.dc.html`.
+
+---
+
+## F · Lo que Augusto pidió y NO está en ningún documento
+
+Esto no son divergencias: son decisiones que faltan tomar. Las escribo acá
+porque si se implementan sin cerrarlas, quedan mal.
+
+### F.1 · El rol Partner con alcance por empresa propia
+
+**Lo que pide Augusto**: dos partners distintos. Alejandro ve solo lo de
+**Globalita / Fabript-PIV** y sus reuniones. Otro ve solo lo de **Seng**.
+
+**Lo que dicen el manual y el prototipo**: hay **un** rol Observador, con preset
+`control` + `verTodosLeads`, que ve **todos** los proyectos de las dos empresas
+(§6.3.1, y `PORROL_OBS` en `Dashboard.dc.html:568`). No hay alcance por empresa
+en ningún lado.
+
+**Lo que ya existe en el código y nadie volvió a mirar**: la migración
+`1788600800_control_por_linea.js` (06/09) agregó `users.linea_control` con
+valores `ia | inversiones`, justamente para esto. Su comentario dice:
+*«Globalita (ia) … SENG (inversiones) … El socio de IT de Globalita no tiene por
+qué ver los proyectos de SENG, ni al revés»*.
+
+**El problema**: hoy hay **dos vocabularios para la misma división**, y no
+filtran por lo mismo.
+
+| | Valores | Cuelga de | Origen |
+|---|---|---|---|
+| `linea_control` / `linea_negocio` | `ia` \| `inversiones` | usuario / **cuenta** | código, 06/09 |
+| `casa` | `globalita` \| `seng` | **proyecto** | manual nuevo, §3.13.1 |
+
+Un proyecto de Seng abierto desde una cuenta de Globalita queda clasificado de
+una forma por el mecanismo viejo y de otra por el nuevo.
+
+**Recomendación**: quedarse con `casa`, que es lo que dice el manual y lo que
+además es correcto — la casa la elige quien abre el proyecto, no se hereda de
+la cuenta desde la que se invitó. Renombrar `linea_control` a `casa_control`
+con los valores `globalita | seng`, y que el alcance del partner filtre por
+`proyecto.casa`, no por `cuenta.linea_negocio`.
+
+Falta decidir además:
+
+- ¿El partner de Globalita ve **solo Fabript/PIV**, o también las parcerías?
+  Augusto dijo «los leads que están con PIV», que es más angosto que la casa.
+  Si es por tipo y no por casa, el alcance necesita dos campos.
+- El manual le da `verTodosLeads` al Observador. Si el partner solo tiene que
+  ver los leads que tienen proyecto suyo, ese permiso sobra y hay que
+  reemplazarlo por un alcance.
+
+### F.2 · «Estamos viendo el prototipo»
+
+**Contradice al manual tal como está.** La decisión cerrada #21 dice: *«El tipo
+prototipo no existe más: se fusionó con Fabript/PIV, y con él se eliminó la
+pestaña Prototipos»*.
+
+**Cómo se expresa hoy**: solo como **texto libre en el hilo del proyecto**. En
+los datos de demo del prototipo aparece así: *«Demo del prototipo con datos
+reales de dos líneas»*, *«Aprobaron el prototipo, pasa a implementación»*,
+*«Arranque del prototipo, dos tableros»*. Es una actualización, no un estado.
+
+Por eso el partner no lo puede ver de un vistazo: tiene que leer el hilo.
+
+**Recomendación: un estado, no una etiqueta.** Tres razones:
+
+1. Los siete estados ya son **normativos** (§5.12): cada uno define cuándo se
+   aplica, y son lo que la tabla de Control muestra, filtra y cuenta en las
+   tarjetas. Un partner que entra a ver «en qué está esto» lee el estado.
+2. **Las etiquetas son del lead, no del proyecto** (§3.9). No existe el
+   concepto de etiqueta de proyecto: habría que inventarlo.
+3. «Viendo el prototipo» es un momento del trabajo, igual que «Propuesta
+   enviada» o «Nuestra pelota». Pertenece a la misma serie.
+
+Concretamente: un octavo estado **«Prototipo en revisión»**, entre «Propuesta
+enviada» y «Nuestra pelota». Quedan dos cosas por decidir:
+
+- ¿Cuenta como activo en la tarjeta «Activos»? (creo que sí)
+- ¿Se congela a los 30 días sin movimiento? (creo que sí, es la misma regla)
+
+**Contra**: con un estado no se pueden acumular dos cosas a la vez. Si un
+proyecto puede estar «viendo el prototipo» *y* «esperando presupuesto» al mismo
+tiempo, entonces sí hace falta una etiqueta de proyecto. Eso lo sabe Augusto,
+no yo.
+
+### F.3 · Dos cosas que no entendí y prefiero no adivinar
+
+- **«La parte de reuniones que aplica solo para el perfil de Alberto Córdoba»**.
+  Puede ser: (a) el partner de Seng ve solo las reuniones generadas desde la
+  cuenta AL; (b) el dashboard de reuniones se filtra por cuenta; (c) otra cosa.
+  El dato que hay: AL es la cuenta de Alberto y es la de `inversiones`/Seng
+  (migración `1788600800`), y en Automatizaciones el prototipo aclara que
+  *«Alberto Córdoba trabaja otro perfil (directores y gerentes financieros,
+  CEOs) con la misma métrica, aparte del resto»*.
+
+- **«Los perfiles que les interesó la propuesta»** para el partner de Seng.
+  ¿Es un estado del proyecto («Propuesta enviada» ya existe), o es una
+  condición del lead? Si es del lead, hoy se expresaría con `situacion:
+  contesto` o con la etiqueta `Caliente`.
+
+---
+
+## G · Mensajes destacados — confirmado, y es más de lo que pensaba
+
+Augusto tiene razón. El bloque del prototipo (`EnviarMensaje.dc.html`) es:
+
+**Fila de chips de acceso rápido** — sin rótulo, sin colapsable:
+
+- Cada chip es **arrastrable**, muestra el nombre, el **idioma en 8 px acento**,
+  y una **× para sacarlo**.
+- Un botón punteado **«+ destacados»** abre el modal.
+- Un hint: *«arrastrá para ordenar · clic reemplaza el mensaje»*.
+- A la derecha, la pastilla del idioma sugerido.
+
+**Modal «Destacar mensajes»** (400 px, centrado): *«para {cuenta}»*, la
+explicación *«se guardan en {idioma} y quedan como chips arriba»*, una fila por
+mensaje del repositorio con check, nombre, idioma, alcance y preview, el conteo
+de seleccionados, «Guardar», y una nota de cómo corregir un destaque.
+
+**Debajo del textarea**: un botón **«Guardar»** con icono de estrella que guarda
+el texto escrito como **mensaje nuevo del repositorio**. Después de guardar
+aparece un panel que pregunta:
+
+- *«¿Cargarlo en otro idioma?»* con los idiomas que faltan y su textarea.
+- *«¿Destacarlo?»* → «Todas las cuentas» / «Solo {cuenta}» / «Ahora no».
+
+**Lo que construí**: una fila de chips estáticos con el rótulo «Destacados». Sin
+el botón «+ destacados», sin ×, sin arrastre, sin idioma en el chip, sin el hint,
+y sin nada del flujo de guardar al repositorio.
+
+### G.1 · Y los bloques de la ficha tampoco son los que pide el manual
+
+§7.2: *«Bloques colapsables: Datos · Contacto · Fecha de reunión · **Etiquetas**
+· **Log de ediciones** · Análisis del perfil»*. Son **seis**.
+
+Lo que hay: tres colapsables (Datos, Contacto, Análisis) más Fecha de reunión
+como bloque propio. **Etiquetas es un popover** desde un botón del encabezado y
+**Log de ediciones es un overlay**. Los dos tendrían que ser bloques de la ficha.
+
+---
+
+## H · Inconsistencias del propio prototipo
+
+No son mías: el prototipo se contradice consigo mismo y con el manual. Conviene
+arreglarlas del lado del documento.
+
+1. **`AdminUsuarios.dc.html:531`** describe al Observador como *«Entra a Control
+   de proyectos (proyectos, reuniones **y prototipos**) **y a la agenda**»*.
+   Pero su propio preset es `{ control, verTodosLeads }` — **sin agenda** — y el
+   manual §6.3.1 dice explícitamente que el Observador **no ve agenda**. Además
+   «prototipos» ya no existe (decisión #21). El texto quedó viejo por dos lados.
+
+2. **`AdminUsuarios.dc.html:374`**: la clave `control` se describe como
+   *«Proyectos, reuniones **y prototipos**, sin editar»*. Mismo resto viejo.
+
+3. **`Control.dc.html:11`** usa la clave de tipo **`pib`**; el manual §3.13 dice
+   **`fabript_piv`**. La etiqueta visible es la misma («Fabript/PIV»), pero la
+   clave difiere. Mi código sigue al manual.
+
+
+---
+
 ## Por qué pasó
 
 Construí mirando el marcado de cada `.dc.html` y no la lógica de su
