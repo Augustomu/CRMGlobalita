@@ -298,7 +298,10 @@ export function App() {
                     <button
                       type="button"
                       className="header-mas-item"
-                      onClick={() => irA(() => setCompartidaAbierta(true))}
+                      onClick={() => {
+                        setMasAbierto(false);
+                        irA(() => setCompartidaAbierta(true));
+                      }}
                     >
                       <span>Base compartida</span>
                     </button>
@@ -307,7 +310,10 @@ export function App() {
                     <button
                       type="button"
                       className="header-mas-item"
-                      onClick={() => irA(() => setReglasAbiertas(true))}
+                      onClick={() => {
+                        setMasAbierto(false);
+                        irA(() => setReglasAbiertas(true));
+                      }}
                     >
                       <span>Reglas y acciones rápidas</span>
                     </button>
