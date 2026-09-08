@@ -1,7 +1,7 @@
 # Auditoría — prototipo vs. construido
 
-Fecha: **07/09/2026**. Contra `docs/_bundle/CRM de prospeccion.html` (29 pantallas)
-y `docs/MANUAL.md`.
+Fecha: **07/09/2026**. Contra el bundle **leído entero**: 29 pantallas, los cuatro
+documentos y las 14 imágenes.
 
 Se hizo porque hasta acá venía trabajando contra el documento de cambios de
 diseño y el prototipo de Follow-up, sin haber leído el manual completo ni el
@@ -125,3 +125,71 @@ recién ahí pantallas nuevas.
 4. **Agenda** — es la pantalla grande que más se usa después de Follow-up
 5. **Tareas** y el **panel de etiquetas** completo
 6. Etapa 5 entera: cuentas, listas, cupos, R0, cancelación
+
+---
+
+# Lo que apareció al leer el bundle entero
+
+La primera versión de esta auditoría se hizo con el 21% leído. Estas son las
+cosas que solo aparecieron al abrir las 21 pantallas que faltaban y las 14
+imágenes.
+
+## La jerarquía de documentos, que estaba en duda
+
+El `README.md` del bundle la fija y resuelve la contradicción que había
+encontrado:
+
+> `MANUAL.md` es la fuente de verdad de las **reglas**.
+> El prototipo es la fuente de verdad de lo **visual y del comportamiento**.
+
+`DESIGN-SYSTEM.md` **no** está en esa lista. Es el manual del dashboard viejo
+—habla de matrices, clusters, AUTO-CAN y `dashboard.html`— y su tabla de colores
+está desactualizada: dice `--bg: #F5F4F0`, y el prototipo y
+`css-followup-extracto.css` coinciden en `#F2EEE6`. Los tokens que uso son los
+correctos. Sus reglas de peso (400/500/600) y de topbar (52px) también quedan
+superadas por el prototipo, que usa 700 y 44px.
+
+## Errores concretos en lo que ya construí
+
+**Las cuentas son gente real, y las inventé.** `Dashboard.dc.html` trae
+`CUENTAS_NOMBRE = { AL: 'Alejandro', DL: 'David', FR: 'Francisco', ED: 'Edith',
+AU: 'Augusto', AMU: 'Ana María' }`. Mi seed puso «Alberto Cordoba», «Diego
+Lamas», «Franco Ruiz», «Elena Duarte». Por eso mi título de evento decía
+«Alexandre Jordão · **Diego** · Alberto» y el de Augusto decía «· **David** ·».
+
+**El calendario de próximo contacto no es un calendario pelado.** Pinta cada día
+según la carga contra un tope (`tope 40 leads por día`): verde el elegido, ámbar
+los que se acercan, rojo los pasados de tope. Y abajo tiene cuatro atajos —
+`A 1 semana`, `S 2 semanas`, `D 3 semanas`, `F 4 semanas` — que muestran la fecha
+resultante con el corrimiento que hizo falta (`14/09 +2d`) cuando el día ideal
+estaba lleno. Es el prop `cargaDias`. No implementé nada de eso.
+
+**El aviso de cambios sin guardar tiene TRES salidas**, no dos:
+`Seguir editando` · `Descartar` · `Guardar y salir`.
+
+## Reglas exactas que ahora tengo
+
+| Qué | Regla |
+|---|---|
+| Escala de la columna 1 | arranca en 80, suma 80 al llegar a 400px del final, vuelve a 80 al filtrar, y si el lead elegido cae fuera de la ventana la expande a `índice + 80` |
+| Filtros de la columna 1 | ocho: vencidos, orden, whatsapp, reunión, rol, país, ciudad, etiqueta |
+| Cola de envíos | lotes de 5 por cuenta, espaciados 30–40 s, umbral de 15 minutos, countdown en vivo |
+| Importar CSV | tres pasos; el duplicado se detecta por los **últimos 8 dígitos** del teléfono |
+| Motor de reglas | 5 disparadores × 4 condiciones × 5 acciones, con el vocabulario cerrado |
+| Confirmar reunión | `Principal` + `Copia 1, 2…`; avisa si el perfil no tiene email |
+| Base compartida | 27.412 perfiles de diseño |
+| Sesiones WA | dice **Baileys** explícitamente |
+
+## Una pregunta que la lectura no resolvió
+
+Entre las imágenes hay **dos shells distintos**:
+
+- El de `Dashboard.dc.html`, que es el que construí: sin marca, tabs
+  `Automatizaciones · Control · Follow-up · WA Personal · Usuarios`, subtabs en
+  el header.
+- Otro con **marca «Globalita»**, tabs `Automatizaciones · Follow-up · Tareas ·
+  Agenda · Reglas · Cuentas`, subtabs dentro de la columna 1, y dos chips en el
+  header: `WA 5/6` y `6.165 · 1.086`.
+
+El segundo aparece en cinco de las diez capturas anotadas. No sé cuál es el
+vigente y no lo voy a adivinar.

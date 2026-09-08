@@ -49,5 +49,15 @@ try {
   fs.rmSync(tmp, { force: true });
 }
 
+// El bundle trae su propio CLAUDE.md, que describe el PROTOTIPO: sus secciones,
+// sus convenciones y su backlog. Dejarlo con ese nombre adentro del repo es un
+// problema: cualquier agente que trabaje en esa carpeta lo lee como
+// instrucciones de construcción, y son otra cosa que el CLAUDE.md de la raíz.
+const suCLAUDE = path.join(destino, 'CLAUDE.md');
+if (fs.existsSync(suCLAUDE)) {
+  fs.renameSync(suCLAUDE, path.join(destino, 'ESTRUCTURA-Y-DECISIONES.md'));
+}
+
 const pantallas = fs.readdirSync(destino).filter((f) => f.endsWith('.dc.html'));
 console.log(`${pantallas.length} pantallas en docs/prototipo/ (regenerado desde el bundle)`);
+console.log('El CLAUDE.md del bundle quedó como ESTRUCTURA-Y-DECISIONES.md');
