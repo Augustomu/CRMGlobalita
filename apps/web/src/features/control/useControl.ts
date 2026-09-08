@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { casaSugerida, type Casa, type Proyecto, type ReunionDelProyecto } from '@crm/core/proyecto';
+import { etiquetasDeLaCasa, loVeElPartner } from '@crm/core/partner';
 import type { ReunionMedida } from '@crm/core/metricas';
 import { lineasDeControl, veLineaEnControl, type LineaNegocio } from '@crm/core/permisos';
 import { pb } from '../../lib/pocketbase';
@@ -25,6 +26,31 @@ interface ProyectoRecord extends Proyecto {
  * campo de permisos —tocar datos de usuarios para renombrar dos palabras— se
  * traducen acá, en el único lugar donde los dos vocabularios se cruzan.
  */
+/**
+ * Los leads que ve el partner: los que CONFIRMARON interés en su casa.
+ *
+ * No es la base entera. Los que no confirmaron no le incumben, y además el
+ * partner no tiene por qué ver la prospección (§6.3.1).
+ */
+export interface LeadDeControl {
+  id: string;
+  nombre: string;
+  empresa: string;
+  cargo: string;
+  pais: string;
+  ciudad: string;
+  industria: string;
+  cuenta: string;
+  etapa: string;
+  /** Las etiquetas de SU casa, no todas: el resto no le incumbe. */
+  etiquetas: string[];
+  casa: Casa;
+  reuniones: number;
+  ultima: string | null;
+  /** Si alguien ya abrió el proyecto. Se puede confirmar interés y no tenerlo. */
+  proyecto: string | null;
+}
+
 const LINEA_DE_CASA: Record<Casa, LineaNegocio> = {
   globalita: 'ia',
   seng: 'inversiones',
@@ -47,6 +73,7 @@ export interface ProyectoConDatos {
  * edita o se cierra se decide desde la ficha del lead.
  */
 export function useControl(usuario: UsuarioRecord | null) {
+  const [leads, setLeads] = useState<LeadDeControl[]>([]);
   const [proyectos, setProyectos] = useState<ProyectoConDatos[]>([]);
   const [reuniones, setReuniones] = useState<ReunionMedida[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -60,7 +87,7 @@ export function useControl(usuario: UsuarioRecord | null) {
       return;
     }
     try {
-      const [ps, rs] = await Promise.all([
+      const [ps, rs, ls] = await Promise.all([
         pb.collection('proyecto').getFullList<ProyectoRecord>({
           expand: 'cuenta,responsable',
           sort: '-updated',
@@ -68,6 +95,15 @@ export function useControl(usuario: UsuarioRecord | null) {
         pb.collection('reunion').getFullList({
           expand: 'lead.perfil,lead.cuenta,lead.asignado',
           sort: '-inicio',
+        }),
+        // Solo los que tienen alguna etiqueta: el filtro fino es por nombre de
+        // etiqueta y se hace abajo, pero esto ya deja afuera a la mayoría.
+        // `field != null && field != "[]"` porque `:length` mide el texto
+        // serializado y "[]" pasaría.
+        pb.collection('lead').getFullList({
+          filter: 'etiquetas != null && etiquetas != "[]"',
+          expand: 'perfil,cuenta,etiquetas',
+          sort: '-updated',
         }),
       ]);
 
@@ -141,6 +177,54 @@ export function useControl(usuario: UsuarioRecord | null) {
           .filter((p) => mio(p.linea)),
       );
       setReuniones(medidas.filter((r) => mio(r.linea)));
+
+      // La lista de leads del partner. Se filtra ACÁ y no al dibujar, por lo
+      // mismo que los proyectos: al partner de Seng los leads de Globalita no
+      // le tienen que llegar al navegador.
+      const proyectoDe = new Map<string, string>();
+      for (const pr of ps) if (pr.lead) proyectoDe.set(String(pr.lead), pr.id);
+
+      const reunionesDe = new Map<string, { cuantas: number; ultima: string | null }>();
+      for (const r of rs as unknown as Array<Record<string, any>>) {
+        const k = String(r.lead ?? '');
+        if (!k) continue;
+        const previo = reunionesDe.get(k) ?? { cuantas: 0, ultima: null };
+        const cuando = String(r.inicio ?? '').slice(0, 10);
+        reunionesDe.set(k, {
+          cuantas: previo.cuantas + 1,
+          ultima: !previo.ultima || cuando > previo.ultima ? cuando : previo.ultima,
+        });
+      }
+
+      const suyos: LeadDeControl[] = [];
+      for (const l of ls as unknown as Array<Record<string, any>>) {
+        const nombres: string[] = (l.expand?.etiquetas ?? []).map((e: { nombre: string }) => e.nombre);
+        for (const casa of ['globalita', 'seng'] as Casa[]) {
+          if (!mio(LINEA_DE_CASA[casa])) continue;
+          if (!loVeElPartner({ id: l.id, etiquetas: nombres }, casa)) continue;
+          const r = reunionesDe.get(l.id) ?? { cuantas: 0, ultima: null };
+          suyos.push({
+            id: l.id,
+            nombre: l.expand?.perfil?.nombre ?? 'sin nombre',
+            empresa: l.expand?.perfil?.empresa ?? '',
+            cargo: l.expand?.perfil?.cargo ?? '',
+            pais: l.expand?.perfil?.pais ?? '',
+            ciudad: l.expand?.perfil?.ciudad ?? '',
+            industria: l.expand?.perfil?.industria ?? '',
+            cuenta: l.expand?.cuenta?.abrev ?? '',
+            etapa: String(l.etapa ?? ''),
+            etiquetas: etiquetasDeLaCasa({ id: l.id, etiquetas: nombres }, casa),
+            casa,
+            reuniones: r.cuantas,
+            ultima: r.ultima,
+            proyecto: proyectoDe.get(l.id) ?? null,
+          });
+          // Una fila por lead. Si confirmó en las dos casas y el partner ve las
+          // dos, se muestra una vez con la primera: son el mismo lead.
+          break;
+        }
+      }
+      setLeads(suyos);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -161,5 +245,5 @@ export function useControl(usuario: UsuarioRecord | null) {
       })
     : [];
 
-  return { proyectos, reuniones, lineas, cargando, error, recargar };
+  return { proyectos, reuniones, leads, lineas, cargando, error, recargar };
 }

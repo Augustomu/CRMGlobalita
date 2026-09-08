@@ -76,9 +76,17 @@ migrate(
       if (String(u.get('rol')) !== 'observador') usuarios.push(u.id);
     }
 
+    // Las etiquetas para el relleno: ni las del sistema ni las PROTEGIDAS.
+    //
+    // Las protegidas (PIV, Parceria, Inversion) deciden que ve cada partner.
+    // Repartiendolas al azar como una mas, un tercio de la base aparecia en la
+    // vista de un partner por accidente, y ademas quedaban leads con etiquetas
+    // de las dos casas sin que nadie lo hubiera decidido. Las pone el seed de
+    // partner, a proposito y sabiendo cuantos.
     const etiquetas = [];
     for (const e of app.findAllRecords('etiqueta')) {
-      if (!e.get('del_sistema')) etiquetas.push(e.id);
+      if (e.get('del_sistema') || e.get('protegida')) continue;
+      etiquetas.push(e.id);
     }
 
     // El reparto por dia esta armado a mano y no con aritmetica modular, para

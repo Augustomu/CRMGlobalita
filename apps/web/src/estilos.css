@@ -4225,3 +4225,53 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 /* Cambiar el idioma a mano es legitimo, pero tiene que verse: mandarle en
    espanol a un brasileno es el error que la pantalla existe para no repetir. */
 .venc-idioma-cambiado { background: var(--warning-light); color: var(--warning); font-weight: 600; }
+
+/* ---------- Control · leads que confirmaron interes (§7.11) ---------- */
+.ctrl-leads { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.ctrl-leads-tabla {
+  min-width: 900px;
+}
+.ctrl-leads-tabla .bc-encabezado,
+.ctrl-leads-tabla .bc-fila {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 120px 130px 54px 70px 84px;
+}
+.ctrl-leads-etiquetas { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+/* La etiqueta de interes es lo que pone al lead en esta pantalla: se ve como
+   un dato, no como una decoracion. */
+.ctrl-chip-interes {
+  font-size: var(--txt-xs);
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: var(--accent-light);
+  color: var(--accent);
+  white-space: nowrap;
+}
+.ctrl-chip-abierto {
+  font-size: var(--txt-xs);
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: var(--success-light);
+  color: var(--success);
+  white-space: nowrap;
+}
+.ctrl-leyenda {
+  font-size: var(--txt-sm);
+  color: var(--hint);
+  line-height: 1.5;
+  text-wrap: pretty;
+  padding-top: 6px;
+  border-top: .5px solid var(--border);
+}
+
+/* Los filtros de la vista de leads son UNA fila de chips, no las tres filas
+   con rotulo de Proyectos: aca hay un solo eje —la etiqueta de interes— y
+   apilarlo en filas separadas deja tres renglones casi vacios. */
+.ctrl-leads-filtros {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ctrl-leads-filtros .bc-buscar { max-width: 320px; }

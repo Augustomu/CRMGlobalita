@@ -4,7 +4,20 @@ import type { UsuarioRecord } from '../../lib/types';
 import { useControl, type ProyectoConDatos } from './useControl';
 import { Proyectos } from './Proyectos';
 import { Reuniones } from './Reuniones';
+import { LeadsDelPartner } from './LeadsDelPartner';
 import { PanelProyecto } from './PanelProyecto';
+
+/**
+ * El puente entre los dos vocabularios de la misma división.
+ *
+ * El alcance del usuario se guarda como `ia | inversiones` (`linea_control`) y
+ * la casa del proyecto como `globalita | seng`. Se traducen acá y en
+ * `useControl`, que son los únicos dos lugares donde se cruzan.
+ */
+const LINEA_DE_LA_CASA: Record<string, LineaNegocio> = {
+  globalita: 'ia',
+  seng: 'inversiones',
+};
 
 interface Props {
   usuario: UsuarioRecord;
@@ -18,8 +31,8 @@ interface Props {
  * el proyecto; acá se mira. Es lo único que ve el Observador.
  */
 export function Control({ usuario }: Props) {
-  const { proyectos, reuniones, lineas, cargando, error } = useControl(usuario);
-  const [vista, setVista] = useState<'proyectos' | 'reuniones'>('proyectos');
+  const { proyectos, reuniones, leads, lineas, cargando, error } = useControl(usuario);
+  const [vista, setVista] = useState<'proyectos' | 'leads' | 'reuniones'>('proyectos');
   // Quien ve las dos lineas puede mirar una por vez. Quien ve una sola no elige
   // nada: el filtro ya se aplico al leer.
   const [linea, setLinea] = useState<LineaNegocio | null>(null);
@@ -28,6 +41,10 @@ export function Control({ usuario }: Props) {
   const deLaLinea = useMemo(
     () => (linea ? proyectos.filter((p) => p.linea === linea) : proyectos),
     [proyectos, linea],
+  );
+  const leadsDeLaLinea = useMemo(
+    () => (linea ? leads.filter((l) => LINEA_DE_LA_CASA[l.casa] === linea) : leads),
+    [leads, linea],
   );
   const reunionesDeLaLinea = useMemo(
     () => (linea ? reuniones.filter((r) => r.linea === linea) : reuniones),
@@ -50,6 +67,13 @@ export function Control({ usuario }: Props) {
             onClick={() => setVista('proyectos')}
           >
             Proyectos <span className="ctrl-vista-n tabular">{deLaLinea.length}</span>
+          </button>
+          <button
+            type="button"
+            className={vista === 'leads' ? 'ctrl-vista-on' : 'ctrl-vista-off'}
+            onClick={() => setVista('leads')}
+          >
+            Leads <span className="ctrl-vista-n tabular">{leadsDeLaLinea.length}</span>
           </button>
           <button
             type="button"
@@ -110,6 +134,7 @@ export function Control({ usuario }: Props) {
             seleccionado={panel?.proyecto.id ?? null}
           />
         )}
+        {!cargando && !error && vista === 'leads' && <LeadsDelPartner leads={leadsDeLaLinea} />}
         {!cargando && !error && vista === 'reuniones' && (
           <Reuniones reuniones={reunionesDeLaLinea} />
         )}
