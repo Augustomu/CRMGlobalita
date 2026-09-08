@@ -157,7 +157,11 @@ export function Conversacion({ lead, canal, onCerrar }: Props) {
       )}
 
       {/* El hilo del CRM tiene lo registrado; el completo está en el chat real
-          hasta que el worker lo traiga (Etapa 5). */}
+          hasta que el worker lo traiga (Etapa 5).
+
+          Sin ningún mensaje, el botón NO dice «abrir el chat»: no hay chat que
+          abrir todavía, hay uno que empezar. Es la distinción del prototipo y
+          cambia lo que uno espera al tocarlo. */}
       <div className="conv-pie">
         <span className="campo-ayuda">
           {cargando
@@ -166,7 +170,7 @@ export function Conversacion({ lead, canal, onCerrar }: Props) {
         </span>
         {chat && (
           <a className="boton-mini al-final" href={chat} target="_blank" rel="noreferrer">
-            Abrir el chat
+            {delCanal.length ? 'Abrir el chat' : 'Escribir el primer mensaje'}
           </a>
         )}
       </div>

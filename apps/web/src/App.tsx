@@ -703,6 +703,9 @@ export function App() {
                 lead al que se le va a mandar, y un modal tapa exactamente eso. */}
             {repoAbierto && (
               <Repositorio
+                cuentaActual={
+                  leads.find((l) => l.id === seleccionado)?.expand?.cuenta?.abrev ?? ''
+                }
                 onCerrar={() => setRepoAbierto(false)}
                 onCambio={() => {
                   recargar();

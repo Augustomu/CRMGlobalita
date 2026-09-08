@@ -458,7 +458,8 @@ Para que la lista de arriba se lea en contexto. Verificado contra el manual:
 - Siete estados de proyecto, Congelado automático a los 30 días, los dos
   cerrados terminales, y la leyenda al pie (§5.12).
 - Lead → proyecto **manual** desde acciones rápidas (§5.13, decisión #17).
-- Las 15 claves de permiso y la resolución rol-como-preset (§6.1, §6.2).
+- La resolución rol-como-preset (§6.2). **Las claves NO son 15: son 19.**
+  Ver la corrección abajo.
 - Asignación en lote con filtros multi-selección y «seleccionar los N» que
   alcanza a todos, no a los visibles (§6.5).
 - **Las listas de invitación se reordenan con flechas, no con drag**
@@ -466,6 +467,25 @@ Para que la lista de arriba se lea en contexto. Verificado contra el manual:
 - Control de solo lectura con su pastilla, para todos los roles (§7.11,
   decisión #22).
 - Los tres temas y el aviso de cambios sin guardar (§9.3, §9.6).
+
+### E-bis · Una corrección a esta misma sección
+
+Decía *«Las 15 claves de permiso … verificado contra el manual»*. **Es falso:
+hay 19.** §6.1 lista quince; el código agrega cuatro —`verTelefono`,
+`verEmails`, `verLinks`, `verConversaciones`— y las usa para gatear de verdad
+(`FichaLead`, `App`).
+
+**Por qué las dejo, y no es por costumbre.** §10.24 dice que *«el Observador no
+ve datos de contacto: teléfono, email, links»*, y §10.13 dice que *«el rol es un
+preset de permisos, no una jaula: cualquier permiso se puede prender o apagar
+por usuario»*. Con quince claves, «no ve teléfono» sólo se puede escribir
+adentro del rol; con estas cuatro se puede decidir por persona, que es lo que
+§10.13 pide. Sin ellas la regla de §10.24 quedaría cableada al rol.
+
+Lo que estaba mal no era el código: era esta sección afirmando que había
+verificado algo que no coincidía. **Es la segunda vez que este documento dice
+algo falso** — la primera fue lo de `linea_control` y `casa`. Las dos veces
+apareció recontando contra la fuente, no releyendo el documento.
 
 ---
 

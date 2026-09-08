@@ -4,12 +4,14 @@ import {
   concluir,
   demoraDeRespuesta,
   dondeSeCorto,
+  minutosDeRespuesta,
   frecuenciaDeEnvio,
   pasoQueRespondio,
   type EnvioDelLead,
   type LeadAnalizado,
 } from '@crm/core/analisis';
 import { CADENCIA_POR_DEFECTO, siguientePaso } from '@crm/core/cadencia';
+import { ddmm } from '@crm/core/fecha';
 import type { Paso } from '@crm/core/tipos';
 import { pb } from '../../lib/pocketbase';
 import type { LeadRecord } from '../../lib/types';
@@ -45,6 +47,38 @@ function aAnalizado(l: LeadRecord): LeadAnalizado {
   };
 }
 
+/**
+ * Una comparación contra la cohorte: el valor propio, el del grupo y la barra.
+ *
+ * La barra se llena a la mitad cuando este lead va igual que el promedio, así
+ * que pasada la mitad es «mejor que el promedio» sin tener que leer números.
+ */
+function Comparacion({
+  label,
+  mio,
+  suyo,
+  ancho,
+}: {
+  label: string;
+  mio: string;
+  suyo: string;
+  ancho: number;
+}) {
+  return (
+    <div className="ana-barra">
+      <span className="auto-th">{label}</span>
+      <span className="ana-barra-valor tabular">
+        {mio} <span className="campo-ayuda">vs {suyo}</span>
+      </span>
+      <div className="ana-barra-riel">
+        <div className="ana-barra-relleno" style={{ width: `${Math.max(2, Math.round(ancho))}%` }} />
+        {/* La marca del promedio. Sin ella la barra no dice contra qué. */}
+        <div className="ana-barra-medio" />
+      </div>
+    </div>
+  );
+}
+
 /** Un dato con su rótulo. Vacío se dice, no se esconde. */
 function Dato({ label, valor }: { label: string; valor: string | null }) {
   return (
@@ -69,7 +103,7 @@ function Dato({ label, valor }: { label: string; valor: string | null }) {
  */
 export function AnalisisPerfil({ lead, leads }: Props) {
   const [envios, setEnvios] = useState<EnvioRecord[]>([]);
-  const [salientes, setSalientes] = useState<MensajeRecord[]>([]);
+  const [hilo, setHilo] = useState<MensajeRecord[]>([]);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
@@ -87,12 +121,9 @@ export function AnalisisPerfil({ lead, leads }: Props) {
     // Sólo los salientes de ESTE lead: el que trajo la respuesta es uno de
     // ellos, y traer el hilo entero de la base para leer uno sería absurdo.
     pb.collection('mensaje')
-      .getFullList<MensajeRecord>({
-        filter: `lead = "${lead.id}" && quien = "out"`,
-        sort: 'enviado_en',
-      })
-      .then((r) => vivo && setSalientes(r))
-      .catch(() => vivo && setSalientes([]));
+      .getFullList<MensajeRecord>({ filter: `lead = "${lead.id}"`, sort: 'enviado_en' })
+      .then((r) => vivo && setHilo(r))
+      .catch(() => vivo && setHilo([]));
     return () => {
       vivo = false;
     };
@@ -122,12 +153,29 @@ export function AnalisisPerfil({ lead, leads }: Props) {
    * el timestamp completo: un mensaje de las 18:00 no provocó una respuesta de
    * las 11:40 del mismo día.
    */
+  const salientes = useMemo(() => hilo.filter((m) => m.quien === 'out'), [hilo]);
+  /** Los del lead. El prototipo los cuenta como «Recibidos». */
+  const entrantes = useMemo(() => hilo.filter((m) => m.quien === 'in'), [hilo]);
+
   const textoQueRespondio = useMemo(() => {
     const r = String(lead.f_respuesta ?? '');
     if (!r) return null;
     const previos = salientes.filter((m) => String(m.enviado_en ?? '').localeCompare(r) <= 0);
     return previos[previos.length - 1] ?? null;
   }, [salientes, lead.f_respuesta]);
+
+  /**
+   * El entrante que vino después, para poder decir las dos horas.
+   *
+   * «enviado 10:14 · respondió 18:40» dice de un vistazo lo que tardó; con una
+   * sola de las dos hay que ir a buscar la otra.
+   */
+  const respuestaAl = useMemo(() => {
+    if (!textoQueRespondio) return null;
+    return entrantes.find(
+      (m) => String(m.enviado_en ?? '').localeCompare(String(textoQueRespondio.enviado_en)) > 0,
+    ) ?? null;
+  }, [entrantes, textoQueRespondio]);
 
   if (cargando) return <p className="campo-ayuda">Leyendo los envíos…</p>;
 
@@ -139,8 +187,14 @@ export function AnalisisPerfil({ lead, leads }: Props) {
           <span className="auto-th">Enviados</span>
         </div>
         <div className="ana-metrica">
-          <span className="ana-numero tabular">{lead.f_respuesta ? 1 : 0}</span>
-          <span className="auto-th">Respuestas</span>
+          {/* Los mensajes DEL LEAD, no un 0/1. Con el hilo guardado es un
+              número de verdad: tres respuestas y una respuesta no son el mismo
+              lead. Si el hilo todavía no llegó, cae a la fecha de respuesta,
+              que es lo único que se sabe. */}
+          <span className="ana-numero tabular">
+            {entrantes.length || (lead.f_respuesta ? 1 : 0)}
+          </span>
+          <span className="auto-th">Recibidos</span>
         </div>
         <div className="ana-metrica">
           {/* Manual p. 6: `respuesta − aceptacion`, en lenguaje natural. «0
@@ -170,13 +224,39 @@ export function AnalisisPerfil({ lead, leads }: Props) {
           <span className="auto-th">
             Comparado con {cohorte.cuantos} leads de {cohorte.criterio}
           </span>
-          <div className="ana-comparacion">
-            <span>Contestan</span>
-            <span className="tabular">{cohorte.tasaRespuesta}%</span>
-            <span>Envíos promedio</span>
-            <span className="tabular">{cohorte.enviosPromedio}</span>
-            <span>Tardan</span>
-            <span className="tabular">{cohorte.demoraPromedio ?? '—'}</span>
+          {/* «X vs Y» con la barra, como el prototipo. Los números solos
+              obligan a comparar de memoria; la barra dice de un vistazo si
+              este lead está por arriba o por debajo, que es la única pregunta
+              que se le hace a una comparación. */}
+          <div className="ana-barras">
+            <Comparacion
+              label="Mensajes enviados"
+              mio={String(mios.length)}
+              suyo={String(cohorte.enviosPromedio)}
+              ancho={
+                cohorte.enviosPromedio
+                  ? Math.min(100, (mios.length / cohorte.enviosPromedio) * 50)
+                  : 0
+              }
+            />
+            <Comparacion
+              label="Tiempo de respuesta"
+              mio={demoraDeRespuesta(yo, mios) ?? '—'}
+              suyo={cohorte.demoraPromedio ?? '—'}
+              // Más corto que el promedio llena más barra: acá lo bueno es
+              // tardar menos, al revés que en las otras dos.
+              ancho={
+                minutosDeRespuesta(yo, mios) != null && cohorte.minutosPromedio
+                  ? Math.min(100, (cohorte.minutosPromedio / (minutosDeRespuesta(yo, mios) || 1)) * 50)
+                  : 0
+              }
+            />
+            <Comparacion
+              label="Tasa de respuesta"
+              mio={`${mios.length ? Math.round((entrantes.length / mios.length) * 100) : 0}%`}
+              suyo={`${cohorte.tasaRespuesta}%`}
+              ancho={mios.length ? Math.min(100, (entrantes.length / mios.length) * 100) : 0}
+            />
           </div>
         </div>
       ) : (
@@ -193,10 +273,11 @@ export function AnalisisPerfil({ lead, leads }: Props) {
           <span className="auto-th">El mensaje que trajo la respuesta</span>
           <p>{textoQueRespondio.texto}</p>
           <span className="campo-ayuda tabular">
-            {textoQueRespondio.canal === 'whatsapp' ? 'WhatsApp' : 'LinkedIn'} ·{' '}
-            {String(textoQueRespondio.enviado_en).slice(8, 10)}/
-            {String(textoQueRespondio.enviado_en).slice(5, 7)}{' '}
-            {String(textoQueRespondio.enviado_en).slice(11, 16)}
+            {textoQueRespondio.canal === 'whatsapp' ? 'WhatsApp' : 'LinkedIn'} · enviado{' '}
+            {ddmm(textoQueRespondio.enviado_en)} {String(textoQueRespondio.enviado_en).slice(11, 16)}
+            {respuestaAl
+              ? ` · respondió ${ddmm(respuestaAl.enviado_en)} ${String(respuestaAl.enviado_en).slice(11, 16)}`
+              : ''}
           </span>
         </div>
       ) : (

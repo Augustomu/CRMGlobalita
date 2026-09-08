@@ -4998,9 +4998,10 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .atajos { width: calc(320px * var(--escala-texto)); display: flex; flex-direction: column; gap: 7px; }
 .atajos-cabeza { display: flex; align-items: center; gap: 8px; }
 .atajos-lista { display: flex; flex-direction: column; gap: 1px; max-height: 300px; overflow-y: auto; }
+.atajos-nota { padding-top: 6px; border-top: .5px solid var(--border); }
 .atajos-fila {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) auto;
+  grid-template-columns: 52px minmax(0, 1fr);
   gap: 8px;
   align-items: center;
   padding: 3px 4px;
@@ -5217,4 +5218,29 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   line-height: 1.5;
   color: var(--text);
   text-wrap: pretty;
+}
+
+/* Las barras de comparación contra la cohorte (§7.2, AnalisisPerfil). */
+.ana-barras { display: flex; flex-direction: column; gap: 7px; }
+.ana-barra { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; }
+.ana-barra-valor { font-size: var(--txt-md); color: var(--text); text-align: right; }
+.ana-barra-riel {
+  grid-column: 1 / -1;
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg);
+  border: .5px solid var(--border);
+  overflow: hidden;
+}
+.ana-barra-relleno { height: 100%; background: var(--accent); border-radius: 2px; }
+/* La marca del promedio, en la mitad: sin ella la barra no dice contra qué. */
+.ana-barra-medio {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--muted);
+  opacity: .5;
 }

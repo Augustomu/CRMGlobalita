@@ -35,6 +35,15 @@ const EJEMPLO = {
 interface Props {
   onCerrar: () => void;
   onCambio: () => void;
+  /**
+   * La cuenta del lead que se está mirando.
+   *
+   * Es lo que hace posible «Solo esta cuenta», que es el caso más común:
+   * destacar el mensaje para la cuenta con la que se está trabajando. Sin
+   * esto hay que ir a «Elegir cuentas» y tildarla, que son tres clics para lo
+   * que el prototipo resuelve en uno.
+   */
+  cuentaActual?: string;
 }
 
 /**
@@ -51,7 +60,7 @@ interface Props {
  * cada mensaje es una tarjeta que se abre en el lugar. Los destacados van
  * arriba.
  */
-export function Repositorio({ onCerrar, onCambio }: Props) {
+export function Repositorio({ onCerrar, onCambio, cuentaActual }: Props) {
   const [plantillas, setPlantillas] = useState<PlantillaRecord[]>([]);
   /** Cuál está abierta para editar. Una sola a la vez. */
   const [abierta, setAbierta] = useState<string | null>(null);
@@ -393,6 +402,18 @@ export function Repositorio({ onCerrar, onCambio }: Props) {
                     <span>Todas las cuentas</span>
                     <span className="campo-ayuda al-final">{cuentas.length} cuentas</span>
                   </button>
+                  {/* Sólo si hay un lead abierto: una opción que no sabe a
+                      qué cuenta se refiere no es una opción. */}
+                  {cuentaActual && (
+                    <button
+                      type="button"
+                      className="repo-opcion"
+                      onClick={() => void guardarAlcance(p.id, { tipo: 'cuentas', cuentas: [cuentaActual] })}
+                    >
+                      <span>Solo esta cuenta</span>
+                      <span className="campo-ayuda al-final">{cuentaActual}</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="repo-opcion"
