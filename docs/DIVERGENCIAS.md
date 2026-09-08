@@ -30,22 +30,42 @@ Ahora:
 - Se agregó el **switch de calendario** por administrador (§6.3, §8.6), y los bloques ajenos se dibujan grises, sin nombre, sin arrastre y sin tarjeta de hover.
 - La ficha también pedía todas las reuniones para calcular disponibilidad, y el registro trae `titulo_evento` —que lleva el nombre del lead adentro—, `invitado_email` e `invitados_copia`. Ahora usa la misma vista.
 
-### A.2 · El resto del alcance sigue siendo del lado del cliente
+### A.2 · El alcance del partner ahora es del servidor — ✅ **resuelto el 08/09**
 
-Lo de arriba arregla la agenda y la ficha. **Las demás pantallas filtran
-después de recibir todo**, y eso sigue abierto:
+`useControl` traía todos los proyectos, todas las reuniones y todos los leads, y
+recién ahí aplicaba el alcance por casa. Al partner de Seng le llegaban los
+datos de Globalita al navegador: bastaba abrir la pestaña de red.
 
-- `useControl` trae todos los proyectos y todas las reuniones y recién ahí
-  aplica el alcance por casa. Al partner de Seng le llegan los datos de
-  Globalita, aunque no los dibuje. El comentario del archivo dice que se filtra
-  «antes de que lleguen al navegador» y no es cierto.
-- `useLeads` trae todos los leads y filtra por asignación en el cliente.
-- `Automatizaciones` trae todas las reuniones y todos los envíos.
+Se cerró con lo mismo que la agenda —**las reglas filtran filas, las vistas
+recortan columnas**— y las dos cosas hacían falta:
 
-La solución de fondo es la misma en los tres casos: reglas de `listRule` en
-las colecciones, o vistas como `ocupado` donde haga falta recortar columnas.
-No se hizo ahora porque cambiar `listRule` toca todas las pantallas a la vez y
-conviene hacerlo con las pantallas ya estables.
+| | Qué se hizo |
+|---|---|
+| `proyecto` | `listRule` por casa contra `linea_control` |
+| `reunion` | `listRule` por la línea de negocio de la cuenta del lead |
+| `lead` | **negado al observador**: para lo suyo tiene la vista |
+| `perfil` | negado al observador |
+| `confirmado` (vista nueva) | los que confirmaron interés, sin teléfono, email ni links |
+| `reunion_control` (vista nueva) | quién es y de qué cuenta salió, sin cómo contactarlo |
+
+Las dos vistas hicieron falta porque negar `perfil` a secas dejaba la lista del
+partner sin nombres: el `expand` respeta la regla de la colección relacionada.
+
+**Medido:** con un espía sobre las respuestas de red, la sesión del partner ya
+no recibe ni un `telefono`, `email`, `link_chat` ni `link_perfil` — lo único
+que queda es su propio email en la respuesta del login. Antes aparecían en
+`perfil`, `lead`, `proyecto` y `reunion`.
+
+Y los números quedan donde tienen que quedar: el administrador ve 13 proyectos,
+51 leads y 32 reuniones; el partner de Globalita 9/36/23; el de Seng 4/19/9.
+
+Los otros dos casos del punto original se caen solos:
+
+- `useLeads` — §3.6 dice que **los leads son compartidos** y que el
+  administrador ve todos, así que un colaborador viéndolos todos es lo
+  especificado. El que no tenía que verlos era el observador, y ahora no puede.
+- `Automatizaciones` — el observador no llega a la pantalla (§6.3.1) y las
+  reuniones que pide ya vienen acotadas por la regla nueva.
 
 ### A.1-bis · Lo que decía este documento antes
 

@@ -32,6 +32,43 @@ interface ProyectoRecord extends Proyecto {
  * No es la base entera. Los que no confirmaron no le incumben, y además el
  * partner no tiene por qué ver la prospección (§6.3.1).
  */
+/** Una fila de la vista `reunion_control` (migración 1788602000). */
+interface ReunionDeControl {
+  id: string;
+  inicio: string;
+  zona: string;
+  duracion_min: number;
+  estado: string;
+  nota: string;
+  lead: string;
+  nombre: string;
+  cargo: string;
+  empresa: string;
+  pais: string;
+  ciudad: string;
+  industria: string;
+  cuenta: string;
+  genero: string;
+  linea: string;
+}
+
+/** Una fila de la vista `confirmado` (migración 1788601900). */
+interface LeadConfirmado {
+  id: string;
+  nombre: string;
+  empresa: string;
+  cargo: string;
+  pais: string;
+  ciudad: string;
+  industria: string;
+  cuenta: string;
+  etapa: string;
+  /** Las protegidas, separadas por coma: «PIV, Parceria». */
+  etiquetas: string;
+  /** Las casas que le corresponden: «globalita,seng». */
+  casas: string;
+}
+
 export interface LeadDeControl {
   id: string;
   nombre: string;
@@ -90,21 +127,32 @@ export function useControl(usuario: UsuarioRecord | null) {
       const [ps, rs, ls] = await Promise.all([
         pb.collection('proyecto').getFullList<ProyectoRecord>({
           expand: 'cuenta,responsable',
+          // Sin `fields`, el expand del responsable trae el usuario entero con
+          // su email. Acá sólo se usa el nombre.
+          fields: [
+            '*',
+            'expand.cuenta.abrev',
+            'expand.cuenta.linea_negocio',
+            'expand.responsable.name',
+          ].join(','),
           sort: '-updated',
         }),
-        pb.collection('reunion').getFullList({
-          expand: 'lead.perfil,lead.cuenta,lead.asignado',
-          sort: '-inicio',
-        }),
-        // Solo los que tienen alguna etiqueta: el filtro fino es por nombre de
-        // etiqueta y se hace abajo, pero esto ya deja afuera a la mayoría.
-        // `field != null && field != "[]"` porque `:length` mide el texto
-        // serializado y "[]" pasaría.
-        pb.collection('lead').getFullList({
-          filter: 'etiquetas != null && etiquetas != "[]"',
-          expand: 'perfil,cuenta,etiquetas',
-          sort: '-updated',
-        }),
+        // De la vista `reunion_control`, no de `reunion`.
+        //
+        // Pedirla con `expand=lead.perfil` traía el perfil entero —teléfono,
+        // email, links— y el lead entero, que tiene sus propios tres campos de
+        // email. La vista trae quién es y de qué cuenta salió, que es lo que
+        // Control dibuja, y nada de cómo contactarlo.
+        pb.collection('reunion_control').getFullList<ReunionDeControl>({ sort: '-inicio' }),
+        // De la vista `confirmado`, no de `lead`.
+        //
+        // La vista trae SOLO los que confirmaron interés y SOLO las columnas
+        // que el partner puede ver. Teléfono, email, links y notas no están en
+        // su consulta: no es que se escondan al dibujar, es que no hay pedido
+        // que los devuelva. Y su `listRule` ya deja afuera las casas ajenas,
+        // así que al partner de Seng los de Globalita no le llegan al
+        // navegador.
+        pb.collection('confirmado').getFullList<LeadConfirmado>({ sort: 'nombre' }),
       ]);
 
       // Las reuniones se asocian al proyecto por lead (§6): si el lead tiene
@@ -112,30 +160,26 @@ export function useControl(usuario: UsuarioRecord | null) {
       const proyectoDeLead = new Map<string, string>();
       for (const p of ps) if (p.lead) proyectoDeLead.set(p.lead, p.id);
 
-      const medidas: ReunionMedida[] = (rs as unknown as Array<Record<string, any>>).map((r) => {
-        const lead = r.expand?.lead;
-        const perfil = lead?.expand?.perfil;
-        return {
-          id: r.id,
-          inicio: r.inicio ?? '',
-          // D23: la hora y la fecha que valen son las de esta zona, no las de
-          // la base, que guarda todo en UTC.
-          zona: r.zona || 'America/Mexico_City',
-          duracion_min: r.duracion_min ?? 0,
-          estado: r.estado || 'pendiente',
-          nombre: perfil?.nombre ?? '',
-          cargo: perfil?.cargo ?? '',
-          empresa: perfil?.empresa ?? '',
-          pais: perfil?.pais ?? '',
-          ciudad: perfil?.ciudad ?? '',
-          industria: perfil?.industria ?? '',
-          cuenta: lead?.expand?.cuenta?.abrev ?? '',
-          genero: lead?.expand?.asignado?.name ?? '',
-          nota: r.notas ?? '',
-          proyecto: lead ? (proyectoDeLead.get(lead.id) ?? '') : '',
-          linea: (lead?.expand?.cuenta?.linea_negocio ?? null) as LineaNegocio | null,
-        };
-      });
+      const medidas: ReunionMedida[] = rs.map((r) => ({
+        id: r.id,
+        inicio: r.inicio ?? '',
+        // D23: la hora y la fecha que valen son las de esta zona, no las de la
+        // base, que guarda todo en UTC.
+        zona: r.zona || 'America/Mexico_City',
+        duracion_min: r.duracion_min ?? 0,
+        estado: (r.estado || 'pendiente') as ReunionMedida['estado'],
+        nombre: r.nombre,
+        cargo: r.cargo,
+        empresa: r.empresa,
+        pais: r.pais,
+        ciudad: r.ciudad,
+        industria: r.industria,
+        cuenta: r.cuenta,
+        genero: r.genero,
+        nota: r.nota,
+        proyecto: r.lead ? (proyectoDeLead.get(r.lead) ?? '') : '',
+        linea: (r.linea || null) as LineaNegocio | null,
+      }));
 
       const porProyecto = new Map<string, ReunionDelProyecto[]>();
       for (const m of medidas) {
@@ -197,22 +241,29 @@ export function useControl(usuario: UsuarioRecord | null) {
       }
 
       const suyos: LeadDeControl[] = [];
-      for (const l of ls as unknown as Array<Record<string, any>>) {
-        const nombres: string[] = (l.expand?.etiquetas ?? []).map((e: { nombre: string }) => e.nombre);
+      for (const l of ls) {
+        // La vista ya filtró por casa del lado del servidor. Esto vuelve a
+        // preguntarlo porque el administrador ve las dos y necesita una fila
+        // por casa: un lead con PIV y con Inversión sale dos veces, una en
+        // cada panel.
+        const nombres = String(l.etiquetas ?? '')
+          .split(',')
+          .map((x) => x.trim())
+          .filter(Boolean);
         for (const casa of ['globalita', 'seng'] as Casa[]) {
           if (!mio(LINEA_DE_CASA[casa])) continue;
           if (!loVeElPartner({ id: l.id, etiquetas: nombres }, casa)) continue;
           const r = reunionesDe.get(l.id) ?? { cuantas: 0, ultima: null };
           suyos.push({
             id: l.id,
-            nombre: l.expand?.perfil?.nombre ?? 'sin nombre',
-            empresa: l.expand?.perfil?.empresa ?? '',
-            cargo: l.expand?.perfil?.cargo ?? '',
-            pais: l.expand?.perfil?.pais ?? '',
-            ciudad: l.expand?.perfil?.ciudad ?? '',
-            industria: l.expand?.perfil?.industria ?? '',
-            cuenta: l.expand?.cuenta?.abrev ?? '',
-            etapa: String(l.etapa ?? ''),
+            nombre: l.nombre || 'sin nombre',
+            empresa: l.empresa,
+            cargo: l.cargo,
+            pais: l.pais,
+            ciudad: l.ciudad,
+            industria: l.industria,
+            cuenta: l.cuenta,
+            etapa: l.etapa,
             etiquetas: etiquetasDeLaCasa({ id: l.id, etiquetas: nombres }, casa),
             casa,
             reuniones: r.cuantas,
