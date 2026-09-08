@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type RefObject } from 'react';
 import {
-  DURACION_DEFECTO, descripcionEvento, enSuZona, finDe, tituloEvento,
-  type EstadoReunion,
+  DURACION_DEFECTO, descripcionEvento, enMinutos, enSuZona, filasPorHora, finDe, hhmm,
+  mensajeDeHorarios, tituloEvento, tramoDeLaHora, tramosDelDia,
+  type EstadoReunion, type EventoDelDia,
 } from '@crm/core/reunion';
 import { cargaPorDia, estadoDelDia, fechaConCupo } from '@crm/core/carga';
 import { pb } from '../../lib/pocketbase';
@@ -27,10 +28,6 @@ const DURACIONES = [15, 30, 45, 60];
  * que la edita, y con este comentario para que no se pierda.
  */
 const TOPE_DIARIO = 40;
-
-/** La franja en que se agenda. Fuera de eso no se ofrece un horario. */
-const HORA_DESDE = 8;
-const HORA_HASTA = 19;
 
 /**
  * Hoy en la zona de QUIEN MIRA, no en UTC.
@@ -65,6 +62,16 @@ function sumarMeses(anio: number, mes: number, n: number) {
   return { anio: d.getUTCFullYear(), mes: d.getUTCMonth() };
 }
 
+/** Una reunión que quien mira tiene permitido ver con nombre (§6.3). */
+interface ConNombre {
+  id: string;
+  inicio: string;
+  zona: string;
+  duracion_min: number;
+  estado: string;
+  expand?: { lead?: { expand?: { perfil?: { nombre?: string } } } };
+}
+
 interface Props {
   lead: LeadRecord;
   usuario: UsuarioRecord | null;
@@ -94,13 +101,29 @@ export function FechaReunion({
   leads = [],
 }: Props) {
   const [reuniones, setReuniones] = useState<ReunionRecord[]>([]);
-  const [ocupadas, setOcupadas] = useState<ReunionRecord[]>([]);
+  /**
+   * Los calendarios que se pueden mirar y cuál se está mirando (§6.3).
+   *
+   * Sirve para agendar contra la agenda de otro: si la reunión la va a tomar
+   * el administrador, los huecos que importan son los suyos. Lo ajeno se suma
+   * a lo propio en vez de reemplazarlo — la reunión tiene que entrar en las
+   * dos agendas, no en una.
+   */
+  const [calendarios, setCalendarios] = useState<{ id: string; nombre: string }[]>([]);
+  const [calendario, setCalendario] = useState<string | null>(null);
+  const [ajenas, setAjenas] = useState<{ id: string; inicio: string; zona: string; duracion_min: number }[]>([]);
+  /** Las que quien mira tiene permitido ver con nombre. */
+  const [conNombre, setConNombre] = useState<
+    { id: string; inicio: string; zona: string; duracion_min: number; nombre: string }[]
+  >([]);
   const [abierto, setAbierto] = useState(true);
   const [histAbierto, setHistAbierto] = useState(false);
   const [proxAbierto, setProxAbierto] = useState(false);
   const [dia, setDia] = useState<string | null>(null);
   const [hora, setHora] = useState<string | null>(null);
   const [duracion, setDuracion] = useState(DURACION_DEFECTO);
+  /** Qué hora está desplegada en tramos de 15. Una sola a la vez. */
+  const [horaAbierta, setHoraAbierta] = useState<string | null>(null);
   const [recordatorios, setRecordatorios] = useState(true);
   const [agradecimiento, setAgradecimiento] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -116,47 +139,94 @@ export function FechaReunion({
 
   async function recargar() {
     try {
-      const [mias, ocupados] = await Promise.all([
+      // §6.3: el administrador ve todo; el colaborador, lo suyo. Es el mismo
+      // filtro que usa la agenda, y por la misma razón: el detalle ajeno no se
+      // esconde al dibujar, no se pide.
+      const filtroPropio =
+        usuario?.rol === 'administrador'
+          ? ''
+          : `calendario = "${usuario?.id ?? ''}" || lead.asignado = "${usuario?.id ?? ''}"`;
+
+      const [mias, visibles] = await Promise.all([
         pb.collection('reunion').getFullList<ReunionRecord>({
           filter: `lead = "${lead.id}"`,
           sort: '-inicio',
         }),
-        // La disponibilidad sale de la vista `ocupado`, no de `reunion`.
-        //
-        // Para saber que un horario está tomado alcanza con la hora y la
-        // duración. Pidiendo la reunión entera venían además el título del
-        // evento —que lleva el nombre del lead adentro—, el mail del invitado y
-        // los de la copia: datos de gente que quien agenda no tiene por qué
-        // ver. La vista expone solo el horario.
-        pb.collection('ocupado').getFullList<{ id: string; inicio: string; zona: string; duracion_min: number }>({
-          sort: 'inicio',
-        }),
+        pb
+          .collection('reunion')
+          .getFullList<ConNombre>({
+            expand: 'lead.perfil',
+            fields: 'id,inicio,zona,duracion_min,estado,expand.lead.expand.perfil.nombre',
+            sort: 'inicio',
+            ...(filtroPropio ? { filter: filtroPropio } : {}),
+          })
+          .catch(() => [] as ConNombre[]),
       ]);
+      // Un calendario por administrador, más el propio. §8.6 pide no asumir
+      // que hay uno solo.
+      const admins = await pb
+        .collection('users')
+        .getFullList<{ id: string; name: string }>({
+          filter: 'rol = "administrador" && estado = "activo"',
+          fields: 'id,name',
+          sort: 'name',
+        })
+        .catch(() => []);
+      setCalendarios([
+        ...(usuario ? [{ id: usuario.id, nombre: 'Mi calendario' }] : []),
+        ...admins
+          .filter((x) => x.id !== usuario?.id)
+          .map((x) => ({ id: x.id, nombre: `Calendario de ${x.name.split(' ')[0]}` })),
+      ]);
+
       setReuniones(mias);
-      // Las propias se sacan acá y no en el filtro: la vista no tiene columna
-      // `lead`, y agregársela volvería a atar cada horario a una persona.
-      const propias = new Set(mias.map((m) => m.id));
-      setOcupadas(
-        ocupados
-          .filter((o) => !propias.has(o.id))
-          .map((o) => ({
-            id: o.id,
-            inicio: o.inicio,
-            zona: o.zona,
-            duracion_min: o.duracion_min,
-          })) as unknown as ReunionRecord[],
+      setConNombre(
+        visibles
+          .filter((r) => r.estado !== 'cancelada')
+          .map((r) => ({
+            id: r.id,
+            inicio: r.inicio,
+            zona: r.zona,
+            duracion_min: r.duracion_min,
+            nombre: r.expand?.lead?.expand?.perfil?.nombre ?? '',
+          })),
       );
     } catch {
       setReuniones([]);
-      setOcupadas([]);
+      setConNombre([]);
     }
   }
+
+  /**
+   * Lo tomado del calendario ajeno, sin decir de qué.
+   *
+   * Sale de la vista `ocupado`, que expone horario y calendario y nada más: ni
+   * el título del evento, ni el lead, ni los invitados.
+   */
+  useEffect(() => {
+    let vivo = true;
+    if (!calendario || calendario === usuario?.id) {
+      setAjenas([]);
+      return;
+    }
+    pb.collection('ocupado')
+      .getFullList<{ id: string; inicio: string; zona: string; duracion_min: number }>({
+        filter: `calendario = "${calendario}"`,
+        sort: 'inicio',
+      })
+      .then((r) => vivo && setAjenas(r))
+      .catch(() => vivo && setAjenas([]));
+    return () => {
+      vivo = false;
+    };
+  }, [calendario, usuario?.id]);
 
   useEffect(() => {
     void recargar();
     setDia(null);
     setHora(null);
     setDuracion(DURACION_DEFECTO);
+    setHoraAbierta(null);
     setHistAbierto(false);
     setProxAbierto(false);
     setError(null);
@@ -173,16 +243,37 @@ export function FechaReunion({
   const descripcion = descripcionEvento(perfil?.slug ?? '', lead.id);
   const linkPerfil = perfil?.slug ? `https://www.linkedin.com/in/${perfil.slug}` : '';
 
-  /** Qué hay tomado cada día y a qué hora, en la zona de cada reunión. */
+  /**
+   * Qué hay tomado cada día, como BLOQUES con principio y fin.
+   *
+   * Antes era una lista de horas de arranque, y con eso «ocupado» sólo podía
+   * significar «empieza a la misma hora». Una reunión de 14:00 a 15:30 no
+   * tapaba las 14:30 ni las 15:00, así que el panel las ofrecía.
+   */
   const agenda = useMemo(() => {
-    const m = new Map<string, string[]>();
-    for (const r of ocupadas) {
+    const m = new Map<string, EventoDelDia[]>();
+    const nombres = new Map(conNombre.map((r) => [r.id, r.nombre]));
+    const poner = (r: { id: string; inicio: string; zona?: string; duracion_min: number }) => {
       const local = enSuZona(r.inicio, r.zona || ZONA);
-      const d = local.slice(0, 10);
-      m.set(d, [...(m.get(d) ?? []), local.slice(11, 16)]);
-    }
+      const dia = local.slice(0, 10);
+      const a = enMinutos(local.slice(11, 16));
+      const quien = nombres.get(r.id);
+      m.set(dia, [
+        ...(m.get(dia) ?? []),
+        // Sin nombre no se inventa uno: «Ocupado» es exactamente lo que se
+        // sabe de la reunión de otro (§6.3).
+        { a, b: a + (r.duracion_min || DURACION_DEFECTO), titulo: quien || 'Ocupado' },
+      ]);
+    };
+    // Las de este lead no bloquean: si estás reagendando, el horario que
+    // querés liberar es justamente el que tiene.
+    const suyas = new Set(reuniones.map((r) => r.id));
+    for (const r of conNombre) if (!suyas.has(r.id)) poner(r);
+    // El calendario ajeno SUMA: la reunión tiene que entrar en las dos agendas.
+    for (const r of ajenas) if (!suyas.has(r.id) && !conNombre.some((c) => c.id === r.id)) poner(r);
+    for (const [, evs] of m) evs.sort((x, y) => x.a - y.a);
     return m;
-  }, [ocupadas]);
+  }, [reuniones, conNombre, ajenas]);
 
   const hoy = hoyIso();
   const celdas = celdasDelMes(cal.anio, cal.mes);
@@ -193,17 +284,42 @@ export function FechaReunion({
    */
   const carga = useMemo(() => cargaPorDia(leads), [leads]);
 
-  const horas = useMemo(() => {
-    const tomadas = new Set(dia ? (agenda.get(dia) ?? []) : []);
-    const out: { hora: string; tomada: boolean }[] = [];
-    for (let h = HORA_DESDE; h <= HORA_HASTA; h++) {
-      for (const m of ['00', '30']) {
-        const s = `${String(h).padStart(2, '0')}:${m}`;
-        out.push({ hora: s, tomada: tomadas.has(s) });
-      }
-    }
-    return out;
-  }, [dia, agenda]);
+  const eventosDelDia = useMemo(() => (dia ? (agenda.get(dia) ?? []) : []), [dia, agenda]);
+  const filas = useMemo(
+    () => (dia ? filasPorHora(eventosDelDia, duracion) : []),
+    [dia, eventosDelDia, duracion],
+  );
+  /**
+   * Por qué no hay horarios, si no los hay.
+   *
+   * Un día «sin disponibilidad» es distinto de un día lleno: en el primero hay
+   * que elegir otro día, en el segundo alcanza con achicar la reunión.
+   */
+  const tramos = useMemo(
+    () => (dia ? tramosDelDia(eventosDelDia, duracion) : []),
+    [dia, eventosDelDia, duracion],
+  );
+  const sinHorarios = useMemo(
+    // El segundo argumento es «el día está bloqueado entero en Google
+    // Calendar». Todavía no hay de dónde saberlo —la cuenta no está
+    // conectada—, así que va en false y el mensaje queda inalcanzable hasta
+    // que llegue la integración. Está escrito porque el hueco se dice.
+    () => mensajeDeHorarios(dia, false, tramos, duracion),
+    [dia, tramos, duracion],
+  );
+
+  /**
+   * Cambiar la duración puede invalidar la hora ya elegida.
+   *
+   * Elegís 14:30 para media hora, lo pasás a una hora y a las 15:00 hay otra
+   * reunión: 14:30 dejó de entrar. Sin esto, el horario seguía marcado y el
+   * botón de confirmar seguía habilitado, o sea que el panel te dejaba agendar
+   * encima de algo que él mismo estaba mostrando.
+   */
+  useEffect(() => {
+    if (!hora) return;
+    if (!tramos.some((t) => t.label === hora && t.libre)) setHora(null);
+  }, [tramos, hora]);
 
   /** Link de "crear evento" de Google Calendar, ya armado. */
   function linkCalendar(inicioIso: string, min: number): string {
@@ -609,7 +725,15 @@ export function FechaReunion({
                 ))}
                 {celdas.map((iso, i) => {
                   if (iso === null) return <span key={`v${i}`} className="reunion-dia-vacio" />;
-                  const tomadas = agenda.get(iso) ?? [];
+                  const evs = agenda.get(iso) ?? [];
+                  // El día lleva título con lo que hay ese día, no solo un
+                  // color: «3 bloques: 10:00–11:00, 14:00–15:30…» dice si vale
+                  // la pena entrar.
+                  const tituloDia = evs.length
+                    ? `${evs.length} ${evs.length === 1 ? 'bloque' : 'bloques'}: ${evs
+                        .map((e) => `${hhmm(e.a)}–${hhmm(e.b)}`)
+                        .join(', ')}`
+                    : 'Día libre';
                   const pasado = iso < hoy;
                   if (pasado) {
                     return (
@@ -622,11 +746,12 @@ export function FechaReunion({
                     <button
                       key={iso}
                       type="button"
-                      className={`reunion-dia ${iso === dia ? 'reunion-dia-on' : ''} ${tomadas.length ? 'reunion-dia-con-carga' : ''}`}
-                      title={tomadas.length ? `ya hay ${tomadas.length}: ${tomadas.join(', ')}` : undefined}
+                      className={`reunion-dia ${iso === dia ? 'reunion-dia-on' : ''} ${evs.length ? 'reunion-dia-con-carga' : ''}`}
+                      title={tituloDia}
                       onClick={() => {
                         setDia(iso);
                         setHora(null);
+                        setHoraAbierta(null);
                       }}
                     >
                       {Number(iso.slice(8, 10))}
@@ -637,6 +762,33 @@ export function FechaReunion({
             </div>
 
             <div className="reunion-derecha">
+              {calendarios.length > 1 && (
+                <div className="reunion-fila-control">
+                  <span className="campo-label">Calendario</span>
+                  <div className="reunion-segmentado">
+                    {calendarios.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className={(calendario ?? usuario?.id) === c.id ? 'reunion-seg-on' : ''}
+                        title={
+                          c.id === usuario?.id
+                            ? 'Sólo tus horarios'
+                            : 'Suma los horarios de ese calendario, sin decir de qué son'
+                        }
+                        onClick={() => {
+                          setCalendario(c.id);
+                          setHora(null);
+                          setHoraAbierta(null);
+                        }}
+                      >
+                        {c.nombre}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="reunion-fila-control">
                 <span className="campo-label">Duración (min)</span>
                 <div className="reunion-segmentado">
@@ -653,27 +805,91 @@ export function FechaReunion({
                 </div>
               </div>
 
-              {dia ? (
-                <div className="reunion-horas">
-                  {horas.map((h) => (
-                    <button
-                      key={h.hora}
-                      type="button"
-                      className={`reunion-hora ${hora === h.hora ? 'reunion-hora-on' : ''} ${h.tomada ? 'reunion-hora-tomada' : ''}`}
-                      title={h.tomada ? 'ya hay una reunión a esa hora' : undefined}
-                      onClick={() => setHora(h.hora)}
-                    >
-                      {h.hora}
-                    </button>
-                  ))}
-                </div>
+              {/* Una fila POR HORA, con lo que ya hay agendado a la vista. La
+                  grilla plana de :00 y :30 mostraba huecos sin decir contra qué
+                  competían, y encima mentía: con la duración sin mirar, un hueco
+                  de media hora se ofrecía para una reunión de una hora. */}
+              {sinHorarios ? (
+                <div className="reunion-sin-dia">{sinHorarios}</div>
               ) : (
-                <div className="reunion-sin-dia">Elegí un día en el calendario</div>
+                <div className="reunion-horas">
+                  {filas.map((f) => {
+                    const abierta = horaAbierta === f.label;
+                    const elegido = tramoDeLaHora(f, hora);
+                    const enEstaHora = Boolean(hora && hora.slice(0, 2) === f.label.slice(0, 2));
+                    return (
+                      <div key={f.label} className="reunion-hora-fila">
+                        <div className="reunion-hora-cab">
+                          {f.hayLibres ? (
+                            <button
+                              type="button"
+                              className={`reunion-hora ${enEstaHora ? 'reunion-hora-on' : ''}`}
+                              title={`Elegir ${elegido?.label ?? f.label}`}
+                              onClick={() => elegido && setHora(elegido.label)}
+                            >
+                              {f.label}
+                            </button>
+                          ) : (
+                            /* Sin huecos deja de ser botón: tachada y quieta.
+                               Un botón que no hace nada es peor que ninguno. */
+                            <span className="reunion-hora reunion-hora-tomada" title="sin huecos en esta hora">
+                              {f.label}
+                            </span>
+                          )}
+
+                          {f.puedeAbrir && (
+                            <button
+                              type="button"
+                              className="reunion-hora-chevron"
+                              title={abierta ? 'Cerrar los tramos' : 'Ver tramos de 15 min'}
+                              onClick={() => setHoraAbierta(abierta ? null : f.label)}
+                            >
+                              {abierta ? '▴' : '▾'}
+                            </button>
+                          )}
+
+                          {f.eventos.map((e) => (
+                            <span key={e.rango} className="reunion-hora-chip">
+                              <span className="reunion-hora-chip-rango tabular">{e.rango}</span>
+                              <span className="reunion-hora-chip-tit">{e.titulo}</span>
+                            </span>
+                          ))}
+                        </div>
+
+                        {abierta && (
+                          <div className="reunion-cuartos">
+                            {f.tramos.map((q) =>
+                              q.libre ? (
+                                <button
+                                  key={q.label}
+                                  type="button"
+                                  className={`reunion-cuarto ${hora === q.label ? 'reunion-cuarto-on' : ''}`}
+                                  onClick={() => setHora(q.label)}
+                                >
+                                  {q.label}
+                                </button>
+                              ) : (
+                                <span
+                                  key={q.label}
+                                  className="reunion-cuarto reunion-cuarto-tomado"
+                                  title={q.choca?.titulo ?? 'ocupado'}
+                                >
+                                  {q.label}
+                                </span>
+                              ),
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
 
               <span className="reunion-evento-ayuda">
-                Los días ocupados salen de las reuniones ya cargadas. La disponibilidad real de
-                Google Calendar llega cuando se conecte la cuenta.
+                Los bloques ocupados salen de las reuniones ya cargadas; las de otros calendarios
+                se ven como «Ocupado», sin de quién son (§6.3). La disponibilidad real de Google
+                Calendar llega cuando se conecte la cuenta.
               </span>
               {error && <span className="login-error">{error}</span>}
             </div>

@@ -1561,10 +1561,94 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .reunion-segmentado .reunion-seg-on { background: var(--accent); color: var(--surface); font-weight: 600; }
 .reunion-segmentado .reunion-seg-on:hover { background: var(--accent); color: var(--surface); }
 
-.reunion-horas { display: flex; flex-wrap: wrap; gap: 4px; }
+/* Una fila por hora, no una grilla de pastillas: del prototipo
+   FechaReunion.dc.html. La altura de 210px es la suya — nueve horas entran
+   justas y la décima asoma, que es lo que dice que hay más para abajo. */
+.reunion-horas {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 210px;
+  overflow-y: auto;
+}
+.reunion-hora-fila { display: flex; flex-direction: column; gap: 2px; }
+/* min-width:0 y overflow ocultos: sin eso, el chip de un nombre largo
+   —«María de los Ángeles Fernández Villagrán de Gonçalves Sobrinho…»— estira
+   la fila y saca el resto de la pantalla. El nombre se corta, no la fila. */
+.reunion-hora-cab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  min-width: 0;
+  overflow: hidden;
+}
 .reunion-hora {
+  width: 44px;
+  flex-shrink: 0;
   height: 24px;
-  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--txt-md);
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  padding: 0;
+  transition: background 150ms ease-out;
+}
+.reunion-hora-chevron {
+  width: 18px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--hint);
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 8px;
+  transition: color 150ms ease-out;
+}
+.reunion-hora-chevron:hover { color: var(--accent); }
+
+/* Lo que ya hay agendado en esa hora. Es la mitad de la información que
+   faltaba: un hueco no dice nada sin lo que tiene al lado. */
+.reunion-hora-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  max-width: 240px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: .5px solid var(--border);
+}
+.reunion-hora-chip-rango { font-size: var(--txt-xs); color: var(--hint); flex-shrink: 0; }
+.reunion-hora-chip-tit {
+  font-size: var(--txt-sm);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reunion-cuartos { display: flex; flex-wrap: wrap; gap: 3px; padding: 0 0 4px 50px; }
+.reunion-cuarto {
+  height: 22px;
+  padding: 0 9px;
+  display: flex;
+  align-items: center;
   border-radius: 8px;
   border: .5px solid var(--border);
   background: var(--surface);
@@ -1574,6 +1658,20 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   cursor: pointer;
   font-variant-numeric: tabular-nums;
   transition: background 150ms ease-out;
+}
+.reunion-cuarto:hover { background: var(--accent-light); border-color: var(--accent-br); color: var(--accent); }
+.reunion-cuarto-on {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--surface);
+  font-weight: 600;
+}
+.reunion-cuarto-on:hover { background: var(--accent); color: var(--surface); }
+.reunion-cuarto-tomado {
+  background: var(--bg);
+  color: var(--hint);
+  text-decoration: line-through;
+  cursor: help;
 }
 .reunion-hora:hover { background: var(--accent-light); border-color: var(--accent-br); color: var(--accent); }
 .reunion-hora-on { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 600; }

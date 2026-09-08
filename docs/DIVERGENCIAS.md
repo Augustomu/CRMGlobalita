@@ -70,27 +70,61 @@ Es la única de la lista que es un problema de datos y no de diseño.
 
 ## B · Lo que hace que un número falte o mienta
 
-### B.1 · Las fechas son `date` y el manual pide `timestamp`
+### B.1 · Las fechas no tenían hora — ✅ **resuelto el 08/09**
 
 **Lo que dice el manual** (§3.2): el objeto `fechas` tiene `invitacion`,
 `aceptacion`, `respuesta` y `ultimo_contacto` como **`timestamp`**, y agrega:
 *«Requisito: guardar los timestamps crudos, no los textos»*.
 
-**Lo que hay**: `f_invitacion`, `f_aceptacion`, `f_respuesta` son `date` en la
-migración `1788600000`.
+**Lo que había**: los campos son `date` de PocketBase, y yo di por sentado que
+eso era solo la fecha. **No lo es**: el tipo `date` de PocketBase guarda
+`YYYY-MM-DD HH:MM:SS.sssZ`. No había que migrar nada. Lo que faltaba era que
+los seeds escribieran la hora — la escribían siempre a medianoche — y que el
+código la leyera.
 
-Dos cosas que el manual pide y que hoy no se pueden calcular por esto:
+Lo que se destrabó:
 
 - **§5.5 — «Cuándo responden: distribución de respuestas por día de semana **y
-  franja horaria**»**. Yo lo construí solo por día y lo anoté como «la hora no
-  está en los datos». Era cierto, pero la causa es esta decisión de modelo, no
-  una limitación real. Con `timestamp` se puede.
-- **§3.2 — `demora_respuesta` y `demora_reunion`**, derivados que se muestran en
-  lenguaje natural («8 h», «18 días»). Con solo la fecha, «8 h» no existe.
+  franja horaria**»**. Ahora la tarjeta dice «viernes última hora 23%» en vez de
+  solo «viernes». `franjaDe()` y `cuandoRespondenDetallado()` en
+  `core/rendimiento.ts`, con las cuatro franjas del manual (mañana 8–11,
+  mediodía 11–14, tarde 14–17, última hora 17–20).
+- **§3.2 — `demora_respuesta`** en lenguaje natural. La ficha muestra «8 h»,
+  «5 h», «10 min», «18 días» y «escribió primero», que son exactamente los
+  cinco casos que el prototipo trae escritos.
 
-Corregirlo es cambiar cuatro campos a `date` con hora y volver a poblarlos.
+**Y de paso apareció que la fórmula estaba mal.** El manual (p. 6) define
+`demora_respuesta = respuesta − aceptacion`. Yo la había implementado como
+«desde el último envío», que es otra pregunta: la del manual mide cuánto tarda
+alguien en engancharse después de aceptar, y por eso da «8 h» aunque entremedio
+hayan salido tres R. Está en `core/analisis.ts` como `demoraDeRespuesta`, con
+su test citando la página.
 
-### B.2 · La disponibilidad de la reunión no tiene en cuenta la duración
+Dos detalles que salieron de comparar contra el prototipo:
+
+- **Las horas se truncan, los días se redondean.** Alexandre aceptó 10:02 y
+  contestó 18:40: son 8 h 38, y el prototipo lo dice «8 h». Lucía tardó 17 d
+  20 h y el prototipo dice «18 días».
+- **La cohorte promediaba en días enteros**, así que «8 h» y «40 h» valían las
+  dos 0 y el promedio daba siempre cero. Ahora promedia en minutos y redacta al
+  final.
+
+### B.1-bis · Los datos de demo no eran los del prototipo
+
+Salió buscando dónde verificar lo anterior. Los seis leads de `pb_seed` tenían
+nombres del prototipo pero cargos, empresas, ciudades, listas, páginas de
+origen y **fechas inventadas**. El caso que lo delató: Alexandre respondía el
+20/05 y su primer envío salía el 21/05 — la respuesta era anterior a todo lo
+que le habíamos mandado, así que «qué paso lo trajo» no podía contestarse nunca
+y «tardó en contestar» daba «—» para toda la base de demo.
+
+Ahora los seis salen de `Dashboard.dc.html`: fechas con hora, listas, páginas,
+etiquetas, y los envíos sacados de los hilos `mensajesLi`/`mensajesWa` — cada
+saliente es un envío, con su hora y su canal.
+
+### B.2 · La disponibilidad de la reunión no tenía en cuenta la duración — ✅ **resuelto el 08/09**
+
+Se resolvió junto con la sección C, que es donde está el detalle.
 
 **Lo que dice el prototipo**: un horario está ocupado si la reunión de `dur`
 minutos **se solaparía** con un evento (`t < e.b && t + dur > e.a`), y el slot
@@ -101,7 +135,20 @@ reunión. Cambiar de 30 a 60 minutos no cambia ni un horario.
 
 Ofrece las 14:30 para una reunión de una hora aunque a las 15:00 haya otra.
 
-### B.3 · `HOY` sale de UTC en la lista de contactos
+### B.3 · El buscador no ignoraba tildes — ✅ **resuelto el 08/09**
+
+Apareció intentando abrir la ficha de Lucía. Escribir «Lucia» no traía a **Lucía
+Gonçalves**; «Fernandez» no traía a **María Fernández Villagrán**. En una base
+que es toda latinoamericana, eso es no tener buscador: hay que saber cómo está
+cargado el nombre antes de poder buscarlo, que es justo lo que uno no sabe.
+
+Lo llamativo es que la regla **ya existía** en `core/compartida.ts` y funcionaba
+bien — pero solo en la Base compartida. Follow-up y el panel de partner
+comparaban en crudo. Tres buscadores, dos comportamientos.
+
+Ahora está en `core/busqueda.ts` (`sinAcentos`, `coincide`) y lo usan los tres.
+
+### B.4 · `HOY` sale de UTC en la lista de contactos
 
 `ListaContactos.tsx:8` usa `new Date().toISOString().slice(0, 10)`. Cerca de la
 medianoche clasifica mal qué está vencido, y los filtros de la columna 1 quedan
@@ -112,19 +159,45 @@ la quinta.
 
 ---
 
-## C · El panel de horarios de la reunión
+## C · El panel de horarios de la reunión — ✅ **resuelto el 08/09**
 
-Es lo que motivó la revisión y es la divergencia más grande de diseño.
+Era la divergencia más grande de diseño, y la que motivó la revisión.
 
-| Manual / prototipo | Construido |
-|---|---|
-| Una fila **por hora** (09 a 17) | Grilla plana de `:00` y `:30`, de 08 a 19 |
-| Cada fila muestra **los eventos de esa hora** como chips: `14:00–14:30 · Reunión con Alexandre` | No se muestra ningún evento |
-| Un **chevron** despliega la hora en tramos de **15 min** | No existe |
-| La hora sin huecos va **tachada** y deja de ser botón | Solo cambia de color |
-| Tres mensajes: «Elegí un día…», «Sin disponibilidad ese día», «Sin huecos de N min ese día» | Solo el primero |
-| Los días llevan **título** con lo que hay ese día | Sin título |
-| **Selector de calendario** (§6.3): *Mi calendario* / *Calendario de {admin}*, y la disponibilidad suma los días de ese calendario | No existe |
+| Manual / prototipo | Estaba | Ahora |
+|---|---|---|
+| Una fila **por hora** (09 a 17) | Grilla plana de `:00` y `:30`, de 08 a 19 | ✅ `filasPorHora()` |
+| Cada fila muestra **los eventos de esa hora** como chips | No se mostraba ninguno | ✅ con rango y nombre |
+| Un **chevron** despliega la hora en tramos de **15 min** | No existía | ✅ una hora abierta por vez |
+| La hora sin huecos va **tachada** y deja de ser botón | Solo cambiaba de color | ✅ pasa a `<span>` |
+| Tres mensajes distintos | Solo el primero | ✅ los tres en `mensajeDeHorarios()` |
+| Los días llevan **título** con lo que hay ese día | Sin título | ✅ «3 bloques: 10:00–11:00, …» |
+| **Selector de calendario** (§6.3) | No existía | ✅ suma el ajeno como «Ocupado» |
+| **B.2** — el hueco se prueba por solapamiento | Coincidencia exacta de arranque | ✅ `t < e.b && t + dur > e.a` |
+
+Las reglas están en `core/reunion.ts` con sus tests (`test/horarios.test.ts`), no
+en el componente.
+
+Tres cosas que salieron construyéndolo:
+
+1. **El panel bloqueaba la agenda entera.** Traía `ocupado` sin filtro, o sea
+   las reuniones de todo el mundo, y con eso el selector de calendario no tenía
+   nada que sumar: ya estaba todo puesto. Ahora la base es lo propio (§6.3: el
+   administrador ve todo, el colaborador lo suyo) y el calendario ajeno se
+   agrega cuando se lo elige.
+
+2. **Las reuniones del lead que se está mirando no se bloquean a sí mismas.**
+   Si estás reagendando, el horario que querés liberar es justamente el que
+   tiene.
+
+3. **Cambiar la duración podía dejar elegido un horario que ya no entra.**
+   Elegís 14:30 para media hora, lo pasás a una hora, y a las 15:00 hay otra
+   reunión: 14:30 dejó de servir pero seguía marcado y el botón de confirmar
+   seguía habilitado. El panel te dejaba agendar encima de algo que él mismo
+   estaba mostrando.
+
+Lo único que queda sin llegar es el mensaje «Sin disponibilidad ese día»: marca
+los días bloqueados enteros en Google Calendar, y eso no existe hasta que la
+cuenta esté conectada. La función lo contempla y el argumento va en `false`.
 
 ---
 
@@ -404,6 +477,28 @@ arreglarlas del lado del documento.
 3. **`Control.dc.html:11`** usa la clave de tipo **`pib`**; el manual §3.13 dice
    **`fabript_piv`**. La etiqueta visible es la misma («Fabript/PIV»), pero la
    clave difiere. Mi código sigue al manual.
+
+4. **Wellington Abner Simoes es dos personas distintas según la pantalla.** En
+   `Dashboard.dc.html:380` es «Gerente de Operaciones, Opus CM, Construcción
+   Manufactura, Sao Paulo»; en `Control.dc.html:572` la industria es
+   «Construcción **/** Manufactura». Diferencia menor, pero es la misma ficha.
+
+5. **`fechas.ultimoContacto` no coincide con los hilos de mensajes.** El manual
+   lo define como «último envío nuestro». Para Alexandre el campo dice 13/08,
+   pero su `mensajesWa` tiene salientes del 18/08 y del 28/08. Para Lucía dice
+   27/08, que es el día en que contestó **ella** — no hay ningún saliente ese
+   día. Tomé el hilo, que es el dato concreto, y derivé el campo de ahí.
+
+6. **La etapa no cuadra con la cantidad de envíos.** Alexandre está en R3 con
+   cuatro salientes en el hilo; Herik está en Fase 2 y su análisis dice «4
+   mensajes desde R0», pero su hilo tiene uno solo. Sembré lo que el hilo
+   muestra: es lo único verificable.
+
+7. **`demoraRespuesta: 'mismo día'` para Gonzalo** (`Dashboard.dc.html:467`),
+   que no aceptó ninguna invitación y cuyo primer mensaje es entrante. El propio
+   prototipo usa **«escribió primero»** para el mismo caso en los leads de WA
+   Personal (líneas 977 y 993). Implementé «escribió primero», que es lo que
+   pasó; «mismo día» no se deriva de ningún par de timestamps.
 
 
 ---

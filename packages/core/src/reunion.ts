@@ -184,3 +184,135 @@ export function enSuZona(instanteIso: string, zona: string): string {
     return d.toISOString().slice(0, 16);
   }
 }
+
+// ---------------------------------------------------------------------------
+// El panel de horarios (§3.2, prototipo `FechaReunion.dc.html`)
+//
+// Antes esto era una grilla plana de :00 y :30 en la que «ocupado» significaba
+// coincidir EXACTAMENTE con el arranque de otra reunión. Con eso, cambiar la
+// duración de 30 a 60 minutos no cambiaba ni un horario, y el panel ofrecía las
+// 14:30 para una reunión de una hora aunque a las 15:00 hubiera otra cosa.
+//
+// El prototipo hace lo correcto y es lo que va acá: el hueco se prueba contra
+// el SOLAPAMIENTO del bloque completo, y las filas son por hora, con los
+// eventos de esa hora a la vista.
+
+/** La jornada del panel: 09:00 a 18:00, en tramos de 15 minutos. */
+export const JORNADA_DESDE = 9 * 60;
+export const JORNADA_HASTA = 18 * 60;
+export const PASO_TRAMO = 15;
+
+export interface EventoDelDia {
+  /** Minutos desde medianoche. */
+  a: number;
+  b: number;
+  titulo: string;
+}
+
+export interface Tramo {
+  /** «09:15». */
+  label: string;
+  minuto: number;
+  libre: boolean;
+  /** El evento que lo tapa, para poder decir cuál en el title. */
+  choca: EventoDelDia | null;
+}
+
+export function hhmm(minutos: number): string {
+  return `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`;
+}
+
+export function enMinutos(hhmmTexto: string): number {
+  return Number(hhmmTexto.slice(0, 2)) * 60 + Number(hhmmTexto.slice(3, 5));
+}
+
+/**
+ * Los tramos de 15 minutos del día y cuáles entran.
+ *
+ * Un tramo sirve si la reunión ENTERA cabe sin pisar nada: `t < e.b && t + dur >
+ * e.a`. Y el último tramo posible es el que termina a las 18:00, no el que
+ * empieza: una reunión de una hora no puede arrancar 17:30.
+ */
+export function tramosDelDia(eventos: EventoDelDia[], duracion: number): Tramo[] {
+  const tramos: Tramo[] = [];
+  for (let t = JORNADA_DESDE; t + duracion <= JORNADA_HASTA; t += PASO_TRAMO) {
+    const choca = eventos.find((e) => t < e.b && t + duracion > e.a) ?? null;
+    tramos.push({ label: hhmm(t), minuto: t, libre: !choca, choca });
+  }
+  return tramos;
+}
+
+export interface FilaDeHora {
+  /** «09:00». */
+  label: string;
+  hora: number;
+  /** Los cuatro tramos de esa hora que existen (los del final del día pueden faltar). */
+  tramos: Tramo[];
+  /** Si alguno entra. Si no, la hora va tachada y deja de ser botón. */
+  hayLibres: boolean;
+  /** Lo que ya hay agendado en esa hora, para mostrarlo como chips. */
+  eventos: { rango: string; titulo: string }[];
+  /** El chevron sólo tiene sentido si hay más de un tramo que abrir. */
+  puedeAbrir: boolean;
+}
+
+/**
+ * Una fila por hora, de 09 a 17, con sus tramos y sus eventos.
+ *
+ * Las horas sin ningún tramo no aparecen: al final del día, una reunión larga
+ * deja horas donde no arranca nada, y una fila vacía no dice nada.
+ *
+ * El título del evento se corta en el primer salto de línea: el resto es el
+ * lead y el rango, que ya se muestran aparte.
+ */
+export function filasPorHora(eventos: EventoDelDia[], duracion: number): FilaDeHora[] {
+  const tramos = tramosDelDia(eventos, duracion);
+  const filas: FilaDeHora[] = [];
+  for (let h = 9; h <= 17; h++) {
+    const suyos = tramos.filter((q) => Math.floor(q.minuto / 60) === h);
+    if (!suyos.length) continue;
+    filas.push({
+      label: hhmm(h * 60),
+      hora: h,
+      tramos: suyos,
+      hayLibres: suyos.some((q) => q.libre),
+      eventos: eventos
+        .filter((e) => e.a < (h + 1) * 60 && e.b > h * 60)
+        .map((e) => ({ rango: `${hhmm(e.a)}–${hhmm(e.b)}`, titulo: e.titulo.split('\n')[0] ?? '' })),
+      puedeAbrir: suyos.length > 1,
+    });
+  }
+  return filas;
+}
+
+/**
+ * Cuál tramo elige el click en la hora en punto.
+ *
+ * Si el `hh:00` entra, ése. Si no, el primero de esa hora que entre — hacer
+ * click en «10» con las 10:00 ocupadas y las 10:30 libres tiene que dar las
+ * 10:30, no nada.
+ */
+export function tramoDeLaHora(fila: FilaDeHora, elegido: string | null): Tramo | null {
+  const enPunto = fila.tramos.find((q) => q.label === fila.label);
+  if (enPunto && (enPunto.libre || enPunto.label === elegido)) return enPunto;
+  return fila.tramos.find((q) => q.libre) ?? null;
+}
+
+/**
+ * Qué decir cuando no hay horarios que ofrecer.
+ *
+ * Son tres mensajes distintos porque son tres situaciones distintas, y decir
+ * «no hay horarios» en las tres esconde justo lo que hay que hacer: elegir un
+ * día, elegir otro día, o achicar la reunión.
+ */
+export function mensajeDeHorarios(
+  dia: string | null,
+  diaSinDisponibilidad: boolean,
+  tramos: Tramo[],
+  duracion: number,
+): string | null {
+  if (!dia) return 'Elegí un día en el calendario';
+  if (diaSinDisponibilidad) return 'Sin disponibilidad ese día';
+  if (!tramos.some((q) => q.libre)) return `Sin huecos de ${duracion} min ese día`;
+  return null;
+}
