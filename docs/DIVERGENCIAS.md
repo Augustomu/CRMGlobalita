@@ -308,16 +308,30 @@ el nombre del evento. Eso no es una omisión, es que la cuenta no está conectad
 todavía — y los bloques de OTRO calendario nunca van a llevar nombre, porque
 §6.3 dice que de un calendario ajeno se ve cuándo está tomado y nada más.
 
-### D.6 · El shell (§4, §7.1, §7.10)
+### D.6 · El shell (§4, §7.1, §7.10) — ✅ **resuelto el 08/09**
 
-- **Cuentas conectadas / QR** por cuenta — hoy figura como «falta» en el menú.
-- **Notificaciones**: hay campana con badge, falta el popover que lista cada uno
-  con su canal (LI/WA) y salta a la ficha o a la pestaña.
-- **Atajos de teclado**: falta el popover que los lista. *Los atajos en sí están
-  todos implementados* (`useAtajos.ts`: a s d r f g h v c z ctrl+z).
-- **Ver el CRM como otro usuario** (§6.4), desde el chip de sesión.
-- El botón `···` se muestra siempre; §7.1 pide que aparezca solo si el usuario
-  tiene al menos una de las herramientas que contiene.
+- **Cuentas conectadas**: una fila por cuenta con el estado de LinkedIn y de
+  WhatsApp, en verde / ámbar / gris para leerlo sin leer la palabra, y el
+  encabezado diciendo cuántas tienen algo caído. Es la pantalla desde la que se
+  ve por qué la cola no sale. **El QR se dice que falta y por qué**: lo emite la
+  sesión de WhatsApp Web, que vive en el worker; un botón de «Vincular» que no
+  vincula nada sería peor que no tenerlo.
+- **Notificaciones**: el popover lista cada sin-leer con su canal y salta a la
+  ficha abriendo esa conversación. Un lead con los dos canales aparece **dos
+  veces**, una por canal: son dos conversaciones y se contestan en lugares
+  distintos. Antes la campana llevaba a la subtab «Sin leer», que es una lista
+  de leads y no dice por dónde entró cada uno.
+- **Atajos de teclado**: el popover con los once. Estaban todos implementados;
+  lo que faltaba era decir cuáles son — un atajo que nadie sabe que existe no
+  es un atajo.
+- **Ver el CRM como otro usuario** (§6.4): desde el chip de sesión, con una
+  barra que no se puede perder de vista mientras dura y «Volver a mi usuario».
+  No persiste entre recargas, como pide el manual. Y dice lo que hace de
+  verdad: cambia lo que se DIBUJA, no con qué permisos se pide — las peticiones
+  siguen saliendo con la sesión del administrador.
+- El **`···` sólo aparece** si el usuario tiene alguna de las herramientas que
+  contiene. Medido: al observador le quedan exactamente los dos controles que
+  §7.1 nombra, **tema y chip de usuario**.
 
 ### D.7 · Detalles menores
 

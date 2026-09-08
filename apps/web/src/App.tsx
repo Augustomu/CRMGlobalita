@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { pb } from './lib/pocketbase';
+import type { UsuarioRecord } from './lib/types';
 import { useAuth } from './features/auth/useAuth';
 import { Login } from './features/auth/Login';
 import { useLeads, puedeUsuario } from './features/followup/useLeads';
@@ -9,6 +11,9 @@ import { usePlantillas } from './features/followup/usePlantillas';
 import { Vencimientos, leadsVencidos } from './features/vencimientos/Vencimientos';
 import { Usuarios } from './features/usuarios/Usuarios';
 import { Repositorio } from './features/repositorio/Repositorio';
+import { Atajos } from './features/shell/Atajos';
+import { CuentasConectadas } from './features/shell/CuentasConectadas';
+import { Notificaciones } from './features/shell/Notificaciones';
 import { useEtiquetas } from './features/followup/useEtiquetas';
 import { Control } from './features/control/Control';
 import { seccionInicial } from '@crm/core/permisos';
@@ -36,11 +41,44 @@ const CON_DATOS_PROPIOS: Seccion[] = ['control', 'automatizaciones', 'wapersonal
 export function App() {
   const auth = useAuth();
 
+  const [viendoComo, setViendoComo] = useState<UsuarioRecord | null>(null);
+  const [otrosUsuarios, setOtrosUsuarios] = useState<UsuarioRecord[]>([]);
+
+  /**
+   * Quién manda para lo que se DIBUJA.
+   *
+   * `auth.usuario` sigue siendo quien está autenticado —las peticiones salen
+   * con su token y el servidor le contesta lo suyo—; `usuario` es desde qué
+   * ojos se mira. Mientras se mira como otro, la barra de arriba lo dice: sin
+   * eso es demasiado fácil quedarse ahí y reportar como bug lo que es el
+   * permiso del otro funcionando.
+   */
+  const usuarioReal = auth.usuario;
+  const usuario = viendoComo ?? auth.usuario;
+
+  // Los usuarios a los que se puede mirar. Sólo para el administrador, y sólo
+  // los activos: entrar como uno suspendido no muestra nada útil.
+  useEffect(() => {
+    if (usuarioReal?.rol !== 'administrador') {
+      setOtrosUsuarios([]);
+      return;
+    }
+    let vivo = true;
+    pb.collection('users')
+      .getFullList<UsuarioRecord>({ filter: 'estado = "activo"', sort: 'name' })
+      .then((r) => vivo && setOtrosUsuarios(r.filter((u) => u.id !== usuarioReal.id)))
+      .catch(() => vivo && setOtrosUsuarios([]));
+    return () => {
+      vivo = false;
+    };
+  }, [usuarioReal?.id, usuarioReal?.rol]);
+
+
   // Los datos de prospeccion solo se piden si el usuario tiene Follow-up.
   // El Observador tiene verTodosLeads pero NO followup, y §7 dice que no ve
   // telefonos, emails ni links: si igual se bajaran, estarian en su navegador
   // aunque ninguna pantalla los dibuje.
-  const usuarioDeFollowup = puedeUsuario(auth.usuario, 'followup') ? auth.usuario : null;
+  const usuarioDeFollowup = puedeUsuario(usuario, 'followup') ? usuario : null;
 
   const { leads, cargando, error, recargar } = useLeads(usuarioDeFollowup);
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
@@ -49,6 +87,9 @@ export function App() {
   const [repoAbierto, setRepoAbiertoBruto] = useState(false);
   const [dupAbierto, setDupAbierto] = useState(false);
   const [masAbierto, setMasAbierto] = useState(false);
+  const [atajosAbiertos, setAtajosAbiertos] = useState(false);
+  const [cuentasAbiertas, setCuentasAbiertas] = useState(false);
+  const [notifAbiertas, setNotifAbiertas] = useState(false);
   const [usuarioAbierto, setUsuarioAbierto] = useState(false);
   const [agendaAbierta, setAgendaAbiertaBruto] = useState(false);
 
@@ -110,7 +151,7 @@ export function App() {
   // Se carga sin abrir nada, para el contador del header, pero solo para quien
   // puede resolverlos.
   const duplicados = useDuplicados(
-    puedeUsuario(auth.usuario, 'importarLeads') ? auth.usuario : null,
+    puedeUsuario(usuario, 'importarLeads') ? usuario : null,
   );
 
   useEffect(() => {
@@ -120,16 +161,16 @@ export function App() {
   // Al entrar (o al cambiar de usuario) se elige la sección de arranque una vez.
   // Si el usuario no tiene ninguna de las tres, queda en null y se le dice.
   useEffect(() => {
-    if (!auth.usuario) {
+    if (!usuario) {
       setSeccion(null);
       return;
     }
     const inicial = seccionInicial({
-      rol: auth.usuario.rol as never,
-      permisos: auth.usuario.permisos ?? {},
+      rol: usuario.rol as never,
+      permisos: usuario.permisos ?? {},
     });
     setSeccion(inicial === 'waPersonal' ? 'wapersonal' : inicial);
-  }, [auth.usuario?.id]);
+  }, [usuario?.id]);
 
   // Si el lead seleccionado deja de estar en la lista (cambió el filtro o el
   // usuario), se cae a la primera fila en vez de quedar en una ficha fantasma.
@@ -159,12 +200,24 @@ export function App() {
     setPendiente(null);
   }, [esperandoGuardado, sucio, pendiente]);
 
-  if (!auth.usuario) return <Login auth={auth} />;
+  if (!usuario) return <Login auth={auth} />;
 
   const nVencidos = leadsVencidos(leads).length;
   const nSinLeerLi = leads.filter((l) => l.sin_leer_li).length;
   const nSinLeerWa = leads.filter((l) => l.sin_leer_wa).length;
   const nSinLeer = leads.filter((l) => l.sin_leer_li || l.sin_leer_wa).length;
+
+  /**
+   * Si el menú `···` tiene algo adentro (§7.1).
+   *
+   * «Atajos de teclado» no cuenta: es de la aplicación, no una herramienta con
+   * permiso, y un menú que sólo la tiene es un botón que promete y no da.
+   */
+  const tieneMas =
+    puedeUsuario(usuario, 'importarLeads') ||
+    puedeUsuario(usuario, 'baseCompartida') ||
+    puedeUsuario(usuario, 'automatizaciones') ||
+    puedeUsuario(usuario, 'cuentasConectadas');
 
   // El subtab filtra la lista de verdad, no solo el conteo del header.
   const visibles = subtab === 'sinleer' ? leads.filter((l) => l.sin_leer_li || l.sin_leer_wa) : leads;
@@ -200,7 +253,7 @@ export function App() {
         {/* El orden es el del prototipo, no el mío: Automatizaciones, Control,
             Follow-up, WA Personal, Usuarios. */}
         <nav className="header-tabs">
-          {puedeUsuario(auth.usuario, 'automatizaciones') && (
+          {puedeUsuario(usuario, 'automatizaciones') && (
             <button
               type="button"
               className={`tab ${seccion === 'automatizaciones' ? 'tab-on' : 'tab-off'}`}
@@ -209,7 +262,7 @@ export function App() {
               Automatizaciones
             </button>
           )}
-          {puedeUsuario(auth.usuario, 'control') && (
+          {puedeUsuario(usuario, 'control') && (
             <button
               type="button"
               className={`tab ${seccion === 'control' ? 'tab-on' : 'tab-off'}`}
@@ -218,7 +271,7 @@ export function App() {
               Control
             </button>
           )}
-          {puedeUsuario(auth.usuario, 'followup') && (
+          {puedeUsuario(usuario, 'followup') && (
             <button
               type="button"
               className={`tab ${seccion === 'followup' ? 'tab-on' : 'tab-off'}`}
@@ -227,7 +280,7 @@ export function App() {
               Follow-up
             </button>
           )}
-          {puedeUsuario(auth.usuario, 'waPersonal') && (
+          {puedeUsuario(usuario, 'waPersonal') && (
             <button
               type="button"
               className={`tab ${seccion === 'wapersonal' ? 'tab-on' : 'tab-off'}`}
@@ -236,7 +289,7 @@ export function App() {
               WA Personal
             </button>
           )}
-          {puedeUsuario(auth.usuario, 'usuarios') && (
+          {puedeUsuario(usuario, 'usuarios') && (
             <button
               type="button"
               className={`tab ${seccion === 'usuarios' ? 'tab-on' : 'tab-off'}`}
@@ -270,6 +323,11 @@ export function App() {
         )}
 
         <div className="header-derecha">
+          {/* §7.1: «el de ··· requiere al menos una de las herramientas que
+              contiene». Con el preset de Observador quedan dos controles: chip
+              de usuario y tema — y un menú de una sola opción («Atajos») es
+              justamente lo que la regla evita. */}
+          {tieneMas && (
           <div className="relativo">
             <button
               type="button"
@@ -290,7 +348,7 @@ export function App() {
               <>
                 <div className="popover-fondo" onClick={() => setMasAbierto(false)} />
                 <div className="popover popover-anclado header-mas">
-                  {puedeUsuario(auth.usuario, 'importarLeads') && (
+                  {puedeUsuario(usuario, 'importarLeads') && (
                     <button
                       type="button"
                       className="header-mas-item"
@@ -311,7 +369,7 @@ export function App() {
                       Agenda NO van acá: son botones sueltos del header.
                       Las que todavía no existen se listan igual, con el motivo:
                       esconderlas haría creer que el sistema no las contempla. */}
-                  {puedeUsuario(auth.usuario, 'baseCompartida') && (
+                  {puedeUsuario(usuario, 'baseCompartida') && (
                     <button
                       type="button"
                       className="header-mas-item"
@@ -323,7 +381,7 @@ export function App() {
                       <span>Base compartida</span>
                     </button>
                   )}
-                  {puedeUsuario(auth.usuario, 'automatizaciones') && (
+                  {puedeUsuario(usuario, 'automatizaciones') && (
                     <button
                       type="button"
                       className="header-mas-item"
@@ -335,26 +393,36 @@ export function App() {
                       <span>Reglas y acciones rápidas</span>
                     </button>
                   )}
-                  {(
-                    [['cuentasConectadas', 'Cuentas conectadas']] as const
-                  ).map(([clave, texto]) =>
-                    puedeUsuario(auth.usuario, clave) ? (
-                      <span key={clave} className="header-mas-item header-mas-off">
-                        <span>{texto}</span>
-                        <span className="chip-mini">falta</span>
-                      </span>
-                    ) : null,
+                  {puedeUsuario(usuario, 'cuentasConectadas') && (
+                    <button
+                      type="button"
+                      className="header-mas-item"
+                      onClick={() => {
+                        setMasAbierto(false);
+                        setCuentasAbiertas(true);
+                      }}
+                    >
+                      <span>Cuentas conectadas</span>
+                    </button>
                   )}
-                  <span className="header-mas-item header-mas-off">
+                  <button
+                    type="button"
+                    className="header-mas-item"
+                    onClick={() => {
+                      setMasAbierto(false);
+                      setAtajosAbiertos(true);
+                    }}
+                  >
                     <span>Atajos de teclado</span>
-                    <span className="chip-mini">falta</span>
-                  </span>
+                  </button>
                 </div>
               </>
             )}
+            {atajosAbiertos && <Atajos onCerrar={() => setAtajosAbiertos(false)} />}
           </div>
+          )}
 
-          {puedeUsuario(auth.usuario, 'vencimientos') && (
+          {puedeUsuario(usuario, 'vencimientos') && (
             <button
               type="button"
               className="boton-icono-28"
@@ -369,7 +437,7 @@ export function App() {
             </button>
           )}
 
-          {puedeUsuario(auth.usuario, 'repositorio') && (
+          {puedeUsuario(usuario, 'repositorio') && (
             <button
               type="button"
               className="boton-icono-28"
@@ -388,7 +456,7 @@ export function App() {
               DESHABILITADOS con el motivo en el title, no ocultos: §9.7 dice
               que esconder lo que no se puede usar hace creer que el sistema no
               lo contempla. La excepción son los permisos, que sí ocultan. */}
-          {puedeUsuario(auth.usuario, 'tareas') && (
+          {puedeUsuario(usuario, 'tareas') && (
             <button
               type="button"
               className={`boton-icono-28 ${tareasAbierto ? 'boton-icono-on' : ''}`}
@@ -403,23 +471,40 @@ export function App() {
 
           {/* Esta sí funciona: son los leads con mensajes sin leer, que ya se
               cuentan para el switch del header. */}
-          <button
-            type="button"
-            className="boton-icono-28"
-            title={nSinLeer ? `${nSinLeer} con mensajes sin leer` : 'Sin mensajes sin leer'}
-            onClick={() => irA(() => {
-              setSeccion('followup');
-              setSubtab('sinleer');
-            })}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-              <path d="M18 8a6 6 0 10-12 0c0 7-2 8-2 8h16s-2-1-2-8z" />
-              <path d="M13.7 21a2 2 0 01-3.4 0" />
-            </svg>
-            {nSinLeer > 0 && <span className="badge-punto tabular">{nSinLeer}</span>}
-          </button>
+          {/* §7.1: el icono aparece sólo si el usuario tiene lo que abre. */}
+          {(puedeUsuario(usuario, 'followup') || puedeUsuario(usuario, 'waPersonal')) && (
+            <div className="relativo">
+              <button
+                type="button"
+                className={`boton-icono-28 ${notifAbiertas ? 'boton-icono-on' : ''}`}
+                title={nSinLeer ? `${nSinLeer} con mensajes sin leer` : 'Sin mensajes sin leer'}
+                onClick={() => setNotifAbiertas((a) => !a)}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                  <path d="M18 8a6 6 0 10-12 0c0 7-2 8-2 8h16s-2-1-2-8z" />
+                  <path d="M13.7 21a2 2 0 01-3.4 0" />
+                </svg>
+                {nSinLeer > 0 && <span className="badge-punto tabular">{nSinLeer}</span>}
+              </button>
+              {notifAbiertas && (
+                <Notificaciones
+                  leads={leads.filter((l) => l.sin_leer_li || l.sin_leer_wa)}
+                  waPersonal={0}
+                  onIrAlLead={(id, canal) =>
+                    irA(() => {
+                      setSeccion('followup');
+                      setSeleccionado(id);
+                      setConv(canal);
+                    })
+                  }
+                  onIrAWaPersonal={() => irA(() => setSeccion('wapersonal'))}
+                  onCerrar={() => setNotifAbiertas(false)}
+                />
+              )}
+            </div>
+          )}
 
-          {puedeUsuario(auth.usuario, 'agenda') && (
+          {puedeUsuario(usuario, 'agenda') && (
             <button
               type="button"
               className={`boton-icono-28 ${agendaAbierta ? 'boton-icono-on' : ''}`}
@@ -448,17 +533,61 @@ export function App() {
             <button
               type="button"
               className="header-avatar"
-              title={`${auth.usuario.name} · ${auth.usuario.rol}`}
+              title={`${usuario.name} · ${usuario.rol}`}
               onClick={() => setUsuarioAbierto((a) => !a)}
             >
-              {iniciales(auth.usuario.name)}
+              {iniciales(usuario.name)}
             </button>
             {usuarioAbierto && (
               <>
                 <div className="popover-fondo" onClick={() => setUsuarioAbierto(false)} />
                 <div className="popover popover-anclado header-usuario">
-                  <span className="header-usuario-nombre">{auth.usuario.name}</span>
-                  <span className="campo-ayuda">{auth.usuario.rol}</span>
+                  <span className="header-usuario-nombre">{usuario.name}</span>
+                  <span className="campo-ayuda">{usuario.rol}</span>
+
+                  {/* §6.4: sólo un administrador, y sólo mientras dure la
+                      pestaña. «Volver a mi usuario» regresa. */}
+                  {usuarioReal?.rol === 'administrador' && (
+                    <>
+                      {viendoComo ? (
+                        <button
+                          type="button"
+                          className="boton-mini"
+                          onClick={() => {
+                            setViendoComo(null);
+                            setUsuarioAbierto(false);
+                          }}
+                        >
+                          Volver a mi usuario
+                        </button>
+                      ) : (
+                        <>
+                          <span className="campo-label">Ver el CRM como</span>
+                          <div className="header-usuario-otros">
+                            {otrosUsuarios.map((u) => (
+                              <button
+                                key={u.id}
+                                type="button"
+                                className="header-mas-item"
+                                title={`Ver lo que ve ${u.name} (${u.rol})`}
+                                onClick={() => {
+                                  setViendoComo(u);
+                                  setUsuarioAbierto(false);
+                                }}
+                              >
+                                <span>{u.name}</span>
+                                <span className="chip-mini">{u.rol}</span>
+                              </button>
+                            ))}
+                            {!otrosUsuarios.length && (
+                              <span className="campo-ayuda">No hay otros usuarios activos.</span>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
+
                   <button type="button" className="boton-mini" onClick={auth.salir}>
                     Salir
                   </button>
@@ -468,6 +597,24 @@ export function App() {
           </div>
         </div>
       </header>
+
+      {viendoComo && (
+        <div className="vercomo">
+          <span>
+            Estás viendo el CRM como <strong>{viendoComo.name}</strong> ({viendoComo.rol}).
+          </span>
+          {/* Honesto: cambia lo que se DIBUJA, no lo que el servidor contesta.
+              §6.4 lo llama herramienta de soporte y no suplantación auditada, y
+              esto es exactamente eso. */}
+          <span className="campo-ayuda">
+            Cambia lo que se muestra, no con qué permisos se pide: las peticiones siguen saliendo
+            con tu sesión.
+          </span>
+          <button type="button" className="boton-mini al-final" onClick={() => setViendoComo(null)}>
+            Volver a mi usuario
+          </button>
+        </div>
+      )}
 
       <main className="cuerpo">
         {seccion && !CON_DATOS_PROPIOS.includes(seccion) && cargando && (
@@ -482,7 +629,7 @@ export function App() {
             </p>
           </div>
         )}
-        {seccion === 'control' && auth.usuario && <Control usuario={auth.usuario} />}
+        {seccion === 'control' && usuario && <Control usuario={usuario} />}
 
         {seccion === 'automatizaciones' && <Automatizaciones />}
 
@@ -498,8 +645,8 @@ export function App() {
           />
         )}
 
-        {!cargando && !error && seccion === 'usuarios' && auth.usuario && (
-          <Usuarios usuarioActual={auth.usuario} leads={leads} onCambio={recargar} />
+        {!cargando && !error && seccion === 'usuarios' && usuario && (
+          <Usuarios usuarioActual={usuario} leads={leads} onCambio={recargar} />
         )}
 
         {!cargando && !error && seccion === 'followup' && (
@@ -510,12 +657,12 @@ export function App() {
               onCerrarConversacion={() => setConv(null)}
               seleccionado={seleccionado}
               onSeleccionar={(id) => irA(() => setSeleccionado(id))}
-              usuario={auth.usuario}
-              verColaboradores={puedeUsuario(auth.usuario, 'verTodosLeads')}
-              veTelefono={puedeUsuario(auth.usuario, 'verTelefono')}
-              veCola={puedeUsuario(auth.usuario, 'colaEnvios')}
+              usuario={usuario}
+              verColaboradores={puedeUsuario(usuario, 'verTodosLeads')}
+              veTelefono={puedeUsuario(usuario, 'verTelefono')}
+              veCola={puedeUsuario(usuario, 'colaEnvios')}
               onImportar={
-                puedeUsuario(auth.usuario, 'importarLeads')
+                puedeUsuario(usuario, 'importarLeads')
                   ? () => irA(() => setImportarAbierto(true))
                   : undefined
               }
@@ -526,7 +673,7 @@ export function App() {
                 plantillas={plantillas}
                 onPlantillasCambiadas={recargarPlantillas}
                 catalogoEtiquetas={catalogoEtiquetas}
-                usuario={auth.usuario}
+                usuario={usuario}
                 onGuardado={recargar}
                 leads={leads}
                 onEtiquetasCambiadas={recargarEtiquetas}
@@ -545,7 +692,7 @@ export function App() {
             {agendaAbierta && (
               <Agenda
                 leads={leads}
-                usuario={auth.usuario}
+                usuario={usuario}
                 onCerrar={() => setAgendaAbierta(false)}
                 onIrAlLead={(id) => irA(() => setSeleccionado(id))}
               />
@@ -568,6 +715,8 @@ export function App() {
       </main>
 
 
+      {cuentasAbiertas && <CuentasConectadas onCerrar={() => setCuentasAbiertas(false)} />}
+
       {dupAbierto && (
         <Duplicados
           duplicados={duplicados}
@@ -577,7 +726,7 @@ export function App() {
       )}
 
       {tareasAbierto && (
-        <Tareas usuario={auth.usuario} onCerrar={() => setTareasAbierto(false)} />
+        <Tareas usuario={usuario} onCerrar={() => setTareasAbierto(false)} />
       )}
 
       {compartidaAbierta && <BaseCompartida onCerrar={() => setCompartidaAbierta(false)} />}
