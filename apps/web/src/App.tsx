@@ -263,15 +263,15 @@ export function App() {
                       )}
                     </button>
                   )}
-                  {/* Las que todavía no existen se listan igual, con el motivo:
+                  {/* Estas cuatro son las del menú en el prototipo. Tareas y
+                      Agenda NO van acá: son botones sueltos del header.
+                      Las que todavía no existen se listan igual, con el motivo:
                       esconderlas haría creer que el sistema no las contempla. */}
                   {(
                     [
-                      ['baseCompartida', 'Base compartida'],
                       ['cuentasConectadas', 'Cuentas conectadas'],
-                      ['tareas', 'Tareas'],
-                      ['agenda', 'Agenda'],
-                      ['colaEnvios', 'Cola de envíos'],
+                      ['baseCompartida', 'Base compartida'],
+                      ['automatizaciones', 'Reglas y acciones rápidas'],
                     ] as const
                   ).map(([clave, texto]) =>
                     puedeUsuario(auth.usuario, clave) ? (
@@ -281,6 +281,10 @@ export function App() {
                       </span>
                     ) : null,
                   )}
+                  <span className="header-mas-item header-mas-off">
+                    <span>Atajos de teclado</span>
+                    <span className="chip-mini">falta</span>
+                  </span>
                 </div>
               </>
             )}
@@ -313,6 +317,46 @@ export function App() {
                 <path d="M3.5 9h17M9 9v11" />
               </svg>
             </button>
+          )}
+
+          {/* Tareas, notificaciones y agenda: el prototipo los tiene sueltos,
+              en este orden. Los dos que todavía no existen se muestran
+              DESHABILITADOS con el motivo en el title, no ocultos: §9.7 dice
+              que esconder lo que no se puede usar hace creer que el sistema no
+              lo contempla. La excepción son los permisos, que sí ocultan. */}
+          {puedeUsuario(auth.usuario, 'tareas') && (
+            <span className="boton-icono-28 boton-off" title="Tareas — todavía no construida">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                <path d="M4 7l2 2 4-4M4 15l2 2 4-4M13 8h7M13 16h7" />
+              </svg>
+            </span>
+          )}
+
+          {/* Esta sí funciona: son los leads con mensajes sin leer, que ya se
+              cuentan para el switch del header. */}
+          <button
+            type="button"
+            className="boton-icono-28"
+            title={nSinLeer ? `${nSinLeer} con mensajes sin leer` : 'Sin mensajes sin leer'}
+            onClick={() => irA(() => {
+              setSeccion('followup');
+              setSubtab('sinleer');
+            })}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+              <path d="M18 8a6 6 0 10-12 0c0 7-2 8-2 8h16s-2-1-2-8z" />
+              <path d="M13.7 21a2 2 0 01-3.4 0" />
+            </svg>
+            {nSinLeer > 0 && <span className="badge-punto tabular">{nSinLeer}</span>}
+          </button>
+
+          {puedeUsuario(auth.usuario, 'agenda') && (
+            <span className="boton-icono-28 boton-off" title="Agenda — todavía no construida">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                <rect x="3.5" y="5" width="17" height="15" rx="2" />
+                <path d="M3.5 10h17M8 3v4M16 3v4" />
+              </svg>
+            </span>
           )}
 
           <button
