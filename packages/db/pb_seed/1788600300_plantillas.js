@@ -98,13 +98,26 @@ migrate(
       },
     ];
 
+    // Los destacados salen del prototipo (Dashboard.dc.html, DESTACADOS): sin
+    // ninguno, la fila de chips de la ficha y el filtro "Favoritos" del
+    // repositorio se ven vacios y no hay como saber si funcionan.
+    //
+    // Los tres alcances tienen que estar representados: todas las cuentas, una
+    // sola, y una lista.
+    const DESTACADOS = {
+      R0: 'todas las cuentas',
+      R1: 'todas las cuentas',
+      R2: 'DL',
+      R4: 'AL, DL',
+    };
+
     plantillas.forEach((p, i) => {
       const r = new Record(app.findCollectionByNameOrId('plantilla'));
       r.set('nombre', p.nombre);
       r.set('paso', p.paso);
       r.set('por_defecto', true); // una sola por paso en la semilla
       r.set('textos', p.textos);
-      r.set('destacado', '');
+      r.set('destacado', DESTACADOS[p.paso] || '');
       r.set('orden', i + 1);
       app.save(r);
     });

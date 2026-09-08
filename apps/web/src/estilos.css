@@ -4559,3 +4559,288 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .divisor-izq { left: 0; }
 
 .columna-lista, .agenda { position: relative; }
+
+/* ---------- repositorio de mensajes: sidebar (§7.9) ---------- */
+/*
+ * Una sola columna. Como sidebar de 300–620 px las dos columnas del modal
+ * viejo no entran: a 300 px el editor mediría 40. Cada mensaje es una tarjeta
+ * que se abre en el lugar, como en RepositorioMensajes.dc.html.
+ */
+.repo-sidebar {
+  position: relative;
+  min-width: 0;
+  border-left: .5px solid var(--border);
+  background: var(--surface);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.repo-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: .5px solid var(--border);
+}
+.repo-nuevo {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: var(--surface);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 150ms ease-out;
+}
+.repo-nuevo svg { width: 12px; height: 12px; }
+.repo-nuevo:hover { background: var(--accent-hover); }
+.repo-nuevo:disabled { opacity: .5; cursor: not-allowed; }
+
+.repo-filtros {
+  display: flex;
+  gap: 4px;
+  padding: 6px 12px;
+  border-bottom: .5px solid var(--border);
+  align-items: center;
+}
+.repo-chip {
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: var(--txt-sm);
+  white-space: nowrap;
+  background: transparent;
+  color: var(--muted);
+  border: .5px solid var(--border);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 150ms ease-out;
+}
+.repo-chip:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent-br); }
+.repo-chip-on { background: var(--accent); color: var(--surface); border-color: var(--accent); font-weight: 600; }
+.repo-chip-on:hover { background: var(--accent); color: var(--surface); }
+
+.repo-cuerpo {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.repo-tarjeta {
+  border: .5px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+  transition: opacity 150ms ease-out, border-color 150ms ease-out;
+}
+.repo-tarjeta-yendo { opacity: .45; }
+.repo-tarjeta-blanco { border-color: var(--accent); }
+
+.repo-fila { display: flex; align-items: center; gap: 6px; padding: 7px 8px 7px 10px; min-width: 0; }
+.repo-agarre { width: 14px; flex-shrink: 0; color: var(--hint); cursor: grab; text-align: center; }
+.repo-abrir {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.repo-nombre {
+  font-size: var(--txt-lg);
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.repo-idiomas { display: flex; gap: 3px; flex-shrink: 0; }
+/* Los tres idiomas siempre: con solo los cargados no se ve qué falta. */
+.repo-idioma {
+  font-size: var(--txt-xs);
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--hint);
+  border: .5px dashed var(--border);
+  white-space: nowrap;
+}
+.repo-idioma-on {
+  font-weight: 600;
+  background: var(--accent-light);
+  color: var(--accent);
+  border: .5px solid transparent;
+}
+.repo-defecto { color: var(--accent); font-size: var(--txt-sm); flex-shrink: 0; }
+.repo-destacar {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--hint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 150ms ease-out;
+}
+.repo-destacar svg { width: 13px; height: 13px; }
+.repo-destacar:hover { background: var(--accent-light); }
+.repo-destacar-on { color: var(--accent); }
+
+.repo-destacado-en {
+  padding: 0 10px 7px 32px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.repo-quitar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--hint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: var(--txt-md);
+  transition: background 150ms ease-out;
+}
+.repo-quitar:hover { background: var(--error-light); color: var(--error); }
+
+.repo-alcance {
+  padding: 8px 10px;
+  border-top: .5px solid var(--border);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.repo-opcion {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--txt-md);
+  color: var(--text);
+  text-align: left;
+  transition: background 150ms ease-out;
+}
+.repo-opcion:hover { background: var(--accent-light); border-color: var(--accent-br); }
+.repo-cuentas {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+  border-top: .5px solid var(--border);
+  align-items: center;
+}
+
+.repo-editor {
+  border-top: .5px solid var(--border);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.repo-nombre-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 26px;
+  padding: 0 8px;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--txt-md);
+  font-weight: 500;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 150ms ease-out;
+}
+.repo-nombre-input:focus { border-color: var(--accent); }
+.repo-editor-controles { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.repo-paso {
+  height: 24px;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--txt-sm);
+  font-family: inherit;
+  padding: 0 4px;
+}
+.repo-borrar {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  background: transparent;
+  color: var(--hint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 150ms ease-out;
+}
+.repo-borrar svg { width: 11px; height: 11px; }
+.repo-borrar:hover { background: var(--error-light); border-color: var(--error); color: var(--error); }
+.repo-texto {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 132px;
+  padding: 9px 11px;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--txt-lg);
+  line-height: 1.6;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: border-color 150ms ease-out;
+}
+.repo-texto:focus { border-color: var(--accent); }
+.repo-previa {
+  border: .5px dashed var(--border);
+  border-radius: 8px;
+  padding: 7px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.repo-previa p { margin: 0; font-size: var(--txt-md); color: var(--muted); line-height: 1.55; white-space: pre-wrap; }
+.repo-vacio { padding: 18px 8px; font-size: var(--txt-md); color: var(--hint); text-align: center; }
+.repo-pie {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: .5px solid var(--border);
+  min-width: 0;
+}

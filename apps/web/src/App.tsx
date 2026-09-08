@@ -46,11 +46,28 @@ export function App() {
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const [tema, setTema] = useState(0);
   const [vencAbierto, setVencAbierto] = useState(false);
-  const [repoAbierto, setRepoAbierto] = useState(false);
+  const [repoAbierto, setRepoAbiertoBruto] = useState(false);
   const [dupAbierto, setDupAbierto] = useState(false);
   const [masAbierto, setMasAbierto] = useState(false);
   const [usuarioAbierto, setUsuarioAbierto] = useState(false);
-  const [agendaAbierta, setAgendaAbierta] = useState(false);
+  const [agendaAbierta, setAgendaAbiertaBruto] = useState(false);
+
+  // §7.2: «Sidebars (una a la vez)». En una laptop de 14" las dos al mismo
+  // tiempo dejan la ficha en 300 px, que es no poder trabajar con ninguna.
+  const setRepoAbierto = (v: boolean | ((x: boolean) => boolean)) => {
+    setRepoAbiertoBruto((x) => {
+      const n = typeof v === 'function' ? v(x) : v;
+      if (n) setAgendaAbiertaBruto(false);
+      return n;
+    });
+  };
+  const setAgendaAbierta = (v: boolean | ((x: boolean) => boolean)) => {
+    setAgendaAbiertaBruto((x) => {
+      const n = typeof v === 'function' ? v(x) : v;
+      if (n) setRepoAbiertoBruto(false);
+      return n;
+    });
+  };
   const [tareasAbierto, setTareasAbierto] = useState(false);
   const [compartidaAbierta, setCompartidaAbierta] = useState(false);
   const [importarAbierto, setImportarAbierto] = useState(false);
@@ -533,19 +550,23 @@ export function App() {
                 onIrAlLead={(id) => irA(() => setSeleccionado(id))}
               />
             )}
+
+            {/* §7.9: el repositorio también es un SIDEBAR, no un modal. Se
+                edita una plantilla justo cuando se la está mirando contra el
+                lead al que se le va a mandar, y un modal tapa exactamente eso. */}
+            {repoAbierto && (
+              <Repositorio
+                onCerrar={() => setRepoAbierto(false)}
+                onCambio={() => {
+                  recargar();
+                  recargarPlantillas();
+                }}
+              />
+            )}
           </>
         )}
       </main>
 
-      {repoAbierto && (
-        <Repositorio
-          onCerrar={() => setRepoAbierto(false)}
-          onCambio={() => {
-            recargar();
-            recargarPlantillas();
-          }}
-        />
-      )}
 
       {dupAbierto && (
         <Duplicados

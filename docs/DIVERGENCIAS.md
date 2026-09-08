@@ -224,18 +224,27 @@ Está en `core/ventana.ts` con su test. No era una optimización prematura: con
 los leads dibujados todos, cada tecla del buscador remontaba miles de filas y el
 cursor iba atrás de lo que se escribía.
 
-### D.2 · Anchos arrastrables (§9.4, también transversal) — ✅ **dos de tres**
+### D.2 · Anchos arrastrables (§9.4, también transversal) — ✅ **resuelto el 08/09**
 
-Columna 1 (260–520, doble clic alterna 260/340) y agenda (340–900, doble clic
-vuelve a 560): arrastrables y persistidas en `localStorage`, con las reglas en
+Los tres: columna 1 (260–520, doble clic alterna 260/340), agenda (340–900,
+doble clic vuelve a 560) y repositorio (300–620, doble clic vuelve a 400).
+Arrastrables y persistidos en `localStorage`, con las reglas en
 `core/anchos.ts` y el arrastre en `lib/useAncho.ts`.
 
-Falta el **repositorio de mensajes**, y no es sólo el ancho: el manual §7.2 lo
-lista como *sidebar* junto a la agenda («Sidebars (una a la vez)») y hoy es un
-**overlay modal** de dos columnas. Como sidebar de 300–620 px las dos columnas
-no entran —a 300 px el editor mediría 40—, así que pasarlo es rehacer su
-interior en una sola columna, como `RepositorioMensajes.dc.html`, que es un
-grid de tres filas.
+El repositorio además **era un overlay modal** y §7.9 lo define como sidebar.
+No era ponerle un divisor: había que rehacer su interior en una sola columna
+—a 300 px el editor de dos columnas mediría 40— siguiendo
+`RepositorioMensajes.dc.html`. Ahora cada mensaje es una tarjeta que se abre en
+el lugar, con los tres idiomas siempre a la vista (cargados en firme, sin
+cargar en punteado: con sólo los cargados no se ve qué falta traducir), la
+estrella con su alcance, el filtro Todos/Favoritos y los destacados arriba.
+
+Y §7.2 dice «Sidebars (una a la vez)»: abrir una cierra la otra. En una laptop
+de 14" las dos juntas dejan la ficha en 300 px.
+
+Lo que el modal tenía y el prototipo no —el paso de la cadencia, «hacer la
+principal» (D16) y la vista previa con datos reales— quedó adentro del editor:
+son reglas del manual (§5.2) que el mock del prototipo no necesitaba.
 
 ### D.3 · Conversaciones en la ficha (§3.2, §7.2, decisión cerrada #2)
 

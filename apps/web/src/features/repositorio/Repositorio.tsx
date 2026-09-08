@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { PANEL_REPOSITORIO } from '@crm/core/anchos';
 import {
   escribirAlcance,
   leerAlcance,
@@ -9,9 +10,15 @@ import {
 } from '@crm/core/plantilla';
 import type { Idioma } from '@crm/core/tipos';
 import { pb } from '../../lib/pocketbase';
+import { useAncho } from '../../lib/useAncho';
 import type { PlantillaRecord } from '../../lib/types';
 
-const IDIOMAS: Idioma[] = ['es', 'pt', 'en'];
+const IDIOMAS: { k: Idioma; label: string }[] = [
+  { k: 'es', label: 'ES' },
+  { k: 'pt', label: 'PT' },
+  { k: 'en', label: 'EN' },
+];
+
 const PASOS = [
   'R0', 'R0-recontacto', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'agradecimiento',
 ] as const;
@@ -19,9 +26,9 @@ const PASOS = [
 /** Ejemplo para la vista previa: se ve cómo queda con datos reales. */
 const EJEMPLO = {
   nombre: 'Wellington Abner Simoes',
-  empresa: 'GlobalTec',
-  industria: 'Alimentos',
-  ciudad: 'Campinas',
+  empresa: 'Opus CM',
+  industria: 'Construcción / Manufactura',
+  ciudad: 'Sao Paulo',
 };
 
 interface Props {
@@ -31,30 +38,42 @@ interface Props {
 
 /**
  * Repositorio de mensajes (§7.9). Es el **único lugar de verdad de los textos**:
- * lo que se edite acá se refleja al instante en Enviar mensaje y en Vencimientos.
+ * lo que se edite acá se refleja al instante en Enviar mensaje, en Vencimientos
+ * y en Automatizaciones.
+ *
+ * Es un SIDEBAR, no un modal. El manual lo lista junto a la agenda en «Sidebars
+ * (una a la vez)», y la diferencia no es decorativa: un modal tapa la ficha, y
+ * el momento en que se edita una plantilla es justamente cuando se la está
+ * mirando contra el lead al que se le va a mandar.
+ *
+ * Portado de `docs/prototipo/RepositorioMensajes.dc.html`: una sola columna,
+ * cada mensaje es una tarjeta que se abre en el lugar. Los destacados van
+ * arriba.
  */
 export function Repositorio({ onCerrar, onCambio }: Props) {
   const [plantillas, setPlantillas] = useState<PlantillaRecord[]>([]);
-  const [seleccionada, setSeleccionada] = useState<string | null>(null);
+  /** Cuál está abierta para editar. Una sola a la vez. */
+  const [abierta, setAbierta] = useState<string | null>(null);
   const [idioma, setIdioma] = useState<Idioma>('es');
   const [borrador, setBorrador] = useState('');
   const [nombre, setNombre] = useState('');
   const [sucio, setSucio] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [filtro, setFiltro] = useState<'todos' | 'favoritos'>('todos');
   /** Qué plantilla tiene abierto el selector de alcance del destacado. */
   const [alcanceDe, setAlcanceDe] = useState<string | null>(null);
-  const [eligiendo, setEligiendo] = useState<string[]>([]);
-  /** El id que se está arrastrando, y sobre cuál está parado. */
+  const [eligiendo, setEligiendo] = useState<string[] | null>(null);
   const [arrastrando, setArrastrando] = useState<string | null>(null);
   const [sobre, setSobre] = useState<string | null>(null);
   const [cuentas, setCuentas] = useState<string[]>([]);
 
+  // §9.4: 300–620, doble clic vuelve a 400, persistido.
+  const anchoRepo = useAncho(PANEL_REPOSITORIO);
+
   async function recargar() {
     try {
-      const r = await pb.collection('plantilla').getFullList<PlantillaRecord>({ sort: 'orden' });
-      setPlantillas(r);
-      if (!seleccionada && r[0]) setSeleccionada(r[0].id);
+      setPlantillas(await pb.collection('plantilla').getFullList<PlantillaRecord>({ sort: 'orden' }));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -70,22 +89,67 @@ export function Repositorio({ onCerrar, onCambio }: Props) {
       .catch(() => setCuentas([]));
   }, []);
 
+  useEffect(() => {
+    const f = (e: KeyboardEvent) => e.key === 'Escape' && !sucio && onCerrar();
+    document.addEventListener('keydown', f);
+    return () => document.removeEventListener('keydown', f);
+  }, [onCerrar, sucio]);
+
+  const plantilla = plantillas.find((p) => p.id === abierta) ?? null;
+
+  useEffect(() => {
+    if (!plantilla) {
+      setNombre('');
+      setBorrador('');
+      setSucio(false);
+      return;
+    }
+    setNombre(plantilla.nombre);
+    setBorrador(plantilla.textos?.[idioma] ?? '');
+    setSucio(false);
+  }, [plantilla?.id, idioma]);
+
+  const vistaPrevia = useMemo(
+    () => (borrador ? resolverTexto(borrador, EJEMPLO, idioma) : ''),
+    [borrador, idioma],
+  );
+
+  /**
+   * Los destacados van arriba, y adentro de cada grupo manda el orden.
+   *
+   * No es un capricho del prototipo: el repositorio se abre para buscar algo
+   * que ya se usó, y lo que ya se usó es lo destacado.
+   */
+  const visibles = useMemo(() => {
+    const destacados = plantillas.filter((p) => leerAlcance(p.destacado).tipo !== 'ninguno');
+    if (filtro === 'favoritos') return destacados;
+    return [...destacados, ...plantillas.filter((p) => leerAlcance(p.destacado).tipo === 'ninguno')];
+  }, [plantillas, filtro]);
+
+  const nDestacados = plantillas.filter((p) => leerAlcance(p.destacado).tipo !== 'ninguno').length;
+
+  /** Qué pasos no tienen plantilla (§5.2: hay que avisarlo). */
+  const pasosSinPlantilla = useMemo(() => {
+    const con = new Set(plantillas.map((p) => p.paso).filter(Boolean));
+    return PASOS.filter((p) => !con.has(p));
+  }, [plantillas]);
+
   async function guardarAlcance(id: string, a: Alcance) {
     setAlcanceDe(null);
-    setEligiendo([]);
+    setEligiendo(null);
     await pb.collection('plantilla').update(id, { destacado: escribirAlcance(a) });
     await recargar();
     onCambio();
   }
 
   /**
-   * Arrastrar dentro del grupo del paso.
+   * Arrastrar para reordenar.
    *
-   * Se renumera el grupo entero y no el par que se cruza: guardando solo los
+   * Se renumera la lista entera y no el par que se cruza: guardando solo los
    * dos quedan números repetidos y el orden pasa a decidirlo el desempate.
    */
-  async function soltar(destinoId: string, delPaso: PlantillaRecord[]) {
-    const cambios = reordenar(delPaso, arrastrando ?? '', destinoId);
+  async function soltar(destinoId: string) {
+    const cambios = reordenar(plantillas, arrastrando ?? '', destinoId);
     setArrastrando(null);
     setSobre(null);
     if (!cambios.length) return;
@@ -96,36 +160,10 @@ export function Repositorio({ onCerrar, onCambio }: Props) {
 
   async function borrar(id: string) {
     await pb.collection('plantilla').delete(id);
-    if (seleccionada === id) setSeleccionada(null);
+    if (abierta === id) setAbierta(null);
     await recargar();
     onCambio();
   }
-
-  const plantilla = plantillas.find((p) => p.id === seleccionada) ?? null;
-
-  useEffect(() => {
-    if (!plantilla) return;
-    setNombre(plantilla.nombre);
-    setBorrador(plantilla.textos?.[idioma] ?? '');
-    setSucio(false);
-  }, [plantilla?.id, idioma]);
-
-  useEffect(() => {
-    const f = (e: KeyboardEvent) => e.key === 'Escape' && !sucio && onCerrar();
-    document.addEventListener('keydown', f);
-    return () => document.removeEventListener('keydown', f);
-  }, [onCerrar, sucio]);
-
-  const vistaPrevia = useMemo(
-    () => (borrador ? resolverTexto(borrador, EJEMPLO, idioma) : ''),
-    [borrador, idioma],
-  );
-
-  /** Qué pasos tienen plantilla y cuáles no (§5.2: hay que avisarlo). */
-  const pasosSinPlantilla = useMemo(() => {
-    const con = new Set(plantillas.map((p) => p.paso).filter(Boolean));
-    return PASOS.filter((p) => !con.has(p));
-  }, [plantillas]);
 
   async function guardar() {
     if (!plantilla) return;
@@ -135,10 +173,7 @@ export function Repositorio({ onCerrar, onCambio }: Props) {
       const textos = { ...(plantilla.textos ?? {}) };
       if (borrador.trim()) textos[idioma] = borrador;
       else delete textos[idioma];
-      const g = await pb.collection('plantilla').update<PlantillaRecord>(plantilla.id, {
-        nombre,
-        textos,
-      });
+      const g = await pb.collection('plantilla').update<PlantillaRecord>(plantilla.id, { nombre, textos });
       setPlantillas((ps) => ps.map((p) => (p.id === g.id ? g : p)));
       setSucio(false);
       onCambio();
@@ -149,20 +184,23 @@ export function Repositorio({ onCerrar, onCambio }: Props) {
     }
   }
 
-  async function crear(paso: string) {
+  /** Alta. El nombre «R{n} · …» es lo que ata la plantilla al paso (§5.2). */
+  async function crear() {
     setGuardando(true);
     try {
       const orden = Math.max(0, ...plantillas.map((p) => p.orden ?? 0)) + 1;
       const nueva = await pb.collection('plantilla').create<PlantillaRecord>({
-        nombre: `${paso} · nueva`,
-        paso,
-        por_defecto: !plantillas.some((p) => p.paso === paso),
+        nombre: 'Mensaje nuevo',
+        paso: '',
+        por_defecto: false,
         textos: {},
         destacado: '',
         orden,
       });
-      setPlantillas((ps) => [...ps, nueva]);
-      setSeleccionada(nueva.id);
+      await recargar();
+      setFiltro('todos');
+      setAbierta(nueva.id);
+      setIdioma('es');
       onCambio();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -171,16 +209,30 @@ export function Repositorio({ onCerrar, onCambio }: Props) {
     }
   }
 
-  async function hacerPorDefecto() {
-    if (!plantilla?.paso) return;
+  /** D16: una sola por defecto por paso. */
+  async function cambiarPaso(id: string, paso: string) {
     setGuardando(true);
     try {
-      // Una sola por defecto por paso (D16): primero se baja la actual.
-      const actual = plantillas.find((p) => p.paso === plantilla.paso && p.por_defecto);
-      if (actual && actual.id !== plantilla.id) {
+      const otras = plantillas.filter((p) => p.paso === paso && p.id !== id);
+      await pb.collection('plantilla').update(id, { paso, por_defecto: otras.length === 0 });
+      await recargar();
+      onCambio();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function hacerPorDefecto(p: PlantillaRecord) {
+    if (!p.paso) return;
+    setGuardando(true);
+    try {
+      const actual = plantillas.find((x) => x.paso === p.paso && x.por_defecto);
+      if (actual && actual.id !== p.id) {
         await pb.collection('plantilla').update(actual.id, { por_defecto: false });
       }
-      await pb.collection('plantilla').update(plantilla.id, { por_defecto: true });
+      await pb.collection('plantilla').update(p.id, { por_defecto: true });
       await recargar();
       onCambio();
     } catch (e) {
@@ -191,279 +243,312 @@ export function Repositorio({ onCerrar, onCambio }: Props) {
   }
 
   return (
-    <div className="overlay-fondo" onClick={() => !sucio && onCerrar()}>
+    <aside className="repo-sidebar" style={anchoRepo.estilo}>
       <div
-        className="overlay-caja overlay-ancho"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="overlay-header">
-          <span className="overlay-titulo">Repositorio de mensajes</span>
-          <span className="overlay-progreso">{plantillas.length}</span>
-          <div className="barra" />
-          <button type="button" className="boton-icono-26" onClick={onCerrar} title="Cerrar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
+        className="divisor divisor-izq"
+        title="Arrastrá para cambiar el ancho del repositorio · doble clic para volver al ancho normal"
+        {...anchoRepo.divisor}
+      />
+
+      <header className="repo-cabecera">
+        <span className="colapsable-titulo">Repositorio</span>
+        <span className="campo-ayuda tabular">
+          {plantillas.length} mensajes · {nDestacados} destacados
+        </span>
+        <button
+          type="button"
+          className="repo-nuevo al-final"
+          title="Nuevo mensaje"
+          disabled={guardando}
+          onClick={() => void crear()}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
+        <button type="button" className="boton-icono-26" title="Cerrar" onClick={onCerrar}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </header>
+
+      <div className="repo-filtros">
+        {(['todos', 'favoritos'] as const).map((f) => (
+          <button
+            key={f}
+            type="button"
+            className={`repo-chip ${filtro === f ? 'repo-chip-on' : ''}`}
+            onClick={() => setFiltro(f)}
+          >
+            {f === 'todos' ? 'Todos' : 'Favoritos'}
           </button>
-        </header>
+        ))}
+        <span className="campo-ayuda al-final">los destacados van arriba</span>
+      </div>
 
-        <div className="repo">
-          <aside className="repo-lista">
-            {PASOS.map((paso) => {
-              const delPaso = plantillas.filter((p) => p.paso === paso);
-              return (
-                <div key={paso} className="repo-grupo">
-                  <div className="repo-grupo-cabecera">
-                    <span className="campo-label">{paso}</span>
-                    <button
-                      type="button"
-                      className="boton-mini"
-                      onClick={() => void crear(paso)}
-                      disabled={guardando}
-                      title={`Agregar una variante de ${paso}`}
+      <div className="repo-cuerpo">
+        {visibles.map((p) => {
+          const alcance = leerAlcance(p.destacado);
+          const destacada = alcance.tipo !== 'ninguno';
+          const estaAbierta = abierta === p.id;
+          return (
+            <div
+              key={p.id}
+              className={[
+                'repo-tarjeta',
+                arrastrando === p.id ? 'repo-tarjeta-yendo' : '',
+                sobre === p.id && arrastrando !== p.id ? 'repo-tarjeta-blanco' : '',
+              ].join(' ')}
+              draggable
+              onDragStart={() => setArrastrando(p.id)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (sobre !== p.id) setSobre(p.id);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                void soltar(p.id);
+              }}
+              onDragEnd={() => {
+                setArrastrando(null);
+                setSobre(null);
+              }}
+            >
+              <div className="repo-fila">
+                <span className="repo-agarre" title="Arrastrá para reordenar">
+                  &#10495;
+                </span>
+                <button
+                  type="button"
+                  className="repo-abrir"
+                  onClick={() => {
+                    setAbierta(estaAbierta ? null : p.id);
+                    setIdioma('es');
+                  }}
+                >
+                  <span className="repo-nombre">{p.nombre}</span>
+                </button>
+
+                {p.paso && (
+                  <span className="pastilla" title="El paso al que responde (§5.2)">
+                    {p.paso}
+                  </span>
+                )}
+                {p.por_defecto && (
+                  <span className="repo-defecto" title="La principal del paso (D16)">
+                    ★
+                  </span>
+                )}
+
+                {/* Los tres idiomas SIEMPRE, cargados o no: el hueco se dice.
+                    Con solo los cargados no se ve qué falta traducir. */}
+                <span className="repo-idiomas">
+                  {IDIOMAS.map((i) => (
+                    <span
+                      key={i.k}
+                      className={p.textos?.[i.k] ? 'repo-idioma repo-idioma-on' : 'repo-idioma'}
+                      title={p.textos?.[i.k] ? 'Cargado' : 'Sin cargar'}
                     >
-                      +
-                    </button>
-                  </div>
-                  {delPaso.map((p) => {
-                    const alcance = leerAlcance(p.destacado);
-                    return (
-                      <div
-                        key={p.id}
-                        className={[
-                          'repo-item',
-                          seleccionada === p.id ? 'repo-item-on' : '',
-                          arrastrando === p.id ? 'repo-item-yendo' : '',
-                          sobre === p.id && arrastrando !== p.id ? 'repo-item-blanco' : '',
-                        ].join(' ')}
-                        draggable
-                        onDragStart={() => setArrastrando(p.id)}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          if (sobre !== p.id) setSobre(p.id);
-                        }}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          void soltar(p.id, delPaso);
-                        }}
-                        onDragEnd={() => {
-                          setArrastrando(null);
-                          setSobre(null);
-                        }}
-                        onClick={() => setSeleccionada(p.id)}
-                      >
-                        <span className="repo-agarre" title="Arrastrar para reordenar">
-                          &#10495;
-                        </span>
-                        <span className="repo-nombre">{p.nombre}</span>
-                        <span className="repo-idiomas">
-                          {IDIOMAS.filter((i) => p.textos?.[i]).join(' ') || '—'}
-                        </span>
-                        {p.por_defecto && (
-                          <span className="repo-defecto" title="La principal del paso (D16)">
-                            ★
-                          </span>
-                        )}
-                        <span className="relativo">
-                          <button
-                            type="button"
-                            className={
-                              alcance.tipo !== 'ninguno' ? 'repo-destacar repo-destacar-on' : 'repo-destacar'
-                            }
-                            title={
-                              alcance.tipo === 'ninguno'
-                                ? 'Destacar este mensaje'
-                                : 'Destacado en ' + nombreDeAlcance(alcance)
-                            }
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setAlcanceDe(alcanceDe === p.id ? null : p.id);
-                              setEligiendo(alcance.tipo === 'cuentas' ? alcance.cuentas : []);
-                            }}
-                          >
-                            ★
-                          </button>
-                          {alcanceDe === p.id && (
-                            <>
-                              <div
-                                className="popover-fondo"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setAlcanceDe(null);
-                                }}
-                              />
-                              <div
-                                className="popover popover-anclado repo-alcance"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <span className="campo-label">¿Para qué cuentas?</span>
-                                <button
-                                  type="button"
-                                  className="lot-opcion"
-                                  onClick={() => void guardarAlcance(p.id, { tipo: 'todas' })}
-                                >
-                                  Todas las cuentas
-                                  <span className="campo-ayuda al-final">{cuentas.length}</span>
-                                </button>
-                                <span className="campo-label">O elegí cuáles</span>
-                                <div className="chips">
-                                  {cuentas.map((c) => (
-                                    <button
-                                      key={c}
-                                      type="button"
-                                      className={eligiendo.includes(c) ? 'chip chip-on' : 'chip'}
-                                      onClick={() =>
-                                        setEligiendo((sel) =>
-                                          sel.includes(c) ? sel.filter((x) => x !== c) : [...sel, c],
-                                        )
-                                      }
-                                    >
-                                      {c}
-                                    </button>
-                                  ))}
-                                </div>
-                                <div className="repo-alcance-pie">
-                                  {alcance.tipo !== 'ninguno' && (
-                                    <button
-                                      type="button"
-                                      className="boton-mini"
-                                      onClick={() => void guardarAlcance(p.id, { tipo: 'ninguno' })}
-                                    >
-                                      Quitar destaque
-                                    </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    className="boton-mini al-final"
-                                    disabled={!eligiendo.length}
-                                    onClick={() =>
-                                      void guardarAlcance(p.id, { tipo: 'cuentas', cuentas: eligiendo })
-                                    }
-                                  >
-                                    Aplicar
-                                  </button>
-                                </div>
-                              </div>
-                            </>
-                          )}
-                        </span>
-                        {/* La principal del paso no se borra: dejaría el paso sin
-                            texto y la cadencia sin qué mandar (D16). */}
-                        {!p.por_defecto && (
-                          <button
-                            type="button"
-                            className="pet-icono pet-icono-borrar"
-                            title="Eliminar esta variante"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void borrar(p.id);
-                            }}
-                          >
-                            ×
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {delPaso.length === 0 && <span className="repo-vacio">sin plantilla</span>}
-                </div>
-              );
-            })}
-          </aside>
+                      {i.label}
+                    </span>
+                  ))}
+                </span>
 
-          <section className="repo-editor">
-            {!plantilla ? (
-              <p className="vacio">Elegí una plantilla.</p>
-            ) : (
-              <>
-                <label className="campo">
-                  <span className="campo-label">Nombre</span>
+                <button
+                  type="button"
+                  className={destacada ? 'repo-destacar repo-destacar-on' : 'repo-destacar'}
+                  title={destacada ? `Destacado en ${nombreDeAlcance(alcance)}` : 'Destacar este mensaje'}
+                  onClick={() => {
+                    setAlcanceDe(alcanceDe === p.id ? null : p.id);
+                    setEligiendo(alcance.tipo === 'cuentas' ? alcance.cuentas : null);
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" fill={destacada ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6">
+                    <path d="M12 4l2.4 5 5.6.8-4 4 1 5.6-5-2.7-5 2.7 1-5.6-4-4 5.6-.8z" />
+                  </svg>
+                </button>
+              </div>
+
+              {destacada && (
+                <div className="repo-destacado-en">
+                  <span className="campo-ayuda">destacado en</span>
+                  <span className="pastilla pastilla-acento">{nombreDeAlcance(alcance)}</span>
+                  <button
+                    type="button"
+                    className="repo-quitar"
+                    title="Quitar de destacados"
+                    onClick={() => void guardarAlcance(p.id, { tipo: 'ninguno' })}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+
+              {alcanceDe === p.id && (
+                <div className="repo-alcance">
+                  <span className="campo-label">¿Para qué cuentas lo destaco?</span>
+                  <button
+                    type="button"
+                    className="repo-opcion"
+                    onClick={() => void guardarAlcance(p.id, { tipo: 'todas' })}
+                  >
+                    <span>Todas las cuentas</span>
+                    <span className="campo-ayuda al-final">{cuentas.length} cuentas</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="repo-opcion"
+                    onClick={() => setEligiendo(eligiendo ? null : [])}
+                  >
+                    <span>Elegir cuentas</span>
+                    <span className="campo-ayuda al-final">seleccionar</span>
+                  </button>
+
+                  {eligiendo && (
+                    <div className="repo-cuentas">
+                      {cuentas.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          className={`repo-chip ${eligiendo.includes(c) ? 'repo-chip-on' : ''}`}
+                          onClick={() =>
+                            setEligiendo((s) =>
+                              (s ?? []).includes(c) ? (s ?? []).filter((x) => x !== c) : [...(s ?? []), c],
+                            )
+                          }
+                        >
+                          {c}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className="boton-mini al-final"
+                        disabled={!eligiendo.length}
+                        onClick={() => void guardarAlcance(p.id, { tipo: 'cuentas', cuentas: eligiendo })}
+                      >
+                        Destacar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {estaAbierta && (
+                <div className="repo-editor">
                   <input
+                    type="text"
+                    className="repo-nombre-input"
                     value={nombre}
+                    placeholder="Nombre del mensaje…"
                     onChange={(e) => {
                       setNombre(e.target.value);
                       setSucio(true);
                     }}
                   />
-                  <span className="campo-ayuda">
-                    El nombre es libre: lo que ata la plantilla al paso es el campo{' '}
-                    <code>{plantilla.paso || 'sin paso'}</code>, no el texto (D16).
-                  </span>
-                </label>
 
-                <div className="venc-mensaje-cabecera">
-                  <span className="campo-label">Texto</span>
-                  {!plantilla.por_defecto && plantilla.paso && (
+                  <div className="repo-editor-controles">
+                    <div className="reunion-segmentado">
+                      {IDIOMAS.map((i) => (
+                        <button
+                          key={i.k}
+                          type="button"
+                          className={idioma === i.k ? 'reunion-seg-on' : ''}
+                          onClick={() => setIdioma(i.k)}
+                        >
+                          {i.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* §5.2: el paso sale del nombre, pero guardarlo aparte es
+                        lo que le permite a Automatizaciones encontrarlo sin
+                        adivinar de un texto libre. */}
+                    <select
+                      className="repo-paso"
+                      value={p.paso ?? ''}
+                      title="A qué paso de la cadencia responde"
+                      onChange={(e) => void cambiarPaso(p.id, e.target.value)}
+                    >
+                      <option value="">sin paso</option>
+                      {PASOS.map((x) => (
+                        <option key={x} value={x}>
+                          {x}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="button"
+                      className="repo-borrar"
+                      title="Eliminar mensaje"
+                      onClick={() => void borrar(p.id)}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                        <path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="boton-principal al-final"
+                      disabled={!sucio || guardando}
+                      onClick={() => void guardar()}
+                    >
+                      {guardando ? 'Guardando…' : 'Guardar'}
+                    </button>
+                  </div>
+
+                  <textarea
+                    className="repo-texto"
+                    value={borrador}
+                    placeholder="Escribir el mensaje…"
+                    onChange={(e) => {
+                      setBorrador(e.target.value);
+                      setSucio(true);
+                    }}
+                  />
+                  <span className="campo-ayuda tabular">{borrador.length} caracteres</span>
+
+                  {vistaPrevia && (
+                    <div className="repo-previa">
+                      <span className="campo-label">Cómo queda</span>
+                      <p>{vistaPrevia}</p>
+                    </div>
+                  )}
+
+                  {p.paso && !p.por_defecto && (
                     <button
                       type="button"
                       className="boton-mini"
-                      onClick={() => void hacerPorDefecto()}
-                      disabled={guardando}
+                      onClick={() => void hacerPorDefecto(p)}
+                      title="La automatización usa la que está por defecto (D16)"
                     >
-                      Hacer la principal
+                      Hacer la principal de {p.paso}
                     </button>
                   )}
-                  <div className="selector-idioma">
-                    {IDIOMAS.map((i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        className={idioma === i ? 'idioma-on' : 'idioma-off'}
-                        onClick={() => setIdioma(i)}
-                        title={plantilla.textos?.[i] ? 'Tiene texto' : 'Sin texto en este idioma'}
-                      >
-                        {i}
-                        {plantilla.textos?.[i] ? '' : ' ·'}
-                      </button>
-                    ))}
-                  </div>
                 </div>
+              )}
+            </div>
+          );
+        })}
 
-                <textarea
-                  rows={7}
-                  value={borrador}
-                  onChange={(e) => {
-                    setBorrador(e.target.value);
-                    setSucio(true);
-                  }}
-                  placeholder={`Texto en ${idioma}. Variables: {nombre} {empresa} {industria} {ciudad} {tema}`}
-                />
-
-                <div className="campo">
-                  <span className="campo-label">Vista previa</span>
-                  <div className="reunion-preview">
-                    {vistaPrevia || <span className="campo-ayuda">Escribí el texto para verlo.</span>}
-                  </div>
-                  <span className="campo-ayuda">
-                    Con datos de ejemplo. Un campo vacío usa el genérico del idioma
-                    (su planta / sua planta).
-                  </span>
-                </div>
-
-                {error && <div className="login-error">{error}</div>}
-              </>
-            )}
-          </section>
-        </div>
-
-        <footer className="overlay-pie">
-          {pasosSinPlantilla.length > 0 ? (
-            <span className="campo-ayuda">
-              Sin plantilla todavía: <strong>{pasosSinPlantilla.join(', ')}</strong>
-            </span>
-          ) : (
-            <span className="campo-ayuda">Todos los pasos tienen plantilla.</span>
-          )}
-          <button
-            type="button"
-            className="boton-principal al-final"
-            disabled={!sucio || guardando}
-            onClick={() => void guardar()}
-          >
-            {guardando ? 'Guardando…' : 'Guardar'}
-          </button>
-        </footer>
+        {!visibles.length && (
+          <div className="repo-vacio">
+            {filtro === 'favoritos' ? 'sin mensajes destacados' : 'sin mensajes cargados'}
+          </div>
+        )}
       </div>
-    </div>
+
+      <footer className="repo-pie">
+        {pasosSinPlantilla.length > 0 ? (
+          <span className="campo-ayuda">
+            Sin plantilla todavía: <strong>{pasosSinPlantilla.join(', ')}</strong>
+          </span>
+        ) : (
+          <span className="campo-ayuda">Todos los pasos tienen plantilla.</span>
+        )}
+        {error && <span className="login-error">{error}</span>}
+      </footer>
+    </aside>
   );
 }
