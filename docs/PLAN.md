@@ -56,71 +56,61 @@ Resumen: de 29 pantallas, **9 al día, 4 a medias, 16 sin construir**.
 
 ## El orden
 
-Primero lo que puede hacer perder datos, después lo que se rompe con volumen, y
-recién ahí pantallas nuevas.
+Decidido por Augusto: **primero todo el diseño, con datos falsos, para poder
+verlo entero. Las integraciones al final.**
 
-### Fase 1 — Follow-up, que es la pantalla de todos los días
+El criterio es que mirar las 29 pantallas con datos adentro es lo unico que
+permite decidir si el diseño esta bien ANTES de invertir en la plomeria. Una
+integracion sobre una pantalla que despues cambia es trabajo tirado.
 
-**1.1 · Aviso de cambios sin guardar** (§9.3) — ✅ **hecho**
-Tres salidas: seguir editando / descartar / guardar y salir. Frena al cambiar
-de lead y de sección. «Guardar y salir» espera a que el guardado termine, porque
-puede fallar.
+Cada pantalla que falta necesita tres cosas: su coleccion, sus datos de demo y
+la pantalla. Las tres van juntas.
 
-**1.2 · Aguantar el volumen real** (§7.2) — *siguiente*
-Hoy `useLeads` hace `getFullList`: **trae los 6.165 leads del servidor y los
-dibuja todos**. Son dos problemas distintos y el prototipo solo resuelve el
-segundo, porque ahí los datos ya están en memoria.
+### A · Terminar Follow-up
 
-El algoritmo del prototipo, exacto: arranca en 80 · suma 80 al llegar a 400px
-del final · vuelve a 80 cuando cambia un filtro · si el lead elegido cae fuera
-de la ventana, la expande a `índice + 80` antes de hacer scroll.
+Es la pantalla de todos los dias y esta casi entera.
 
-Antes de elegir cómo se traen los datos hay que **medirlo con volumen de
-verdad**: sembrar ~6.000 leads y ver cuánto pesa la respuesta y cuánto tarda.
-Con el número en la mano se decide si alcanza con traer todo una vez —que es lo
-que el prototipo asume, y lo que hace que el buscador y los filtros sean
-instantáneos— o si hay que mover el filtrado al servidor, que cambia ese
-comportamiento.
+- **A.1** Aviso de cambios sin guardar (§9.3) — ✅ hecho
+- **A.2** Los seis filtros que faltan: orden, reunion, rol, pais, ciudad,
+  etiquetas. Hoy hay dos de ocho.
+- **A.3** El header como lo fijo Augusto: sueltos notificaciones, tareas,
+  agenda, tema y sesion; al menu de tres puntos: cuentas conectadas, vencimientos, base
+  compartida, repositorio, reglas y atajos. Lo que todavia no existe va
+  **deshabilitado con el motivo** (§9.7), no oculto.
+- **A.4** El calendario de proximo contacto por carga: dias pintados contra el
+  tope diario y atajos A/S/D/F de 1 a 4 semanas con su corrimiento. Es una
+  regla: va a packages/core con tests.
 
-**1.3 · Los seis filtros que faltan**
-Hoy hay dos de ocho: próximo contacto y WhatsApp. Faltan **orden, reunión, rol,
-país, ciudad y etiquetas**. Los cuatro últimos son listas que salen de los
-datos, no fijas.
+### B · Las pantallas que faltan, con datos falsos
 
-**1.4 · El header, corregido**
-Sueltos van: notificaciones · tareas · agenda · tema · sesión.
-Al menú `···` van: cuentas conectadas · vencimientos · base compartida ·
-repositorio · reglas · atajos.
-Hoy vencimientos y repositorio están sueltos, y faltan los tres primeros.
-Tareas y Agenda todavía no existen: van **deshabilitados con el motivo**, que es
-lo que pide §9.7, no ocultos.
+Por cuanto se usan:
 
-**1.5 · El calendario de próximo contacto, por carga**
-Pinta cada día contra el tope diario —verde el elegido, ámbar los que se
-acercan, rojo los pasados— y ofrece los atajos `A S D F` de 1 a 4 semanas,
-mostrando el corrimiento cuando el día ideal está lleno (`14/09 +2d`).
-Es una regla, así que va a `core/` con sus tests.
+1. **Agenda** — tres vistas, arrastre de 15 minutos
+2. **Tareas** — grilla con estrellas de prioridad
+3. **Cola de envios** — al pie de la columna 1, con la cuenta regresiva
+4. **Automatizaciones** — invitaciones, cancelacion, seguimiento
+5. **WA Personal** — chats y entrantes desconocidos
+6. **Base compartida** — perfiles ya invitados
+7. **Importar CSV** — los tres pasos
+8. **Reglas y acciones** — disparador → condicion → accion
 
-### Fase 2 — Completar lo que ya tiene backend
+Y los paneles chicos de la ficha: Editar links · Confirmar reunion · Analisis
+del perfil · Panel de etiquetas completo · Evento de agenda.
 
-Usuarios (pestaña Actividad, asignación en lote) · Repositorio (destacados con
-alcance, orden arrastrable) · Vencimientos (idioma detectado) · el panel de
-etiquetas completo · Editar links · Confirmar reunión · Análisis del perfil.
+### C · Completar las que estan a medias
 
-### Fase 3 — Lo que necesita modelo nuevo
+Usuarios (pestaña Actividad, asignacion en lote) · Repositorio (destacados con
+alcance, orden arrastrable) · Vencimientos (idioma detectado).
 
-Agenda · Tareas · WA Personal · Automatizaciones · Base compartida · Cola de
-envíos · Importar CSV · Reglas.
+### D · Recien ahi: escala e integraciones
 
-Y los módulos de `core/` que el manual especifica y todavía no existen:
-`cupos`, `cancelacion`, `reglas`, `tarea`, `agenda`, `actividad`.
-
-### Fase 4 — Lo que no depende de mí
-
-- El cliente OAuth en Google Cloud, para que la disponibilidad del calendario
-  salga de la agenda real.
-- La decisión sobre el repositorio público y el histórico ya expuesto.
-- Baileys: WhatsApp y LinkedIn.
+- **El volumen real.** Hoy useLeads hace getFullList: trae los 6.165 leads
+  y los dibuja todos. Hay que medirlo con volumen de verdad y decidir si
+  alcanza con traer todo una vez —lo que hace que el buscador sea instantaneo,
+  como esta especificado— o si el filtrado se mueve al servidor.
+- **Google Calendar**: el cliente OAuth, que es de Augusto.
+- **Baileys**: WhatsApp y LinkedIn.
+- **CSV** y **Gmail**.
 
 ---
 
