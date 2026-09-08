@@ -193,3 +193,63 @@ Entre las imágenes hay **dos shells distintos**:
 
 El segundo aparece en cinco de las diez capturas anotadas. No sé cuál es el
 vigente y no lo voy a adivinar.
+
+---
+
+## Cierre — 08/09/2026
+
+Esta auditoría se hizo el 07/09 y midió el punto de partida. **Está saldada.**
+
+| | 07/09 | 08/09 |
+|---|---|---|
+| Construidas y al día | 9 | **29** |
+| Construidas a medias | 4 | 0 |
+| Sin construir | 16 | 0 |
+| Tests en `core/` | 170 | **276** |
+
+Las 16 que faltaban se construyeron con su colección, sus datos de demo y sus
+reglas en `core/` (bloque B del plan), y las 4 a medias se completaron
+(bloque C). El detalle de cada una está en los commits `B.1`…`B.9` y
+`C.1`…`C.4`.
+
+### Lo que se omitió a propósito
+
+CLAUDE.md regla 6: lo que depende de datos que todavía no existen **se omite y
+se anota**, no se reemplaza por una versión inventada. Son tres cosas:
+
+1. **El texto del mensaje que logró la respuesta** (Análisis del perfil). El
+   CRM no guarda el hilo de la conversación —se lee en el chat real—, así que
+   no hay texto que mostrar. Sí se construyó *qué paso* la trajo, que sale de
+   los envíos registrados y es la mitad accionable de la pregunta.
+2. **Las franjas horarias de «Cuándo responden»** (Automatizaciones).
+   `f_respuesta` guarda solo la fecha. Se muestra por día de la semana, que es
+   un dato real, con la nota de que la hora llega con la integración.
+3. **Guardar un contacto en Gmail** (WA Personal). Necesita la conexión de
+   Google. El botón queda a la vista y apagado, con el motivo.
+
+### Correcciones a esta misma auditoría
+
+Dos cosas que decía y resultaron no ser así al mirarlas con datos adentro:
+
+- **«Rehacer Duplicados en el estilo nuevo»**: no hacía falta. La pantalla está
+  al día —comparación lado a lado, campos en desacuerdo marcados, vista previa
+  de la fusión, tres salidas—. Lo que faltaba era el dato: sin un perfil
+  marcado siempre decía «no hay duplicados pendientes».
+- **El duplicado por slug igual no existe.** `perfil.slug` tiene índice único,
+  así que el segundo no llega a guardarse. Es la única clase de duplicado que
+  el modelo previene solo, y no hay que contemplarla en ningún lado.
+
+### Lo que sigue abierto
+
+Nada de diseño. Lo que queda es el **bloque D — escala e integraciones**, y
+buena parte depende de Augusto:
+
+- El cliente OAuth de Google (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+  `APP_URL` en el VPS).
+- La decisión sobre el repositorio público y el historial ya expuesto.
+- La importación de los datos de producción, que necesita su contraseña.
+
+Y una que no depende de nadie: **medir el volumen real**. Hoy `useLeads` hace
+`getFullList` y trae los 6.165 leads de una. Hay que medirlo con volumen de
+verdad antes de decidir si el filtrado se mueve al servidor — y medirlo, no
+suponerlo, porque traer todo es lo que hace que el buscador sea instantáneo.
