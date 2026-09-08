@@ -2353,3 +2353,39 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .log-despues { font-size: var(--txt-base); color: var(--text); overflow-wrap: break-word; text-wrap: pretty; }
 .log-sin-revertir { font-size: var(--txt-xs); color: var(--hint); padding-top: 4px; white-space: nowrap; }
 .log-vacio { padding: 20px 16px; font-size: var(--txt-md); color: var(--hint); text-align: center; }
+
+/* ---------- cambios sin guardar (§9.3) ----------
+   Portado de docs/prototipo/CambiosSinGuardar.dc.html. Va por encima de todo
+   lo demás: es lo único que puede aparecer sobre otro overlay. */
+.overlay-alto { z-index: 210; }
+.csg-caja {
+  width: min(94vw, calc(380px * var(--escala-texto)));
+  background: var(--surface);
+  border: .5px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.csg-titulo { font-size: var(--txt-xl); font-weight: 500; color: var(--text); }
+.csg-texto { font-size: var(--txt-base); color: var(--muted); line-height: 1.55; text-wrap: pretty; }
+.csg-texto b { color: var(--text); font-weight: 600; }
+.csg-botones { display: flex; justify-content: flex-end; gap: 8px; }
+/* Descartar tira lo escrito: se pinta con el color de error para que no se
+   confunda con «guardar y salir», que está al lado y hace lo contrario. */
+.csg-descartar {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: .5px solid var(--error);
+  background: var(--error-light);
+  color: var(--error);
+  font-size: var(--txt-md);
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 150ms ease-out;
+}
+.csg-descartar:hover { background: var(--error); color: var(--surface); }

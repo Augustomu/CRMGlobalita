@@ -4,6 +4,7 @@ import { Login } from './features/auth/Login';
 import { useLeads, puedeUsuario } from './features/followup/useLeads';
 import { ListaContactos, iniciales } from './features/followup/ListaContactos';
 import { FichaLead } from './features/followup/FichaLead';
+import { CambiosSinGuardar } from './features/followup/CambiosSinGuardar';
 import { usePlantillas } from './features/followup/usePlantillas';
 import { Vencimientos, leadsVencidos } from './features/vencimientos/Vencimientos';
 import { Usuarios } from './features/usuarios/Usuarios';
@@ -46,6 +47,28 @@ export function App() {
   // §5.2: la primera seccion visible es la primera de la lista de permitidas,
   // no Follow-up fijo. Al entrar, el Observador cae en Control.
   const [seccion, setSeccion] = useState<Seccion | null>(null);
+
+  // ---------------------------------------------------- cambios sin guardar
+  //
+  // §9.3: cruzar de lead o de sección con la ficha editada tiene que preguntar.
+  // El estado sucio vive adentro de la ficha (`useFicha`), así que la ficha lo
+  // reporta hacia arriba y ACÁ se decide si la navegación pasa o espera.
+  const [sucio, setSucio] = useState(false);
+  /** Lo que se quiso hacer y quedó esperando la respuesta del aviso. */
+  const [pendiente, setPendiente] = useState<{ correr: () => void } | null>(null);
+  /** Se incrementa para pedirle a la ficha que guarde ("Guardar y salir"). */
+  const [nonceGuardar, setNonceGuardar] = useState(0);
+  /** Entre que se pidió guardar y que la ficha avisa que terminó. */
+  const [esperandoGuardado, setEsperandoGuardado] = useState(false);
+
+  /**
+   * Toda navegación pasa por acá. Sin cambios pendientes ejecuta directo; con
+   * cambios, guarda la intención y muestra el aviso.
+   */
+  function irA(accion: () => void) {
+    if (!sucio) return accion();
+    setPendiente({ correr: accion });
+  }
   const plantillas = usePlantillas(usuarioDeFollowup);
   const { etiquetas: catalogoEtiquetas, recargar: recargarEtiquetas } = useEtiquetas(usuarioDeFollowup);
   // Se carga sin abrir nada, para el contador del header, pero solo para quien
@@ -84,6 +107,21 @@ export function App() {
     setMasAbierto(false);
     setUsuarioAbierto(false);
   }, [seccion]);
+
+  /**
+   * «Guardar y salir»: cuando la ficha termina de guardar deja de estar sucia,
+   * y recién ahí se deja pasar lo que el usuario quería hacer.
+   *
+   * Se espera en vez de navegar de una porque guardar puede fallar —la red, una
+   * regla del servidor— y en ese caso irse igual perdería lo escrito, que es
+   * justo lo que este aviso existe para evitar.
+   */
+  useEffect(() => {
+    if (!esperandoGuardado || sucio) return;
+    setEsperandoGuardado(false);
+    pendiente?.correr();
+    setPendiente(null);
+  }, [esperandoGuardado, sucio, pendiente]);
 
   if (!auth.usuario) return <Login auth={auth} />;
 
@@ -135,7 +173,7 @@ export function App() {
             <button
               type="button"
               className={`tab ${seccion === 'control' ? 'tab-on' : 'tab-off'}`}
-              onClick={() => setSeccion('control')}
+              onClick={() => irA(() => setSeccion('control'))}
             >
               Control
             </button>
@@ -144,7 +182,7 @@ export function App() {
             <button
               type="button"
               className={`tab ${seccion === 'followup' ? 'tab-on' : 'tab-off'}`}
-              onClick={() => setSeccion('followup')}
+              onClick={() => irA(() => setSeccion('followup'))}
             >
               Follow-up
             </button>
@@ -158,7 +196,7 @@ export function App() {
             <button
               type="button"
               className={`tab ${seccion === 'usuarios' ? 'tab-on' : 'tab-off'}`}
-              onClick={() => setSeccion('usuarios')}
+              onClick={() => irA(() => setSeccion('usuarios'))}
             >
               Usuarios
             </button>
@@ -337,7 +375,7 @@ export function App() {
               conversacion={conv}
               onCerrarConversacion={() => setConv(null)}
               seleccionado={seleccionado}
-              onSeleccionar={setSeleccionado}
+              onSeleccionar={(id) => irA(() => setSeleccionado(id))}
               usuario={auth.usuario}
               verColaboradores={puedeUsuario(auth.usuario, 'verTodosLeads')}
               veTelefono={puedeUsuario(auth.usuario, 'verTelefono')}
@@ -350,6 +388,8 @@ export function App() {
                 usuario={auth.usuario}
                 onGuardado={recargar}
                 onEtiquetasCambiadas={recargarEtiquetas}
+                onSucio={setSucio}
+                nonceGuardar={nonceGuardar}
               />
             ) : (
               <section className="ficha">
@@ -369,6 +409,26 @@ export function App() {
           duplicados={duplicados}
           onCerrar={() => setDupAbierto(false)}
           onCambio={recargar}
+        />
+      )}
+
+      {pendiente && (
+        <CambiosSinGuardar
+          nombre={lead?.expand?.perfil?.nombre ?? ''}
+          onCancelar={() => setPendiente(null)}
+          onDescartar={() => {
+            // La ficha se remonta con los valores de la base al cambiar de lead,
+            // así que descartar es simplemente dejar pasar la navegación.
+            setSucio(false);
+            pendiente.correr();
+            setPendiente(null);
+          }}
+          onGuardar={() => {
+            // Guardar es asíncrono y vive en la ficha. Se le pide por nonce y
+            // la navegación espera a que ella avise que ya no está sucia.
+            setNonceGuardar((n) => n + 1);
+            setEsperandoGuardado(true);
+          }}
         />
       )}
 

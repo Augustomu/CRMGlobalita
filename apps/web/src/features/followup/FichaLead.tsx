@@ -62,9 +62,19 @@ interface Props {
   onGuardado: () => void;
   /** Aplicar una etiqueta cambia su fecha de uso: hay que releer el catálogo. */
   onEtiquetasCambiadas?: () => void;
+  /**
+   * §9.3: el estado sucio vive acá, pero quien frena la navegación es App.
+   * Por eso se reporta hacia arriba en vez de resolverlo adentro de la ficha.
+   */
+  onSucio?: (sucio: boolean) => void;
+  /** Se incrementa cuando el aviso pide «Guardar y salir». */
+  nonceGuardar?: number;
 }
 
-export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuardado, onEtiquetasCambiadas }: Props) {
+export function FichaLead({
+  lead, plantillas, catalogoEtiquetas, usuario, onGuardado, onEtiquetasCambiadas,
+  onSucio, nonceGuardar,
+}: Props) {
   // Dos ejes independientes: si puede editar ESTE lead, y qué campos ve.
   const editable = puedeEditar(usuario, lead);
   const veTelefono = puedeUsuario(usuario, 'verTelefono');
@@ -185,6 +195,25 @@ export function FichaLead({ lead, plantillas, catalogoEtiquetas, usuario, onGuar
     }
     onGuardado();
   }
+
+  // §9.3: App frena la navegación con esto. Se avisa en cada cambio, y al
+  // desmontar se limpia — si no, cerrar la ficha dejaría el guardián trabado
+  // pidiendo guardar algo que ya no está en pantalla.
+  useEffect(() => {
+    onSucio?.(ficha.sucio);
+    return () => onSucio?.(false);
+  }, [ficha.sucio, onSucio]);
+
+  // «Guardar y salir» del aviso: se pide por nonce, como el atajo S.
+  const primerNonce = useRef(true);
+  useEffect(() => {
+    if (primerNonce.current) {
+      primerNonce.current = false;
+      return;
+    }
+    void guardar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nonceGuardar]);
 
   useAtajos(
     {

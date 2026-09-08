@@ -97,9 +97,9 @@ export function LogEdiciones({ perfilId, leadId, editable, onCerrar, onRevertido
   }
 
   return (
-    <div className="overlay" onClick={onCerrar}>
+    <div className="overlay-fondo" onClick={onCerrar}>
       <div className="overlay-caja overlay-log" onClick={(ev) => ev.stopPropagation()}>
-        <div className="overlay-cabecera">
+        <div className="overlay-header">
           <span className="overlay-titulo">Log de ediciones</span>
           <span className="campo-ayuda">
             {cargando ? 'cargando…' : entradas.length ? `${entradas.length} cambios` : ''}
