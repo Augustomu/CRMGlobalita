@@ -12,6 +12,7 @@ import { Repositorio } from './features/repositorio/Repositorio';
 import { useEtiquetas } from './features/followup/useEtiquetas';
 import { Control } from './features/control/Control';
 import { seccionInicial } from '@crm/core/permisos';
+import { Agenda } from './features/agenda/Agenda';
 import { Duplicados } from './features/duplicados/Duplicados';
 import { useDuplicados } from './features/duplicados/useDuplicados';
 
@@ -36,6 +37,7 @@ export function App() {
   const [dupAbierto, setDupAbierto] = useState(false);
   const [masAbierto, setMasAbierto] = useState(false);
   const [usuarioAbierto, setUsuarioAbierto] = useState(false);
+  const [agendaAbierta, setAgendaAbierta] = useState(false);
   /**
    * Qué canal de conversación está abierto, o ninguno. Vive en el header
    * porque la conversación se abre en la columna 1, arriba de la lista: es un
@@ -351,12 +353,17 @@ export function App() {
           </button>
 
           {puedeUsuario(auth.usuario, 'agenda') && (
-            <span className="boton-icono-28 boton-off" title="Agenda — todavía no construida">
+            <button
+              type="button"
+              className={`boton-icono-28 ${agendaAbierta ? 'boton-icono-on' : ''}`}
+              title="Agenda"
+              onClick={() => setAgendaAbierta((a) => !a)}
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
                 <rect x="3.5" y="5" width="17" height="15" rx="2" />
                 <path d="M3.5 10h17M8 3v4M16 3v4" />
               </svg>
-            </span>
+            </button>
           )}
 
           <button
@@ -440,6 +447,17 @@ export function App() {
               <section className="ficha">
                 <p className="vacio">Elegí un lead de la lista.</p>
               </section>
+            )}
+
+            {/* §7.2: la agenda es un SIDEBAR de Follow-up, no una sección.
+                Se abre al lado de la lista para poder mirar la semana sin
+                perder de vista en qué lead se estaba. */}
+            {agendaAbierta && (
+              <Agenda
+                leads={leads}
+                onCerrar={() => setAgendaAbierta(false)}
+                onIrAlLead={(id) => irA(() => setSeleccionado(id))}
+              />
             )}
           </>
         )}
