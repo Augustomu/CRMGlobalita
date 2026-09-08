@@ -9,6 +9,7 @@ import type { LeadRecord, UsuarioRecord } from '../../lib/types';
 import { BurbujaWhatsApp } from './IconosCanal';
 import { pb } from '../../lib/pocketbase';
 import { ColaEnvios } from './ColaEnvios';
+import { Conversacion } from './Conversacion';
 
 const HOY = diaLocal();
 
@@ -303,43 +304,12 @@ export function ListaContactos({
       {/* Se dibuja siempre: vacío ocupa 0 y así el resto de las filas del grid
           no se corren cuando la conversación se abre o se cierra. */}
       <div className={abierto ? 'conv-panel' : ''}>
-        {abierto && (
-          <>
-          <div className="conv-cabecera">
-            <span className="colapsable-flecha">▾</span>
-            <span className="colapsable-titulo">Conversación</span>
-            <span
-              className={`pastilla ${conversacion === 'whatsapp' ? 'pastilla-wa' : 'pastilla-li'}`}
-            >
-              {conversacion === 'whatsapp' ? 'WhatsApp' : 'LinkedIn'}
-            </span>
-            <span className="conv-fecha al-final tabular">
-              {abierto.f_ultimo_contacto ? String(abierto.f_ultimo_contacto).slice(0, 10) : 'sin contacto'}
-            </span>
-            <button type="button" className="boton-icono-22" title="Cerrar" onClick={onCerrarConversacion}>×</button>
-          </div>
-          {/* Honesto: el hilo todavía no se guarda en el CRM. Leerlo requiere
-              la sesión de la cuenta, que llega con el worker. Lo que sí hay es
-              el acceso directo al chat real, que es el atajo H. */}
-          <div className="conv-vacio">
-            <span>El hilo todavía no se guarda en el CRM: se lee en el chat real.</span>
-            <a
-              className="boton-mini"
-              href={
-                conversacion === 'whatsapp'
-                  ? `https://wa.me/${(abierto.expand?.perfil?.telefono ?? '').replace(/\D/g, '')}`
-                  : abierto.link_chat ||
-                    (abierto.expand?.perfil?.slug
-                      ? `https://www.linkedin.com/in/${abierto.expand.perfil.slug}`
-                      : '#')
-              }
-              target="_blank"
-              rel="noreferrer"
-            >
-              Abrir el chat
-            </a>
-          </div>
-          </>
+        {abierto && conversacion && (
+          <Conversacion
+            lead={abierto}
+            canal={conversacion}
+            onCerrar={() => onCerrarConversacion?.()}
+          />
         )}
       </div>
 

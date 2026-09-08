@@ -61,3 +61,22 @@ test('el ultimo mensaje dice de que lado quedo la pelota', () => {
   assert.equal(ultimoTexto([m('out', 'hola'), m('in', 'chau')]), 'chau');
   assert.equal(ultimoTexto([]), '');
 });
+
+// §3.2 — el ack es sólo de WhatsApp, y su ausencia no es un estado.
+test('el ack viaja con el mensaje, y vacío significa «no se sabe»', () => {
+  const hilo = conDias(
+    [
+      { quien: 'out', texto: 'por LinkedIn', en: '2026-09-02 11:40:00.000Z' },
+      { quien: 'out', texto: 'por WhatsApp', en: '2026-09-02 11:41:00.000Z', ack: 'leido' },
+      { quien: 'in', texto: 'listo', en: '2026-09-02 12:05:00.000Z' },
+    ],
+    '2026-09-08',
+  );
+  const mensajes = hilo.filter((x) => x.tipo === 'mensaje');
+  // El de LinkedIn no trae ack: la pantalla no dibuja nada ahí. Un tilde gris
+  // sería decir «no llegó», que es otra cosa.
+  assert.equal(mensajes[0]?.tipo === 'mensaje' && mensajes[0].ack, null);
+  assert.equal(mensajes[1]?.tipo === 'mensaje' && mensajes[1].ack, 'leido');
+  // Los entrantes nunca tienen: el ack es de lo que mandamos nosotros.
+  assert.equal(mensajes[2]?.tipo === 'mensaje' && mensajes[2].ack, null);
+});

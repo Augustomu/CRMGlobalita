@@ -3,16 +3,27 @@
 // Es lo único de la conversación que tiene reglas. El resto —quién habla de qué
 // lado, el color de la burbuja— es presentación pura.
 
+/** Solo WhatsApp informa entrega y lectura (§3.2). */
+export type Ack = 'enviado' | 'entregado' | 'leido';
+
 export interface MensajeChat {
   quien: 'in' | 'out';
   texto: string;
   /** ISO con hora. Vacío = no se sabe cuándo (importado sin fecha). */
   en?: string | null;
+  /**
+   * Solo de los salientes de WhatsApp.
+   *
+   * Vacío NO es «no llegó»: es «no se sabe». LinkedIn no informa nada, así que
+   * un tilde gris ahí sería un dato inventado. Por eso el tipo distingue
+   * ausencia de estado en vez de tener un 'ninguno'.
+   */
+  ack?: Ack | null;
 }
 
 export type ItemHilo =
   | { tipo: 'dia'; etiqueta: string }
-  | { tipo: 'mensaje'; quien: 'in' | 'out'; texto: string; hora: string };
+  | { tipo: 'mensaje'; quien: 'in' | 'out'; texto: string; hora: string; ack: Ack | null };
 
 const HOY_AYER = ['hoy', 'ayer'];
 
@@ -61,6 +72,7 @@ export function conDias(mensajes: MensajeChat[], hoy: string): ItemHilo[] {
       quien: m.quien,
       texto: m.texto,
       hora: iso ? iso.slice(11, 16) : '',
+      ack: m.ack ?? null,
     });
   }
   return salida;

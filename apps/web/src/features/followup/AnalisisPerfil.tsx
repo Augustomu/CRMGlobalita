@@ -24,6 +24,15 @@ interface EnvioRecord extends EnvioDelLead {
   lead: string;
 }
 
+/** Un saliente del hilo, para poder mostrar el texto que trajo la respuesta. */
+interface MensajeRecord {
+  id: string;
+  quien: 'in' | 'out';
+  texto: string;
+  enviado_en: string;
+  canal: string;
+}
+
 function aAnalizado(l: LeadRecord): LeadAnalizado {
   return {
     id: l.id,
@@ -49,13 +58,18 @@ function Dato({ label, valor }: { label: string; valor: string | null }) {
 /**
  * Análisis del perfil (§7.2). Portada de `docs/prototipo/AnalisisPerfil.dc.html`.
  *
- * LO QUE EL PROTOTIPO MUESTRA Y ACÁ NO ESTÁ: «el mensaje que logró la
- * respuesta», con su texto. Eso necesita el hilo de la conversación, que el
- * CRM todavía no guarda (se lee en el chat real). Lo que sí se puede decir es
- * cuál de los R la trajo, que es la mitad accionable de la pregunta.
+ * «El mensaje que logró la respuesta» sale del hilo (colección `mensaje`): es
+ * el último saliente ANTERIOR a la respuesta. Estuvo mucho tiempo sin poder
+ * mostrarse porque el CRM no guardaba la conversación; ahora sí, y por eso se
+ * muestra el texto además del paso.
+ *
+ * Cuando el hilo todavía no tiene nada —que es lo normal hasta que el worker
+ * lea los chats— se sigue diciendo cuál de los R la trajo, que es la mitad
+ * accionable de la pregunta.
  */
 export function AnalisisPerfil({ lead, leads }: Props) {
   const [envios, setEnvios] = useState<EnvioRecord[]>([]);
+  const [salientes, setSalientes] = useState<MensajeRecord[]>([]);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
@@ -69,6 +83,16 @@ export function AnalisisPerfil({ lead, leads }: Props) {
         }
       })
       .catch(() => vivo && setCargando(false));
+
+    // Sólo los salientes de ESTE lead: el que trajo la respuesta es uno de
+    // ellos, y traer el hilo entero de la base para leer uno sería absurdo.
+    pb.collection('mensaje')
+      .getFullList<MensajeRecord>({
+        filter: `lead = "${lead.id}" && quien = "out"`,
+        sort: 'enviado_en',
+      })
+      .then((r) => vivo && setSalientes(r))
+      .catch(() => vivo && setSalientes([]));
     return () => {
       vivo = false;
     };
@@ -89,6 +113,21 @@ export function AnalisisPerfil({ lead, leads }: Props) {
   const frecuencia = frecuenciaDeEnvio(mios);
   const corte = dondeSeCorto(mios, lead.f_respuesta);
   const respondio = pasoQueRespondio(mios, lead.f_respuesta);
+
+  /**
+   * El texto del mensaje que trajo la respuesta.
+   *
+   * Es la misma regla que `envioQueRespondio` —el último saliente anterior a
+   * la respuesta— pero sobre el HILO, que es donde está el texto. Se compara
+   * el timestamp completo: un mensaje de las 18:00 no provocó una respuesta de
+   * las 11:40 del mismo día.
+   */
+  const textoQueRespondio = useMemo(() => {
+    const r = String(lead.f_respuesta ?? '');
+    if (!r) return null;
+    const previos = salientes.filter((m) => String(m.enviado_en ?? '').localeCompare(r) <= 0);
+    return previos[previos.length - 1] ?? null;
+  }, [salientes, lead.f_respuesta]);
 
   if (cargando) return <p className="campo-ayuda">Leyendo los envíos…</p>;
 
@@ -148,11 +187,26 @@ export function AnalisisPerfil({ lead, leads }: Props) {
 
       <div className={`ana-conclusion ana-tono-${conclusion.tono}`}>{conclusion.texto}</div>
 
-      {/* El hueco se dice, no se disimula (CLAUDE.md regla 6). */}
-      <span className="campo-ayuda">
-        El texto del mensaje que trajo la respuesta no está: el CRM todavía no guarda el hilo, se lee
-        en el chat real. Llega con la integración.
-      </span>
+      {/* §7.2: «el mensaje que logró la respuesta», con su texto. */}
+      {textoQueRespondio ? (
+        <div className="ana-mensaje">
+          <span className="auto-th">El mensaje que trajo la respuesta</span>
+          <p>{textoQueRespondio.texto}</p>
+          <span className="campo-ayuda tabular">
+            {textoQueRespondio.canal === 'whatsapp' ? 'WhatsApp' : 'LinkedIn'} ·{' '}
+            {String(textoQueRespondio.enviado_en).slice(8, 10)}/
+            {String(textoQueRespondio.enviado_en).slice(5, 7)}{' '}
+            {String(textoQueRespondio.enviado_en).slice(11, 16)}
+          </span>
+        </div>
+      ) : (
+        // El hueco se dice, no se disimula (CLAUDE.md regla 6).
+        <span className="campo-ayuda">
+          {lead.f_respuesta
+            ? 'El texto del mensaje que trajo la respuesta no está en el hilo todavía: el CRM guarda lo registrado, y el resto llega cuando el worker lea los chats.'
+            : 'Todavía no contestó, así que no hay mensaje que haya traído nada.'}
+        </span>
+      )}
     </div>
   );
 }

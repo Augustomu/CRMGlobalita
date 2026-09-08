@@ -266,14 +266,39 @@ Lo que el modal tenía y el prototipo no —el paso de la cadencia, «hacer la
 principal» (D16) y la vista previa con datos reales— quedó adentro del editor:
 son reglas del manual (§5.2) que el mock del prototipo no necesitaba.
 
-### D.3 · Conversaciones en la ficha (§3.2, §7.2, decisión cerrada #2)
+### D.3 · Conversaciones en la ficha — ✅ **resuelto el 08/09**
 
-El manual define `mensajes_li[]` y `mensajes_wa[]` en el lead, cada mensaje
-`{ quien: 'in'|'out', texto, enviado_en, ack? }` con `ack ∈ enviado | entregado
-| leido`. **No hay ninguna colección de mensajes en el modelo.**
+Ahora existe la colección `mensaje`, con las cinco cosas que pide §3.2:
+`quien` (in/out), `texto`, `enviado_en`, `canal` y `ack`.
 
-Es la misma falta que hace que el Análisis del perfil no pueda mostrar el texto
-del mensaje que trajo la respuesta. Las dos cosas se resuelven juntas.
+**Es una colección con un campo `canal`, no dos arrays embebidos en el lead**,
+que es como lo define el manual. Da lo mismo en pantalla —los dos hilos salen
+filtrando— y evita tres problemas: reescribir el hilo entero cada vez que
+alguien toca una etiqueta, traer 189 hilos cuando la lista pide 189 leads, y
+perder mensajes cuando el worker inserte dos que llegan juntos.
+
+El `ack` es sólo de WhatsApp, y **su ausencia no es un estado**. LinkedIn no
+informa nada, así que un tilde gris ahí diría «no llegó», que es otra cosa: el
+tipo distingue ausencia en vez de tener un `'ninguno'`, y la pantalla no dibuja
+nada.
+
+Las dos pantallas que dependían de esto:
+
+- **El panel de Conversación** de la columna 1, con las burbujas del prototipo
+  —entrantes a la izquierda, salientes con el color del canal por el que
+  salieron—, los separadores de día y los acks.
+- **«El mensaje que trajo la respuesta»** en el Análisis del perfil, que era el
+  hueco documentado en ese archivo desde el principio. Ahora se ve el texto,
+  con su canal y su hora.
+
+El seed trae los 21 mensajes de los seis hilos del prototipo, así que los tres
+casos se ven: el que contestó (Alexandre), la que escribió primero (María, que
+respondió a la nota de R0 y por eso no tiene paso atribuido) y el que nunca
+contestó (Herik).
+
+Lo que sigue faltando y se dice en pantalla: **nadie los escribe todavía**. El
+worker que lee LinkedIn y WhatsApp llega en la Etapa 5; hasta entonces el hilo
+tiene lo sembrado y lo registrado, y el pie ofrece el chat real.
 
 ### D.4 · Enviar mensaje (§7.2) — ✅ **resuelto el 08/09**
 

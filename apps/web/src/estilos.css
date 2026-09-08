@@ -5082,3 +5082,99 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   flex-shrink: 0;
 }
 .header-usuario-otros { display: flex; flex-direction: column; gap: 1px; max-height: 200px; overflow-y: auto; }
+
+/* ---------- el hilo de la conversación (§3.2, §7.2) ---------- */
+/*
+ * Las burbujas salen de Conversaciones.dc.html. Los entrantes van a la
+ * izquierda con la esquina de arriba mordida; los salientes a la derecha, con
+ * el color del canal por el que salieron — el mismo azul y el mismo verde del
+ * switch del header, así el hilo dice por dónde se habló sin leer nada.
+ */
+.conv-hilo {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 10px;
+  max-height: 210px;
+  overflow-y: auto;
+}
+.conv-dia { display: flex; justify-content: center; padding: 2px 0; }
+.conv-dia span {
+  font-size: var(--txt-xs);
+  font-weight: 600;
+  color: var(--hint);
+  background: var(--bg);
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  padding: 2px 8px;
+  letter-spacing: .04em;
+}
+.conv-burbuja {
+  max-width: 78%;
+  padding: 6px 10px;
+  font-size: var(--txt-lg);
+  line-height: 1.45;
+  overflow-wrap: break-word;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.conv-in {
+  align-self: flex-start;
+  border-radius: 2px 8px 8px 8px;
+  background: var(--bg);
+  color: var(--text);
+  border: .5px solid var(--border);
+}
+.conv-out-li {
+  align-self: flex-end;
+  border-radius: 8px 2px 8px 8px;
+  background: var(--brand-linkedin-light);
+  color: var(--brand-linkedin);
+  border: .5px solid var(--brand-linkedin-br);
+}
+.conv-out-wa {
+  align-self: flex-end;
+  border-radius: 8px 2px 8px 8px;
+  background: var(--success-light);
+  color: var(--brand-whatsapp);
+  border: .5px solid var(--teal-br);
+}
+.conv-meta {
+  font-size: var(--txt-xs);
+  opacity: .7;
+  align-self: flex-end;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+/* Entregado y leído usan el mismo doble tilde; el leído se pinta. Es lo que
+   hace WhatsApp y lo que la gente ya sabe leer. */
+.conv-ack { letter-spacing: -2px; }
+.conv-ack-leido { color: var(--brand-linkedin); opacity: 1; }
+.conv-pie {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 8px;
+  border-top: .5px solid var(--border);
+  min-width: 0;
+}
+
+/* El mensaje que trajo la respuesta (§7.2). */
+.ana-mensaje {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  background: var(--bg);
+}
+.ana-mensaje p {
+  margin: 0;
+  font-size: var(--txt-lg);
+  line-height: 1.5;
+  color: var(--text);
+  text-wrap: pretty;
+}
