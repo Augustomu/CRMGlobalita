@@ -17,17 +17,18 @@ import { Tareas } from './features/tareas/Tareas';
 import { Duplicados } from './features/duplicados/Duplicados';
 import { useDuplicados } from './features/duplicados/useDuplicados';
 import { Automatizaciones } from './features/automatizaciones/Automatizaciones';
+import { WaPersonal } from './features/wapersonal/WaPersonal';
 
 const TEMAS = ['tema-claro', 'tema-oscuro', 'tema-noche'] as const;
 
-type Seccion = 'followup' | 'control' | 'usuarios' | 'automatizaciones';
+type Seccion = 'followup' | 'control' | 'usuarios' | 'automatizaciones' | 'wapersonal';
 
 /**
  * Las secciones que traen sus propios datos y no dependen de `useLeads`.
  * Sin esto, entrar a Control o Automatizaciones mostraba «Cargando leads…»
  * arriba de una pantalla que no usa ni un lead de esa carga.
  */
-const CON_DATOS_PROPIOS: Seccion[] = ['control', 'automatizaciones'];
+const CON_DATOS_PROPIOS: Seccion[] = ['control', 'automatizaciones', 'wapersonal'];
 
 export function App() {
   const auth = useAuth();
@@ -104,7 +105,7 @@ export function App() {
       rol: auth.usuario.rol as never,
       permisos: auth.usuario.permisos ?? {},
     });
-    setSeccion(inicial === 'waPersonal' ? null : inicial);
+    setSeccion(inicial === 'waPersonal' ? 'wapersonal' : inicial);
   }, [auth.usuario?.id]);
 
   // Si el lead seleccionado deja de estar en la lista (cambió el filtro o el
@@ -204,9 +205,13 @@ export function App() {
             </button>
           )}
           {puedeUsuario(auth.usuario, 'waPersonal') && (
-            <span className="tab tab-off tab-pendiente" title="Todavía no construida">
+            <button
+              type="button"
+              className={`tab ${seccion === 'wapersonal' ? 'tab-on' : 'tab-off'}`}
+              onClick={() => irA(() => setSeccion('wapersonal'))}
+            >
               WA Personal
-            </span>
+            </button>
           )}
           {puedeUsuario(auth.usuario, 'usuarios') && (
             <button
@@ -437,6 +442,18 @@ export function App() {
         {seccion === 'control' && auth.usuario && <Control usuario={auth.usuario} />}
 
         {seccion === 'automatizaciones' && <Automatizaciones />}
+
+        {/* Mover un chat a Follow-up abre la ficha del lead recién creado: la
+            acción no termina hasta que se ve dónde quedó. */}
+        {seccion === 'wapersonal' && (
+          <WaPersonal
+            onIrAlLead={(id) => {
+              setSeleccionado(id);
+              setSeccion('followup');
+              recargar();
+            }}
+          />
+        )}
 
         {!cargando && !error && seccion === 'usuarios' && auth.usuario && (
           <Usuarios usuarioActual={auth.usuario} leads={leads} onCambio={recargar} />
