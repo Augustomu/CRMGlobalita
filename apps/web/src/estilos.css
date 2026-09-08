@@ -1,5 +1,5 @@
 /* Estilos de la app. Regla 5 del CLAUDE.md: ningún color suelto — todo sale de
-   las variables de public/design-tokens.css (copia de docs/design/tokens.css).
+   las variables de public/design-tokens.css, que es el unico archivo de tokens.
 
    ── Tamaño del texto ──────────────────────────────────────────────────────
    La escala es 1: los tamaños son EXACTAMENTE los del prototipo.

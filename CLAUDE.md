@@ -44,7 +44,10 @@ docs/         El vault. La documentación viaja con el código.
 4. **Prohibido el cajón de sastre.** Nada de `utils.ts`, `helpers.ts` ni `common/`.
    Si algo no encaja en ningún módulo, falta nombrar el módulo.
 
-5. **Ningún color suelto.** Todo pasa por las variables de `docs/design/tokens.css`.
+5. **Ningún color suelto.** Todo pasa por las variables de
+   `apps/web/public/design-tokens.css`, que es el ÚNICO archivo de tokens.
+   Había una copia en `docs/design/tokens.css`: dos archivos idénticos que se
+   desincronizan en cuanto alguien toca uno.
    Tres temas: claro, oscuro, noche.
 
 6. **El prototipo es la fuente de verdad visual, no una referencia vaga.**

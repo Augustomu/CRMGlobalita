@@ -30,7 +30,7 @@ Entrar con `alberto@globalita.test` (administrador, ve los 8 leads) o
 - **Las reglas de core, en pantalla.** El badge "le toca hoy" sale de `tocaHoy()`,
   el chip de idioma de `idiomaEfectivo()`, el botón de WhatsApp de `linkWhatsApp()`.
   Si no hay teléfono válido, se muestra **tachado con el motivo**, no oculto (§9.7).
-- **Los tres temas** (claro / oscuro / noche) desde `docs/design/tokens.css`.
+- **Los tres temas** (claro / oscuro / noche) desde `public/design-tokens.css`.
 - **Enviar mensaje (Etapa 2).** Arma el texto desde el repositorio, con el idioma
   sugerido y las variables ya resueltas; te lleva al chat real; y registra el envío
   aplicando todo §5.10 de una. La próxima fecha **se propone**: hay un botón para
@@ -82,5 +82,6 @@ Si vas a tocar una pantalla, abrí primero su `.dc.html` — es la regla 6 del
 build. Las reglas viven ahí y la interfaz solo las consume — nunca reimplementa
 una regla de negocio (regla 1 del `CLAUDE.md` de la raíz).
 
-`public/design-tokens.css` es una copia de `docs/design/tokens.css`. Si cambian
-los tokens, hay que volver a copiarlo.
+`public/design-tokens.css` es el **único** archivo de tokens. Había una segunda
+copia en `docs/design/tokens.css` y se eliminó: dos archivos idénticos que hay
+que acordarse de sincronizar a mano se desincronizan solos.

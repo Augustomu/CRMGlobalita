@@ -10,5 +10,6 @@ El documento de especificación completo está en `manual-original.pdf` (26 pág
 y ahí es donde se corrige y se amplía. El PDF queda como referencia histórica de lo que se
 especificó al principio.
 
-Si encontrás una diferencia entre el PDF y una nota del vault, gana la nota: el vault incorpora
-las decisiones tomadas después. Las que están sin tomar viven en `04-decisiones/`.
+Si encontrás una diferencia, el orden es: manda `MANUAL.md` —que viene del bundle del prototipo
+y es la especificación vigente—, después las notas del vault, y el PDF último. Las decisiones sin
+tomar viven en `04-decisiones/`.

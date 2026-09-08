@@ -9,7 +9,7 @@ Servicios industriales en LATAM y Brasil.
 |---|---|
 | `docs/` | El vault de Obsidian. **Fuente de verdad de las reglas.** Abrir `docs/00-Mapa.md` |
 | `docs/prototipo/` | El prototipo en Design Components. **Fuente de verdad visual.** Entrada: `Dashboard.dc.html` |
-| `docs/design/tokens.css` | Los 25 tokens de color y los 3 temas, extraídos del prototipo |
+| `apps/web/public/design-tokens.css` | Los 25 tokens de color y los 3 temas, extraídos del prototipo |
 | `docs/manual-original.pdf` | El manual original de 26 páginas, del que salió el vault |
 | `docs/_bundle/` | El prototipo empaquetado, tal como se subió. Solo respaldo |
 

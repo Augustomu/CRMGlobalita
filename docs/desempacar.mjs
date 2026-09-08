@@ -32,7 +32,19 @@ const tmp = path.join(raiz, '.pb', 'prototipo.zip');
 fs.mkdirSync(path.dirname(tmp), { recursive: true });
 fs.copyFileSync(bundle, tmp);
 
-fs.rmSync(destino, { recursive: true, force: true });
+// En Windows esto falla con EPERM si algo tiene la carpeta abierta: un editor,
+// el explorador, o un servidor estático sirviéndola. `maxRetries` cubre el
+// bloqueo momentáneo; si igual no se puede, se avisa con el motivo en vez de
+// tirar un stack trace de fs.
+try {
+  fs.rmSync(destino, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+} catch (e) {
+  console.error(
+    `No pude borrar ${destino}: ${e.code}.\n` +
+      'Cerrá lo que la tenga abierta (un editor, el explorador, un servidor) y probá de nuevo.',
+  );
+  process.exit(1);
+}
 fs.mkdirSync(destino, { recursive: true });
 
 try {
@@ -58,6 +70,30 @@ if (fs.existsSync(suCLAUDE)) {
   fs.renameSync(suCLAUDE, path.join(destino, 'ESTRUCTURA-Y-DECISIONES.md'));
 }
 
+// Los documentos que además viven trackeados en docs/ se refrescan desde el
+// bundle. Si no, un bundle nuevo los deja viejos EN SILENCIO: el de docs/ es el
+// que se lee en GitHub y el que citan las notas, así que la copia stale sería
+// la que todo el mundo mira.
+const espejados = [
+  ['MANUAL.md', 'docs/MANUAL.md'],
+  ['MANUAL-control-proyectos.md', 'docs/MANUAL-control-proyectos.md'],
+  ['DISENO-control-proyectos.md', 'docs/design/DISENO-control-proyectos.md'],
+];
+let refrescados = 0;
+for (const [origen, copia] of espejados) {
+  const desde = path.join(destino, origen);
+  if (!fs.existsSync(desde)) continue;
+  const hacia = path.join(raiz, copia);
+  const antes = fs.existsSync(hacia) ? fs.readFileSync(hacia, 'utf8') : '';
+  const ahora = fs.readFileSync(desde, 'utf8');
+  if (antes.replace(/\r/g, '') !== ahora.replace(/\r/g, '')) {
+    fs.copyFileSync(desde, hacia);
+    console.log(`  ${copia} actualizado desde el bundle`);
+    refrescados++;
+  }
+}
+
 const pantallas = fs.readdirSync(destino).filter((f) => f.endsWith('.dc.html'));
 console.log(`${pantallas.length} pantallas en docs/prototipo/ (regenerado desde el bundle)`);
 console.log('El CLAUDE.md del bundle quedó como ESTRUCTURA-Y-DECISIONES.md');
+if (!refrescados) console.log('Los documentos de docs/ ya estaban al día');
