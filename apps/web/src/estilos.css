@@ -2648,3 +2648,81 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 }
 .agenda-check-filtro { width: 22px; height: 22px; }
 .agenda-check-on { border-color: var(--accent); background: var(--accent-light); }
+
+/* ---------- tareas (§3.7 y §7.10) ----------
+   La fila es una GRILLA. Con la fila libre las fechas bailaban segun el largo
+   del nombre y no se podian comparar de un vistazo, que es para lo unico que
+   sirve una lista de pendientes. */
+.overlay-tareas { width: min(94vw, calc(720px * var(--escala-texto))); }
+.tarea-filtros { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-bottom: 8px; }
+.tarea-orden-n {
+  font-size: var(--txt-xs);
+  opacity: .7;
+  margin-left: 3px;
+}
+.tarea-fila {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) calc(46px * var(--escala-texto)) calc(46px * var(--escala-texto)) 16px 16px auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 2px;
+  border-bottom: .5px solid var(--border);
+}
+.tarea-fila:hover { background: var(--bg); }
+/* El detalle ocupa la fila entera, debajo de las columnas. */
+.tarea-detalle {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px 0 4px 26px;
+  animation: om-abrir 150ms ease-out;
+}
+.tarea-nombre {
+  font-size: var(--txt-md);
+  color: var(--text);
+  text-align: left;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Hecha: se tacha y se apaga, pero no desaparece — el filtro decide eso. */
+.tarea-hecha .tarea-nombre { text-decoration: line-through; color: var(--hint); }
+.tarea-hecha .tarea-estrella-on { color: var(--hint); }
+.tarea-inicio, .tarea-fin { font-size: var(--txt-sm); color: var(--muted); }
+.tarea-vencida { color: var(--error); font-weight: 600; }
+.tarea-notas-marca, .tarea-alerta { font-size: var(--txt-sm); filter: grayscale(1); }
+.tarea-notas-marca:hover, .tarea-alerta:hover { filter: none; }
+
+.tarea-estrellas { display: flex; gap: 1px; }
+.tarea-estrella {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: var(--txt-md);
+  line-height: 1;
+  color: var(--border);
+  cursor: pointer;
+  font-family: inherit;
+}
+.tarea-estrella:disabled { cursor: default; }
+.tarea-estrella-on { color: var(--accent); }
+
+.tarea-nueva {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px;
+  border: .5px solid var(--accent-br);
+  border-radius: 12px;
+  background: var(--accent-light);
+  margin-bottom: 8px;
+  animation: om-abrir 150ms ease-out;
+}
+.tarea-nueva-fila { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tarea-nueva-acciones { display: flex; justify-content: flex-end; gap: 8px; }

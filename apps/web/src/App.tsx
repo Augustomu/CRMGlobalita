@@ -13,6 +13,7 @@ import { useEtiquetas } from './features/followup/useEtiquetas';
 import { Control } from './features/control/Control';
 import { seccionInicial } from '@crm/core/permisos';
 import { Agenda } from './features/agenda/Agenda';
+import { Tareas } from './features/tareas/Tareas';
 import { Duplicados } from './features/duplicados/Duplicados';
 import { useDuplicados } from './features/duplicados/useDuplicados';
 
@@ -38,6 +39,7 @@ export function App() {
   const [masAbierto, setMasAbierto] = useState(false);
   const [usuarioAbierto, setUsuarioAbierto] = useState(false);
   const [agendaAbierta, setAgendaAbierta] = useState(false);
+  const [tareasAbierto, setTareasAbierto] = useState(false);
   /**
    * Qué canal de conversación está abierto, o ninguno. Vive en el header
    * porque la conversación se abre en la columna 1, arriba de la lista: es un
@@ -327,11 +329,16 @@ export function App() {
               que esconder lo que no se puede usar hace creer que el sistema no
               lo contempla. La excepción son los permisos, que sí ocultan. */}
           {puedeUsuario(auth.usuario, 'tareas') && (
-            <span className="boton-icono-28 boton-off" title="Tareas — todavía no construida">
+            <button
+              type="button"
+              className={`boton-icono-28 ${tareasAbierto ? 'boton-icono-on' : ''}`}
+              title="Tareas"
+              onClick={() => setTareasAbierto(true)}
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
                 <path d="M4 7l2 2 4-4M4 15l2 2 4-4M13 8h7M13 16h7" />
               </svg>
-            </span>
+            </button>
           )}
 
           {/* Esta sí funciona: son los leads con mensajes sin leer, que ya se
@@ -473,6 +480,10 @@ export function App() {
           onCerrar={() => setDupAbierto(false)}
           onCambio={recargar}
         />
+      )}
+
+      {tareasAbierto && (
+        <Tareas usuario={auth.usuario} onCerrar={() => setTareasAbierto(false)} />
       )}
 
       {pendiente && (
