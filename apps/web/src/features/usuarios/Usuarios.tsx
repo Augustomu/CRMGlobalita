@@ -10,6 +10,8 @@ import {
   type Rol,
 } from '@crm/core/permisos';
 import { pb } from '../../lib/pocketbase';
+import { Actividad } from './Actividad';
+import { AsignarEnLote } from './AsignarEnLote';
 import type { LeadRecord, UsuarioRecord } from '../../lib/types';
 import { iniciales } from '../followup/ListaContactos';
 
@@ -56,6 +58,9 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  /** Las dos vistas del prototipo: la lista de usuarios y el registro. */
+  const [vista, setVista] = useState<'usuarios' | 'actividad'>('usuarios');
+  const [loteAbierto, setLoteAbierto] = useState(false);
   const [altaAbierta, setAltaAbierta] = useState(false);
 
   async function recargar() {
@@ -177,11 +182,51 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
     }
   }
 
+  const asignables = leads.map((l) => ({
+    id: l.id,
+    nombre: l.expand?.perfil?.nombre ?? 'sin nombre',
+    empresa: l.expand?.perfil?.empresa ?? '',
+    cargo: l.expand?.perfil?.cargo ?? '',
+    ciudad: l.expand?.perfil?.ciudad ?? '',
+    pais: l.expand?.perfil?.pais ?? '',
+    industria: l.expand?.perfil?.industria ?? '',
+    cuenta: l.expand?.cuenta?.abrev ?? '',
+    asignado: l.asignado ?? '',
+  }));
+
+  // La Actividad es una vista propia y no un bloque mas: contesta otra
+  // pregunta —quien hizo que— y comparte con esta pantalla solo el permiso.
+  if (vista === 'actividad') {
+    return (
+      <div className="usuarios usuarios-actividad">
+        <div className="auto-header">
+          <div className="auto-grupos">
+            <button type="button" className="auto-grupo" onClick={() => setVista('usuarios')}>
+              Usuarios
+            </button>
+            <button type="button" className="auto-grupo auto-grupo-on">
+              Actividad
+            </button>
+          </div>
+          <span className="auto-bajada">Quién hizo qué y cuándo. Se llena sola.</span>
+        </div>
+        <Actividad usuarios={usuarios} />
+      </div>
+    );
+  }
+
   return (
     <div className="usuarios">
       <aside className="usuarios-lista">
         <div className="lista-buscador">
-          <span className="colapsable-titulo">Usuarios</span>
+          <div className="auto-grupos">
+            <button type="button" className="auto-grupo auto-grupo-on">
+              Usuarios
+            </button>
+            <button type="button" className="auto-grupo" onClick={() => setVista('actividad')}>
+              Actividad
+            </button>
+          </div>
           <button
             type="button"
             className="boton-icono"
@@ -366,6 +411,10 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
                 <div className="colapsable-cabecera sin-cursor">
                   <span className="colapsable-titulo">Leads asignados</span>
                   <span className="colapsable-resumen">{susLeads.length}</span>
+                  {/* §7.8: repartir una base de mil de a uno no es trabajo. */}
+                  <button type="button" className="boton-mini al-final" onClick={() => setLoteAbierto(true)}>
+                    Asignar en lote
+                  </button>
                 </div>
                 <div className="colapsable-cuerpo">
                   {susLeads.length === 0 && <span className="vacio">Sin leads asignados.</span>}
@@ -414,6 +463,24 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
           </>
         )}
       </section>
+
+      {loteAbierto && usuario && (
+        <AsignarEnLote
+          leads={asignables}
+          usuarioId={usuario.id}
+          usuarioNombre={usuario.name}
+          nombreDe={(id) => usuarios.find((u) => u.id === id)?.name ?? ''}
+          onCerrar={() => setLoteAbierto(false)}
+          onAsignar={async (ids) => {
+            // De a uno y en serie: PocketBase no tiene escritura en lote, y
+            // mandar 300 PATCH en paralelo hace que el servidor tire la mitad.
+            for (const id of ids) {
+              await pb.collection('lead').update(id, { asignado: usuario.id });
+            }
+            onCambio();
+          }}
+        />
+      )}
 
       {altaAbierta && (
         <AltaUsuario
@@ -517,6 +584,7 @@ function AltaUsuario({ onCerrar, onCreado }: { onCerrar: () => void; onCreado: (
           </button>
         </footer>
       </div>
+
     </div>
   );
 }

@@ -50,7 +50,10 @@ repositorio · reglas · atajos.
 ## Estado
 
 Lo medido está en `docs/AUDITORIA.md`, hecha leyendo el bundle entero.
-Resumen: de 29 pantallas, **9 al día, 4 a medias, 16 sin construir**.
+Punto de partida: de 29 pantallas, **9 al día, 4 a medias, 16 sin construir**.
+
+**Bloque A: cerrado. Bloque B: cerrado — las 16 pantallas están construidas,
+con sus reglas en `core/` y sus datos de demo.** 264 tests.
 
 ---
 
@@ -81,26 +84,42 @@ Es la pantalla de todos los dias y esta casi entera.
   tope diario y atajos A/S/D/F de 1 a 4 semanas con su corrimiento. Es una
   regla: va a packages/core con tests.
 
-### B · Las pantallas que faltan, con datos falsos
+### B · Las pantallas que faltan, con datos falsos — ✅ cerrado
 
 Por cuanto se usan:
 
-1. **Agenda** — tres vistas, arrastre de 15 minutos
-2. **Tareas** — grilla con estrellas de prioridad
-3. **Cola de envios** — al pie de la columna 1, con la cuenta regresiva
-4. **Automatizaciones** — invitaciones, cancelacion, seguimiento
-5. **WA Personal** — chats y entrantes desconocidos
-6. **Base compartida** — perfiles ya invitados
-7. **Importar CSV** — los tres pasos
-8. **Reglas y acciones** — disparador → condicion → accion
+1. **Agenda** — tres vistas, arrastre de 15 minutos ✅
+2. **Tareas** — grilla con estrellas de prioridad ✅
+3. **Cola de envios** — al pie de la columna 1, con la cuenta regresiva ✅
+4. **Automatizaciones** — invitaciones, cancelacion, seguimiento ✅
+5. **WA Personal** — chats y entrantes desconocidos ✅
+6. **Base compartida** — perfiles ya invitados ✅
+7. **Importar CSV** — los tres pasos ✅
+8. **Reglas y acciones** — disparador → condicion → accion ✅
 
-Y los paneles chicos de la ficha: Editar links · Confirmar reunion · Analisis
-del perfil · Panel de etiquetas completo · Evento de agenda.
+Y los paneles chicos de la ficha: Editar links ✅ · Confirmar reunion ✅ ·
+Analisis del perfil ✅ · Panel de etiquetas completo ✅ · Evento de agenda ✅
+(quedo cubierto por la tarjeta hover de la Agenda).
 
-### C · Completar las que estan a medias
+**Lo que se omitio a proposito**, por depender de datos que todavia no existen
+(CLAUDE.md regla 6 — se omite y se anota, no se reemplaza por algo inventado):
 
-Usuarios (pestaña Actividad, asignacion en lote) · Repositorio (destacados con
-alcance, orden arrastrable) · Vencimientos (idioma detectado).
+- **El texto del mensaje que logro la respuesta** (Analisis del perfil). El CRM
+  no guarda el hilo de la conversacion; se lee en el chat real. Lo que si se
+  construyo es *que paso* la trajo, que sale de los envios registrados.
+- **Las franjas horarias de "Cuando responden"** (Automatizaciones).
+  `f_respuesta` guarda solo la fecha. Se muestra por dia, que es dato real.
+- **Guardar un contacto en Gmail** (WA Personal). Necesita la conexion de
+  Google. El boton queda a la vista y apagado.
+
+### C · Completar las que estan a medias ← acá vamos
+
+- **Usuarios**: pestaña Actividad, asignacion en lote, reparto por cuenta.
+- **Repositorio**: destacados con alcance por cuenta, orden arrastrable, alta
+  y baja de mensajes.
+- **Vencimientos**: chip de idioma detectado.
+- **Duplicados**: rehacerla en el estilo nuevo. Es mia, el prototipo no tiene
+  equivalente; las reglas ya viven en `core/dedupe.ts` y `core/fusion.ts`.
 
 ### D · Recien ahi: escala e integraciones
 
