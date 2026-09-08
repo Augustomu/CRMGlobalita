@@ -48,3 +48,33 @@ export function pareceHiloDeChat(url: string): boolean {
   if (!t) return true; // vacío es válido: todavía no lo cargaron
   return /linkedin\.com\/messaging\//i.test(t) || /wa\.me\//i.test(t) || /web\.whatsapp\.com/i.test(t);
 }
+
+/**
+ * El nombre de la persona, sin el cargo que LinkedIn deja pegado.
+ *
+ * En LinkedIn el campo «nombre» es libre y mucha gente le mete el cargo, el
+ * título o la empresa: «María … Sobrinho — Directora de Operaciones y Cadena
+ * de Suministro LATAM». Eso llega tal cual al CRM.
+ *
+ * §10.9 dice que el nombre **se guarda completo** y se recorta en la vista,
+ * nunca en el dato. Esto es la vista: el dato sigue entero en `perfil.nombre`,
+ * y el cargo ya vive en su propio campo, así que mostrarlo dos veces sólo
+ * empuja el resto del encabezado fuera de la pantalla.
+ *
+ * Se corta en el primer separador RODEADO DE ESPACIOS. Los guiones pegados no
+ * se tocan: «García-López» es un apellido, no un cargo.
+ */
+const SEPARADORES = [' — ', ' – ', ' - ', ' | ', ' · '];
+
+export function nombreDePersona(nombre: string | null | undefined): string {
+  const entero = String(nombre ?? '').trim();
+  let corte = -1;
+  for (const s of SEPARADORES) {
+    const i = entero.indexOf(s);
+    if (i > 0 && (corte === -1 || i < corte)) corte = i;
+  }
+  if (corte === -1) return entero;
+  const izquierda = entero.slice(0, corte).trim();
+  // Si a la izquierda no queda un nombre, el separador era parte del nombre.
+  return izquierda ? izquierda : entero;
+}

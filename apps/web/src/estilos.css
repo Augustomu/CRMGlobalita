@@ -509,7 +509,10 @@ html, body, #root { height: 100%; }
   border-bottom: .5px solid var(--border);
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  /* Al centro, no arriba: el avatar mide 30, la pastilla de cuenta 20 y el
+     chip de dueño 26, así que con `flex-start` los tres quedan colgando de
+     una línea imaginaria y se ven de tamaños distintos y desalineados. */
+  align-items: center;
   gap: 7px;
   flex-wrap: wrap;
   background: var(--surface);
@@ -802,10 +805,17 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   color: var(--hint);
   font-size: var(--txt-sm);
   font-weight: 600;
+  font-family: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 150ms ease-out, color 150ms ease-out;
 }
+.ficha-avatar:hover { border-color: var(--accent); color: var(--accent); }
+.ficha-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ficha-cuenta {
   font-size: var(--txt-sm);
   font-weight: 700;
@@ -4362,7 +4372,8 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 }
 .ctrl-leads-tabla .bc-encabezado,
 .ctrl-leads-tabla .bc-fila {
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 120px 130px 54px 70px 84px;
+  /* contacto · empresa · lugar · origen · interés · reuniones · última · proyecto */
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 120px 52px 130px 54px 70px 84px;
 }
 .ctrl-leads-etiquetas { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 /* La etiqueta de interes es lo que pone al lead en esta pantalla: se ve como

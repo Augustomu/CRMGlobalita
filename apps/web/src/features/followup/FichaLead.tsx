@@ -8,6 +8,7 @@ import { pb } from '../../lib/pocketbase';
 import type { EnvioRecord, EtiquetaRecord, LeadRecord, PlantillaRecord, UsuarioRecord } from '../../lib/types';
 import { puedeEditar, puedeUsuario } from './useLeads';
 import { AbrirProyecto } from './AbrirProyecto';
+import { nombreDePersona } from '@crm/core/linkedin';
 import { NOMBRE_SITUACION, iniciales } from './ListaContactos';
 import { EnviarMensaje, type Propuesta } from './EnviarMensaje';
 import { Colapsable, type Chip } from './Colapsable';
@@ -90,6 +91,33 @@ export function FichaLead({
   // Dos ejes independientes: si puede editar ESTE lead, y qué campos ve.
   const editable = puedeEditar(usuario, lead);
   const veTelefono = puedeUsuario(usuario, 'verTelefono');
+
+  /**
+   * La foto del perfil, pegada del portapapeles.
+   *
+   * De LinkedIn la foto se copia, no se descarga: bajarla es abrir la imagen
+   * en otra pestaña, guardarla y después buscarla. Es la misma acción que en
+   * la agenda y en la vista Lista.
+   */
+  async function pegarFoto() {
+    if (!p || !editable) return;
+    try {
+      const items = await navigator.clipboard.read();
+      for (const it of items) {
+        const tipo = it.types.find((t) => t.startsWith('image/'));
+        if (!tipo) continue;
+        const blob = await it.getType(tipo);
+        const datos = new FormData();
+        datos.append('foto', new File([blob], `foto.${tipo.split('/')[1]}`, { type: tipo }));
+        await pb.collection('perfil').update(p.id, datos);
+        onGuardado();
+        return;
+      }
+      setError('No hay ninguna imagen en el portapapeles.');
+    } catch {
+      setError('El navegador no dejó leer el portapapeles.');
+    }
+  }
   const veEmails = puedeUsuario(usuario, 'verEmails');
   const veLinks = puedeUsuario(usuario, 'verLinks');
   const original = useMemo(() => valoresDe(lead), [lead.id, lead.updated]);
@@ -287,9 +315,25 @@ export function FichaLead({
   return (
     <section className="ficha">
       <header className="ficha-header">
-        <span className="ficha-avatar" title={p?.nombre}>
-          {iniciales(p?.nombre ?? '')}
-        </span>
+        {/* El prototipo lo tiene como BOTÓN: la foto se pega del
+            portapapeles, igual que en la agenda. De LinkedIn se copia, no se
+            descarga. */}
+        <button
+          type="button"
+          className="ficha-avatar"
+          title={
+            p?.foto
+              ? 'Pegar otra imagen del portapapeles'
+              : 'Copiá una imagen y tocá acá para pegarla'
+          }
+          onClick={() => void pegarFoto()}
+        >
+          {p?.foto ? (
+            <img src={pb.files.getURL(p as never, p.foto, { thumb: '96x96' })} alt="" />
+          ) : (
+            iniciales(nombreDePersona(p?.nombre ?? ''))
+          )}
+        </button>
 
         <span className="ficha-cuenta" title="Cuenta de LinkedIn">
           {lead.expand?.cuenta?.abrev ?? '—'}
@@ -321,7 +365,13 @@ export function FichaLead({
         )}
 
         <div className="ficha-nombre-caja">
-          <span className="ficha-nombre">{p?.nombre ?? '(sin perfil)'}</span>
+          {/* §10.9: el nombre se guarda completo y se recorta EN LA VISTA. El
+              cargo que LinkedIn deja pegado ya vive en su campo, y repetirlo
+              acá empuja el resto del encabezado fuera de la pantalla. El
+              entero sigue estando, en el title. */}
+          <span className="ficha-nombre" title={p?.nombre}>
+            {p?.nombre ? nombreDePersona(p.nombre) : '(sin perfil)'}
+          </span>
           {hitos.length > 0 && (
             <span
               className="ficha-info"

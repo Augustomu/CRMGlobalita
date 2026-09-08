@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { coincide } from '@crm/core/busqueda';
+import { nombreDePersona } from '@crm/core/linkedin';
 import { COLUMNA_LISTA } from '@crm/core/anchos';
 import { LOTE, hayQueCrecer, scrollHasta, ventanaPara } from '@crm/core/ventana';
 import { useAncho } from '../../lib/useAncho';
@@ -565,7 +566,9 @@ export function ListaContactos({
               className={['fila', activo ? 'fila-on' : '', sinLeer ? 'fila-sin-leer' : ''].join(' ')}
             >
               <div className="fila-arriba">
-                <div className="fila-nombre">{p?.nombre ?? '(sin perfil)'}</div>
+                <div className="fila-nombre" title={p?.nombre}>
+                  {p?.nombre ? nombreDePersona(p.nombre) : '(sin perfil)'}
+                </div>
                 {veTelefono && (
                   <BurbujaWhatsApp
                     activa={Boolean(p?.telefono_valido)}

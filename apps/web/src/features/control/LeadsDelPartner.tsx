@@ -86,6 +86,11 @@ export function LeadsDelPartner({ leads }: Props) {
             <span className="auto-th">Contacto</span>
             <span className="auto-th">Empresa e industria</span>
             <span className="auto-th">Lugar</span>
+            {/* De qué cuenta entró. Un lead puede confirmar interés en las DOS
+                casas —PIV e Inversión a la vez— y entonces aparece en las dos
+                listas; la cuenta es lo único que dice por dónde entró, que es
+                lo que hace falta para saber quién lo trajo. */}
+            <span className="auto-th">Origen</span>
             <span className="auto-th">Interés</span>
             <span className="auto-th auto-der">Reun.</span>
             <span className="auto-th auto-der">Última</span>
@@ -104,6 +109,11 @@ export function LeadsDelPartner({ leads }: Props) {
               </div>
               <span className="bc-celda bc-texto">
                 {[l.ciudad, l.pais].filter(Boolean).join(' · ') || '—'}
+              </span>
+              <span className="bc-celda">
+                <span className="pastilla" title="La cuenta por la que entró el lead">
+                  {l.cuenta || '—'}
+                </span>
               </span>
               <div className="bc-celda ctrl-leads-etiquetas">
                 {l.etiquetas.map((e) => (
