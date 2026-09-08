@@ -1686,7 +1686,8 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   text-align: center;
 }
 
-.reunion-prox-panel { width: 452px; right: auto; left: 0; padding: 10px 12px; gap: 9px; }
+/* §9.5: las coordenadas las pone el componente; acá solo el tamaño. */
+.reunion-prox-panel { width: 452px; padding: 10px 12px; gap: 9px; }
 .reunion-prox-cabecera { display: flex; align-items: center; gap: 8px; }
 .reunion-prox-cabecera .boton-icono-22:first-of-type { margin-left: auto; }
 .reunion-prox-meses { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }

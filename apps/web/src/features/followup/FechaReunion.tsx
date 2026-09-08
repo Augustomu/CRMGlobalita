@@ -106,6 +106,31 @@ export function FechaReunion({
   const [abierto, setAbierto] = useState(true);
   const [histAbierto, setHistAbierto] = useState(false);
   const [proxAbierto, setProxAbierto] = useState(false);
+  /**
+   * Dónde caen los dos popovers grandes (§9.5).
+   *
+   * Con `position: absolute` los recorta el scroll de la ficha: la reunión
+   * está a media columna, y el panel del próximo contacto mide 452 px de ancho
+   * y casi 300 de alto. Se posicionan con coordenadas calculadas desde el
+   * botón, que es lo que el manual pide para «filtros, próximo contacto,
+   * histórico».
+   */
+  const [posProx, setPosProx] = useState({ left: 0, top: 0 });
+  const [posHist, setPosHist] = useState({ left: 0, top: 0 });
+
+  /** El popover entra en pantalla: si no cabe abajo, sube. */
+  const donde = (el: HTMLElement | null, ancho: number, alto: number) => {
+    const r = el?.getBoundingClientRect();
+    if (!r) return { left: 12, top: 60 };
+    return {
+      left: Math.round(Math.max(8, Math.min(r.left, window.innerWidth - ancho - 8))),
+      top: Math.round(
+        r.bottom + 6 + alto > window.innerHeight - 8
+          ? Math.max(8, window.innerHeight - alto - 8)
+          : r.bottom + 6,
+      ),
+    };
+  };
   const [dia, setDia] = useState<string | null>(null);
   const [hora, setHora] = useState<string | null>(null);
   const [duracion, setDuracion] = useState(DURACION_DEFECTO);
@@ -464,7 +489,10 @@ export function FechaReunion({
               type="button"
               className="boton-chico"
               title="Reuniones registradas"
-              onClick={() => setHistAbierto((a) => !a)}
+              onClick={(ev) => {
+                setPosHist(donde(ev.currentTarget, 330, 300));
+                setHistAbierto((a) => !a);
+              }}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
                 <path d="M4 7h16M4 12h16M4 17h10" />
@@ -474,7 +502,7 @@ export function FechaReunion({
             {histAbierto && (
               <>
                 <div className="popover-fondo" onClick={() => setHistAbierto(false)} />
-                <div className="popover popover-anclado reunion-historial">
+                <div className="popover reunion-historial" style={{ left: posHist.left, top: posHist.top }}>
                   {reuniones.length === 0 && (
                     <div className="reunion-hist-vacio">sin reuniones registradas</div>
                   )}
@@ -530,7 +558,10 @@ export function FechaReunion({
             type="button"
             className="reunion-proximo-boton tabular"
             title="Fecha del próximo contacto (D)"
-            onClick={() => setProxAbierto((a) => !a)}
+            onClick={(ev) => {
+              setPosProx(donde(ev.currentTarget, 452, 300));
+              setProxAbierto((a) => !a);
+            }}
           >
             {proximoContacto ? ddmm(proximoContacto) : 'sin fecha'}
             <span className="reunion-caret">▾</span>
@@ -538,7 +569,7 @@ export function FechaReunion({
           {proxAbierto && (
             <>
               <div className="popover-fondo" onClick={() => setProxAbierto(false)} />
-              <div className="popover popover-anclado reunion-prox-panel">
+              <div className="popover reunion-prox-panel" style={{ left: posProx.left, top: posProx.top }}>
                 <div className="reunion-prox-cabecera">
                   <span className="colapsable-titulo">Próximo contacto</span>
                   <span className="campo-ayuda">tope {TOPE_DIARIO} leads por día</span>

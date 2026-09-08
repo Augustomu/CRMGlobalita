@@ -386,6 +386,22 @@ que ya tenía el repositorio: si hay cambios sin guardar, Escape no los tira.
 
 ---
 
+### D.9 · Y otra del ciclo de validación: los popovers de la ficha
+
+§9.5 nombra tres popovers que **tienen que posicionarse con coordenadas
+calculadas desde el botón** (`position: fixed`), *«para que no los recorte el
+scroll de la columna»*: filtros, próximo contacto e histórico.
+
+El de filtros lo hacía. Los otros dos —los dos que están **adentro de la
+ficha**, que es la columna que scrollea— usaban `position: absolute`. El del
+próximo contacto mide 452 × 300: con la reunión a media columna en una laptop
+de 14", se corta.
+
+Ahora los tres calculan su posición, y si no entran para abajo suben. Medido en
+1440 × 620 con la ficha scrolleada al fondo: los dos entran enteros.
+
+---
+
 ## E · Lo que sí coincide
 
 Para que la lista de arriba se lea en contexto. Verificado contra el manual:
