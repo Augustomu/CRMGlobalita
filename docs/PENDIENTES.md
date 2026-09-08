@@ -1,13 +1,246 @@
 # Pendientes
 
-Lo que está decidido y todavía no está hecho, en orden de lo que más pesa.
-`docs/DIVERGENCIAS.md` tiene el detalle de lo ya cerrado; acá va lo que falta.
+Lo decidido y todavía no hecho. `docs/DIVERGENCIAS.md` tiene el detalle de lo
+ya cerrado contra el manual y el prototipo; acá va lo que falta.
 
-Última revisión: 08/09/2026.
+Última revisión: **08/09/2026**, después de la recorrida de Augusto por la app.
+
+> **Cómo leer esto.** Los ⚠️ son choques con el manual o el prototipo: hay que
+> decidir cuál gana antes de tocarlos. Los ❓ son preguntas que no puedo
+> responder yo. El resto es trabajo.
 
 ---
 
-## 1 · El worker: lo único que hace que el CRM *actúe*
+## 0 · Lo que hay que decidir antes de programar
+
+Nada de esto es difícil de hacer; es que **hacerlo mal cuesta un refactor**.
+
+### ❓ 0.1 · El alcance de los mensajes destacados
+
+Augusto: *«si el perfil viene de la cuenta de Alberto, mostrame los destacados
+de la cuenta de Alberto; si viene de Globalita —Bruno, Alejandro, Edith, David,
+Francisco— comparten los mismos mensajes, salvo que un chip sea sólo para una
+cuenta»*.
+
+Hoy el alcance es **por cuenta** (`todas las cuentas` | lista de abreviaturas).
+Lo que describe es **por casa, con excepción por cuenta**: Seng (AL) tiene los
+suyos, Globalita comparte, y un mensaje puede clavarse a una cuenta puntual.
+
+Son dos modelos distintos. El actual puede expresar el nuevo (listando las
+cinco cuentas de Globalita), pero entonces cada cuenta nueva hay que agregarla
+a mano en cada mensaje. Habría que sumar un alcance `casa`.
+
+**Falta decidir**: ¿el alcance pasa a ser `todas | casa | cuentas`?
+
+### ❓ 0.2 · ¿Seng puede tener «Parcería»?
+
+Augusto: *«podríamos sumar otra etiqueta que sea parcerías… puedo tener
+parcerías dentro de Seng»*.
+
+Hoy el mapeo etiqueta → casa está fijo: `PIV` y `Parcería` son Globalita,
+`Inversión` es Seng. Si Seng también puede tener parcerías, ese mapeo se rompe
+y la casa deja de deducirse de la etiqueta.
+
+Es la pieza sobre la que se apoyan la vista `confirmado` y el alcance del
+partner, así que conviene resolverlo antes de tocar Control.
+
+**Falta decidir**: ¿la casa se elige aparte de la etiqueta, o hay etiquetas
+distintas por casa (`Parcería Globalita` / `Parcería Seng`)?
+
+### ❓ 0.3 · ¿Dónde se cargan los textos de la cadencia?
+
+Pregunta del propio Augusto: *«¿dónde administro qué mensaje se les va a
+enviar? El repositorio está conectado con R0, R1, R2. ¿Dónde lo termino de
+cargar y dónde lo edito?»*.
+
+Hoy: el repositorio es el único lugar de verdad (§5.2), y Automatizaciones sólo
+muestra el nombre del paso. Así que **ya se administra en el repositorio** —
+pero no se ve desde Automatizaciones, que es donde uno lo busca.
+
+**Propuesta**: desde cada paso de la cadencia, un enlace que abra el
+repositorio con ese mensaje abierto. Un solo lugar de edición, dos puertas.
+
+### ❓ 0.4 · Asignar un lead a más de una persona
+
+Ya estaba pedido. Hoy `lead.asignado` es de uno.
+
+Toca la ficha, la lista, Usuarios y el alcance: la regla *«sin `verTodosLeads`
+sólo ve los leads asignados»* pasa a ser *«donde figura»*.
+
+**Falta decidir**: ¿los asignados son iguales o hay un responsable y
+acompañantes? El modelo ya tiene `nivel_asignacion`, que quizá alcance.
+
+---
+
+## 1 · Follow-up · columna 2 (la ficha)
+
+### ⚠️ 1.1 · Etiquetas y Log vuelven a ser iconos, no bloques
+
+Augusto: *«el colapsable de etiquetas no va ahí, eliminarlo de la columna dos,
+eso va con un emoji al lado del perfil»*, y lo mismo para el log.
+
+**Choca con §7.2**, que enumera *«Datos · Contacto · Fecha de reunión ·
+Etiquetas · Log de ediciones · Análisis del perfil»* — seis bloques. Los pasé a
+bloques hace dos días justamente por esa línea (ver G.1 en DIVERGENCIAS).
+
+Gana Augusto, pero conviene que quede escrito: el manual va a decir una cosa y
+la app otra.
+
+- Etiquetas: icono al lado del perfil, con agregar y **quitar del lead** (no
+  borrar del catálogo).
+- Log de ediciones: icono. Y **reemplaza al tooltip** del perfil.
+- Análisis del perfil: se queda como está.
+
+### 1.2 · Enviar mensaje
+
+- **El switch de canal tiene que mandar de verdad.** Hoy dice «enviar mensaje a
+  LinkedIn» sin poder cambiarlo; el prototipo tiene el switch LinkedIn/WhatsApp
+  y lo que se elige es por donde sale.
+- **La secuencia en vez del desplegable de paso.** En lugar de «Paso: R2
+  (toca)», una fila de chips `R0 ✓ · R1 ✓ · R2` donde lo tildado ya se mandó y
+  lo que falta se ve solo. Cada uno con **el idioma en que se mandó**.
+- **«Ir al chat» al lado del título** «Enviar mensaje».
+- **Sacar el botón «Copiar»**.
+- **Sacar los tres textos de ayuda de abajo** («al registrar se agregan…», «el
+  CRM no manda el mensaje…», «el envío automático llega con el worker»).
+
+---
+
+## 2 · Follow-up · columna 1 (la lista)
+
+- **De qué cuenta viene** cada perfil.
+- **El último mensaje enviado**: si fue un R, decir cuál; si fue suelto, `FU`.
+- **Etiquetas** en la fila.
+- **El icono de WhatsApp** cuando hay teléfono. Hoy hay un icono de mensaje
+  genérico que no se entiende.
+- **El agente asignado**: hoy es un chip con iniciales (`SF`). Tocarlo tiene
+  que abrir la lista de agentes para asignar. Con muchos, un solo icono y el
+  detalle al pasar por encima.
+- **Etiquetas que no entran**: mismo criterio — hover para verlas todas, y
+  **poder elegir cuáles se muestran y en qué orden** cuando entran dos o tres.
+- **Ancho ajustable de la columna 1 en WA Personal** (hoy sólo en Follow-up).
+
+---
+
+## 3 · Vencimientos
+
+- **El próximo contacto tiene que ser editable**: clic → calendario → elegir la
+  fecha. Hoy es sólo lectura.
+- **Los chips de mensajes destacados no aparecen.** Depende de 0.1.
+
+---
+
+## 4 · Agenda
+
+Augusto: *«tomá de referencia cómo funciona Google Calendar y copialo tal
+cual»*.
+
+- **La vista diaria no deja estirar** y **el bloque no muestra su duración**:
+  un evento de 10:45 de media hora se ve como si durara quince minutos, porque
+  el bloque está encerrado en su celda de 15 minutos y no puede pasar a la
+  siguiente. Verificado: el resize sólo está en la vista semanal.
+- **La vista semanal**: sólo deja mover, y el diseño hay que revisarlo.
+- **Próximo contacto**: mostrar día y mes, sin año.
+- **El icono de notas** tiene que ser el mismo en todos lados.
+- **El link de perfil** abre el LinkedIn del lead (no Sales Navigator) — bien —
+  pero en la lista de reuniones abre **con el perfil personal, no con la cuenta
+  de origen del lead**. Augusto lo deja para configurar después.
+- **WhatsApp con su icono**, no uno genérico.
+
+---
+
+## 5 · Repositorio de mensajes
+
+La reescribí como sidebar hace dos días y **el diseño quedó mal**:
+
+- No se ve el mensaje: la tarjeta parece colapsada.
+- «destacado en *todas las cuentas*» sale cortado.
+- Al abrir una tarjeta, el contenido se ve cortado.
+
+---
+
+## 6 · Tareas
+
+- **Icono de notas**, el mismo de toda la app.
+- Una tarea conectada a un lead tiene que **traer sus datos**: nombre, enlace a
+  LinkedIn y a WhatsApp, y las notas ya cargadas.
+- **Órdenes combinables**, no filtros: ordenar por vencimiento **y** por
+  prioridad a la vez. Hoy están como filtros y es un nombre equivocado (lo dice
+  el propio Augusto).
+- **La vista de Vencimientos, también como sidebar derecho** en Tareas.
+
+---
+
+## 7 · Notificaciones
+
+- Tocar una sin leer tiene que **marcarla leída**.
+- Y **abrir la conversación en la columna 1**, en el canal por el que escribió.
+- Estados: **leído sin responder** / **leído y respondido**.
+
+---
+
+## 8 · Control de proyectos
+
+- **Administrador de estados**: hoy los siete están fijos. Poder agregar y
+  editar, con **el nombre y qué significa** — la leyenda del pie sale de ahí.
+  Desde Control y desde la columna 2.
+- **Enlaces**: el LinkedIn de la empresa, la web de la empresa y el perfil del
+  prospecto. No están, ni en Proyectos ni en Leads.
+- **La cuenta de origen abreviada**: al pasar por encima, el nombre completo.
+  Quien no sabe qué significa `AL` no lo entiende.
+- **Sacar la columna «cantidad de reuniones»**; dejar última reunión, próximo
+  contacto y fecha de la próxima.
+- **La tabla es muy ancha**: hueco grande entre contacto y empresa, y espacio
+  muerto a la derecha. Achicar o alinear a la izquierda.
+- **Notas y comentarios** en la tabla.
+- **Histórico de reuniones** con su icono.
+- **Etiquetas asignadas**.
+
+---
+
+## 9 · Automatizaciones
+
+- **Las tablas son muy anchas** (Cuentas de invitación, Sale hoy por cuenta,
+  Métricas, Cadencia). Nombre a la izquierda y un vacío enorme a la derecha.
+- **Métricas semanales por cuenta**: poder elegir semana, mes o un rango
+  propio.
+- **Cancelación**: la misma métrica por cuenta con el mismo selector (semana,
+  mes, trimestre, semestre, año), y agregar **última ejecución, cuántos se
+  mandaron y en qué fecha**, por cuenta.
+- **La cadencia R0–R8 va al final** del panel, y hay que poder **agregar
+  fases**.
+- **«Cuándo responden»**: franjas de dos o tres horas, más finas que las
+  cuatro actuales.
+- Pensar qué otros datos vale la pena sumar al análisis.
+
+---
+
+## 10 · WA Personal
+
+- **Acceso rápido a los números que no están agendados**, poder agendarlos y
+  poder pasarlos a Follow-up.
+- **Regla que hay que respetar**: todos los chats empiezan en WA Personal;
+  cuando el contacto está en Follow-up **se ve sólo ahí**. WA Personal es
+  personal.
+- **Revisar el ancho** y que la columna 1 se pueda agrandar y achicar.
+
+---
+
+## 11 · Usuarios
+
+- **Editar los permisos de cada rol** y que queden como preset: al invitar a
+  alguien como colaborador ya sabe qué permisos trae.
+- Y **después** poder ajustarlo persona por persona (esto ya funciona).
+
+---
+
+## 12 · Transversal
+
+- **Traducción al portugués** de todo el CRM.
+
+---
+
+## 13 · El worker: lo único que hace que el CRM *actúe*
 
 **`apps/worker/` está vacío.** Hoy el CRM registra lo que hacés a mano; no manda
 un mensaje ni invita a nadie. Es la Etapa 5 del manual y la que el propio manual
@@ -15,90 +248,50 @@ marca como *«la de más riesgo técnico»* (§8.1).
 
 | | Estado |
 |---|---|
-| **Cola del lado del servidor** (§10.16) | La colección está, la pantalla la muestra, la cuenta regresiva corre — **y nadie la procesa**. El único cron que existe es el barrido de retención |
+| **Cola del lado del servidor** (§10.16) | La colección está, la pantalla la muestra, la cuenta regresiva corre — **y nadie la procesa** |
 | **LinkedIn** (§8.1) | No existe. Todos los envíos llevan `a_mano: true` |
 | **WhatsApp** (§8.2) | No hay sesión ni QR real. No llegan entrantes ni acks |
-| **Google Calendar** (§8.3) | Los hooks están escritos, la cuenta no está conectada: las 32 reuniones tienen `sync: "omitida"` |
+| **Google Calendar** (§8.3) | Los hooks están escritos, la cuenta no está conectada: las reuniones tienen `sync: "omitida"` |
 
 Empezado: el cálculo del turno se extrajo a `core/cola.ts` (`turnosDeLote`,
-`queSale`) para que el worker y la pantalla den **el mismo** turno. Sin eso la
-cuenta regresiva muestra una hora y el mensaje sale a otra.
-
-Lo que sigue: el bucle del worker, la interfaz de mensajero (CLAUDE.md: *«el
-resto del sistema no sabe cómo se envía»*), un adaptador simulado que permita
-verificar todo el circuito sin credenciales, y recién después los adaptadores
-reales de LinkedIn y WhatsApp.
+`queSale`) para que el worker y la pantalla den **el mismo** turno.
 
 ---
 
-## 2 · Asignar un lead a más de una persona
+## 14 · Lo que sigue esperando a Augusto
 
-**Pedido por Augusto el 08/09.** Hoy `lead.asignado` es una relación de uno.
-
-No es sólo el campo: toca la ficha (el chip «Asignado a»), la lista (el filtro
-por colaborador), Usuarios (asignación en lote y el reparto por cuenta), y el
-alcance — `verTodosLeads` decide qué ve un colaborador, y la regla *«sin esto
-sólo ve los leads asignados»* pasa a ser *«los leads donde figura»*.
-
-Hay que decidir antes de tocarlo:
-
-- ¿Los dos asignados son iguales, o hay un responsable y acompañantes? El
-  modelo tiene `nivel_asignacion` (`seguimiento` / otro), que quizá ya sirva.
-- §3.6 dice *«un lead sin asignación explícita pertenece al administrador»*.
-  Con varios, ¿quién aparece en la columna 1, que tiene lugar para un chip?
+- **«Estamos viendo el prototipo»** (F.2 en DIVERGENCIAS): propuse un octavo
+  estado en vez de una etiqueta. ¿Cuenta como activo? ¿Se congela a los 30
+  días? Y si un proyecto puede estar *viendo el prototipo* **y** *esperando
+  presupuesto* a la vez, hace falta etiqueta de proyecto. Se resuelve solo si
+  se hace el administrador de estados (8).
+- **«Las reuniones que aplican sólo al perfil de Alberto Córdoba»** (F.3):
+  sigo sin entender si es el partner de Seng viendo sólo la cuenta AL, o el
+  dashboard filtrado por cuenta.
 
 ---
 
-## 3 · Las dos decisiones que están esperando a Augusto
+## 15 · Producción
 
-- **«Estamos viendo el prototipo»** (§F.2 de DIVERGENCIAS). Propuse un octavo
-  estado de proyecto en vez de una etiqueta. Dos preguntas abiertas: ¿cuenta
-  como activo en la tarjeta? ¿se congela a los 30 días? Y una salvedad: si un
-  proyecto puede estar *viendo el prototipo* **y** *esperando presupuesto* a la
-  vez, entonces hace falta una etiqueta de proyecto, que hoy no existe.
-- **«La parte de reuniones que aplica sólo para el perfil de Alberto Córdoba»**
-  (§F.3). Sigo sin entender si es el partner de Seng viendo sólo lo de la
-  cuenta AL, o el dashboard de reuniones filtrado por cuenta.
+- **El deploy no se hizo.** `deploy/publicar.sh` necesita la IP del VPS.
+- **Backups del VPS.** El backup actual depende de que la PC esté prendida, y
+  `globalita-data` no está en GitHub. Un snapshot del proveedor cubre lo que el
+  esquema de tres copias no cubre: que se rompa el servidor, no la PC. No
+  reemplaza al backup a GitHub — devuelve la máquina, no el historial.
 
 ---
 
-## 4 · La auditoría, ciclo 4
+## 16 · La auditoría, ciclo 4
 
-Los ciclos 1 a 3 están cerrados. Queda revisar contra el prototipo:
-`FollowupDetalle` (la que más frases sin resolver tiene), `Login`, `ColaEnvios`,
-`ImportarCsv` y `BaseCompartida`.
-
-El método está montado como script y se vuelve a correr solo: extrae las frases
-que el prototipo le muestra al usuario y busca cuáles no existen en el código.
-No es prueba —una frase puede estar redactada distinto a propósito— pero es la
-lista de dónde mirar.
+Ciclos 1 a 3 cerrados. Queda revisar contra el prototipo: `FollowupDetalle`,
+`Login`, `ColaEnvios`, `ImportarCsv` y `BaseCompartida`. El método está montado
+como script y se vuelve a correr solo.
 
 ---
 
-## 5 · Producción
+## Nota sobre el orden
 
-- **El deploy no se hizo.** `deploy/publicar.sh` necesita la IP del VPS y el
-  visto bueno de Augusto.
-- **Backups del VPS.** El backup actual depende de que la PC de Augusto esté
-  prendida, y `globalita-data` no está en GitHub. Un snapshot diario del
-  proveedor cubre el caso que el esquema de tres copias no cubre: que se rompa
-  el servidor, no la PC. No reemplaza al backup a GitHub — el snapshot devuelve
-  la máquina, no el historial.
-
----
-
-## 6 · Lo que el manual deja para cuando exista el worker
-
-No son omisiones: son cosas que necesitan una integración que todavía no está,
-y que en pantalla ya se dicen.
-
-- El **QR de WhatsApp** por cuenta (§7.10). El panel está y explica por qué no
-  hay código todavía.
-- Los **bloqueos de Google Calendar con su nombre** (§7.6). Los de otro
-  calendario nunca van a llevar nombre: §6.3 dice que de un calendario ajeno se
-  ve cuándo está tomado y nada más.
-- El **hilo completo de la conversación** (§3.2). Hoy tiene lo sembrado y lo
-  registrado; el resto llega cuando el worker lea los chats.
-- «**Sin disponibilidad ese día**» en el panel de horarios: marca los días
-  bloqueados enteros en Google Calendar. La función lo contempla y el argumento
-  va en `false` hasta que la cuenta esté conectada.
+Casi todo lo de arriba es de **pantalla**, y lo de 13 es **la mitad del
+producto que no existe**. Mi recomendación sigue siendo cerrar 0 (las
+decisiones), después 13 (el worker), y meter lo de pantalla en el medio por
+tandas — empezando por lo que está roto (5, 4, 3) antes que por lo que falta.
