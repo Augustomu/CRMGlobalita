@@ -9,6 +9,39 @@ import { enSuZona } from './reunion.ts';
 
 export type TipoProyecto = 'fabript_piv' | 'parceria' | 'prototipo' | 'inversion';
 
+/**
+ * Las dos casas. Es como el equipo nombra los dos negocios, y es la palabra
+ * que usa el prototipo: Globalita vende el producto de IA, Seng arma
+ * propuestas de inversion.
+ */
+export type Casa = 'globalita' | 'seng';
+
+export const CASAS: Casa[] = ['globalita', 'seng'];
+
+export const NOMBRE_CASA: Record<Casa, string> = {
+  globalita: 'Globalita',
+  seng: 'Seng',
+};
+
+export const DETALLE_CASA: Record<Casa, string> = {
+  globalita: 'Fabript/PIV y parcerias',
+  seng: 'Inversiones',
+};
+
+/**
+ * La casa que le corresponde a un proyecto nuevo.
+ *
+ * Un proyecto de inversión es de Seng por definición. Para los otros dos manda la cuenta de
+ * LinkedIn por la que entro el lead. Y un proyecto sin cuenta —los que nacen de
+ * una feria o un referido, que el prototipo tiene de sobra— cae en Globalita,
+ * que es el negocio con volumen: es la suposicion que menos veces hay que
+ * corregir a mano.
+ */
+export function casaSugerida(tipo: TipoProyecto | '', lineaDeLaCuenta?: string | null): Casa {
+  if (tipo === 'inversion') return 'seng';
+  return lineaDeLaCuenta === 'inversiones' ? 'seng' : 'globalita';
+}
+
 export type EstadoProyecto =
   | 'sin_hablar'
   | 'en_conversacion'
@@ -53,6 +86,14 @@ export const REGLA_ESTADO: Record<EstadoProyecto, string> = {
   cerrado_perdido: 'Se cerró sin avanzar. Queda en el historial con el motivo.',
 };
 
+/**
+ * Los tres que se ofrecen hoy. `prototipo` NO está: el prototipo nuevo lo sacó
+ * y sus proyectos pasaron a Fabript/PIV. Sigue en el tipo de TypeScript y en
+ * las opciones de la base para que una fila vieja no quede invalida, pero no se
+ * ofrece para elegir.
+ */
+export const TIPOS_VIGENTES: TipoProyecto[] = ['fabript_piv', 'parceria', 'inversion'];
+
 export const NOMBRE_TIPO: Record<TipoProyecto, string> = {
   fabript_piv: 'Fabript/PIV',
   parceria: 'Parcería',
@@ -82,6 +123,8 @@ export interface Proyecto {
   nombre: string;
   empresa: string;
   tipo: TipoProyecto | '';
+  /** De que negocio es. Vive en el proyecto, no se hereda de la cuenta. */
+  casa: Casa | '';
   estado: EstadoProyecto | '';
   pais: string;
   ciudad: string;
@@ -199,6 +242,24 @@ export function proximaAccion(p: Proyecto): Registro | null {
     .filter((a) => !a.hecha)
     .sort((a, b) => soloFecha(a.fecha).localeCompare(soloFecha(b.fecha)));
   return pendientes[0] ?? null;
+}
+
+/**
+ * La última novedad del proyecto: lo que va en la columna «Actualización».
+ *
+ * Reemplaza a la tira de avance, que era una fila de tarjetas que se corría al
+ * costado debajo de cada proyecto. Con trece proyectos eso son trece tiras y la
+ * tabla deja de leerse de un vistazo — que es lo único que Control tiene que
+ * hacer. El historial completo sigue estando, en el panel que abre la fila.
+ *
+ * Se mira solo entre las ACTUALIZACIONES: una nota es contexto sobre la
+ * persona ("responde de noche"), no una novedad del proyecto.
+ */
+export function ultimaActualizacion(p: Proyecto): Registro | null {
+  const ordenadas = (p.updates ?? [])
+    .slice()
+    .sort((a, b) => soloFecha(b.fecha).localeCompare(soloFecha(a.fecha)));
+  return ordenadas[0] ?? null;
 }
 
 export type TipoAvance = 'accion' | 'update' | 'nota';

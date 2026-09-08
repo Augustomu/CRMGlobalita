@@ -1926,20 +1926,43 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .ctrl-reunion-pendiente { background: var(--badge-await); color: var(--badge-await-text); }
 .ctrl-reunion-cancelada { background: var(--bg); color: var(--hint); }
 
-/* La tabla. Las columnas son las del prototipo. */
+/* La tabla. Las columnas son las del prototipo, que las reajustó al sumar
+   «Actualización»: el proyecto y el lugar cedieron ancho para que la novedad
+   entre en dos renglones sin cortar la palabra. */
 .ctrl-cabecera,
 .ctrl-fila-datos {
   display: grid;
   grid-template-columns:
-    minmax(0, 2fr)
-    calc(96px * var(--escala-texto))
-    calc(122px * var(--escala-texto))
-    minmax(0, 1fr) minmax(0, 1fr)
-    calc(50px * var(--escala-texto))
-    calc(80px * var(--escala-texto))
-    minmax(0, 1.1fr);
+    minmax(0, 1.55fr)
+    calc(88px * var(--escala-texto))
+    calc(108px * var(--escala-texto))
+    minmax(0, .8fr) minmax(0, .8fr)
+    calc(44px * var(--escala-texto))
+    calc(88px * var(--escala-texto))
+    minmax(0, 1.45fr)
+    minmax(0, 1.05fr);
   column-gap: 8px;
   align-items: center;
+}
+.ctrl-casa-tipo { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; min-width: 0; padding-right: 6px; }
+.ctrl-casa {
+  font-size: var(--txt-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.ctrl-casa-globalita { color: var(--accent); }
+.ctrl-casa-seng { color: var(--warning); }
+/* Dos renglones y corta: la novedad completa está en el title y en el panel. */
+.ctrl-actualizacion {
+  font-size: var(--txt-sm);
+  color: var(--text);
+  line-height: 1.35;
+  text-wrap: pretty;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .ctrl-cabecera {
   font-size: var(--txt-xs);

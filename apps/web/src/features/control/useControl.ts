@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { Proyecto, ReunionDelProyecto } from '@crm/core/proyecto';
+import { casaSugerida, type Casa, type Proyecto, type ReunionDelProyecto } from '@crm/core/proyecto';
 import type { ReunionMedida } from '@crm/core/metricas';
 import { lineasDeControl, veLineaEnControl, type LineaNegocio } from '@crm/core/permisos';
 import { pb } from '../../lib/pocketbase';
@@ -16,12 +16,27 @@ interface ProyectoRecord extends Proyecto {
   };
 }
 
+/**
+ * Las dos formas de nombrar los mismos dos negocios.
+ *
+ * El PERMISO usa `ia | inversiones` (`users.linea_control`), porque así se
+ * cargó y así está en la base. El PROYECTO usa `globalita | seng`, que es como
+ * los nombra el equipo y como los nombra el prototipo. En vez de migrar el
+ * campo de permisos —tocar datos de usuarios para renombrar dos palabras— se
+ * traducen acá, en el único lugar donde los dos vocabularios se cruzan.
+ */
+const LINEA_DE_CASA: Record<Casa, LineaNegocio> = {
+  globalita: 'ia',
+  seng: 'inversiones',
+};
+
 export interface ProyectoConDatos {
   proyecto: ProyectoRecord;
   reuniones: ReunionDelProyecto[];
   cuenta_abrev: string;
   responsable: string;
-  /** De que negocio es. Sale de la cuenta; el proyecto no la guarda aparte. */
+  /** De qué negocio es. Vive en el proyecto (campo `casa`). */
+  casa: Casa;
   linea: LineaNegocio | null;
 }
 
@@ -107,13 +122,22 @@ export function useControl(usuario: UsuarioRecord | null) {
 
       setProyectos(
         ps
-          .map((p) => ({
-            proyecto: p,
-            reuniones: porProyecto.get(p.id) ?? [],
-            cuenta_abrev: p.expand?.cuenta?.abrev ?? '',
-            linea: (p.expand?.cuenta?.linea_negocio ?? null) as LineaNegocio | null,
-            responsable: p.expand?.responsable?.name ?? '',
-          }))
+          .map((p) => {
+            // La casa la guarda el proyecto. Si una fila vieja todavía no la
+            // tiene, se deduce como al abrirla: así un proyecto sin migrar no
+            // desaparece de la pantalla.
+            const casa =
+              (p.casa as Casa) ||
+              casaSugerida(p.tipo, p.expand?.cuenta?.linea_negocio ?? null);
+            return {
+              proyecto: p,
+              reuniones: porProyecto.get(p.id) ?? [],
+              cuenta_abrev: p.expand?.cuenta?.abrev ?? '',
+              casa,
+              linea: LINEA_DE_CASA[casa],
+              responsable: p.expand?.responsable?.name ?? '',
+            };
+          })
           .filter((p) => mio(p.linea)),
       );
       setReuniones(medidas.filter((r) => mio(r.linea)));

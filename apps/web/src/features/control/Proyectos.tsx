@@ -6,7 +6,9 @@ import {
   REGLA_ESTADO,
   estadoEfectivo,
   proximaAccion,
-  tiraDeAvance,
+  TIPOS_VIGENTES,
+  NOMBRE_CASA,
+  ultimaActualizacion,
   ultimaReunion,
   type EstadoProyecto,
   type TipoProyecto,
@@ -15,13 +17,13 @@ import type { ProyectoConDatos } from './useControl';
 
 const HOY = new Date().toISOString().slice(0, 10);
 
-const TIPOS: TipoProyecto[] = ['fabript_piv', 'parceria', 'prototipo', 'inversion'];
+// Los tres vigentes. El prototipo saco «Prototipo» y sus proyectos pasaron a
+// Fabript/PIV: ofrecer un filtro que no matchea nada seria ruido.
+const TIPOS: TipoProyecto[] = TIPOS_VIGENTES;
 const ESTADOS: EstadoProyecto[] = [
   'sin_hablar', 'en_conversacion', 'propuesta_enviada', 'nuestra_pelota',
   'congelado', 'cerrado_ganado', 'cerrado_perdido',
 ];
-
-const ETIQUETA_AVANCE = { accion: 'Próxima acción', update: 'Actualización', nota: 'Nota' };
 
 function fechaCorta(iso: string): string {
   const f = String(iso).slice(0, 10);
@@ -38,8 +40,8 @@ interface Props {
 
 /**
  * Control → Proyectos (anexo §4.1). Portado de `docs/prototipo/Control.dc.html`:
- * tarjetas de resumen, dos filas de filtros rotuladas, y la tabla de dos líneas
- * con la tira de avance abajo.
+ * tarjetas de resumen, filas de filtros rotuladas y la tabla de dos líneas con
+ * la última actualización en su propia columna.
  *
  * Solo lectura, como toda la sección. Lo que se edita se edita en la ficha.
  */
@@ -157,12 +159,13 @@ export function Proyectos({ proyectos, onAbrir, seleccionado }: Props) {
 
         <div className="ctrl-cabecera">
           <span>Proyecto</span>
-          <span>Tipo</span>
+          <span>Empresa y tipo</span>
           <span>Estado</span>
           <span>Lugar</span>
           <span>Industria y rol</span>
           <span className="ctrl-num">Reun.</span>
           <span>Últ. reunión</span>
+          <span>Actualización</span>
           <span>Próxima acción</span>
         </div>
 
@@ -178,7 +181,7 @@ export function Proyectos({ proyectos, onAbrir, seleccionado }: Props) {
           {filas.map((p) => {
             const ult = ultimaReunion(p.reuniones, HOY);
             const paso = proximaAccion(p.proyecto);
-            const avance = tiraDeAvance(p.proyecto);
+            const ultimaAct = ultimaActualizacion(p.proyecto);
             const notas = p.proyecto.notas ?? [];
 
             return (
@@ -207,9 +210,12 @@ export function Proyectos({ proyectos, onAbrir, seleccionado }: Props) {
                     </span>
                   </div>
 
-                  <span className={`ctrl-pastilla ctrl-tipo-${p.proyecto.tipo}`}>
-                    {NOMBRE_TIPO[p.proyecto.tipo as TipoProyecto] ?? '—'}
-                  </span>
+                  <div className="ctrl-casa-tipo">
+                    <span className={`ctrl-casa ctrl-casa-${p.casa}`}>{NOMBRE_CASA[p.casa]}</span>
+                    <span className={`ctrl-pastilla ctrl-tipo-${p.proyecto.tipo}`}>
+                      {NOMBRE_TIPO[p.proyecto.tipo as TipoProyecto] ?? '—'}
+                    </span>
+                  </div>
                   <span className={`ctrl-pastilla ctrl-estado-${p.efectivo}`}>
                     {NOMBRE_ESTADO[p.efectivo]}
                   </span>
@@ -232,25 +238,21 @@ export function Proyectos({ proyectos, onAbrir, seleccionado }: Props) {
                     <span className="ctrl-doble-2">{ult.detalle}</span>
                   </div>
 
-                  <span className="ctrl-paso">{paso?.texto ?? '—'}</span>
-                </div>
-
-                <div className="ctrl-avance">
-                  <span className="ctrl-filtro-label">Avance</span>
-                  <div className="ctrl-avance-tira">
-                    {avance.length === 0 && (
-                      <span className="campo-ayuda">Sin movimientos todavía.</span>
-                    )}
-                    {avance.map((a, i) => (
-                      <div key={i} className={`ctrl-avance-item ctrl-avance-${a.tipo}`}>
-                        <div className="ctrl-avance-cabecera">
-                          <span className="ctrl-avance-tag">{ETIQUETA_AVANCE[a.tipo]}</span>
-                          <span className="ctrl-avance-fecha tabular">{fechaCorta(a.fecha)}</span>
-                        </div>
-                        <span className="ctrl-avance-texto">{a.texto}</span>
-                      </div>
-                    ))}
+                  {/* La última novedad, en la fila. Antes era una tira de
+                      tarjetas debajo de cada proyecto: con trece proyectos son
+                      trece tiras y la tabla deja de leerse de un vistazo, que
+                      es lo único que Control tiene que hacer. El historial
+                      completo sigue estando en el panel que abre la fila. */}
+                  <div className="ctrl-doble" title={ultimaAct?.texto ?? ''}>
+                    <span className="ctrl-doble-1 tabular">
+                      {ultimaAct ? fechaCorta(ultimaAct.fecha) : '—'}
+                    </span>
+                    <span className="ctrl-actualizacion">
+                      {ultimaAct?.texto ?? 'sin novedades'}
+                    </span>
                   </div>
+
+                  <span className="ctrl-paso">{paso?.texto ?? '—'}</span>
                 </div>
               </div>
             );
@@ -258,8 +260,8 @@ export function Proyectos({ proyectos, onAbrir, seleccionado }: Props) {
         </div>
 
         <span className="campo-ayuda">
-          La tira de avance arranca en la última novedad y se corre al costado para ver todo el
-          historial. Cliqueando la fila se abre la ficha del proyecto.
+          La columna Actualización muestra la última novedad del proyecto. Cliqueando la fila se
+          abre la ficha: notas, actualizaciones y próximas acciones en columnas.
         </span>
       </div>
 

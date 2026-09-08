@@ -309,7 +309,15 @@ migrate(
 
     // --------------------------------------------------------- proyectos
 
-    const TIPO = { pib: 'fabript_piv', parceria: 'parceria', prototipo: 'prototipo', inversion: 'inversion' };
+    // El bundle nuevo tiene tres tipos: se fue «prototipo».
+    const TIPO = { pib: 'fabript_piv', parceria: 'parceria', inversion: 'inversion' };
+
+    // Que abreviaturas son de Seng. La casa del proyecto sale de aca cuando el
+    // tipo no la decide solo.
+    const cuentaSeng = {};
+    for (const c of app.findAllRecords('cuenta')) {
+      cuentaSeng[String(c.get('abrev'))] = c.get('linea_negocio') === 'inversiones';
+    }
     const ESTADO = {
       'sin-hablar': 'sin_hablar',
       conversacion: 'en_conversacion',
@@ -408,7 +416,7 @@ migrate(
       {
         contacto: 'rodrigo',
         nombre: 'Prototipo tablero de flota',
-        tipo: 'prototipo', estado: 'conversacion', abierto: '14/07',
+        tipo: 'pib', estado: 'conversacion', abierto: '14/07',
         nota_lead: 'Entró por recomendación directa, no por prospección: no hubo invitación ni cadencia.',
         notas: [
           ['14/07', 'El equipo de tráfico es el que va a usarlo todos los días.'],
@@ -424,7 +432,7 @@ migrate(
       {
         contacto: 'silvina',
         nombre: 'Prototipo control de planta',
-        tipo: 'prototipo', estado: 'ganado', abierto: '05/05',
+        tipo: 'pib', estado: 'ganado', abierto: '05/05',
         nota_lead: 'Viene de un contacto anterior a la prospección.',
         notas: [['18/08', 'Sirve como caso de referencia para el resto del sector alimentos.']],
         updates: [
@@ -465,7 +473,7 @@ migrate(
       {
         contacto: 'emilio',
         nombre: 'Prototipo app de campo',
-        tipo: 'prototipo', estado: 'congelado', abierto: '11/05',
+        tipo: 'pib', estado: 'congelado', abierto: '11/05',
         nota_lead: 'Contacto por LinkedIn de Sofía.',
         notas: [['03/07', 'El prototipo funcionó; lo que se cortó fue el presupuesto.']],
         updates: [
@@ -538,6 +546,9 @@ migrate(
         nombre: p.nombre,
         empresa: g[3],
         tipo: TIPO[p.tipo],
+        // La casa vive en el proyecto: inversion es Seng, y el resto sale de la
+        // cuenta por la que entro el lead.
+        casa: p.tipo === 'inversion' || cuentaSeng[g[7]] ? 'seng' : 'globalita',
         estado: ESTADO[p.estado],
         pais: g[4],
         ciudad: g[5],

@@ -54,8 +54,36 @@ if (args.has('--reset') && fs.existsSync(datos)) {
 buscarEjecutable();
 migrar(migraciones);
 if (args.has('--seed')) migrar(semilla);
+superusuarioLocal();
 
 console.log('\nPocketBase en http://127.0.0.1:8090/_/  (Ctrl+C para parar)\n');
 spawn(exe, ['serve', '--dir', datos, '--migrationsDir', migraciones, '--hooksDir', hooks], {
   stdio: 'inherit',
 });
+
+/**
+ * Crea el superusuario de la base LOCAL.
+ *
+ * Sin esto, PocketBase arranca sin superusuario y ABRE SOLO el navegador en
+ * `/_/#/pbinstall/...` para que crees uno. Con `--reset` eso pasa cada vez, y
+ * termina siendo una pestaña nueva por cada corrida.
+ *
+ * PocketBase exige un email con dominio: un `dev@local` lo rechaza con
+ * "missing or invalid email address".
+ *
+ * La clave está a la vista a propósito: es la base de desarrollo, vive en
+ * `.pb/` (fuera de git) y se borra entera con `--reset`. Produccion es otra
+ * instalacion, en el VPS, y no la toca este script.
+ */
+function superusuarioLocal() {
+  try {
+    execFileSync(exe, ['superuser', 'upsert', 'dev@globalita.test', 'dev12345678', '--dir', datos], {
+      stdio: 'pipe',
+    });
+    console.log('Superusuario local: dev@globalita.test / dev12345678');
+  } catch (e) {
+    // Que falle no es motivo para no levantar el servidor: como mucho vuelve a
+    // pedirte que crees uno a mano.
+    console.log('No se pudo crear el superusuario local:', e.message.split('\n')[0]);
+  }
+}

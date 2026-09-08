@@ -1,10 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  casaSugerida,
   estadoEfectivo,
+  NOMBRE_TIPO,
   proximaAccion,
   proyectoDesdeLead,
   tiraDeAvance,
+  TIPOS_VIGENTES,
+  ultimaActualizacion,
   ultimaReunion,
   ultimoMovimiento,
   type Proyecto,
@@ -15,7 +19,7 @@ const HOY = '2026-09-04'; // fecha de referencia del prototipo
 
 const p = (x: Partial<Proyecto> = {}): Proyecto => ({
   id: 'p1', lead: 'l1', nombre: 'Fabript/PIV para Vale', empresa: 'Vale',
-  tipo: 'fabript_piv', estado: 'en_conversacion',
+  tipo: 'fabript_piv', casa: 'globalita', estado: 'en_conversacion',
   pais: 'Brasil', ciudad: 'Belo Horizonte', industria: 'Minería',
   rol_contacto: 'Gerente', contacto: 'Marcelo Carneiro',
   abierto: '2026-08-01', nota_lead: '',
@@ -194,4 +198,51 @@ test('D23 · una reunión de la tarde no figura al día siguiente', () => {
   const u = ultimaReunion([r('2026-09-05 00:00:00.000Z')], HOY);
   assert.equal(u.fecha, '2026-09-04');
   assert.equal(u.detalle, 'asistio');
+});
+
+// ------------------------------------------------ la casa y la actualización
+// Puesta al día contra el bundle del 07/09: la casa pasó al proyecto y la tira
+// de avance se reemplazó por una columna con la última novedad.
+
+test('la casa de un proyecto de inversión es Seng, venga de la cuenta que venga', () => {
+  assert.equal(casaSugerida('inversion', 'ia'), 'seng');
+  assert.equal(casaSugerida('inversion', null), 'seng');
+});
+
+test('para los otros tipos manda la cuenta por la que entró el lead', () => {
+  assert.equal(casaSugerida('fabript_piv', 'inversiones'), 'seng');
+  assert.equal(casaSugerida('parceria', 'ia'), 'globalita');
+});
+
+test('un proyecto sin cuenta —feria, referido— cae en Globalita, que es el de volumen', () => {
+  assert.equal(casaSugerida('parceria', null), 'globalita');
+  assert.equal(casaSugerida('', undefined), 'globalita');
+});
+
+test('«prototipo» ya no se ofrece, pero sigue teniendo nombre para las filas viejas', () => {
+  assert.ok(!TIPOS_VIGENTES.includes('prototipo'));
+  assert.equal(NOMBRE_TIPO.prototipo, 'Prototipo');
+});
+
+test('la columna Actualización muestra la novedad más nueva', () => {
+  const proy = p({
+    updates: [
+      { fecha: '2026-08-01', texto: 'Primera charla' },
+      { fecha: '2026-09-02', texto: 'Mandaron el pliego' },
+      { fecha: '2026-08-20', texto: 'Pidieron material' },
+    ],
+  });
+  assert.equal(ultimaActualizacion(proy)?.texto, 'Mandaron el pliego');
+});
+
+test('las notas NO son novedades del proyecto: son contexto sobre la persona', () => {
+  const proy = p({
+    updates: [{ fecha: '2026-08-01', texto: 'Primera charla' }],
+    notas: [{ fecha: '2026-09-05', texto: 'Responde de noche' }],
+  });
+  assert.equal(ultimaActualizacion(proy)?.texto, 'Primera charla');
+});
+
+test('un proyecto recién abierto no tiene actualización, y eso no es un error', () => {
+  assert.equal(ultimaActualizacion(p({ updates: [] })), null);
 });
