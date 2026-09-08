@@ -2,8 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ddmm, ddmmaaaa, diaLocal } from '../src/fecha.ts';
 
-// El bug que motiva el módulo: a las 21:00 en Buenos Aires ya es mañana en UTC,
-// y con la fecha de UTC la lista marca como vencido lo que vence mañana.
+// §7.2 (vencidos de la columna 1), §7.6 (la columna de hoy en la agenda) y
+// §5.4 (la espera de recontacto): las tres cuentan días, y las tres los contaban
+// en UTC.
+//
+// El bug: a las 21:00 en Buenos Aires ya es mañana en UTC, así que la lista
+// marcaba como vencido lo que vence mañana — de noche, que es justo cuando se
+// cierra el día de trabajo.
 test('hoy es hoy donde está quien mira, no en UTC', () => {
   // 8 de septiembre, 21:30 hora LOCAL: el constructor de tres números no pasa
   // por UTC, así que esto vale en cualquier zona donde se corra el test.
