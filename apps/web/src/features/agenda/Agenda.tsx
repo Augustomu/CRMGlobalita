@@ -82,6 +82,7 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
     cambiarNota,
     pegarFoto,
     nuevaReunion,
+    guardarNotas,
     calendarios,
     calendario,
     setCalendario,
@@ -108,6 +109,21 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
   /** Lo escrito sin guardar todavía, para no pedir un PATCH por tecla. */
   const [borradorNota, setBorradorNota] = useState('');
   const [avisoLista, setAvisoLista] = useState<string | null>(null);
+
+  /**
+   * La confirmación de lo que se acaba de hacer (§8.3).
+   *
+   * *«Cambiar hora, fecha o duración desde la agenda actualiza el evento (la
+   * interfaz confirma con "Calendar actualizado")»*. Vive acá y no en la
+   * tarjeta del evento porque la tarjeta se desmonta cuando los eventos se
+   * recargan — o sea, justo cuando hay algo que confirmar.
+   */
+  const [aviso, setAviso] = useState('');
+  useEffect(() => {
+    if (!aviso) return;
+    const t = setTimeout(() => setAviso(''), 3000);
+    return () => clearTimeout(t);
+  }, [aviso]);
   const [chequeados, setChequeados] = useState<Set<string>>(new Set());
 
   const hoy = diaLocal();
@@ -157,7 +173,10 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
     const soltar = () => {
       setEstirando((s) => {
         // Sólo se guarda si cambió: soltar sin mover no tiene que escribir.
-        if (s && s.dur !== s.base) void cambiarDuracion(s.id, s.dur);
+        if (s && s.dur !== s.base) {
+          void cambiarDuracion(s.id, s.dur);
+          setAviso(`${s.dur} min · Calendar actualizado`);
+        }
         return null;
       });
     };
@@ -193,6 +212,7 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
     setArrastrando(null);
     setDestino(null);
     await mover(e.id, fecha, hora);
+    setAviso(`${hora} · Calendar actualizado`);
   }
 
   /** Si una celda cae dentro del rango que ocuparía el evento arrastrado. */
@@ -215,6 +235,15 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
         title="Arrastra para cambiar el ancho de la agenda - doble clic para volver al ancho normal"
         {...anchoAgenda.divisor}
       />
+      {aviso && (
+        <div className="agenda-aviso-flotante">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <path d="M5 13l4 4L19 7" />
+          </svg>
+          {aviso}
+        </div>
+      )}
+
       <div className="agenda-cabecera">
         <span className="colapsable-titulo">Agenda</span>
         <div className="reunion-segmentado">
@@ -378,6 +407,10 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
                           onEstado={cambiarEstado}
                           onEstirar={(x, y) => setEstirando({ id: x.id, y0: y, base: x.duracion, dur: x.duracion })}
                           onIrAlLead={onIrAlLead}
+                          onNotas={guardarNotas}
+                          onFoto={pegarFoto}
+                          onMover={mover}
+                          onAviso={setAviso}
                         />
                       ))}
                     </div>
@@ -427,6 +460,10 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
                       onArrastrar={setArrastrando}
                       onEstado={cambiarEstado}
                       onIrAlLead={onIrAlLead}
+                      onNotas={guardarNotas}
+                      onFoto={pegarFoto}
+                      onMover={mover}
+                      onAviso={setAviso}
                     />
                   ))}
                 </div>
@@ -634,6 +671,10 @@ function Evento({
   onEstado,
   onEstirar,
   onIrAlLead,
+  onNotas,
+  onFoto,
+  onMover,
+  onAviso,
 }: {
   e: EventoAgenda;
   desplazado: number;
@@ -646,7 +687,20 @@ function Evento({
   /** Falta en la vista diaria, donde el alto lo pone la fila. */
   onEstirar?: (e: EventoAgenda, y: number) => void;
   onIrAlLead: (id: string) => void;
+  /** §7.6: la tarjeta edita notas, foto y la fecha/hora de la reunión. */
+  onNotas: (id: string, notas: string) => Promise<void>;
+  onFoto: (perfilId: string) => Promise<boolean>;
+  onMover: (id: string, fecha: string, hora: string) => Promise<void>;
+  /** El cartel vive en la agenda: la tarjeta se desmonta al recargar. */
+  onAviso: (texto: string) => void;
 }) {
+  // Lo que se está escribiendo, sin guardar todavía.
+  const [notas, setNotas] = useState(e.notas);
+  const [fecha, setFecha] = useState(e.fecha);
+  const [hora, setHora] = useState(e.hora);
+  /** Sólo el de la foto: el de mover lo muestra la agenda. */
+  const [avisoFoto, setAvisoFoto] = useState<string | null>(null);
+  const cambio = fecha !== e.fecha || hora !== e.hora;
   // §6.3: el bloque de otro calendario dice CUÁNDO y nada más. No se arrastra
   // —no es tuyo—, no abre ficha —no hay lead que abrir— y no tiene tarjeta de
   // hover, porque no hay nada que mostrar ahí.
@@ -702,17 +756,43 @@ function Evento({
 
       {abierto && (
         <div className="agenda-hover" onClick={(ev) => ev.stopPropagation()}>
-          <span className="agenda-hover-nombre">{e.nombre}</span>
-          <span className="campo-ayuda">
-            {[e.empresa, e.cargo].filter(Boolean).join(' · ') || 'sin empresa cargada'}
-          </span>
+          <div className="agenda-hover-cabeza">
+            {/* La foto se pega del portapapeles (§7.6), igual que en la vista
+                Lista: de LinkedIn se copia, no se descarga. */}
+            <button
+              type="button"
+              className="agenda-lista-foto"
+              title={e.foto ? 'Pegar otra imagen del portapapeles' : 'Pegar una foto del portapapeles'}
+              onClick={async () => {
+                try {
+                  setAvisoFoto((await onFoto(e.perfil)) ? null : 'No hay ninguna imagen en el portapapeles.');
+                } catch {
+                  setAvisoFoto('El navegador no dejó leer el portapapeles.');
+                }
+              }}
+            >
+              {e.foto ? <img src={e.foto} alt="" /> : (e.nombre || '?').slice(0, 1).toUpperCase()}
+            </button>
+            <div className="agenda-hover-quien">
+              <span className="agenda-hover-nombre">{e.nombre}</span>
+              <span className="campo-ayuda">
+                {[e.empresa, e.cargo].filter(Boolean).join(' · ') || 'sin empresa cargada'}
+              </span>
+            </div>
+          </div>
           <div className="agenda-hover-datos">
             <span className="pastilla">{e.cuenta}</span>
             <span className="pastilla tabular">
               {e.hora} · {duracion}′
             </span>
+            {e.ciudad && <span className="pastilla pastilla-suave">{e.ciudad}</span>}
             {e.duenio && <span className="pastilla pastilla-suave">{e.duenio}</span>}
           </div>
+          {/* De dónde salió. La del CRM se reagenda desde acá; una de Google es
+              un bloque que alguien puso en otro lado. */}
+          <span className="campo-ayuda">
+            {e.delCrm ? 'agendada desde el CRM' : 'evento de Google Calendar'}
+          </span>
 
           <div className="reunion-estados">
             {(
@@ -739,18 +819,81 @@ function Evento({
             ))}
           </div>
 
-          {e.notas && <span className="agenda-hover-notas">{e.notas}</span>}
+          {/* §7.6: las notas se ESCRIBEN acá. Antes se mostraban y para
+              cambiarlas había que abrir la ficha, que es justo lo que la
+              tarjeta existe para evitar. Se guardan al salir del campo. */}
+          <textarea
+            className="agenda-hover-notas"
+            value={notas}
+            placeholder="Notas de la reunión…"
+            onChange={(ev) => setNotas(ev.target.value)}
+            onBlur={() => notas !== e.notas && void onNotas(e.id, notas)}
+          />
 
+          {/* §7.6: «dos campos para cambiar hora y fecha». Reagendar sin abrir
+              la ficha es la mitad de para qué sirve mirar la semana. */}
+          <div className="agenda-hover-mover">
+            <input
+              type="date"
+              className="agenda-lista-fechainput tabular"
+              value={fecha}
+              onChange={(ev) => setFecha(ev.target.value)}
+            />
+            <input
+              type="time"
+              step={900}
+              className="agenda-lista-fechainput tabular"
+              value={hora}
+              onChange={(ev) => setHora(ev.target.value)}
+            />
+            <button
+              type="button"
+              className="boton-mini al-final"
+              disabled={!cambio}
+              title={cambio ? 'Mover la reunión y avisar' : 'Cambiá la fecha o la hora para poder mover'}
+              onClick={async () => {
+                // D10: el evento se actualiza, no se crea uno nuevo. El aviso
+                // es el que confirma que Calendar quedó al día (§8.3).
+                onAviso(`${hora} · Calendar actualizado`);
+                await onMover(e.id, fecha, hora);
+              }}
+            >
+              Guardar y notificar
+            </button>
+          </div>
+          {avisoFoto && <span className="agenda-hover-aviso">{avisoFoto}</span>}
+
+          {/* §9.7: «preferir deshabilitado con motivo antes que oculto». Un
+              link que desaparece deja pensando si el lead no tiene LinkedIn o
+              si la pantalla se rompió. */}
           <div className="agenda-hover-links">
-            {e.slug && (
-              <a href={`https://www.linkedin.com/in/${e.slug}`} target="_blank" rel="noreferrer" className="boton-mini">
+            {e.slug ? (
+              <a
+                href={`https://www.linkedin.com/in/${e.slug}`}
+                target="_blank"
+                rel="noreferrer"
+                className="boton-mini"
+              >
                 LinkedIn
               </a>
+            ) : (
+              <span className="boton-mini boton-mini-off" title="Sin perfil de LinkedIn cargado">
+                LinkedIn
+              </span>
             )}
-            {e.telefono && (
-              <a href={`https://wa.me/${e.telefono.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="boton-mini">
+            {e.telefono ? (
+              <a
+                href={`https://wa.me/${e.telefono.replace(/\D/g, '')}`}
+                target="_blank"
+                rel="noreferrer"
+                className="boton-mini"
+              >
                 WhatsApp
               </a>
+            ) : (
+              <span className="boton-mini boton-mini-off" title="Sin teléfono cargado">
+                WhatsApp
+              </span>
             )}
           </div>
           <span className="campo-ayuda">Arrastrá el evento para moverlo. Clic abre la ficha.</span>

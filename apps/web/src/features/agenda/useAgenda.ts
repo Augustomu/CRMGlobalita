@@ -21,6 +21,17 @@ export interface EventoAgenda {
   cuenta: string;
   telefono: string;
   slug: string;
+  /** §7.6: la tarjeta del evento muestra la ciudad y deja pegar la foto. */
+  ciudad: string;
+  perfil: string;
+  foto: string;
+  /**
+   * Si la agendó el CRM o vino del calendario.
+   *
+   * No es lo mismo: la del CRM se puede reagendar y avisar desde acá; la de
+   * Google es un bloque que alguien puso en otro lado.
+   */
+  delCrm: boolean;
   /** De quién es la reunión. Vacío = sin asignar. */
   duenio: string;
   /**
@@ -55,7 +66,16 @@ interface ReunionCruda {
       id: string;
       asignado?: string;
       expand?: {
-        perfil?: { nombre?: string; empresa?: string; cargo?: string; telefono?: string; slug?: string };
+        perfil?: {
+          id?: string;
+          nombre?: string;
+          empresa?: string;
+          cargo?: string;
+          telefono?: string;
+          slug?: string;
+          ciudad?: string;
+          foto?: string;
+        };
         cuenta?: { abrev?: string };
         asignado?: { name?: string };
       };
@@ -149,6 +169,12 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
           cuenta: r.expand?.lead?.expand?.cuenta?.abrev ?? '',
           telefono: p?.telefono ?? '',
           slug: p?.slug ?? '',
+          ciudad: p?.ciudad ?? '',
+          perfil: p?.id ?? '',
+          foto: p?.foto ? pb.files.getURL(p as never, p.foto, { thumb: '96x96' }) : '',
+          // Sin `google_event_id` la reunión no llegó a escribirse en el
+          // calendario todavía; con él, salió de acá.
+          delCrm: true,
           duenio: r.expand?.lead?.expand?.asignado?.name ?? '',
         };
       });
@@ -186,6 +212,10 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
               cuenta: '',
               telefono: '',
               slug: '',
+              ciudad: '',
+              perfil: '',
+              foto: '',
+              delCrm: false,
               duenio: '',
               ajeno: true,
             };

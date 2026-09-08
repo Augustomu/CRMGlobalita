@@ -5244,3 +5244,53 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   background: var(--muted);
   opacity: .5;
 }
+
+/* La tarjeta del evento de la agenda (§7.6). */
+.agenda-hover-cabeza { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.agenda-hover-quien { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.agenda-hover-cabeza .agenda-lista-foto { width: 30px; height: 30px; font-size: var(--txt-sm); }
+textarea.agenda-hover-notas {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 5px 7px;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--txt-sm);
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+}
+textarea.agenda-hover-notas:focus { border-color: var(--accent); }
+.agenda-hover-mover { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.agenda-hover-mover input { border-color: var(--border); background: var(--surface); }
+/* §8.3: la interfaz confirma con «Calendar actualizado». */
+.agenda-hover-aviso { font-size: var(--txt-xs); color: var(--success); font-weight: 600; }
+
+/* §9.7: apagado con el motivo en el title, no oculto. */
+.boton-mini-off { opacity: .45; cursor: help; }
+
+/* §8.3: la confirmación de que Calendar quedó al día. Flota sobre la grilla y
+   se va sola a los 3 segundos: es un acuse, no un estado. */
+.agenda-aviso-flotante {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: var(--success-light);
+  color: var(--success);
+  border: .5px solid var(--success);
+  font-size: var(--txt-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  animation: om-abrir 160ms ease-out;
+}
+.agenda-aviso-flotante svg { width: 9px; height: 9px; }
