@@ -431,6 +431,7 @@ export function App() {
                 catalogoEtiquetas={catalogoEtiquetas}
                 usuario={auth.usuario}
                 onGuardado={recargar}
+                leads={leads}
                 onEtiquetasCambiadas={recargarEtiquetas}
                 onSucio={setSucio}
                 nonceGuardar={nonceGuardar}

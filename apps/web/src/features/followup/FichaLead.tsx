@@ -69,11 +69,16 @@ interface Props {
   onSucio?: (sucio: boolean) => void;
   /** Se incrementa cuando el aviso pide «Guardar y salir». */
   nonceGuardar?: number;
+  /**
+   * Todos los leads. El calendario de próximo contacto los usa para saber
+   * cuántos caen cada día: la carga es del equipo, no de este lead.
+   */
+  leads?: LeadRecord[];
 }
 
 export function FichaLead({
   lead, plantillas, catalogoEtiquetas, usuario, onGuardado, onEtiquetasCambiadas,
-  onSucio, nonceGuardar,
+  onSucio, nonceGuardar, leads = [],
 }: Props) {
   // Dos ejes independientes: si puede editar ESTE lead, y qué campos ve.
   const editable = puedeEditar(usuario, lead);
@@ -532,6 +537,7 @@ export function FichaLead({
           lead={lead}
           usuario={usuario}
           editable={editable}
+          leads={leads}
           proximoContacto={valores.proximo_contacto}
           onProximoContacto={(f: string) => aplicar({ proximo_contacto: f }, 'Próximo contacto')}
           refProximo={refProximo}

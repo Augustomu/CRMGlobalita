@@ -3,6 +3,7 @@ import {
   DURACION_DEFECTO, descripcionEvento, enSuZona, finDe, tituloEvento,
   type EstadoReunion,
 } from '@crm/core/reunion';
+import { cargaPorDia, estadoDelDia, fechaConCupo } from '@crm/core/carga';
 import { pb } from '../../lib/pocketbase';
 import type { LeadRecord, ReunionRecord, UsuarioRecord } from '../../lib/types';
 
@@ -16,6 +17,15 @@ const MESES = [
 ];
 
 const DURACIONES = [15, 30, 45, 60];
+
+/**
+ * Cuantos leads entran en un dia de trabajo.
+ *
+ * Deberia salir de la coleccion `configuracion`, como la cadencia y los cupos
+ * (regla 2 del CLAUDE.md). Queda como constante hasta que exista la pantalla
+ * que la edita, y con este comentario para que no se pierda.
+ */
+const TOPE_DIARIO = 40;
 
 /** La franja en que se agenda. Fuera de eso no se ofrece un horario. */
 const HORA_DESDE = 8;
@@ -61,6 +71,8 @@ interface Props {
   /** Vive en el lead, pero se edita acá: es la misma decisión que la reunión. */
   proximoContacto: string;
   onProximoContacto: (fecha: string) => void;
+  /** Todos los leads, para saber cuantos caen cada dia. */
+  leads?: { proximo_contacto?: string | null }[];
   refProximo?: RefObject<HTMLButtonElement>;
   onCambio: () => void;
 }
@@ -78,6 +90,7 @@ interface Props {
  */
 export function FechaReunion({
   lead, usuario, editable, proximoContacto, onProximoContacto, refProximo, onCambio,
+  leads = [],
 }: Props) {
   const [reuniones, setReuniones] = useState<ReunionRecord[]>([]);
   const [ocupadas, setOcupadas] = useState<ReunionRecord[]>([]);
@@ -154,6 +167,12 @@ export function FechaReunion({
 
   const hoy = hoyIso();
   const celdas = celdasDelMes(cal.anio, cal.mes);
+
+  /**
+   * Cuántos leads caen cada día. Pinta el calendario de próximo contacto y
+   * corre los atajos cuando el día elegido ya está lleno.
+   */
+  const carga = useMemo(() => cargaPorDia(leads), [leads]);
 
   const horas = useMemo(() => {
     const tomadas = new Set(dia ? (agenda.get(dia) ?? []) : []);
@@ -393,6 +412,7 @@ export function FechaReunion({
               <div className="popover popover-anclado reunion-prox-panel">
                 <div className="reunion-prox-cabecera">
                   <span className="colapsable-titulo">Próximo contacto</span>
+                  <span className="campo-ayuda">tope {TOPE_DIARIO} leads por día</span>
                   <button
                     type="button"
                     className="boton-icono-22"
@@ -424,14 +444,20 @@ export function FechaReunion({
                           {DOWS.map((d) => (
                             <span key={d} className="reunion-dow">{d}</span>
                           ))}
-                          {celdasDelMes(m.anio, m.mes).map((iso, i) =>
-                            iso === null ? (
-                              <span key={`v${i}`} className="reunion-dia-vacio" />
-                            ) : (
+                          {celdasDelMes(m.anio, m.mes).map((iso, i) => {
+                            if (iso === null) {
+                              return <span key={`v${i}`} className="reunion-dia-vacio" />;
+                            }
+                            // El día se pinta por CARGA, no por disponibilidad:
+                            // acá no se agenda una reunión, se reparte trabajo.
+                            const cuantos = carga[iso] ?? 0;
+                            const estado = estadoDelDia(cuantos, TOPE_DIARIO);
+                            return (
                               <button
                                 key={iso}
                                 type="button"
-                                className={`reunion-dia ${iso === proximoContacto ? 'reunion-dia-on' : ''} ${iso < hoy ? 'reunion-dia-pasado' : ''}`}
+                                className={`reunion-dia reunion-dia-${estado} ${iso === proximoContacto ? 'reunion-dia-on' : ''} ${iso < hoy ? 'reunion-dia-pasado' : ''}`}
+                                title={`${cuantos} de ${TOPE_DIARIO} leads ese día`}
                                 onClick={() => {
                                   onProximoContacto(iso);
                                   setProxAbierto(false);
@@ -439,10 +465,45 @@ export function FechaReunion({
                               >
                                 {Number(iso.slice(8, 10))}
                               </button>
-                            ),
-                          )}
+                            );
+                          })}
                         </div>
                       </div>
+                    );
+                  })}
+                </div>
+
+                {/* Los cuatro atajos de 1 a 4 semanas. Muestran la fecha que
+                    queda y, si el día ideal estaba lleno, cuántos días se
+                    corrió: sin eso el atajo pondría una fecha distinta de la
+                    que dice su etiqueta y nadie se enteraría. */}
+                <div className="reunion-atajos">
+                  {([['A', 1], ['S', 2], ['D', 3], ['F', 4]] as const).map(([tecla, semanas]) => {
+                    const r = fechaConCupo(hoy, semanas, carga, TOPE_DIARIO);
+                    return (
+                      <button
+                        key={tecla}
+                        type="button"
+                        className="reunion-atajo"
+                        title={
+                          r.sinLugar
+                            ? 'No hay ningún día con lugar en las próximas dos semanas'
+                            : r.corrimiento
+                              ? `El día original estaba lleno: corre ${r.corrimiento} días`
+                              : 'Libre'
+                        }
+                        onClick={() => {
+                          onProximoContacto(r.fecha);
+                          setProxAbierto(false);
+                        }}
+                      >
+                        <span className="reunion-atajo-tecla">{tecla}</span>
+                        <span>{semanas === 1 ? '1 semana' : `${semanas} semanas`}</span>
+                        <span className="reunion-atajo-fecha tabular">
+                          {ddmm(r.fecha)}
+                          {r.corrimiento ? ` +${r.corrimiento}d` : ''}
+                        </span>
+                      </button>
                     );
                   })}
                 </div>

@@ -35,7 +35,14 @@ migrate(
 
     const DIA = 86400000;
     const HOY_PROTOTIPO = '2026-09-04';
-    const HOY = new Date().toISOString().slice(0, 10);
+    // Hoy en la zona del SERVIDOR, no en UTC.
+    //
+    // Con toISOString() a las 18:00 en Mexico ya es el dia siguiente, y los datos
+    // de demo quedan corridos un dia respecto de lo que la pantalla considera hoy:
+    // el pico de carga caia en +8 cuando el atajo de "1 semana" apuntaba a +7, y
+    // asi el corrimiento no se veia nunca.
+    const ahora = new Date();
+    const HOY = ahora.getFullYear() + '-' + String(ahora.getMonth() + 1).padStart(2, '0') + '-' + String(ahora.getDate()).padStart(2, '0');
     const CORRIMIENTO = Math.round((Date.parse(HOY) - Date.parse(HOY_PROTOTIPO)) / DIA);
 
     /**
