@@ -88,7 +88,7 @@ export function App() {
     if (!sucio) return accion();
     setPendiente({ correr: accion });
   }
-  const plantillas = usePlantillas(usuarioDeFollowup);
+  const { plantillas, recargar: recargarPlantillas } = usePlantillas(usuarioDeFollowup);
   const { etiquetas: catalogoEtiquetas, recargar: recargarEtiquetas } = useEtiquetas(usuarioDeFollowup);
   // Se carga sin abrir nada, para el contador del header, pero solo para quien
   // puede resolverlos.
@@ -507,6 +507,7 @@ export function App() {
               <FichaLead
                 lead={lead}
                 plantillas={plantillas}
+                onPlantillasCambiadas={recargarPlantillas}
                 catalogoEtiquetas={catalogoEtiquetas}
                 usuario={auth.usuario}
                 onGuardado={recargar}
@@ -537,7 +538,13 @@ export function App() {
       </main>
 
       {repoAbierto && (
-        <Repositorio onCerrar={() => setRepoAbierto(false)} onCambio={recargar} />
+        <Repositorio
+          onCerrar={() => setRepoAbierto(false)}
+          onCambio={() => {
+            recargar();
+            recargarPlantillas();
+          }}
+        />
       )}
 
       {dupAbierto && (

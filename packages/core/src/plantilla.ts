@@ -214,3 +214,41 @@ export function reordenar(
   orden.splice(j, 0, item);
   return orden.map((m, k) => ({ id: m.id, orden: k + 1 }));
 }
+
+/**
+ * Agrega una cuenta al alcance de un destacado.
+ *
+ * Si ya era «todas», se queda en «todas»: agregar una cuenta a un destacado
+ * global no lo hace más chico. Es el error que se comete al tocar la estrella
+ * desde la ficha sin mirar que ya estaba destacado en todas.
+ */
+export function conCuenta(a: Alcance, cuenta: string): Alcance {
+  const c = cuenta.trim().toUpperCase();
+  if (!c) return a;
+  if (a.tipo === 'todas') return a;
+  const cuentas = a.tipo === 'cuentas' ? a.cuentas : [];
+  return cuentas.includes(c) ? { tipo: 'cuentas', cuentas } : { tipo: 'cuentas', cuentas: [...cuentas, c] };
+}
+
+/**
+ * Saca una cuenta del alcance.
+ *
+ * Sacar la única que quedaba deja el mensaje SIN destacar, no con una lista
+ * vacía: una lista vacía y «ninguno» se ven igual en la pantalla, pero se
+ * guardan distinto, y después el filtro por alcance no coincide con nada.
+ *
+ * Sobre «todas»: se convierte en la lista de las demás. Quitar el chip de una
+ * cuenta no puede apagarlo para el resto del equipo sin avisar — quien lo
+ * quiera apagar para todos lo hace desde el Repositorio, que es donde se ve el
+ * alcance completo.
+ */
+export function sinCuenta(a: Alcance, cuenta: string, todasLasCuentas: string[] = []): Alcance {
+  const c = cuenta.trim().toUpperCase();
+  if (!c || a.tipo === 'ninguno') return a;
+  if (a.tipo === 'todas') {
+    const resto = todasLasCuentas.map((x) => x.trim().toUpperCase()).filter((x) => x && x !== c);
+    return resto.length ? { tipo: 'cuentas', cuentas: resto } : SIN_ALCANCE;
+  }
+  const cuentas = a.cuentas.filter((x) => x !== c);
+  return cuentas.length ? { tipo: 'cuentas', cuentas } : SIN_ALCANCE;
+}

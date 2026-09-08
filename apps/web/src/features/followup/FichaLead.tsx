@@ -65,6 +65,8 @@ interface Props {
   onGuardado: () => void;
   /** Aplicar una etiqueta cambia su fecha de uso: hay que releer el catálogo. */
   onEtiquetasCambiadas?: () => void;
+  /** Destacar o guardar un mensaje cambia el repositorio: hay que releerlo. */
+  onPlantillasCambiadas?: () => void;
   /**
    * §9.3: el estado sucio vive acá, pero quien frena la navegación es App.
    * Por eso se reporta hacia arriba en vez de resolverlo adentro de la ficha.
@@ -81,6 +83,7 @@ interface Props {
 
 export function FichaLead({
   lead, plantillas, catalogoEtiquetas, usuario, onGuardado, onEtiquetasCambiadas,
+  onPlantillasCambiadas,
   onSucio, nonceGuardar, leads = [],
 }: Props) {
   // Dos ejes independientes: si puede editar ESTE lead, y qué campos ve.
@@ -602,6 +605,7 @@ export function FichaLead({
             plantillas={plantillas}
             envios={envios}
             nonceEnviar={nonceEnviar}
+            onPlantillasCambiadas={onPlantillasCambiadas}
             onRegistrado={(prop) => {
               setPropuesta(prop);
               onGuardado();

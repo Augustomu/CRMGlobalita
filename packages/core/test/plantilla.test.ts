@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   SIN_ALCANCE,
+  conCuenta,
+  sinCuenta,
   escribirAlcance,
   estaDestacadaPara,
   leerAlcance,
@@ -153,4 +155,40 @@ test('reordenar renumera TODOS, no solo el par que se cruza', () => {
   // Soltar sobre si mismo no toca nada.
   assert.deepEqual(reordenar(lista, 'a', 'a'), []);
   assert.deepEqual(reordenar(lista, 'a', 'z'), []);
+});
+
+test('agregar una cuenta a un destacado que ya es «todas» no lo achica', () => {
+  // Es el error de tocar la estrella desde la ficha sin ver que ya estaba
+  // destacado en todas: lo dejaria destacado en una sola.
+  assert.deepEqual(conCuenta({ tipo: 'todas' }, 'AL'), { tipo: 'todas' });
+  assert.deepEqual(conCuenta(SIN_ALCANCE, 'AL'), { tipo: 'cuentas', cuentas: ['AL'] });
+  assert.deepEqual(conCuenta({ tipo: 'cuentas', cuentas: ['AL'] }, 'dl'), {
+    tipo: 'cuentas',
+    cuentas: ['AL', 'DL'],
+  });
+  // Agregar la que ya estaba no la duplica.
+  assert.deepEqual(conCuenta({ tipo: 'cuentas', cuentas: ['AL'] }, 'AL'), {
+    tipo: 'cuentas',
+    cuentas: ['AL'],
+  });
+});
+
+test('sacar la ultima cuenta deja SIN destacar, no con una lista vacia', () => {
+  // Una lista vacia y "ninguno" se ven igual en pantalla y se guardan distinto:
+  // despues el filtro por alcance no coincide con nada.
+  assert.deepEqual(sinCuenta({ tipo: 'cuentas', cuentas: ['AL'] }, 'AL'), SIN_ALCANCE);
+  assert.deepEqual(sinCuenta({ tipo: 'cuentas', cuentas: ['AL', 'DL'] }, 'AL'), {
+    tipo: 'cuentas',
+    cuentas: ['DL'],
+  });
+});
+
+test('sacar una cuenta de un destacado «todas» no lo apaga para el resto', () => {
+  // Quitar el chip de tu cuenta no puede dejar sin chip a todo el equipo.
+  assert.deepEqual(sinCuenta({ tipo: 'todas' }, 'AL', ['AL', 'DL', 'ED']), {
+    tipo: 'cuentas',
+    cuentas: ['DL', 'ED'],
+  });
+  // Salvo que no haya otras cuentas: ahi si queda sin destacar.
+  assert.deepEqual(sinCuenta({ tipo: 'todas' }, 'AL', ['AL']), SIN_ALCANCE);
 });

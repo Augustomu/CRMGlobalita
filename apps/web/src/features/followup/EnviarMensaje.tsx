@@ -3,6 +3,12 @@ import { CADENCIA_POR_DEFECTO, canalDe, siguientePaso } from '@crm/core/cadencia
 import { planDeEnvio } from '@crm/core/envio';
 import { idiomaEfectivo } from '@crm/core/idioma';
 import {
+  conCuenta,
+  escribirAlcance,
+  leerAlcance,
+  nombreDeAlcance,
+  reordenar,
+  sinCuenta,
   estaDestacadaPara, plantillasDe, resolverParaPaso, type Plantilla } from '@crm/core/plantilla';
 import type { Canal, Idioma, Paso } from '@crm/core/tipos';
 import { pb } from '../../lib/pocketbase';
@@ -42,6 +48,8 @@ interface Props {
   /** Se incrementa con el atajo S para disparar el registro (SS9.1). */
   nonceEnviar: number;
   onRegistrado: (propuesta: Propuesta | null) => void;
+  /** Se llama cuando cambia el repositorio: destacar, o guardar un texto. */
+  onPlantillasCambiadas?: () => void;
 }
 
 /**
@@ -49,7 +57,9 @@ interface Props {
  * arma el texto, te lleva al chat real, y después registra que lo mandaste.
  * No envía nada por su cuenta — eso llega con el worker, en la Etapa 5.
  */
-export function EnviarMensaje({ lead, plantillas, envios, nonceEnviar, onRegistrado }: Props) {
+export function EnviarMensaje({
+  lead, plantillas, envios, nonceEnviar, onRegistrado, onPlantillasCambiadas,
+}: Props) {
   const perfil = lead.expand?.perfil;
   const cfg = CADENCIA_POR_DEFECTO;
 
@@ -64,6 +74,16 @@ export function EnviarMensaje({ lead, plantillas, envios, nonceEnviar, onRegistr
   const [tocado, setTocado] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** El modal «Destacar mensajes». */
+  const [listaAbierta, setListaAbierta] = useState(false);
+  const [marcados, setMarcados] = useState<Set<string>>(new Set());
+  /** Qué chip se está arrastrando, para reordenar. */
+  const [arrastrando, setArrastrando] = useState<string | null>(null);
+  /** Después de guardar un texto: qué quedó guardado, para ofrecer los pasos. */
+  const [guardado, setGuardado] = useState<{ id: string; nombre: string } | null>(null);
+  const [idiomaExtra, setIdiomaExtra] = useState<Idioma | null>(null);
+  const [textoExtra, setTextoExtra] = useState('');
+  const [abrevs, setAbrevs] = useState<string[]>([]);
 
   const catalogo = useMemo(() => plantillas.map(aPlantilla), [plantillas]);
   const delPaso = useMemo(() => plantillasDe(catalogo, paso), [catalogo, paso]);
@@ -74,9 +94,64 @@ export function EnviarMensaje({ lead, plantillas, envios, nonceEnviar, onRegistr
    * Se filtran por alcance, no se muestran todos: un destacado de otra cuenta
    * en esta pantalla es un texto que no corresponde a esta conversación.
    */
-  const destacados = plantillas.filter((p) =>
-    estaDestacadaPara(p.destacado, lead.expand?.cuenta?.abrev ?? ''),
+  const cuenta = lead.expand?.cuenta?.abrev ?? '';
+  const destacados = useMemo(
+    () =>
+      plantillas
+        .filter((p) => estaDestacadaPara(p.destacado, cuenta))
+        // El orden es el del repositorio: el mismo que se arrastra acá y allá,
+        // así no hay dos ordenamientos distintos del mismo puñado de mensajes.
+        .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0)),
+    [plantillas, cuenta],
   );
+
+  // Las abreviaturas hacen falta para una sola cosa: sacar el chip de un
+  // destacado que era «todas las cuentas» sin apagárselo al resto del equipo.
+  useEffect(() => {
+    let vivo = true;
+    pb.collection('cuenta')
+      .getFullList<{ abrev: string }>({ fields: 'abrev', sort: 'slot' })
+      .then((cs) => vivo && setAbrevs(cs.map((c) => c.abrev)))
+      .catch(() => vivo && setAbrevs([]));
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  /** Cambia el alcance de un mensaje y refresca. */
+  async function guardarAlcance(id: string, alcance: ReturnType<typeof leerAlcance>) {
+    await pb.collection('plantilla').update(id, { destacado: escribirAlcance(alcance) });
+    onPlantillasCambiadas?.();
+  }
+
+  /** Guarda el texto escrito como mensaje nuevo del repositorio. */
+  async function guardarComoMensaje() {
+    const t = texto.trim();
+    if (!t) return;
+    setGuardando(true);
+    try {
+      // El nombre sale del paso, que es lo que ata la plantilla a la cadencia
+      // (D16). Se puede renombrar después desde el Repositorio.
+      const nombre = `${paso} · ${t.slice(0, 40).replace(/\s+/g, ' ').trim()}…`;
+      const orden = Math.max(0, ...plantillas.map((x) => x.orden ?? 0)) + 1;
+      const creada = await pb.collection('plantilla').create({
+        nombre,
+        paso: paso === 'agradecimiento' ? '' : paso,
+        textos: { [idioma]: t },
+        destacado: '',
+        orden,
+        por_defecto: false,
+      });
+      setGuardado({ id: creada.id, nombre });
+      setIdiomaExtra(null);
+      setTextoExtra('');
+      onPlantillasCambiadas?.();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setGuardando(false);
+    }
+  }
 
   const resuelto = useMemo(
     () =>
@@ -265,27 +340,175 @@ export function EnviarMensaje({ lead, plantillas, envios, nonceEnviar, onRegistr
         </div>
       )}
 
-      {/* §7.2: los mensajes destacados de ESTA cuenta. Reemplazan el texto de
-          un clic. El alcance importa: AL trabaja directores financieros y ED
-          maquinaria, y un chip que aparece en la cuenta equivocada se usa una
-          vez, sale mal, y después nadie usa los chips. */}
-      {destacados.length > 0 && (
-        <div className="chips">
-          <span className="campo-label">Destacados</span>
-          {destacados.map((p) => (
-            <button
+      {/* §7.2: la fila de acceso rápido. NO es un colapsable ni una lista con
+          rótulo: son chips que se tocan y reemplazan el texto.
+
+          El alcance importa: AL trabaja directores financieros y ED maquinaria,
+          y un chip que aparece en la cuenta equivocada se usa una vez, sale
+          mal, y después nadie usa los chips. */}
+      <div className="dest-fila">
+        {destacados.map((p) => {
+          const alcance = leerAlcance(p.destacado);
+          return (
+            <span
               key={p.id}
-              type="button"
-              className="chip chip-destacado"
-              title={`Reemplaza el texto con «${p.nombre}»`}
-              onClick={() => {
-                setTexto(p.textos?.[idioma] ?? p.textos?.es ?? '');
-                setTocado(true);
+              className={arrastrando === p.id ? 'dest-chip dest-chip-yendo' : 'dest-chip'}
+              draggable
+              onDragStart={() => setArrastrando(p.id)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={async (e) => {
+                e.preventDefault();
+                const cambios = reordenar(destacados, arrastrando ?? '', p.id);
+                setArrastrando(null);
+                if (!cambios.length) return;
+                for (const c of cambios) {
+                  await pb.collection('plantilla').update(c.id, { orden: c.orden });
+                }
+                onPlantillasCambiadas?.();
               }}
+              onDragEnd={() => setArrastrando(null)}
+              title={`${p.nombre} — destacado en ${nombreDeAlcance(alcance)}`}
             >
-              ★ {p.nombre}
-            </button>
-          ))}
+              <button
+                type="button"
+                className="dest-chip-usar"
+                onClick={() => {
+                  setTexto(p.textos?.[idioma] ?? p.textos?.es ?? '');
+                  setTocado(true);
+                }}
+              >
+                {p.nombre}
+              </button>
+              {/* El idioma del chip: dice qué texto va a entrar antes de tocarlo. */}
+              <span className="dest-chip-idioma">
+                {p.textos?.[idioma] ? idioma.toUpperCase() : 'ES'}
+              </span>
+              <button
+                type="button"
+                className="dest-chip-x"
+                title="Sacar el chip de esta cuenta"
+                onClick={() => void guardarAlcance(p.id, sinCuenta(alcance, cuenta, abrevs))}
+              >
+                ×
+              </button>
+            </span>
+          );
+        })}
+
+        <button
+          type="button"
+          className="dest-mas"
+          title="Elegir y destacar mensajes del repositorio"
+          onClick={() => {
+            setMarcados(new Set(destacados.map((d) => d.id)));
+            setListaAbierta(true);
+          }}
+        >
+          + destacados
+        </button>
+
+        {destacados.length > 0 && (
+          <span className="campo-ayuda">arrastrá para ordenar · clic reemplaza el mensaje</span>
+        )}
+
+        <span className="dest-idioma al-final" title="Idioma sugerido según el país del lead">
+          {idioma.toUpperCase()}
+        </span>
+      </div>
+
+      {listaAbierta && (
+        <div className="overlay-fondo" onClick={() => setListaAbierta(false)}>
+          <div className="overlay-caja dest-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="overlay-header">
+              <span className="overlay-titulo">Destacar mensajes</span>
+              <span className="campo-ayuda">para {cuenta || 'esta cuenta'}</span>
+              <button
+                type="button"
+                className="boton-icono-28 al-final"
+                onClick={() => setListaAbierta(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="overlay-cuerpo dest-modal-cuerpo">
+              <span className="campo-ayuda">
+                Marcá los que querés tener a mano. Quedan como chips arriba, y solo para{' '}
+                <b>{cuenta || 'esta cuenta'}</b>.
+              </span>
+
+              {plantillas.map((m) => {
+                const marcado = marcados.has(m.id);
+                const alcance = leerAlcance(m.destacado);
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className={marcado ? 'dest-opcion dest-opcion-on' : 'dest-opcion'}
+                    onClick={() =>
+                      setMarcados((s) => {
+                        const n = new Set(s);
+                        if (n.has(m.id)) n.delete(m.id);
+                        else n.add(m.id);
+                        return n;
+                      })
+                    }
+                  >
+                    <span className="dest-check">{marcado ? '✓' : ''}</span>
+                    <span className="dest-opcion-texto">
+                      <span className="dest-opcion-titulo">
+                        <b>{m.nombre}</b>
+                        <span className="dest-chip-idioma">
+                          {Object.keys(m.textos ?? {}).join(' ').toUpperCase() || '—'}
+                        </span>
+                        {alcance.tipo !== 'ninguno' && (
+                          <span className="campo-ayuda">en {nombreDeAlcance(alcance)}</span>
+                        )}
+                      </span>
+                      <span className="campo-ayuda dest-preview">
+                        {(m.textos?.[idioma] ?? m.textos?.es ?? '').slice(0, 90) || 'sin texto'}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+
+              {!plantillas.length && (
+                <span className="campo-ayuda">Todavía no hay mensajes en el repositorio.</span>
+              )}
+
+              <div className="dest-modal-pie">
+                <span className="campo-ayuda tabular">{marcados.size} elegidos</span>
+                <button
+                  type="button"
+                  className="boton-principal al-final"
+                  onClick={async () => {
+                    // Se guarda el DELTA, no la lista entera: tocar un mensaje
+                    // que ya estaba destacado en otra cuenta no puede sacárselo.
+                    for (const m of plantillas) {
+                      const antes = leerAlcance(m.destacado);
+                      const estaba = estaDestacadaPara(m.destacado, cuenta);
+                      const quiere = marcados.has(m.id);
+                      if (estaba === quiere) continue;
+                      const despues = quiere
+                        ? conCuenta(antes, cuenta)
+                        : sinCuenta(antes, cuenta, abrevs);
+                      await pb
+                        .collection('plantilla')
+                        .update(m.id, { destacado: escribirAlcance(despues) });
+                    }
+                    setListaAbierta(false);
+                    onPlantillasCambiadas?.();
+                  }}
+                >
+                  Guardar
+                </button>
+              </div>
+              <span className="campo-ayuda">
+                ¿Se destacó mal? Volvé a abrir esta lista y destildalo, o corregilo desde el
+                Repositorio de mensajes — los cambios se ven en los dos lados.
+              </span>
+            </div>
+          </div>
         </div>
       )}
 
@@ -307,6 +530,107 @@ export function EnviarMensaje({ lead, plantillas, envios, nonceEnviar, onRegistr
         }}
         placeholder="El texto que le vas a mandar."
       />
+
+      {/* §7.2: guardar lo escrito COMO MENSAJE del repositorio, y desde ahí
+          ofrecer los dos pasos que siguen. El texto bueno se escribe una vez,
+          en una conversación; si no se puede guardar ahí mismo, se pierde. */}
+      <div className="dest-guardar">
+        {texto.trim() ? (
+          <button
+            type="button"
+            className="boton-secundario"
+            disabled={guardando}
+            title="Guardar este texto como mensaje nuevo del repositorio"
+            onClick={() => void guardarComoMensaje()}
+          >
+            ★ Guardar en el repositorio
+          </button>
+        ) : (
+          <span className="campo-ayuda">escribí algo para poder guardarlo en el repositorio</span>
+        )}
+      </div>
+
+      {guardado && (
+        <div className="dest-guardado">
+          <span>
+            Guardado como <b>{guardado.nombre}</b> en {idioma.toUpperCase()}.
+          </span>
+
+          <div className="dest-guardado-fila">
+            <span className="campo-ayuda">¿Cargarlo en otro idioma?</span>
+            {(['es', 'pt', 'en'] as Idioma[])
+              .filter((i) => i !== idioma)
+              .map((i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className={idiomaExtra === i ? 'chip chip-on' : 'chip'}
+                  onClick={() => {
+                    setIdiomaExtra(i);
+                    setTextoExtra('');
+                  }}
+                >
+                  {i.toUpperCase()}
+                </button>
+              ))}
+          </div>
+
+          {idiomaExtra && (
+            <div className="dest-guardado-idioma">
+              <textarea
+                autoFocus
+                rows={2}
+                value={textoExtra}
+                placeholder={`Texto en ${idiomaExtra.toUpperCase()}…`}
+                onChange={(e) => setTextoExtra(e.target.value)}
+              />
+              <button
+                type="button"
+                className="boton-mini"
+                disabled={!textoExtra.trim()}
+                onClick={async () => {
+                  const actual = plantillas.find((x) => x.id === guardado.id);
+                  await pb.collection('plantilla').update(guardado.id, {
+                    textos: { ...(actual?.textos ?? {}), [idiomaExtra]: textoExtra.trim() },
+                  });
+                  setIdiomaExtra(null);
+                  setTextoExtra('');
+                  onPlantillasCambiadas?.();
+                }}
+              >
+                Guardar idioma
+              </button>
+            </div>
+          )}
+
+          <div className="dest-guardado-fila">
+            <span className="campo-ayuda">¿Destacarlo?</span>
+            <button
+              type="button"
+              className="chip"
+              onClick={async () => {
+                await guardarAlcance(guardado.id, { tipo: 'todas' });
+                setGuardado(null);
+              }}
+            >
+              Todas las cuentas
+            </button>
+            <button
+              type="button"
+              className="chip"
+              onClick={async () => {
+                await guardarAlcance(guardado.id, { tipo: 'cuentas', cuentas: [cuenta] });
+                setGuardado(null);
+              }}
+            >
+              Solo {cuenta || 'esta cuenta'}
+            </button>
+            <button type="button" className="boton-mini al-final" onClick={() => setGuardado(null)}>
+              Ahora no
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="enviar-acciones">
         {urlChat && (
