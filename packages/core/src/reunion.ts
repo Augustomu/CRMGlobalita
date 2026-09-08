@@ -341,3 +341,120 @@ export function mensajeDeHorarios(
   if (!tramos.some((q) => q.libre)) return `Sin huecos de ${duracion} min ese día`;
   return null;
 }
+
+/* ---------------------------------------------------------------------------
+ * La grilla de la agenda (§7.6)
+ * ------------------------------------------------------------------------ */
+
+/**
+ * Cuánto mide una hora de la grilla: los cuatro tramos de quince minutos.
+ *
+ * Es la medida que hace que el bloque DIGA cuánto dura. La grilla anterior
+ * tenía una celda por hora y el bloque metido adentro, así que una reunión de
+ * 12:00 a 14:00 estiraba la fila de las 12 en lugar de bajar hasta las 14: el
+ * día entero se deformaba y la duración no se leía en ningún lado.
+ */
+export const ALTO_HORA = 4 * ALTO_TRAMO;
+
+export interface Bloque {
+  /** Desde dónde arranca, en porcentaje de la columna. */
+  arriba: number;
+  /** Cuánto ocupa, en porcentaje de la columna. */
+  alto: number;
+}
+
+/**
+ * Dónde va el bloque de una reunión dentro de la columna de su día.
+ *
+ * En porcentaje y no en píxeles a propósito: la columna mide `ALTO_HORA × horas`
+ * escalado por el tamaño de letra, y en porcentaje el bloque acompaña ese
+ * escalado solo. Con píxeles fijos, agrandar la letra dejaba todos los bloques
+ * corridos de su hora.
+ *
+ * Lo que se pasa del final de la franja se recorta: una reunión de 19:30 que
+ * dura dos horas llega hasta el borde de abajo, no estira la grilla.
+ */
+export function bloqueDelEvento(
+  hora: string,
+  duracion: number,
+  desdeHora: number,
+  horas: number,
+): Bloque {
+  const total = horas * 60;
+  const inicio = Math.max(0, Math.min(total, enMinutos(hora) - desdeHora * 60));
+  const dura = Math.max(0, Math.min(duracion, total - inicio));
+  return { arriba: (inicio / total) * 100, alto: (dura / total) * 100 };
+}
+
+/**
+ * A qué cuarto de hora apunta un punto de la columna.
+ *
+ * `fraccion` va de 0 a 1 desde el borde de arriba. Se redondea hacia abajo al
+ * tramo de 15 porque el arrastre se mueve de a cuartos (§7.6): soltar en
+ * cualquier píxel daría las 11:07.
+ */
+export function horaEnLaColumna(fraccion: number, desdeHora: number, horas: number): string {
+  const total = horas * 60;
+  const crudo = Math.max(0, Math.min(total - PASO_TRAMO, fraccion * total));
+  return hhmm(desdeHora * 60 + Math.floor(crudo / PASO_TRAMO) * PASO_TRAMO);
+}
+
+export interface Franja {
+  /** Minutos desde medianoche. */
+  a: number;
+  b: number;
+}
+
+export interface EnCarril {
+  /** En cuál de los carriles va, desde 0. */
+  carril: number;
+  /** Cuántos carriles tiene el grupo, para saber cuánto ancho le toca. */
+  carriles: number;
+}
+
+/**
+ * Cómo se reparten a lo ancho los bloques que se pisan.
+ *
+ * Con los bloques posicionados por hora, dos reuniones a las 11:00 quedan una
+ * exactamente encima de la otra y la de atrás desaparece — que es peor que
+ * verlas apretadas, porque no hay ninguna señal de que falte algo.
+ *
+ * El reparto es por GRUPO de bloques encadenados, no por par: si A pisa a B y
+ * B pisa a C, los tres comparten el ancho aunque A y C no se toquen. Repartir
+ * de a pares dejaría a A y C del mismo ancho que B y superpuestos entre sí.
+ *
+ * Devuelve un resultado por bloque, en el mismo orden en que se los pasó.
+ */
+export function carriles(franjas: Franja[]): EnCarril[] {
+  const orden = franjas
+    .map((f, i) => ({ f, i }))
+    .sort((x, y) => x.f.a - y.f.a || x.f.b - y.f.b);
+  const salida: EnCarril[] = franjas.map(() => ({ carril: 0, carriles: 1 }));
+
+  // Un grupo se corta cuando aparece un bloque que empieza después de que
+  // terminaron TODOS los anteriores: ahí ya no hay nada que compartir.
+  let grupo: { i: number; carril: number }[] = [];
+  let finDelGrupo = -Infinity;
+  const cerrar = () => {
+    const ancho = grupo.reduce((n, g) => Math.max(n, g.carril + 1), 1);
+    for (const g of grupo) salida[g.i] = { carril: g.carril, carriles: ancho };
+    grupo = [];
+    finDelGrupo = -Infinity;
+  };
+
+  /** Hasta cuándo está ocupado cada carril dentro del grupo. */
+  let libres: number[] = [];
+  for (const { f, i } of orden) {
+    if (f.a >= finDelGrupo) {
+      cerrar();
+      libres = [];
+    }
+    let c = libres.findIndex((hasta) => hasta <= f.a);
+    if (c < 0) c = libres.length;
+    libres[c] = f.b;
+    grupo.push({ i, carril: c });
+    finDelGrupo = Math.max(finDelGrupo, f.b);
+  }
+  cerrar();
+  return salida;
+}

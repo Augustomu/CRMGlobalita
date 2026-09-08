@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   AVISOS_POR_DEFECTO, descripcionEvento, finDe, momentosDeAviso, primeraReunion,
-  tituloEvento, verBloque,  enSuZona,
+  tituloEvento, verBloque,  enSuZona, bloqueDelEvento, horaEnLaColumna, carriles,
 } from '../src/reunion.ts';
 
 test('el título del evento es "Lead · Cuenta · Vos", con solo el primer nombre de los dos últimos', () => {
@@ -99,4 +99,80 @@ test('D23 · sin esto la fecha se corre un día', () => {
 
 test('una zona inválida no rompe la pantalla', () => {
   assert.equal(enSuZona('2026-05-15 00:00:00.000Z', 'No/Existe').slice(0, 10), '2026-05-15');
+});
+
+/* ---------------------------------------------------------------------------
+ * La grilla de la agenda (§7.6)
+ * ------------------------------------------------------------------------ */
+
+test('§7.6 · el bloque arranca en su hora y mide lo que dura', () => {
+  // Franja de 8 a 20 inclusive: 13 horas dibujadas.
+  const b = bloqueDelEvento('11:45', 30, 8, 13);
+  assert.equal(b.arriba, ((11 * 60 + 45 - 8 * 60) / (13 * 60)) * 100);
+  assert.equal(b.alto, (30 / (13 * 60)) * 100);
+});
+
+test('§7.6 · una reunión de dos horas ocupa el doble que una de una', () => {
+  const una = bloqueDelEvento('12:00', 60, 8, 13);
+  const dos = bloqueDelEvento('12:00', 120, 8, 13);
+  assert.equal(dos.alto, una.alto * 2);
+  // Y arranca en el mismo lugar: estirar baja el borde de abajo, no mueve el de arriba.
+  assert.equal(dos.arriba, una.arriba);
+});
+
+test('§7.6 · el bloque que se pasa del final se recorta contra el borde', () => {
+  const b = bloqueDelEvento('19:30', 180, 8, 13);
+  // Con tolerancia: son divisiones, y 690/780 + 90/780 da 99.99999999999999.
+  assert.ok(Math.abs(b.arriba + b.alto - 100) < 1e-9);
+});
+
+test('§7.6 · el bloque anterior a la franja no se dibuja arriba de la grilla', () => {
+  const b = bloqueDelEvento('06:00', 60, 8, 13);
+  assert.equal(b.arriba, 0);
+});
+
+test('§7.6 · soltar en cualquier punto cae en el cuarto de hora de arriba', () => {
+  // La mitad justa de una franja de 13 horas desde las 8 son las 14:30.
+  assert.equal(horaEnLaColumna(0.5, 8, 13), '14:30');
+  assert.equal(horaEnLaColumna(0, 8, 13), '08:00');
+  // Un pelo antes de las 12: sigue siendo 11:45, no se redondea para arriba.
+  assert.equal(horaEnLaColumna((11 * 60 + 59 - 8 * 60) / (13 * 60), 8, 13), '11:45');
+});
+
+test('§7.6 · soltar al ras del borde de abajo no cae fuera de la franja', () => {
+  assert.equal(horaEnLaColumna(1, 8, 13), '20:45');
+  assert.equal(horaEnLaColumna(1.4, 8, 13), '20:45');
+});
+
+test('§7.6 · dos reuniones a la misma hora se reparten el ancho', () => {
+  const r = carriles([{ a: 660, b: 720 }, { a: 660, b: 720 }]);
+  assert.deepEqual(r, [{ carril: 0, carriles: 2 }, { carril: 1, carriles: 2 }]);
+});
+
+test('§7.6 · dos reuniones que no se tocan usan cada una todo el ancho', () => {
+  const r = carriles([{ a: 660, b: 720 }, { a: 720, b: 780 }]);
+  assert.deepEqual(r, [{ carril: 0, carriles: 1 }, { carril: 0, carriles: 1 }]);
+});
+
+test('§7.6 · si A pisa a B y B pisa a C, los tres achican el ancho', () => {
+  // A 11:00-12:00, B 11:30-12:30, C 12:00-13:00. A y C no se tocan y por eso
+  // comparten carril, pero los tres tienen que quedar a media anchura: si a A
+  // y C se les calculara el ancho de a pares les tocaría la columna entera y
+  // taparían a B.
+  const r = carriles([{ a: 660, b: 720 }, { a: 690, b: 750 }, { a: 720, b: 780 }]);
+  assert.deepEqual(r, [
+    { carril: 0, carriles: 2 },
+    { carril: 1, carriles: 2 },
+    { carril: 0, carriles: 2 },
+  ]);
+});
+
+test('§7.6 · el reparto vuelve en el orden en que se pasaron los bloques', () => {
+  // Desordenados a propósito: el que va segundo empieza antes.
+  const r = carriles([{ a: 720, b: 780 }, { a: 660, b: 700 }]);
+  assert.deepEqual(r, [{ carril: 0, carriles: 1 }, { carril: 0, carriles: 1 }]);
+});
+
+test('§7.6 · sin bloques no hay reparto', () => {
+  assert.deepEqual(carriles([]), []);
 });

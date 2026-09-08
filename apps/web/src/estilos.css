@@ -2583,9 +2583,14 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
    días que sí se usan. */
 .agenda-semana { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
 .agenda-fila-cabeza,
-.agenda-fila {
+.agenda-cuerpo {
   display: grid;
   grid-template-columns: calc(44px * var(--escala-texto)) repeat(6, minmax(0, 1fr));
+}
+/* La vista diaria es la misma grilla con una sola columna. */
+.agenda-fila-cabeza.agenda-un-dia,
+.agenda-cuerpo.agenda-un-dia {
+  grid-template-columns: calc(44px * var(--escala-texto)) minmax(0, 1fr);
 }
 .agenda-fila-cabeza {
   position: sticky;
@@ -2615,32 +2620,93 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   padding: 2px 6px 0 0;
   flex-shrink: 0;
 }
-.agenda-celda {
-  min-height: calc(34px * var(--escala-texto));
+/* La regla de horas: cada etiqueta mide una hora y se apoya en su línea. */
+.agenda-regla { display: flex; flex-direction: column; }
+.agenda-regla .agenda-hora-col { height: var(--alto-hora); line-height: 1; }
+
+/*
+ * La columna del día.
+ *
+ * Mide las horas de la franja y nada más; los eventos van posicionados encima.
+ * Antes había una celda por hora con el bloque adentro, y entonces el bloque
+ * no podía pasar de su hora: una reunión de 12:00 a 14:00 estiraba la fila de
+ * las 12 y deformaba el día entero en lugar de bajar hasta las 14.
+ *
+ * Las líneas son fondo, no bordes de elementos: dibujarlas con divs sería
+ * trece elementos por columna que no hacen nada más que estar ahí.
+ */
+.agenda-col {
+  position: relative;
+  height: calc(var(--alto-hora) * var(--horas));
   border-left: .5px solid var(--border);
-  border-top: .5px solid var(--border);
-  padding: 1px;
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      var(--border) 0 .5px,
+      transparent .5px var(--alto-hora)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      var(--bg) 0 .5px,
+      transparent .5px calc(var(--alto-hora) / 2)
+    );
 }
-.agenda-celda-hoy { background: var(--info-light); }
-.agenda-celda-finde { background: var(--bg); }
-/* Se pintan TODOS los cuadros que abarca la duración, no solo el de destino:
-   así se ve cuánto ocupa el evento antes de soltarlo. */
-.agenda-celda-destino { background: var(--accent-br); }
+.agenda-col-hoy { background: var(--info-light); }
+.agenda-col-finde { background: var(--bg); }
+
+/* El hueco que ocuparía la reunión al soltarla: del alto exacto que va a
+   tener, que es lo que uno necesita ver antes de soltar. */
+.agenda-hueco {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-radius: 6px;
+  background: var(--accent-br);
+  pointer-events: none;
+}
+
+/* El lugar del evento en la columna: la hora manda el borde de arriba, la
+   duración el alto, y el carril el ancho cuando dos se pisan. */
+.agenda-bloque {
+  position: absolute;
+  padding-right: 2px;
+  z-index: 1;
+}
+.agenda-bloque-abierto { z-index: 40; }
 
 .agenda-evento {
-  position: relative;
+  position: absolute;
+  inset: 0 2px 1px 0;
   display: flex;
   flex-direction: column;
   gap: 1px;
-  padding: 2px 5px;
+  padding: 1px 5px;
   border-radius: 6px;
   border-left: 2px solid var(--accent);
   background: var(--accent-light);
   cursor: grab;
-  overflow: visible;
+  overflow: hidden;
 }
+/*
+ * Un bloque de quince minutos no tiene alto para dos líneas, así que ahí la
+ * hora y el nombre van en la misma. Se mide el bloque, no la ventana: el alto
+ * depende de la duración de la reunión, no del tamaño de la pantalla.
+ */
+.agenda-bloque { container-type: size; }
+@container (max-height: 30px) {
+  .agenda-evento { flex-direction: row; align-items: baseline; gap: 4px; }
+  .agenda-evento-dura { display: none; }
+}
+.agenda-evento-dura { color: var(--hint); font-weight: 500; }
 .agenda-evento:active { cursor: grabbing; }
-.agenda-evento-hora { font-size: var(--txt-xs); color: var(--accent); font-weight: 600; }
+/* Sin cortar: en una columna angosta con tres reuniones encimadas, «11:45 ·
+   105 min» se partía en tres renglones y no quedaba lugar para el nombre. */
+.agenda-evento-hora {
+  font-size: var(--txt-xs);
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
 .agenda-evento-nombre {
   font-size: var(--txt-sm);
   color: var(--text);
@@ -2685,17 +2751,6 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   padding: 6px 8px;
 }
 .agenda-hover-links { display: flex; gap: 6px; }
-
-/* Diaria: la misma grilla en filas de 15 minutos. */
-.agenda-dia { flex: 1; min-height: 0; overflow-y: auto; }
-.agenda-slot {
-  display: grid;
-  grid-template-columns: calc(44px * var(--escala-texto)) minmax(0, 1fr);
-  min-height: calc(18px * var(--escala-texto));
-  border-top: .5px dashed var(--border);
-}
-.agenda-slot-hora { border-top: .5px solid var(--border); }
-.agenda-slot-cuerpo { padding: 1px 4px; }
 
 /* Lista: una fila por lead con seguimiento. */
 .agenda-lista { flex: 1; min-height: 0; overflow-y: auto; }
@@ -4892,7 +4947,6 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
  * La manija asoma 4px por debajo del bloque: adentro taparía el nombre, que en
  * un bloque de 15 minutos es toda la altura que hay.
  */
-.agenda-evento { position: relative; overflow: hidden; }
 .agenda-estirar {
   position: absolute;
   left: 0;
@@ -4912,7 +4966,7 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   background: transparent;
   transition: background 150ms ease-out;
 }
-.agenda-evento:hover .agenda-estirar-linea { background: var(--border); }
+.agenda-bloque:hover .agenda-estirar-linea { background: var(--accent); }
 .agenda-estirar:hover .agenda-estirar-linea { background: var(--accent); }
 
 .agenda-cuentas button { padding: 0 7px; }

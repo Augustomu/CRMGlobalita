@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { nombreDePersona } from '@crm/core/linkedin';
 import { enSuZona } from '@crm/core/reunion';
 import { pb } from '../../lib/pocketbase';
 import type { LeadRecord, UsuarioRecord } from '../../lib/types';
@@ -163,7 +164,10 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
           duracion: r.duracion_min || 30,
           estado: r.estado || 'pendiente',
           notas: r.notas ?? '',
-          nombre: p?.nombre ?? '',
+          // Sólo el nombre de la persona: el titular de LinkedIn trae el cargo
+          // pegado y en un bloque de agenda tapa todo lo demás. El cargo se
+          // muestra aparte, en la tarjeta.
+          nombre: nombreDePersona(p?.nombre ?? ''),
           empresa: p?.empresa ?? '',
           cargo: p?.cargo ?? '',
           cuenta: r.expand?.lead?.expand?.cuenta?.abrev ?? '',

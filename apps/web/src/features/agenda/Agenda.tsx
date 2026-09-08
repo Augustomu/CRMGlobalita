@@ -3,7 +3,9 @@ import { pb } from '../../lib/pocketbase';
 import { PANEL_AGENDA } from '@crm/core/anchos';
 import { diaLocal } from '@crm/core/fecha';
 import { useAncho } from '../../lib/useAncho';
-import { duracionAlEstirar, enMinutos, hhmm } from '@crm/core/reunion';
+import {
+  ALTO_HORA, bloqueDelEvento, carriles, duracionAlEstirar, enMinutos, horaEnLaColumna,
+} from '@crm/core/reunion';
 import type { UsuarioRecord, LeadRecord } from '../../lib/types';
 import { leadsConSeguimiento, useAgenda, type EventoAgenda } from './useAgenda';
 
@@ -13,9 +15,8 @@ import { leadsConSeguimiento, useAgenda, type EventoAgenda } from './useAgenda';
  */
 const HORA_DESDE = 8;
 const HORA_HASTA = 20;
-
-/** El arrastre se mueve de a quince minutos, no libre (§7.6). */
-const PASO = 15;
+/** Cuántas filas de hora tiene la grilla. La última se dibuja entera. */
+const HORAS = HORA_HASTA - HORA_DESDE + 1;
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 const CORTOS = ['lu', 'ma', 'mi', 'ju', 'vi', 'sa'];
@@ -198,12 +199,15 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
         ? `${DIAS[(new Date(`${referencia}T12:00:00Z`).getUTCDay() + 6) % 7] ?? ''} ${fechaLarga(referencia)}`
         : `${visibles.length} reuniones`;
 
-  /** Dónde cae el puntero dentro de la celda, en cuartos de hora. */
-  function cuartoDe(ev: React.DragEvent, hora: number): string {
+/**
+   * Dónde cae el puntero dentro de la columna del día, en cuartos de hora.
+   *
+   * Se mide contra la columna entera y no contra una celda: en la grilla nueva
+   * no hay celdas, la columna es una sola pieza de HORAS × ALTO_HORA.
+   */
+  function cuartoDe(ev: React.DragEvent): string {
     const caja = ev.currentTarget.getBoundingClientRect();
-    const frac = caja.height ? (ev.clientY - caja.top) / caja.height : 0;
-    const q = Math.max(0, Math.min(3, Math.floor(frac * 4)));
-    return hhmm(hora * 60 + q * PASO);
+    return horaEnLaColumna(caja.height ? (ev.clientY - caja.top) / caja.height : 0, HORA_DESDE, HORAS);
   }
 
   async function soltar(fecha: string, hora: string) {
@@ -215,11 +219,15 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
     setAviso(`${hora} · Calendar actualizado`);
   }
 
-  /** Si una celda cae dentro del rango que ocuparía el evento arrastrado. */
-  function enElRango(fecha: string, desdeMin: number, hastaMin: number): boolean {
-    if (!arrastrando || !destino || destino.fecha !== fecha) return false;
-    const ini = enMinutos(destino.hora);
-    return desdeMin < ini + arrastrando.duracion && hastaMin > ini;
+/**
+   * El hueco que ocuparía el evento si se lo soltara acá.
+   *
+   * Antes se pintaban las celdas que tocaba; ahora se dibuja un solo rectángulo
+   * del alto exacto de la reunión, que es lo que se está por hacer.
+   */
+  function huecoDestino(fecha: string) {
+    if (!arrastrando || !destino || destino.fecha !== fecha) return null;
+    return bloqueDelEvento(destino.hora, arrastrando.duracion, HORA_DESDE, HORAS);
   }
 
   const filas = useMemo(() => {
@@ -355,121 +363,111 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
       {error && <div className="login-error">{error}</div>}
       {cargando && <p className="vacio">Cargando la agenda…</p>}
 
-      {/* ------------------------------------------------------- semanal */}
-      {vista === 'Semanal' && (
+      {/* ------------------------------------------------ semanal y diaria */}
+      {/*
+        La misma grilla para las dos: cambia cuántos días entran, no cómo se
+        dibujan. Tenerlas separadas costaba que la diaria no dejara estirar
+        —el `onEstirar` estaba puesto en una sola de las dos— y que cualquier
+        arreglo de la agenda hubiera que hacerlo dos veces.
+      */}
+      {(vista === 'Semanal' || vista === 'Diaria') && (
         <div className="agenda-semana">
-          <div className="agenda-fila-cabeza">
+          <div className={`agenda-fila-cabeza ${vista === 'Diaria' ? 'agenda-un-dia' : ''}`}>
             <span className="agenda-hora-col" />
-            {diasVisibles.map((iso, k) => (
+            {(vista === 'Semanal' ? diasVisibles : [referencia]).map((iso, k) => (
               <span
                 key={iso}
-                className={`agenda-cabeza ${iso === hoy ? 'agenda-cabeza-hoy' : ''} ${k === 5 ? 'agenda-cabeza-finde' : ''}`}
+                className={`agenda-cabeza ${iso === hoy ? 'agenda-cabeza-hoy' : ''} ${vista === 'Semanal' && k === 5 ? 'agenda-cabeza-finde' : ''}`}
               >
-                <span className="agenda-cabeza-dia">{CORTOS[k]}</span>
+                <span className="agenda-cabeza-dia">
+                  {vista === 'Semanal'
+                    ? CORTOS[k]
+                    : DIAS[(new Date(`${iso}T12:00:00Z`).getUTCDay() + 6) % 7]}
+                </span>
                 <span className="agenda-cabeza-n tabular">{Number(iso.slice(8, 10))}</span>
               </span>
             ))}
           </div>
 
-          <div className="agenda-grilla">
-            {Array.from({ length: HORA_HASTA - HORA_DESDE + 1 }, (_, i) => HORA_DESDE + i).map((h) => (
-              <div key={h} className="agenda-fila">
-                <span className="agenda-hora-col tabular">{String(h).padStart(2, '0')}:00</span>
-                {diasVisibles.map((iso, k) => {
-                  const delDia = (porDia.get(iso) ?? []).filter((e) => Number(e.hora.slice(0, 2)) === h);
-                  return (
-                    <div
-                      key={iso}
-                      className={`agenda-celda ${iso === hoy ? 'agenda-celda-hoy' : ''} ${k === 5 ? 'agenda-celda-finde' : ''} ${enElRango(iso, h * 60, h * 60 + 60) ? 'agenda-celda-destino' : ''}`}
-                      onDragOver={(ev) => {
-                        if (!arrastrando) return;
-                        ev.preventDefault();
-                        setDestino({ fecha: iso, hora: cuartoDe(ev, h) });
-                      }}
-                      onDrop={(ev) => {
-                        if (!arrastrando) return;
-                        ev.preventDefault();
-                        void soltar(iso, cuartoDe(ev, h));
-                      }}
-                    >
-                      {delDia.map((e) => (
-                        <Evento
-                          key={e.id}
-                          e={e}
-                          // Dentro de la celda el evento se corre según los
-                          // minutos: sin esto un movimiento a :15 o :30 no se
-                          // vería y el arrastre parecería no haber hecho nada.
-                          desplazado={(Number(e.hora.slice(3, 5)) / 60) * 100}
-                          duracion={estirando?.id === e.id ? estirando.dur : e.duracion}
-                          abierto={hover === e.id}
-                          onHover={setHover}
-                          onArrastrar={setArrastrando}
-                          onEstado={cambiarEstado}
-                          onEstirar={(x, y) => setEstirando({ id: x.id, y0: y, base: x.duracion, dur: x.duracion })}
-                          onIrAlLead={onIrAlLead}
-                          onNotas={guardarNotas}
-                          onFoto={pegarFoto}
-                          onMover={mover}
-                          onAviso={setAviso}
-                        />
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+          <div
+            className={`agenda-cuerpo ${vista === 'Diaria' ? 'agenda-un-dia' : ''}`}
+            style={
+              {
+                '--alto-hora': `calc(${ALTO_HORA}px * var(--escala-texto))`,
+                '--horas': HORAS,
+              } as React.CSSProperties
+            }
+          >
+            {/* La regla de horas. Cada etiqueta se apoya en su línea. */}
+            <div className="agenda-regla">
+              {Array.from({ length: HORAS }, (_, i) => HORA_DESDE + i).map((h) => (
+                <span key={h} className="agenda-hora-col tabular">
+                  {String(h).padStart(2, '0')}:00
+                </span>
+              ))}
+            </div>
 
-      {/* -------------------------------------------------------- diaria */}
-      {vista === 'Diaria' && (
-        <div className="agenda-dia">
-          {Array.from(
-            { length: ((HORA_HASTA - HORA_DESDE) * 60) / PASO + 1 },
-            (_, i) => HORA_DESDE * 60 + i * PASO,
-          ).map((t) => {
-            const label = hhmm(t);
-            const enPunto = t % 60 === 0;
-            const delSlot = (porDia.get(referencia) ?? []).filter((e) => e.hora === label);
-            return (
-              <div
-                key={t}
-                className={`agenda-slot ${enPunto ? 'agenda-slot-hora' : ''} ${enElRango(referencia, t, t + PASO) ? 'agenda-celda-destino' : ''}`}
-                onDragOver={(ev) => {
-                  if (!arrastrando) return;
-                  ev.preventDefault();
-                  setDestino({ fecha: referencia, hora: label });
-                }}
-                onDrop={(ev) => {
-                  if (!arrastrando) return;
-                  ev.preventDefault();
-                  void soltar(referencia, label);
-                }}
-              >
-                <span className="agenda-hora-col tabular">{enPunto ? label : ''}</span>
-                <div className="agenda-slot-cuerpo">
-                  {delSlot.map((e) => (
-                    <Evento
-                      key={e.id}
-                      e={e}
-                      desplazado={0}
-                      duracion={estirando?.id === e.id ? estirando.dur : e.duracion}
-                      abierto={hover === e.id}
-                      onHover={setHover}
-                      onArrastrar={setArrastrando}
-                      onEstado={cambiarEstado}
-                      onIrAlLead={onIrAlLead}
-                      onNotas={guardarNotas}
-                      onFoto={pegarFoto}
-                      onMover={mover}
-                      onAviso={setAviso}
+            {(vista === 'Semanal' ? diasVisibles : [referencia]).map((iso, k) => {
+              const delDia = porDia.get(iso) ?? [];
+              // Los que se pisan se reparten el ancho: uno encima de otro
+              // haría desaparecer al de atrás sin ninguna señal.
+              const reparto = carriles(
+                delDia.map((e) => ({ a: enMinutos(e.hora), b: enMinutos(e.hora) + e.duracion })),
+              );
+              const hueco = huecoDestino(iso);
+              return (
+                <div
+                  key={iso}
+                  className={`agenda-col ${iso === hoy ? 'agenda-col-hoy' : ''} ${vista === 'Semanal' && k === 5 ? 'agenda-col-finde' : ''}`}
+                  onDragOver={(ev) => {
+                    if (!arrastrando) return;
+                    ev.preventDefault();
+                    setDestino({ fecha: iso, hora: cuartoDe(ev) });
+                  }}
+                  onDrop={(ev) => {
+                    if (!arrastrando) return;
+                    ev.preventDefault();
+                    void soltar(iso, cuartoDe(ev));
+                  }}
+                >
+                  {hueco && (
+                    <div
+                      className="agenda-hueco"
+                      style={{ top: `${hueco.arriba}%`, height: `${hueco.alto}%` }}
                     />
-                  ))}
+                  )}
+                  {delDia.map((e, i) => {
+                    const dur = estirando?.id === e.id ? estirando.dur : e.duracion;
+                    const b = bloqueDelEvento(e.hora, dur, HORA_DESDE, HORAS);
+                    const c = reparto[i] ?? { carril: 0, carriles: 1 };
+                    return (
+                      <Evento
+                        key={e.id}
+                        e={e}
+                        caja={{
+                          top: `${b.arriba}%`,
+                          height: `${b.alto}%`,
+                          left: `${(c.carril / c.carriles) * 100}%`,
+                          width: `${(1 / c.carriles) * 100}%`,
+                        }}
+                        duracion={dur}
+                        abierto={hover === e.id}
+                        onHover={setHover}
+                        onArrastrar={setArrastrando}
+                        onEstado={cambiarEstado}
+                        onEstirar={(x, y) => setEstirando({ id: x.id, y0: y, base: x.duracion, dur: x.duracion })}
+                        onIrAlLead={onIrAlLead}
+                        onNotas={guardarNotas}
+                        onFoto={pegarFoto}
+                        onMover={mover}
+                        onAviso={setAviso}
+                      />
+                    );
+                  })}
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -663,7 +661,7 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
  */
 function Evento({
   e,
-  desplazado,
+  caja,
   duracion,
   abierto,
   onHover,
@@ -677,14 +675,14 @@ function Evento({
   onAviso,
 }: {
   e: EventoAgenda;
-  desplazado: number;
+  /** Dónde va dentro de la columna del día: hora, duración y carril. */
+  caja: React.CSSProperties;
   /** La de la reunión, o la que está tomando mientras se la estira. */
   duracion: number;
   abierto: boolean;
   onHover: (id: string | null) => void;
   onArrastrar: (e: EventoAgenda | null) => void;
   onEstado: (id: string, estado: string) => Promise<void>;
-  /** Falta en la vista diaria, donde el alto lo pone la fila. */
   onEstirar?: (e: EventoAgenda, y: number) => void;
   onIrAlLead: (id: string) => void;
   /** §7.6: la tarjeta edita notas, foto y la fecha/hora de la reunión. */
@@ -706,37 +704,49 @@ function Evento({
   // hover, porque no hay nada que mostrar ahí.
   if (e.ajeno) {
     return (
-      <div
-        className="agenda-evento agenda-evento-ajeno"
-        style={{ marginTop: `${desplazado}%` }}
-        title="Ocupado en ese calendario"
-      >
-        <span className="agenda-evento-hora tabular">{e.hora}</span>
-        <span className="agenda-evento-nombre">Ocupado</span>
+      <div className="agenda-bloque" style={caja}>
+        <div className="agenda-evento agenda-evento-ajeno" title="Ocupado en ese calendario">
+          <span className="agenda-evento-hora tabular">{e.hora}</span>
+          <span className="agenda-evento-nombre">Ocupado</span>
+        </div>
       </div>
     );
   }
 
   return (
+    // El envoltorio es el que ocupa el lugar en la columna. El bloque de
+    // adentro recorta su texto, y la tarjeta y la manija cuelgan de acá: si
+    // vivieran dentro del bloque las cortaría su `overflow: hidden`, y un
+    // bloque de quince minutos no tiene alto para mostrar ninguna de las dos.
     <div
-      className={`agenda-evento agenda-evento-${e.estado}`}
-      // §7.6: el bloque MIDE lo que dura. Con todos del mismo alto, una
-      // reunión de dos horas y una de quince minutos se ven igual y la agenda
-      // no dice cuánto ocupa el día.
-      style={{ marginTop: `${desplazado}%`, height: `${Math.max(20, (duracion / 15) * 22 - 4)}px` }}
-      draggable
-      onDragStart={(ev) => {
-        // Firefox no arranca el arrastre sin datos en el dataTransfer.
-        ev.dataTransfer.setData('text/plain', e.id);
-        onArrastrar(e);
-      }}
-      onDragEnd={() => onArrastrar(null)}
+      className={`agenda-bloque ${abierto ? 'agenda-bloque-abierto' : ''}`}
+      style={caja}
       onMouseEnter={() => onHover(e.id)}
       onMouseLeave={() => onHover(null)}
-      onClick={() => onIrAlLead(e.lead)}
     >
-      <span className="agenda-evento-hora tabular">{e.hora}</span>
-      <span className="agenda-evento-nombre">{e.nombre}</span>
+      <div
+        className={`agenda-evento agenda-evento-${e.estado}`}
+        // §7.6: el bloque MIDE lo que dura, y por eso está posicionado sobre la
+        // columna en vez de metido en la celda de su hora. Encerrado en la
+        // celda, una reunión de 12:00 a 14:00 estiraba la fila de las 12 en
+        // lugar de bajar hasta las 14.
+        draggable
+        onDragStart={(ev) => {
+          // Firefox no arranca el arrastre sin datos en el dataTransfer.
+          ev.dataTransfer.setData('text/plain', e.id);
+          onArrastrar(e);
+        }}
+        onDragEnd={() => onArrastrar(null)}
+        onClick={() => onIrAlLead(e.lead)}
+      >
+        <span className="agenda-evento-hora tabular">
+          {e.hora}
+          {/* La duración, al lado de la hora: es el dato que faltaba para
+              saber hasta cuándo va la reunión sin tener que medirla a ojo. */}
+          <span className="agenda-evento-dura"> · {duracion} min</span>
+        </span>
+        <span className="agenda-evento-nombre">{e.nombre}</span>
+      </div>
 
       {/* La manija de estirar. Va fuera del borde de abajo para poder
           agarrarla sin tapar el texto del bloque. */}
