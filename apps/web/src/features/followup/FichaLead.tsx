@@ -14,6 +14,9 @@ import { FechaReunion } from './FechaReunion';
 import { useFicha } from './useFicha';
 import { useAtajos } from './useAtajos';
 import { LogEdiciones } from './LogEdiciones';
+import { PanelEtiquetas } from './PanelEtiquetas';
+import { EditarLinks } from './EditarLinks';
+import { AnalisisPerfil } from './AnalisisPerfil';
 
 const HOY = new Date().toISOString().slice(0, 10);
 
@@ -93,6 +96,7 @@ export function FichaLead({
   const [error, setError] = useState<string | null>(null);
   const [envios, setEnvios] = useState<EnvioRecord[]>([]);
   const [etiquetasAbierto, setEtiquetasAbierto] = useState(false);
+  const [linksAbierto, setLinksAbierto] = useState(false);
   const [logAbierto, setLogAbierto] = useState(false);
   const [infoVisible, setInfoVisible] = useState(false);
   const [propuesta, setPropuesta] = useState<Propuesta | null>(null);
@@ -360,6 +364,38 @@ export function FichaLead({
             </a>
           )}
 
+          {/* §7.2: los dos links se editan a mano. El del chat no se puede
+              deducir del perfil, así que sin este panel no hay forma de
+              cargarlo desde la app. */}
+          {veLinks && editable && (
+            <div className="relativo">
+              <button
+                type="button"
+                className="boton-icono-26"
+                title="Editar los links del lead"
+                onClick={() => setLinksAbierto((a) => !a)}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                  <path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.5 1.5" />
+                  <path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.5-1.5" />
+                </svg>
+              </button>
+              {linksAbierto && (
+                <EditarLinks
+                  linkPerfil={linkPerfil}
+                  linkChat={lead.link_chat ?? ''}
+                  onCerrar={() => setLinksAbierto(false)}
+                  onGuardar={async (perfilUrl, chatUrl) => {
+                    setLinksAbierto(false);
+                    if (p?.id && perfilUrl) await pb.collection('perfil').update(p.id, { slug: perfilUrl });
+                    await pb.collection('lead').update(lead.id, { link_chat: chatUrl });
+                    onGuardado();
+                  }}
+                />
+              )}
+            </div>
+          )}
+
           <div className="relativo">
             <button
               type="button"
@@ -374,28 +410,13 @@ export function FichaLead({
               <span className="tabular">{etiquetasAplicadas.length}</span>
             </button>
             {etiquetasAbierto && (
-              <>
-                <div className="popover-fondo" onClick={() => setEtiquetasAbierto(false)} />
-                <div className="popover popover-anclado">
-                  <span className="campo-label">Etiquetas</span>
-                  <div className="chips">
-                    {catalogoEtiquetas.map((et) => {
-                      const puesta = (lead.etiquetas ?? []).includes(et.id);
-                      return (
-                        <button
-                          key={et.id}
-                          type="button"
-                          className={`chip-pastilla ${puesta ? 'chip-pastilla-on' : ''}`}
-                          title={et.del_sistema ? 'La pone el sistema (D04)' : undefined}
-                          onClick={() => void cambiarEtiqueta(et, !puesta)}
-                        >
-                          {et.nombre}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
+              <PanelEtiquetas
+                catalogo={catalogoEtiquetas}
+                aplicadas={lead.etiquetas ?? []}
+                onAlternar={(et, poner) => void cambiarEtiqueta(et as EtiquetaRecord, poner)}
+                onCatalogoCambiado={() => onEtiquetasCambiadas?.()}
+                onCerrar={() => setEtiquetasAbierto(false)}
+              />
             )}
           </div>
 
@@ -568,6 +589,12 @@ export function FichaLead({
             </button>
           </div>
         )}
+
+        {/* §7.2: el último bloque colapsable de la ficha. Va después de
+            Enviar mensaje porque es consulta, no acción. */}
+        <Colapsable titulo="Análisis del perfil" contactoId={lead.id} resumen="qué pasó con este lead">
+          <AnalisisPerfil lead={lead} leads={leads} />
+        </Colapsable>
 
         {editable && puedeUsuario(usuario, 'enviarMensajes') && (
           <EnviarMensaje

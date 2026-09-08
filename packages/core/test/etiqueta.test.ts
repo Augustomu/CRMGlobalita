@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CUANTAS_RECIENTES, recientes, sePuedeSacar, type Etiqueta } from '../src/etiqueta.ts';
+import {
+  CUANTAS_RECIENTES,
+  nombreDisponible,
+  porUltimoUso,
+  recientes,
+  sePuedeRenombrar,
+  sePuedeSacar,
+  type Etiqueta,
+} from '../src/etiqueta.ts';
 
 const catalogo: Etiqueta[] = [
   { id: 'a', nombre: 'Caliente', usada_en: '2026-09-06' },
@@ -61,4 +69,32 @@ test('cambio 9 · la × solo aparece en las que se pueden sacar', () => {
   assert.equal(sePuedeSacar({ id: 'a', nombre: 'Caliente' }), true);
   // La cadencia la vuelve a poner en el próximo envío: el botón no haría nada.
   assert.equal(sePuedeSacar({ id: 'i', nombre: 'Recordatorio', del_sistema: true }), false);
+});
+
+test('D04 · una etiqueta del sistema no se renombra', () => {
+  // Su nombre esta escrito en el codigo que la aplica: renombrarla dejaria la
+  // cadencia buscando una etiqueta que ya no existe.
+  assert.equal(sePuedeRenombrar({ id: 'a', nombre: 'Recordatorio', del_sistema: true }), false);
+  assert.equal(sePuedeRenombrar({ id: 'b', nombre: 'Caliente' }), true);
+});
+
+test('el nombre repetido no entra, sin importar mayusculas ni espacios', () => {
+  // Tener "caliente", "Caliente" y "Caliente " convierte el filtro por
+  // etiqueta en tres filtros que no se cruzan.
+  const catalogo = [{ id: 'a', nombre: 'Caliente' }];
+  assert.equal(nombreDisponible(catalogo, 'caliente'), false);
+  assert.equal(nombreDisponible(catalogo, '  Caliente  '), false);
+  assert.equal(nombreDisponible(catalogo, 'Tibio'), true);
+  assert.equal(nombreDisponible(catalogo, '   '), false);
+  // Renombrar una a si misma no choca consigo misma.
+  assert.equal(nombreDisponible(catalogo, 'Caliente', 'a'), true);
+});
+
+test('el catalogo se ordena por ultimo uso, y las nunca usadas van al fondo', () => {
+  const orden = porUltimoUso([
+    { id: 'nunca', nombre: 'Nunca' },
+    { id: 'vieja', nombre: 'Vieja', usada_en: '2026-01-01' },
+    { id: 'nueva', nombre: 'Nueva', usada_en: '2026-09-01' },
+  ]).map((e) => e.id);
+  assert.deepEqual(orden, ['nueva', 'vieja', 'nunca']);
 });

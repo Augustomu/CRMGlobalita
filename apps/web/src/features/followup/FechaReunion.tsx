@@ -5,6 +5,7 @@ import {
 } from '@crm/core/reunion';
 import { cargaPorDia, estadoDelDia, fechaConCupo } from '@crm/core/carga';
 import { pb } from '../../lib/pocketbase';
+import { ConfirmarReunion } from './ConfirmarReunion';
 import type { LeadRecord, ReunionRecord, UsuarioRecord } from '../../lib/types';
 
 /** La zona del navegador. D23: se guarda con la reunión, no se asume. */
@@ -103,6 +104,8 @@ export function FechaReunion({
   const [recordatorios, setRecordatorios] = useState(true);
   const [agradecimiento, setAgradecimiento] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  /** Los destinatarios se piden al confirmar, no antes. */
+  const [pidiendoMails, setPidiendoMails] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const inicial = { anio: Number(hoyIso().slice(0, 4)), mes: Number(hoyIso().slice(5, 7)) - 1 };
@@ -200,8 +203,9 @@ export function FechaReunion({
     return `https://calendar.google.com/calendar/render?${params}`;
   }
 
-  async function confirmar() {
+  async function confirmar(destinatarios: string[]) {
     if (!dia || !hora || !editable) return;
+    setPidiendoMails(false);
     setGuardando(true);
     setError(null);
     try {
@@ -218,7 +222,13 @@ export function FechaReunion({
         calendario: usuario?.id ?? '',
         titulo_evento: titulo,
         descripcion_evento: descripcion,
-        invitado_email: lead.email || '',
+        // Los destinatarios se eligen al confirmar y valen SOLO para esta
+        // reunion: el primero es el invitado principal y el resto van en copia.
+        // No se guardan en la ficha porque la reunion suele sumar gente que no
+        // es el lead —el jefe, el tecnico— y meterlos ahi ensuciaria el
+        // contacto con direcciones que no son suyas.
+        invitado_email: destinatarios[0] ?? lead.email ?? '',
+        invitados_copia: destinatarios.slice(1),
       });
       // Una reunión agendada es una respuesta: el lead sale de la cadencia
       // automática (§5.1) y su próximo contacto lo maneja la reunión.
@@ -293,7 +303,7 @@ export function FechaReunion({
             className="boton-icono-28 boton-icono-ok"
             title={dia && hora ? 'Confirmar reunión' : 'Elegí día y horario para confirmar'}
             disabled={!dia || !hora || !editable || guardando}
-            onClick={() => void confirmar()}
+            onClick={() => setPidiendoMails(true)}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M5 13l4 4L19 7" />
@@ -653,6 +663,17 @@ export function FechaReunion({
             </div>
           </div>
         </>
+      )}
+
+      {pidiendoMails && dia && hora && (
+        <ConfirmarReunion
+          emails={[lead.email, lead.email2, lead.email3].filter(Boolean) as string[]}
+          fecha={dia}
+          hora={hora}
+          duracion={duracion}
+          onCerrar={() => setPidiendoMails(false)}
+          onEnviar={(destinatarios) => void confirmar(destinatarios)}
+        />
       )}
     </div>
   );

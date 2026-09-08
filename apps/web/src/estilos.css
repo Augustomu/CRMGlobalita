@@ -3936,3 +3936,146 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 }
 .reg-toggle { display: flex; align-items: flex-start; gap: 8px; }
 .reg-toggle-texto { display: flex; flex-direction: column; gap: 1px; font-size: var(--txt-md); color: var(--text); }
+
+/* ---------- paneles chicos de la ficha (§7.2) ---------- */
+/* Panel de etiquetas: el catalogo entero, no solo aplicar. */
+.pet { width: 320px; display: flex; flex-direction: column; gap: 7px; }
+.pet-header { display: flex; align-items: center; gap: 8px; }
+.pet-nueva { display: flex; gap: 5px; }
+.pet-nueva input {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--txt-md);
+  outline: none;
+}
+.pet-nueva input:focus { border-color: var(--accent); }
+.pet-error { font-size: var(--txt-sm); color: var(--error); }
+.pet-lista { display: flex; flex-direction: column; gap: 3px; max-height: 300px; overflow-y: auto; }
+.pet-fila { display: flex; align-items: center; gap: 5px; }
+.pet-fila input {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  padding: 0 7px;
+  border: .5px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--txt-md);
+  outline: none;
+}
+.pet-icono {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--hint);
+  cursor: pointer;
+  padding: 0;
+  font-size: var(--txt-sm);
+  line-height: 1;
+  transition: background 150ms ease-out;
+}
+.pet-icono:hover { background: var(--bg); color: var(--text); }
+.pet-icono-borrar:hover { background: var(--error-light); color: var(--error); }
+
+/* Editar links */
+.edl { width: 330px; display: flex; flex-direction: column; gap: 8px; }
+.edl-campo { display: flex; flex-direction: column; gap: 3px; }
+.edl-campo input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 28px;
+  padding: 0 8px;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--txt-md);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 150ms ease-out;
+}
+.edl-campo input:focus { border-color: var(--accent); }
+
+/* Analisis del perfil */
+.ana { display: flex; flex-direction: column; gap: 10px; }
+.ana-metricas { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.ana-metrica {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: .5px solid var(--border);
+}
+.ana-numero { font-size: var(--txt-2xl); font-weight: 600; color: var(--text); line-height: 1.1; }
+.ana-campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.ana-dato { display: flex; flex-direction: column; gap: 1px; }
+.ana-valor { font-size: var(--txt-md); color: var(--text); }
+.ana-vacio { color: var(--hint); }
+.ana-cohorte {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--info-light);
+  border: .5px solid var(--info-br);
+}
+.ana-comparacion {
+  display: grid;
+  grid-template-columns: repeat(3, auto 1fr);
+  gap: 3px 8px;
+  align-items: baseline;
+  font-size: var(--txt-md);
+  color: var(--muted);
+}
+.ana-comparacion .tabular { font-weight: 600; color: var(--text); }
+/* La conclusion dice lo que los numeros dicen: el color no promete nada que
+   el texto no diga. */
+.ana-conclusion {
+  padding: 8px 11px;
+  border-radius: 10px;
+  font-size: var(--txt-md);
+  line-height: 1.5;
+  text-wrap: pretty;
+  border: .5px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+.ana-tono-bien { border-color: var(--success); background: var(--success-light); color: var(--success); }
+.ana-tono-flojo { border-color: var(--warning); background: var(--warning-light); color: var(--warning); }
+
+/* Confirmar reunion */
+.cnf { width: 620px; max-width: 96vw; display: flex; flex-direction: column; }
+.cnf-cuerpo { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px 14px; }
+.cnf-campo { display: flex; align-items: center; gap: 8px; }
+.cnf-campo .auto-th { width: 70px; flex-shrink: 0; }
+.cnf-campo input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--txt-md);
+  outline: none;
+}
+.cnf-campo input:focus { border-color: var(--accent); }
+.cnf-pie { display: flex; align-items: center; gap: 8px; padding-top: 8px; border-top: .5px solid var(--border); }
+.cnf-falta { font-size: var(--txt-sm); color: var(--warning); }

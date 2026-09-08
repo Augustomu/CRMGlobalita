@@ -59,3 +59,36 @@ export function recientes(
 export function sePuedeSacar(etiqueta: Etiqueta): boolean {
   return !etiqueta.del_sistema;
 }
+
+/**
+ * Si se puede renombrar o borrar del catálogo.
+ *
+ * Las del sistema no: su nombre está escrito en el código que las aplica
+ * («Recordatorio», «Fase 2»). Renombrarlas dejaría la cadencia buscando una
+ * etiqueta que ya no existe y creando una nueva con el nombre viejo en el
+ * próximo envío.
+ */
+export function sePuedeRenombrar(etiqueta: Etiqueta): boolean {
+  return !etiqueta.del_sistema;
+}
+
+/**
+ * Si el nombre está libre en el catálogo.
+ *
+ * Compara sin distinguir mayúsculas ni espacios de sobra: «caliente»,
+ * «Caliente» y «Caliente » son la misma etiqueta para quien la lee, y tener
+ * las tres convierte el filtro por etiqueta en tres filtros que no se cruzan.
+ */
+export function nombreDisponible(catalogo: Etiqueta[], nombre: string, exceptoId?: string): boolean {
+  const n = nombre.trim().toLowerCase();
+  if (!n) return false;
+  return !catalogo.some((e) => e.id !== exceptoId && e.nombre.trim().toLowerCase() === n);
+}
+
+/** El catálogo ordenado por uso más reciente, que es como se lee el panel. */
+export function porUltimoUso(catalogo: Etiqueta[]): Etiqueta[] {
+  return catalogo.slice().sort((a, b) => {
+    const fecha = String(b.usada_en ?? '').localeCompare(String(a.usada_en ?? ''));
+    return fecha !== 0 ? fecha : a.nombre.localeCompare(b.nombre);
+  });
+}

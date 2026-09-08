@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { leer, marcarDuplicados, type FilaImportable, type LecturaCsv } from '@crm/core/csv';
 import { normalizarTelefono } from '@crm/core/telefono';
+import { slugDeLinkedIn } from '@crm/core/linkedin';
 import { pb } from '../../lib/pocketbase';
 import type { LeadRecord } from '../../lib/types';
 
@@ -82,7 +83,7 @@ export function ImportarCsv({ leads, cuenta, onCerrar, onImportado }: Props) {
           ciudad: f.ciudad,
           pais: f.pais,
           email: f.email,
-          link_perfil: f.link_perfil,
+          slug: slugDeLinkedIn(f.link_perfil),
           telefono: tel.valor,
           telefono_raw: f.telefono,
           telefono_valido: tel.valido,
