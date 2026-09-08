@@ -62,7 +62,7 @@ interface Props {
 /**
  * Los proyectos del lead, desde la ficha.
  *
- * **Acá se edita; en Control se mira.** El anexo define Control como solo
+ * **Acá se edita; en Control se mira.** El manual define Control como solo
  * lectura y no dice dónde se cargan las actualizaciones — sin este bloque un
  * proyecto no se puede mover nunca y todos terminan Congelados a los 30 días,
  * que es exactamente lo que la regla quiere señalar, no provocar.

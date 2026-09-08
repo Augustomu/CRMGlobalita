@@ -83,5 +83,5 @@ build. Las reglas viven ahí y la interfaz solo las consume — nunca reimplemen
 una regla de negocio (regla 1 del `CLAUDE.md` de la raíz).
 
 `public/design-tokens.css` es el **único** archivo de tokens. Había una segunda
-copia en `docs/design/tokens.css` y se eliminó: dos archivos idénticos que hay
+copia en `apps/web/public/design-tokens.css` y se eliminó: dos archivos idénticos que hay
 que acordarse de sincronizar a mano se desincronizan solos.

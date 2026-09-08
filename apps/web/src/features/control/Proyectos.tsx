@@ -40,7 +40,7 @@ interface Props {
 }
 
 /**
- * Control → Proyectos (anexo §4.1). Portado de `docs/prototipo/Control.dc.html`:
+ * Control → Proyectos (§7.11.1). Portado de `docs/prototipo/Control.dc.html`:
  * tarjetas de resumen, filas de filtros rotuladas y la tabla de dos líneas con
  * la última actualización en su propia columna.
  *

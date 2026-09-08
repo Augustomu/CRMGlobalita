@@ -1,10 +1,10 @@
-// Permisos. Implementa docs/01-negocio/permisos.md (§6.2) y el anexo de
+// Permisos. Implementa §6.2 del manual y el manual de
 // Control de proyectos (rol Observador y las claves control/followup/waPersonal).
 
 export const CLAVES = [
   // --- secciones ---
   // followup y waPersonal dejaron de ser fijas y pasaron a ser permisos: es lo
-  // que permite que un rol se quede sin ellas (anexo Control §5).
+  // que permite que un rol se quede sin ellas (§6.3.1).
   'followup',
   'waPersonal',
   'control',
@@ -60,7 +60,7 @@ const PRESETS: Record<Rol, readonly Clave[]> = {
   ],
 
   // Solo lectura, y solo Control: no ve prospección ni datos de contacto
-  // (anexo Control §5).
+  // (§6.3.1).
   observador: ['control', 'verTodosLeads'],
 };
 
@@ -119,7 +119,7 @@ export function puedeEditarLead(
   return (lead.nivel_asignacion ?? 'seguimiento') === 'seguimiento';
 }
 
-/** La primera sección que ve el usuario al entrar (anexo Control §5.2). */
+/** La primera sección que ve el usuario al entrar (§4). */
 export function seccionInicial(usuario: UsuarioPermisos): 'followup' | 'control' | 'waPersonal' | null {
   for (const s of ['followup', 'control', 'waPersonal'] as const) {
     if (puede(usuario, s)) return s;

@@ -602,7 +602,7 @@ migrate(
     // ---------------------------------------------------------- reuniones
     //
     // Se cuelgan del proyecto A TRAVES del lead, no por una relacion directa:
-    // es la regla del anexo (§6) y es lo que hay que poder mirar en la
+    // es la regla del manual (§6) y es lo que hay que poder mirar en la
     // columna "Reuniones" de la tabla.
 
     const REUNIONES = [

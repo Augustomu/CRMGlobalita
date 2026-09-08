@@ -1,5 +1,5 @@
 // Tipos compartidos por las reglas de negocio.
-// Fuente: docs/02-modelo/ y las decisiones cerradas de docs/04-decisiones/.
+// Fuente: §3 del manual y las decisiones cerradas de su §14.
 
 /** Los pasos de la cadencia. R0-recontacto es la reinvitación (D24). */
 export type Paso =

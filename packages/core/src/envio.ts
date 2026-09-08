@@ -1,4 +1,4 @@
-// La operación compuesta de enviar. Implementa docs/01-negocio/envio-de-mensaje.md (§5.10).
+// La operación compuesta de enviar. Implementa §5.10 del manual (§5.10).
 //
 // Hoy la mayoría de los R se mandan a mano (D15): el usuario copia el texto, lo
 // pega en el chat real, y vuelve a registrar el envío. Esta función calcula lo

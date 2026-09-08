@@ -36,7 +36,7 @@ test('una reunión futura no cuenta: todavía no pasó', () => {
   assert.equal(dentro[0]!.inicio.slice(0, 10), '2026-08-20');
 });
 
-test('§4.2 · las ocho tarjetas', () => {
+test('§7.11.2 · las ocho tarjetas', () => {
   const rs = [
     r({ inicio: '2026-08-10T10:00:00-03:00', estado: 'asistio', proyecto: 'p1', empresa: 'Vale' }),
     r({ inicio: '2026-08-12T10:00:00-03:00', estado: 'asistio', empresa: 'Vale' }),

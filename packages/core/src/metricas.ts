@@ -1,4 +1,4 @@
-// El dashboard de reuniones (anexo Control §4.2). Todo puro: recibe las
+// El dashboard de reuniones (§7.11.2). Todo puro: recibe las
 // reuniones ya leídas y devuelve lo que se dibuja.
 //
 // Es lo único del CRM que mira hacia atrás en vez de hacia adelante, y es lo
@@ -113,7 +113,7 @@ function pct(parte: number, total: number): number {
   return total ? Math.round((parte / total) * 100) : 0;
 }
 
-/** Las ocho tarjetas de §4.2. */
+/** Las ocho tarjetas de §7.11.2. */
 export function tarjetas(reuniones: ReunionMedida[], rango: Rango): Tarjetas {
   const total = reuniones.length;
   const asistieron = reuniones.filter((r) => r.estado === 'asistio').length;
@@ -197,7 +197,7 @@ export const NOMBRE_AGRUPADOR: Record<Agrupador, string> = {
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
 /**
- * Franjas de §4.2. Reciben el reloj de pared, no el instante: la reunión fue a
+ * Franjas de §7.11.2. Reciben el reloj de pared, no el instante: la reunión fue a
  * media mañana para quien la tuvo, y la hora UTC la mandaría a otra franja.
  */
 function franjaDe(relojDePared: string): string {
@@ -226,7 +226,7 @@ export interface Grupo {
 }
 
 /**
- * Barras horizontales del agrupador (§4.2).
+ * Barras horizontales del agrupador (§7.11.2).
  *
  * Criterio de aceptación 6: los conteos suman el total del período. Por eso las
  * reuniones sin dato entran como "sin dato" en vez de descartarse — si se

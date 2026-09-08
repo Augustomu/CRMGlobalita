@@ -1,7 +1,7 @@
 # Pendientes
 
-Lo decidido y todavía no hecho. `docs/DIVERGENCIAS.md` tiene el detalle de lo
-ya cerrado contra el manual y el prototipo; acá va lo que falta.
+Lo decidido y todavía no hecho. La especificación —cómo tiene que ser— está
+entera en `docs/MANUAL.md`. Acá va sólo lo que falta hacer.
 
 Última revisión: **08/09/2026**, después de la recorrida de Augusto por la app.
 
@@ -67,7 +67,7 @@ eso va con un emoji al lado del perfil»*, y lo mismo para el log.
 
 **Choca con §7.2**, que enumera *«Datos · Contacto · Fecha de reunión ·
 Etiquetas · Log de ediciones · Análisis del perfil»* — seis bloques. Los pasé a
-bloques hace dos días justamente por esa línea (ver G.1 en DIVERGENCIAS).
+bloques hace dos días justamente por esa línea.
 
 Gana Augusto, pero conviene que quede escrito: el manual va a decir una cosa y
 la app otra.
@@ -121,11 +121,13 @@ la app otra.
 Augusto: *«tomá de referencia cómo funciona Google Calendar y copialo tal
 cual»*.
 
-- **La vista diaria no deja estirar** y **el bloque no muestra su duración**:
-  un evento de 10:45 de media hora se ve como si durara quince minutos, porque
-  el bloque está encerrado en su celda de 15 minutos y no puede pasar a la
-  siguiente. Verificado: el resize sólo está en la vista semanal.
-- **La vista semanal**: sólo deja mover, y el diseño hay que revisarlo.
+- ✅ **Hecho el 08/09.** El bloque se dibuja SOBRE la columna del día, no
+  dentro de la celda de su hora: una reunión de 12:00 a 14:00 ocupa las dos
+  horas en vez de estirar la fila de las 12. Las dos vistas son ahora la misma
+  grilla, así que la diaria también deja estirar; el bloque dice cuánto dura;
+  y dos reuniones encimadas se reparten el ancho en carriles en vez de taparse.
+  Geometría en `core/reunion.ts` (`bloqueDelEvento`, `horaEnLaColumna`,
+  `carriles`) con sus tests.
 - **Próximo contacto**: mostrar día y mes, sin año.
 - **El icono de notas** tiene que ser el mismo en todos lados.
 - **El link de perfil** abre el LinkedIn del lead (no Sales Navigator) — bien —
@@ -257,6 +259,16 @@ Empezado: el cálculo del turno se extrajo a `core/cola.ts` (`turnosDeLote`,
 
 ## 15 · Producción
 
+- ⚠️ **Hay datos reales adentro del bundle, y el repo es público.**
+  `docs/_bundle/CRM de prospeccion.html` está commiteado y trae un documento
+  con teléfonos y un email de personas reales. No se leen abriendo el archivo
+  —es un ZIP— pero cualquiera que clone el repo y corra
+  `node docs/desempacar.mjs` los tiene. La copia suelta que había en `docs/`
+  ya estaba enmascarada; la de adentro del bundle no.
+  **Arreglarlo**: re-exportar el bundle con los datos enmascarados. Y decidir
+  aparte —es tu decisión, no mía— si vale la pena reescribir el historial:
+  reescribirlo rompe los clones y los links a commits viejos, y el dato ya
+  estuvo público de todos modos.
 - **El deploy no se hizo.** `deploy/publicar.sh` necesita la IP del VPS.
 - **Backups del VPS.** El backup actual depende de que la PC esté prendida, y
   `globalita-data` no está en GitHub. Un snapshot del proveedor cubre lo que el

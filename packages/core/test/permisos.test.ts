@@ -26,7 +26,7 @@ test('§6.3 · el colaborador NO tiene automatizaciones, usuarios ni base compar
   }
 });
 
-test('anexo Control · el observador solo tiene control y verTodosLeads', () => {
+test('el manual · el observador solo tiene control y verTodosLeads', () => {
   assert.equal(puede(observador, 'control'), true);
   assert.equal(puede(observador, 'verTodosLeads'), true);
   for (const c of CLAVES) {
@@ -35,7 +35,7 @@ test('anexo Control · el observador solo tiene control y verTodosLeads', () => 
   }
 });
 
-test('anexo Control · el observador no ve ningún dato de contacto', () => {
+test('el manual · el observador no ve ningún dato de contacto', () => {
   for (const c of ['verTelefono', 'verEmails', 'verLinks', 'verConversaciones'] as const) {
     assert.equal(puede(observador, c), false, c);
   }
@@ -108,9 +108,9 @@ test('el administrador edita cualquier lead; el observador ninguno', () => {
   assert.equal(puedeEditarLead(observador, { asignado: 'u1', nivel_asignacion: 'seguimiento' }, 'u1'), false);
 });
 
-// ---------- sección inicial (anexo Control §5.2) ----------
+// ---------- sección inicial (§4) ----------
 
-test('anexo Control · cada rol cae en la primera sección que tiene permitida', () => {
+test('el manual · cada rol cae en la primera sección que tiene permitida', () => {
   assert.equal(seccionInicial(admin), 'followup');
   assert.equal(seccionInicial(colaborador), 'followup');
   assert.equal(seccionInicial(observador), 'control');

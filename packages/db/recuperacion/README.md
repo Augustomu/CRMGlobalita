@@ -62,7 +62,7 @@ de D02: entra el dato, se marca "posible duplicado", y lo confirma una persona.
 ## 3. Las conversaciones de LinkedIn — lo último
 
 Es lo más caro (hay que entrar cuenta por cuenta) y lo más riesgoso (es
-automatización de sesión, → `docs/05-operacion/riesgo-linkedin.md`). Conviene
+automatización de sesión, → `§8.1 del manual`). Conviene
 dejarlo para cuando el worker de la Etapa 5 esté andando y probado.
 
 De las 13.000 invitaciones, ~10% aceptó. Ese 10% es lo que hay que identificar,

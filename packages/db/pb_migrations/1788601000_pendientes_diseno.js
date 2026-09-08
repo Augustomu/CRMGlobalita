@@ -1,7 +1,7 @@
 /// <reference path="../../../.pb/pb_data/types.d.ts" />
 
 // Los tres pendientes del bloque 1 del documento de diseño que necesitan
-// guardar algo nuevo. Ver docs/design/CAMBIOS-COMPLETOS-DISENO.md.
+// guardar algo nuevo. Ver §7 del manual.
 //
 // 1. CAMBIOS 8 Y 9 — `etiqueta.usada_en`.
 //    El panel se ordena "por última edición" y la ficha ofrece las seis usadas

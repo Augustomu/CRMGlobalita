@@ -1,4 +1,4 @@
-// Proyectos (anexo Control §2 y §3). La capa de arriba del lead: el trabajo
+// Proyectos (§3.13). La capa de arriba del lead: el trabajo
 // que se abre cuando la prospección ya avanzó.
 //
 // Todo acá es puro. La sección Control es de solo lectura, así que estas
@@ -271,7 +271,7 @@ export interface ItemAvance {
 }
 
 /**
- * La tira de avance de la fila (§4.1 y criterio de aceptación 4).
+ * La tira de avance de la fila (§7.11.1 y criterio de aceptación 4).
  *
  * Orden fijo: primero las próximas acciones, después las actualizaciones de la
  * más nueva a la más vieja, después las notas. Lo primero que se ve es lo que

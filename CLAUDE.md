@@ -2,12 +2,30 @@
 
 ## Antes de escribir código
 
-**Leé la nota que corresponde en `docs/`, no el manual entero.** El vault está troceado
-justamente para eso. Entrada: `docs/00-Mapa.md`.
+**La especificación es `docs/MANUAL.md`, y es un solo archivo.** Hasta el
+08/09/2026 estaba troceada en un vault de treinta notas más un anexo; se
+desincronizaron de verdad, no en teoría, y por eso se unificaron.
 
-Si la tarea toca una regla de negocio, la nota de `docs/01-negocio/` es la especificación.
-Si la nota remite a una decisión abierta de `docs/04-decisiones/`, **preguntá antes de asumir**:
-esas son las cosas que todavía no están definidas y elegir mal cuesta un refactor.
+**Leé la sección que corresponde, no el archivo entero.** Está numerado para
+eso: el índice está arriba de todo, y una sección se abre derecho con
+`grep -n "^## 5\." docs/MANUAL.md` y `sed -n`.
+
+| Si la tarea toca… | Leé |
+|---|---|
+| una regla de negocio | §5 |
+| el modelo de datos | §3 |
+| permisos, roles o alcances | §6 |
+| una pantalla | §7 |
+| Control y proyectos | §3.13, §5.12, §7.11 |
+| deploy, backups, sesiones | §13 |
+
+**§14 tiene las 38 decisiones.** Las cerradas no se rediscuten: cambiarlas es
+rediseñar, no corregir. Las **abiertas** tienen una recomendación aplicada por
+defecto — si la tarea depende de una de esas, **preguntá antes de asumir**:
+elegir mal cuesta un refactor.
+
+`docs/PENDIENTES.md` es la otra mitad: lo decidido y todavía no hecho. El
+manual dice cómo tiene que ser; PENDIENTES dice qué falta.
 
 ## Estructura del proyecto
 
@@ -24,7 +42,8 @@ packages/
               permisos.ts  ruteo.ts  envio.ts  reglas.ts  reunion.ts  metricas.ts
   db/         Esquema y migraciones de PocketBase.
   shared/     Tipos y esquemas de validación compartidos.
-docs/         El vault. La documentación viaja con el código.
+docs/         MANUAL.md (la especificación entera), PENDIENTES.md (lo que falta)
+              y el prototipo. La documentación viaja con el código.
 ```
 
 ## Las reglas que evitan el código de más
@@ -46,8 +65,8 @@ docs/         El vault. La documentación viaja con el código.
 
 5. **Ningún color suelto.** Todo pasa por las variables de
    `apps/web/public/design-tokens.css`, que es el ÚNICO archivo de tokens.
-   Había una copia en `docs/design/tokens.css`: dos archivos idénticos que se
-   desincronizan en cuanto alguien toca uno.
+   Hubo una segunda copia en `docs/design/` y se borró: dos archivos idénticos
+   se desincronizan en cuanto alguien toca uno.
    Tres temas: claro, oscuro, noche.
 
 6. **El prototipo es la fuente de verdad visual, no una referencia vaga.**
@@ -76,11 +95,17 @@ docs/         El vault. La documentación viaja con el código.
 
 ## Definición de terminado
 
-Una regla está hecha cuando tiene las cuatro: nota en el vault, función en `core/`,
+Una regla está hecha cuando tiene las cuatro: sección en el manual, función en `core/`,
 test que cita la sección, y UI conectada. Con tres de cuatro, no está hecha.
 
 ## Cosas que ya se decidieron y no hay que rediscutir
 
-Están en `docs/04-decisiones/` con `estado: cerrada`, y en la sección 10 del manual.
+Están en **§14 del manual** marcadas `cerrada`, y las de fondo también en §10.
 Cambiarlas es rediseñar, no corregir.
+
+## Y una regla sobre el manual mismo
+
+Cuando un cambio contradice lo que dice el manual, **se actualiza el manual en
+el mismo commit**. No se anota aparte «esto ahora es distinto»: esa nota aparte
+es exactamente lo que hubo que venir a limpiar.
 

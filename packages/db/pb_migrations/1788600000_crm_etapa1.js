@@ -2,7 +2,7 @@
 
 // Etapa 1 del CRM: perfil, lead, cuenta, etiqueta, envio, configuracion.
 //
-// Modelo decidido en docs/04-decisiones/:
+// Modelo decidido en §14 del manual:
 //   D01  perfil (identidad, una fila por persona) + lead (trabajo, una por cuenta)
 //   D02  slug y urn como claves unicas nullable; huella solo sugiere duplicados
 //   D16  la plantilla se ata al paso por campo, no por el nombre
@@ -51,7 +51,7 @@ migrate(
     };
 
     // ---------- cuenta ----------
-    // Perfil de LinkedIn desde el que se invita. 10 slots fijos (docs/02-modelo/cuenta.md).
+    // Perfil de LinkedIn desde el que se invita. 10 slots fijos (§3.3 del manual).
     app.save(
       new Collection(
         Object.assign(

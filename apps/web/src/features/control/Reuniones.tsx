@@ -36,7 +36,7 @@ interface Props {
 }
 
 /**
- * Control → Reuniones (anexo §4.2). El dashboard: ocho tarjetas, el gráfico por
+ * Control → Reuniones (§7.11.2). El dashboard: ocho tarjetas, el gráfico por
  * mes con la banda de las que derivaron en proyecto, los diez agrupadores y la
  * tabla del período.
  *

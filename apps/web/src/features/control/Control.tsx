@@ -24,7 +24,7 @@ interface Props {
 }
 
 /**
- * Sección Control (anexo §4). Dos pestañas, Proyectos y Reuniones.
+ * Sección Control (§7.11). Dos pestañas, Proyectos y Reuniones.
  *
  * **Toda la sección es de solo lectura para cualquier rol**, y el header lo
  * declara con la pastilla. Lo que se edita se edita en la ficha del lead o en

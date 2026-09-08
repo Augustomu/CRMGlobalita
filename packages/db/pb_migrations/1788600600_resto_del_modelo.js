@@ -4,7 +4,7 @@
 // chat_personal y entrante.
 //
 // Decisiones que se cierran aca, con las recomendaciones que ya estaban
-// escritas en docs/04-decisiones/:
+// escritas en §14 del manual:
 //
 //   D10  la reunion guarda google_event_id + google_calendar_id + etag, asi
 //        reagendar ACTUALIZA el evento en vez de crear uno nuevo. El historico

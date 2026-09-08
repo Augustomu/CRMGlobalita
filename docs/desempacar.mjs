@@ -70,30 +70,31 @@ if (fs.existsSync(suCLAUDE)) {
   fs.renameSync(suCLAUDE, path.join(destino, 'ESTRUCTURA-Y-DECISIONES.md'));
 }
 
-// Los documentos que además viven trackeados en docs/ se refrescan desde el
-// bundle. Si no, un bundle nuevo los deja viejos EN SILENCIO: el de docs/ es el
-// que se lee en GitHub y el que citan las notas, así que la copia stale sería
-// la que todo el mundo mira.
-const espejados = [
-  ['MANUAL.md', 'docs/MANUAL.md'],
-  ['MANUAL-control-proyectos.md', 'docs/MANUAL-control-proyectos.md'],
-  ['DISENO-control-proyectos.md', 'docs/design/DISENO-control-proyectos.md'],
-];
-let refrescados = 0;
-for (const [origen, copia] of espejados) {
-  const desde = path.join(destino, origen);
-  if (!fs.existsSync(desde)) continue;
-  const hacia = path.join(raiz, copia);
-  const antes = fs.existsSync(hacia) ? fs.readFileSync(hacia, 'utf8') : '';
-  const ahora = fs.readFileSync(desde, 'utf8');
-  if (antes.replace(/\r/g, '') !== ahora.replace(/\r/g, '')) {
-    fs.copyFileSync(desde, hacia);
-    console.log(`  ${copia} actualizado desde el bundle`);
-    refrescados++;
-  }
+// Los documentos del bundle NO se copian encima de los de docs/.
+//
+// Antes sí: el bundle refrescaba docs/MANUAL.md, para que una versión nueva del
+// prototipo no dejara el manual viejo en silencio. Desde el 08/09/2026 la
+// dirección es la contraria — `docs/MANUAL.md` es el documento único y vivo, y
+// el del bundle es la copia que quedó congelada adentro del prototipo. Copiarlo
+// encima borraría todo lo que se decidió después, y sin decir nada.
+//
+// Así que sólo se avisa. Quien vea el aviso decide qué llevar de un lado al
+// otro; lo que no puede pasar es que lo decida un script.
+const suManual = path.join(destino, 'MANUAL.md');
+const nuestro = path.join(raiz, 'docs/MANUAL.md');
+let distintos = false;
+if (fs.existsSync(suManual) && fs.existsSync(nuestro)) {
+  const a = fs.readFileSync(suManual, 'utf8').replace(/\r/g, '');
+  const b = fs.readFileSync(nuestro, 'utf8').replace(/\r/g, '');
+  distintos = a !== b;
 }
 
 const pantallas = fs.readdirSync(destino).filter((f) => f.endsWith('.dc.html'));
 console.log(`${pantallas.length} pantallas en docs/prototipo/ (regenerado desde el bundle)`);
 console.log('El CLAUDE.md del bundle quedó como ESTRUCTURA-Y-DECISIONES.md');
-if (!refrescados) console.log('Los documentos de docs/ ya estaban al día');
+if (distintos) {
+  console.log('');
+  console.log('El MANUAL.md del bundle no es igual al de docs/. Es lo esperable:');
+  console.log('docs/MANUAL.md es el documento vivo y el del bundle quedó congelado');
+  console.log('cuando se armó el prototipo. NO se copió nada encima.');
+}

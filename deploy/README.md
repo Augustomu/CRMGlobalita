@@ -130,7 +130,7 @@ ssh root@TU_IP 'tail -20 /opt/crm-globalita/backups/backup.log'
 ## Lo que este despliegue todavía NO incluye
 
 - **El worker de LinkedIn y WhatsApp.** Es la Etapa 5 y el mayor riesgo técnico
-  del proyecto (→ `docs/05-operacion/riesgo-linkedin.md`). Cuando llegue, va a
+  del proyecto (→ `§8.1 del manual`). Cuando llegue, va a
   ser un segundo servicio de systemd, uno por cuenta.
 - **Las sesiones de LinkedIn/WhatsApp**, que van a necesitar su propio backup:
   recuperarlas evita revincular 10 cuentas por QR.

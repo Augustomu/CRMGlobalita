@@ -1,4 +1,4 @@
-// Cadencia R0-R8. Implementa docs/01-negocio/cadencia-r0-r8.md.
+// Cadencia R0-R8. Implementa §5.1 del manual.
 // Decisiones aplicadas: D15 (Fase 2 = 90 días desde R4), D17 (etapa + situación).
 
 import type {

@@ -11,7 +11,7 @@
 //    lectura (ve el estado) o seguimiento (edita y escribe). Es un eje distinto
 //    de los permisos de visibilidad, que dicen QUE CAMPOS ve.
 //
-// 3. Rol observador y las claves nuevas de permisos (anexo Control).
+// 3. Rol observador y las claves nuevas de permisos (el manual).
 
 migrate(
   (app) => {

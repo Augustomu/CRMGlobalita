@@ -32,7 +32,7 @@ interface Props {
 }
 
 /**
- * El panel del proyecto (anexo §4.1 y diseño §2). Se abre desde cualquier fila,
+ * El panel del proyecto (§7.11.1 y diseño §2). Se abre desde cualquier fila,
  * anclado a la derecha, 720 px.
  *
  * Es de lectura: notas, actualizaciones y próximas acciones en tres columnas,

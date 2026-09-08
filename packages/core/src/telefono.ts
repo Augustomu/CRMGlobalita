@@ -1,7 +1,7 @@
-// Normalización de teléfono. Implementa docs/01-negocio/normalizacion-telefono.md
-// y la decisión docs/04-decisiones/D29-normalizacion-real-e164.md.
+// Normalización de teléfono. Implementa §5.7 del manual
+// y la decisión D29 (manual §14).
 //
-// D08 (docs/04-decisiones/D08-telefono-como-clave.md) depende de esto: el teléfono
+// D08 depende de esto: el teléfono
 // vive en `perfil` (identidad), no en `lead`, y el ruteo de WhatsApp entrante
 // busca por el valor que esta normalización produce.
 

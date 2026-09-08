@@ -1,5 +1,5 @@
-// Ruteo de WhatsApp entrante. Implementa docs/01-negocio/ruteo-whatsapp.md y
-// la decisión docs/04-decisiones/D08-telefono-como-clave.md.
+// Ruteo de WhatsApp entrante. Implementa §5.8 del manual y
+// la decisión D08 (manual §14).
 //
 // Depende de que el teléfono viva en `perfil`, no en `lead` (ver telefono.ts):
 // un WhatsApp entrante se busca UNA vez, contra la identidad de la persona,

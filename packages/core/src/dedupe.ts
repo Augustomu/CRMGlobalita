@@ -1,5 +1,5 @@
 // Identidad de un perfil y detección de duplicados.
-// Implementa docs/04-decisiones/D02-clave-de-dedupe.md.
+// Implementa D02 (manual §14).
 
 /** Los tres identificadores de un perfil (D02). */
 export interface IdentidadPerfil {

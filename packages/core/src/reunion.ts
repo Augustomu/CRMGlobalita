@@ -1,4 +1,4 @@
-// Reunión. Implementa docs/01-negocio/reunion-y-avisos.md (§3.2, §5.11, §8.3)
+// Reunión. Implementa §5.11 del manual (§3.2, §5.11, §8.3)
 // y las decisiones D10 (identidad del evento), D11 (demora) y D23 (zona horaria).
 
 export type EstadoReunion = 'pendiente' | 'asistio' | 'no-asistio' | 'cancelada' | 'reagendada';

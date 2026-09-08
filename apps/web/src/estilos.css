@@ -1829,7 +1829,7 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   background: var(--surface);
 }
 
-/* --- Control de proyectos (anexo Control §4) ------------------------------
+/* --- Control de proyectos (§7.11) ------------------------------
    Portado de docs/prototipo/Control.dc.html. Los anchos de columna del
    prototipo estan pensados para texto de 9-12px; esta app lo escala por
    --escala-texto, asi que las columnas escalan igual. Dejarlas en px fijos

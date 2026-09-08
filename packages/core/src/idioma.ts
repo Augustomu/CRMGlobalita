@@ -1,4 +1,4 @@
-// Idioma sugerido. Implementa docs/01-negocio/idioma-sugerido.md y las
+// Idioma sugerido. Implementa §5.6 del manual y las
 // decisiones D09 (campo idioma en el lead) y D28 (países que faltaban).
 
 import type { Idioma } from './tipos.ts';

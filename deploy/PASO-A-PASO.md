@@ -231,7 +231,7 @@ ssh -i ~/.ssh/bitacora_vps root@45.90.108.64 'nginx -t && systemctl status nginx
 ## Lo que este despliegue todavía NO incluye
 
 - **El worker de LinkedIn y WhatsApp** (Etapa 5, el mayor riesgo técnico del
-  proyecto → `docs/05-operacion/riesgo-linkedin.md`). Va a ser otro servicio de
+  proyecto → `§8.1 del manual`). Va a ser otro servicio de
   systemd, uno por cuenta.
 - **Backup de las sesiones** de LinkedIn/WhatsApp: recuperarlas evita tener que
   revincular 10 cuentas por QR.

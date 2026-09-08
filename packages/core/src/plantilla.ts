@@ -1,5 +1,5 @@
-// Plantillas del repositorio. Implementa docs/02-modelo/plantilla.md (§3.5, §5.2)
-// y la decisión docs/04-decisiones/D16-plantilla-por-paso.md.
+// Plantillas del repositorio. Implementa §3.5 del manual (§3.5, §5.2)
+// y la decisión D16 (manual §14).
 
 import type { Idioma, Paso } from './tipos.ts';
 import { NOMBRE_CASA, type Casa } from './proyecto.ts';
