@@ -550,6 +550,14 @@ migrate(
 
     const proyectoDe = {};
 
+    // §12: «Cinco vienen de leads del CRM y llevan lead_id; el resto no
+    // tiene lead asociado». Son los cinco de los seis contactos del prototipo
+    // que tienen proyecto abierto; los otros ocho son contactos anteriores,
+    // referidos y ferias — §3.13 dice que el proyecto PUEDE existir sin lead, y
+    // sin ninguno así esa rama no se ve nunca. `PanelProyecto` la tiene
+    // escrita: «no vino de la prospección».
+    const DEL_CRM = ['wellington', 'gonzalo', 'largo', 'lucia', 'jordao'];
+
     for (const p of PROYECTOS) {
       const g = GENTE.find((x) => x[0] === p.contacto);
       const notas = registros(p.notas);
@@ -566,7 +574,7 @@ migrate(
         .pop();
 
       proyectoDe[p.contacto] = nuevo('proyecto', {
-        lead: leadDe[p.contacto],
+        lead: DEL_CRM.indexOf(p.contacto) >= 0 ? leadDe[p.contacto] : '',
         nombre: p.nombre,
         empresa: g[3],
         tipo: TIPO[p.tipo],

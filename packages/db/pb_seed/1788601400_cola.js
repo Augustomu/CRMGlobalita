@@ -66,8 +66,13 @@ migrate(
       ['gracias', A, 130, 'pendiente', '', 'whatsapp'],
 
       // Más allá de los 15 minutos: programados, sin turno calculado.
+      //
+      // Los dos en la cuenta A. §12 pide que la segunda —AMU, la de la sesión
+      // caída— tenga TRES envíos frenados, que es el número que muestra el
+      // panel de cuentas conectadas: con cuatro, la pantalla y el manual dicen
+      // cosas distintas.
       ['mensaje', A, 95, 'pendiente', 'R7', 'linkedin'],
-      ['mensaje', B, 1445, 'pendiente', 'R3', 'linkedin'],
+      ['mensaje', A, 1445, 'pendiente', 'R3', 'linkedin'],
 
       // Ya salieron.
       ['mensaje', A, -22, 'enviado', 'R1', 'linkedin'],

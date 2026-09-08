@@ -402,6 +402,39 @@ Ahora los tres calculan su posición, y si no entran para abajo suben. Medido en
 
 ---
 
+## D.10 · La auditoría final: lo que la lista no había mirado
+
+La lista de arriba salió de leer el manual y el prototipo. Lo que **no** se
+había hecho nunca es preguntarse qué quedó afuera de esa lectura. Tres cosas:
+
+**1. Una pantalla del prototipo que nunca abrí.** De los 29 `.dc.html`, uno no
+aparecía citado en ningún archivo del código: `SesionesWa.dc.html`. Es
+**Cuentas conectadas** — la construí desde la línea de §7.10 sin abrir el
+prototipo, porque busqué «Cuentas» y el archivo se llama de otra manera. Le
+faltaba lo que hace que valga la pena entrar: el renglón de *«N envíos frenados
+por sesiones caídas»*, las dos listas separadas, «Vincular otro número» y el
+panel de QR. Y traducía un estado (`expirada`) que no existe en el enum.
+
+**2. La sección E nunca se reverificó**, y esta sesión tocó justo los archivos
+de los que habla. Se probaron en el navegador las siete afirmaciones que mis
+cambios podían haber roto —el drag del repositorio, el texto que sale del
+repositorio y el aviso cuando falta, el WhatsApp apagado con motivo, la
+pastilla de solo lectura, la leyenda de los siete estados y las flechas de las
+listas de invitación. Las siete siguen en pie.
+
+**3. Los datos de demo contra §12.** Dos números no coincidían:
+
+- §12 dice *«AMU … y 3 envíos frenados»*; había 4. Importa porque es el número
+  que muestra el panel nuevo: con cuatro, la pantalla y el manual dicen cosas
+  distintas.
+- §12 dice *«Cinco vienen de leads del CRM y llevan `lead_id`; el resto no
+  tiene lead asociado»*; los 13 tenían lead. §3.13 dice que un proyecto **puede
+  existir sin lead** —contactos anteriores, referidos, ferias— y
+  `PanelProyecto` tiene la rama escrita («no vino de la prospección»), pero la
+  demo no podía mostrarla nunca. Ahora son 5 y 8.
+
+---
+
 ## E · Lo que sí coincide
 
 Para que la lista de arriba se lea en contexto. Verificado contra el manual:
