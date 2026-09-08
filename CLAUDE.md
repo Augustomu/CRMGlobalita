@@ -48,10 +48,22 @@ docs/         El vault. La documentación viaja con el código.
    Tres temas: claro, oscuro, noche.
 
 6. **El prototipo es la fuente de verdad visual, no una referencia vaga.**
-   Antes de escribir una pantalla, abrí el `.dc.html` que le corresponde en
-   `docs/prototipo/` y copiá las medidas reales: tamaños de fuente, paddings,
-   bordes (son `.5px`, no 1px), radios, y la estructura del layout — varias
-   pantallas usan `grid` con filas explícitas, no flex.
+
+   Vive en **un solo archivo**: `docs/_bundle/CRM de prospeccion.html`, que a
+   pesar de la extensión es un ZIP. Para leerlo:
+
+   ```
+   node docs/desempacar.mjs      # regenera docs/prototipo/ (gitignored)
+   ```
+
+   Antes de escribir una pantalla, abrí el `.dc.html` que le corresponde y
+   copiá las medidas reales: tamaños de fuente, paddings, bordes (son `.5px`,
+   no 1px), radios, y la estructura del layout — varias pantallas usan `grid`
+   con filas explícitas, no flex.
+
+   **El texto también sale del prototipo**: los tamaños son 9, 10, 11, 12, 13,
+   14 y 17px, sin escalar. El objetivo es una laptop de 14" donde se trabaja
+   todo el día; la densidad no es un detalle del diseño, es el diseño.
 
    Tomar solo los colores y maquetar de cero **no es respetar el diseño**: da
    algo que funciona pero se ve distinto, y la diferencia se nota sobre todo en

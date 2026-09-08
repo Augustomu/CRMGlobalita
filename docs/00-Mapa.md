@@ -62,3 +62,7 @@ Cada etapa deja algo usable.
 
 Transversal desde el día uno: los tres temas (`design/tokens.css`), los atajos, el aviso de cambios sin guardar, y el renderizado de a 80 de la columna 1. Meterlos al final cuesta el triple.
 
+## Estado del proyecto
+
+- [Auditoria](AUDITORIA.md) — que hay construido de las 29 pantallas del prototipo, que falta y en que orden conviene seguir.
+- El prototipo vive en `_bundle/`. Se lee con `node docs/desempacar.mjs`.

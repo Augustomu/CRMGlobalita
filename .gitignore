@@ -11,3 +11,7 @@ pb_data/
 # personas no salen de la maquina ni del VPS.
 packages/db/recuperacion/*.csv
 packages/db/recuperacion/eventos-calendar.json
+
+# El prototipo vive SOLO en docs/_bundle/. Esta carpeta se regenera con
+# `node docs/desempacar.mjs` — dos copias en git se desincronizan solas.
+docs/prototipo/
