@@ -250,7 +250,9 @@ html, body, #root { height: 100%; }
      desmontara, el resto de las filas se correria una posicion y el panel
      se comeria los 52px del buscador. */
   display: grid;
-  grid-template-rows: auto 52px auto auto auto minmax(120px, 1fr) auto;
+  /* La 7a es la cola de envios, que solo se dibuja con permiso: si falta, el
+     pie ocupa esa fila y la 8a queda sin usar. */
+  grid-template-rows: auto 52px auto auto auto minmax(120px, 1fr) auto auto;
   min-height: 0;
   overflow: hidden;
 }
@@ -2726,3 +2728,246 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 }
 .tarea-nueva-fila { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .tarea-nueva-acciones { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* ---------- cola de envios (§7.2, ColaEnvios.dc.html) ---------- */
+/* Vive pegada al borde de abajo de la columna 1. El panel se abre HACIA
+   ARRIBA: hacia abajo se saldria de la pantalla. */
+.cola {
+  position: relative;
+  flex-shrink: 0;
+  border-top: .5px solid var(--border);
+  background: var(--surface);
+}
+.cola-barra {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 150ms ease-out;
+}
+.cola-barra:hover { background: var(--bg); }
+.cola-caret { font-size: var(--txt-xs); color: var(--hint); width: 10px; flex-shrink: 0; }
+.cola-rotulo {
+  font-size: var(--txt-sm);
+  font-weight: 600;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+.cola-n {
+  font-size: var(--txt-xs);
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--accent-light);
+  color: var(--accent);
+}
+.cola-vivo {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--txt-sm);
+  font-weight: 600;
+  color: var(--success);
+  white-space: nowrap;
+}
+.cola-proximo {
+  margin-left: auto;
+  font-size: var(--txt-xs);
+  color: var(--hint);
+  white-space: nowrap;
+}
+/* El punto que late: es la unica senal de que algo esta corriendo del lado del
+   servidor mientras nadie mira. */
+.cola-punto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  flex-shrink: 0;
+  animation: cola-pulso 1.4s ease-in-out infinite;
+}
+@keyframes cola-pulso {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cola-punto { animation: none; }
+}
+
+.cola-panel {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--surface);
+  border-top: .5px solid var(--border);
+  border-bottom: .5px solid var(--border);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, .12);
+  animation: cola-subir 180ms ease-out;
+}
+@keyframes cola-subir {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.cola-lote { border-bottom: .5px solid var(--border); }
+.cola-lote-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px 4px;
+  background: var(--success-light);
+}
+.cola-lote-cuenta {
+  font-size: var(--txt-xs);
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--success);
+  color: var(--surface);
+  white-space: nowrap;
+}
+.cola-lote-rotulo {
+  font-size: var(--txt-xs);
+  font-weight: 600;
+  color: var(--success);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+.cola-lote-meta {
+  margin-left: auto;
+  font-size: var(--txt-xs);
+  color: var(--success);
+  white-space: nowrap;
+}
+.cola-lote-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 12px;
+  cursor: pointer;
+  background: var(--success-light);
+  border-top: .5px solid var(--surface);
+}
+.cola-lote-fila { display: flex; align-items: center; gap: 7px; }
+.cola-lote-countdown {
+  font-size: var(--txt-md);
+  font-weight: 700;
+  color: var(--success);
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: .02em;
+}
+.cola-lote-detalle {
+  font-size: var(--txt-xs);
+  color: var(--success);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cola-lote-fila .cola-lote-detalle:first-child { flex: 1; min-width: 0; }
+.cola-lote-fila .cola-lote-detalle:last-child { flex-shrink: 0; }
+.cola-avance {
+  height: 3px;
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.cola-avance-relleno {
+  height: 100%;
+  background: var(--success);
+  border-radius: 8px;
+  transition: width 900ms linear;
+}
+
+.cola-titulo {
+  padding: 6px 12px 3px;
+  font-size: var(--txt-xs);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--hint);
+  font-weight: 600;
+}
+.cola-fila {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-bottom: .5px solid var(--border);
+  cursor: pointer;
+  transition: background 150ms ease-out;
+}
+.cola-fila:hover { background: var(--bg); }
+.cola-icono {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cola-icono svg { width: 11px; height: 11px; }
+.cola-icono-plano { border: none; }
+.cola-cuenta {
+  font-size: var(--txt-xs);
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--muted);
+  border: .5px solid var(--border);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.cola-fila-medio { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.cola-quien {
+  font-size: var(--txt-md);
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+.cola-quien-ido { font-weight: 400; color: var(--muted); }
+.cola-detalle {
+  font-size: var(--txt-xs);
+  color: var(--hint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cola-fila-derecha {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  flex-shrink: 0;
+}
+.cola-countdown {
+  font-size: var(--txt-sm);
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+/* Demorado no es "en 0 s": es que se le paso la hora y sigue sin salir. */
+.cola-demorado { color: var(--error); }
+.cola-cuando { font-size: var(--txt-xs); color: var(--hint); white-space: nowrap; flex-shrink: 0; }
+.cola-vacio { padding: 14px 12px; font-size: var(--txt-sm); color: var(--hint); text-align: center; }

@@ -437,6 +437,7 @@ export function App() {
               usuario={auth.usuario}
               verColaboradores={puedeUsuario(auth.usuario, 'verTodosLeads')}
               veTelefono={puedeUsuario(auth.usuario, 'verTelefono')}
+              veCola={puedeUsuario(auth.usuario, 'colaEnvios')}
             />
             {lead ? (
               <FichaLead

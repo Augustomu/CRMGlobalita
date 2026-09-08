@@ -3,6 +3,7 @@ import { tocaHoy } from '@crm/core/cadencia';
 import type { LeadRecord, UsuarioRecord } from '../../lib/types';
 import { BurbujaWhatsApp } from './IconosCanal';
 import { pb } from '../../lib/pocketbase';
+import { ColaEnvios } from './ColaEnvios';
 
 const HOY = new Date().toISOString().slice(0, 10);
 
@@ -59,6 +60,8 @@ interface Props {
    */
   conversacion?: 'linkedin' | 'whatsapp' | null;
   onCerrarConversacion?: () => void;
+  /** §7.2: la cola va al pie, y solo con el permiso `colaEnvios`. */
+  veCola: boolean;
 }
 
 export function ListaContactos({
@@ -70,6 +73,7 @@ export function ListaContactos({
   usuario,
   verColaboradores,
   veTelefono,
+  veCola,
 }: Props) {
   const [busqueda, setBusqueda] = useState('');
   const [cuenta, setCuenta] = useState('todas');
@@ -544,7 +548,10 @@ export function ListaContactos({
         {visibles.length === 0 && <p className="vacio">Ningún lead con esos filtros.</p>}
       </div>
 
-      {/* fila 7: pie con el conteo */}
+      {/* fila 7: la cola de envíos, pegada al pie (§7.2) */}
+      {veCola && <ColaEnvios onIrAlLead={onSeleccionar} />}
+
+      {/* fila 8: pie con el conteo */}
       <div className="lista-pie">
         {visibles.length} de {leads.length}
         {usuario && !verColaboradores && ' · solo tus leads'}
