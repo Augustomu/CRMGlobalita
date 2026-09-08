@@ -234,6 +234,19 @@
   </div>
 
   <sc-if value="{{ abierto }}" hint-placeholder-val="{{ true }}">
+    <sc-if value="{{ tieneEvento }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:4px;padding:9px 12px;border-top:.5px solid var(--border);background:var(--bg)">
+        <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">Evento que se crea en Google Calendar</span>
+        <span style="font-size:12px;font-weight:600;color:var(--text);line-height:1.35;text-wrap:pretty">{{ tituloEvento }}</span>
+        <sc-if value="{{ tieneLinkEvento }}" hint-placeholder-val="{{ true }}">
+          <a href="{{ linkEvento }}" target="_blank" style="font-size:10px;color:var(--brand-linkedin);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ linkEvento }}</a>
+        </sc-if>
+        <sc-if value="{{ sinLinkEvento }}" hint-placeholder-val="{{ false }}">
+          <span style="font-size:10px;color:var(--warning)">Falta el link del perfil de LinkedIn en la ficha: el evento sale sin perfil.</span>
+        </sc-if>
+        <span style="font-size:10px;color:var(--hint);line-height:1.45;text-wrap:pretty">Nombre completo del lead &middot; primer nombre de la cuenta de origen &middot; tu nombre. El link es el del perfil, no el de Sales Navigator.</span>
+      </div>
+    </sc-if>
     <sc-if value="{{ conCalendarios }}" hint-placeholder-val="{{ false }}">
       <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:9px 12px 0;border-top:.5px solid var(--border)">
         <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);white-space:nowrap">Agendar en</span>
@@ -602,6 +615,11 @@ class Component extends DCLogic {
     }));
 
     return {
+      tituloEvento: this.props.tituloEvento || '',
+      tieneEvento: !!this.props.tituloEvento,
+      linkEvento: this.props.linkPerfilEvento || '',
+      tieneLinkEvento: !!this.props.linkPerfilEvento,
+      sinLinkEvento: !this.props.linkPerfilEvento,
       conCalendarios: cals.length > 1,
       calendarios: cals.map(c => ({ label: c.label, on: calSel === c.id, off: calSel !== c.id, elegir: () => this.setState({ cal: c.id, dia: null, hora: null }) })),
       notaCalendario: calAjeno ? 'Los horarios ya tomados figuran como ocupado, sin detalle.' : 'Disponibilidad de tu propio calendario.',

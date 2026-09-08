@@ -118,7 +118,7 @@
   <div ref="{{ refScroll }}" style="flex:1;min-height:0;overflow-y:auto;padding:10px 14px 24px;display:flex;flex-direction:column;gap:10px">
     <dc-import name="Colapsable" titulo="Datos" contactoId="{{ contactoId }}" chips="{{ datos }}" bloques="{{ notas }}" onEditar="{{ editarCampo }}" hint-size="100%,40px"></dc-import>
     <dc-import name="Colapsable" titulo="Contacto" contactoId="{{ contactoId }}" chips="{{ contactoChips }}" onEditar="{{ editarCampo }}" hint-size="100%,40px"></dc-import>
-    <dc-import name="FechaReunion" contactoId="{{ contactoId }}" calendarios="{{ calendarios }}" ocupadosAjenos="{{ ocupadosAjenos }}" ocupados="{{ ocupados }}" eventos="{{ eventos }}" eventosDia="{{ eventosDia }}" confirmada="{{ confirmada }}" fechaConfirmada="{{ fecha }}" horaConfirmada="{{ hora }}" estado="{{ estado }}" historial="{{ historial }}" avisoRegla="{{ regla }}" proximoContacto="{{ proximoContacto }}" cargaDias="{{ cargaDias }}" onPanelProximo="{{ setBloqueo }}" abrirNonce="{{ nonceCal }}" focoProximo="{{ nonceProximo }}" onProximo="{{ setProximo }}" onConfirmar="{{ pedirConfirmacion }}" onEstado="{{ setEstado }}" onCambiarFecha="{{ cambiarFecha }}" onCambio="{{ marcarSucio }}" onRestaurarHistorial="{{ restaurarHistorial }}" onEliminarHistorial="{{ eliminarHistorial }}" hint-size="100%,340px"></dc-import>
+    <dc-import name="FechaReunion" tituloEvento="{{ tituloEvento }}" linkPerfilEvento="{{ linkPerfilEvento }}" contactoId="{{ contactoId }}" calendarios="{{ calendarios }}" ocupadosAjenos="{{ ocupadosAjenos }}" ocupados="{{ ocupados }}" eventos="{{ eventos }}" eventosDia="{{ eventosDia }}" confirmada="{{ confirmada }}" fechaConfirmada="{{ fecha }}" horaConfirmada="{{ hora }}" estado="{{ estado }}" historial="{{ historial }}" avisoRegla="{{ regla }}" proximoContacto="{{ proximoContacto }}" cargaDias="{{ cargaDias }}" onPanelProximo="{{ setBloqueo }}" abrirNonce="{{ nonceCal }}" focoProximo="{{ nonceProximo }}" onProximo="{{ setProximo }}" onConfirmar="{{ pedirConfirmacion }}" onEstado="{{ setEstado }}" onCambiarFecha="{{ cambiarFecha }}" onCambio="{{ marcarSucio }}" onRestaurarHistorial="{{ restaurarHistorial }}" onEliminarHistorial="{{ eliminarHistorial }}" hint-size="100%,340px"></dc-import>
     <sc-if value="{{ hayPropuesta }}" hint-placeholder-val="{{ false }}">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 11px;border-radius:12px;border:.5px solid var(--warning);background:var(--warning-light);animation:om-abrir 160ms ease-out">
         <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:var(--warning);color:var(--surface);white-space:nowrap">Recordatorio</span>
@@ -360,6 +360,8 @@ class Component extends DCLogic {
       reenviar: () => this.aplicar({ reenviado: true }, 'Reenvío de invitación'),
       lista: c.lista || 'lista sin registrar',
       linkPerfil: links.perfil || '#',
+      tituloEvento: [c.nombre, this.props.cuentaNombre, this.props.miNombre].filter(Boolean).join(' · '),
+      linkPerfilEvento: (links.perfil || '').indexOf('linkedin.com') >= 0 ? (links.perfil || '').split('?')[0] : '',
       linkWhatsapp: (c.telefono || '').replace(/\D/g, '') ? 'https://wa.me/' + (c.telefono || '').replace(/\D/g, '') : '#',
       linkChat: links.chat || '',
       emails: [val('Email', c.email), val('Email 2', c.email2), val('Email 3', c.email3)].filter(Boolean),
@@ -421,11 +423,19 @@ class Component extends DCLogic {
           ] },
           { titulo: 'Seguimiento', items: [
             { label: 'Próximo contacto', detalle: 'elegir la fecha del recordatorio', atajo: 'D', activo: true, correr: bump('nonceProximo') },
-            { label: 'Fecha de reunión', detalle: 'abre el calendario de disponibilidad', atajo: 'R', activo: true, correr: bump('nonceCal') },
+            { label: 'Agendar reunión', detalle: 'calendario + evento con nombre, cuenta de origen y link del perfil', atajo: 'R', activo: true, correr: bump('nonceCal') },
             { label: 'Análisis del perfil', detalle: 'ventana, caída y probabilidad', atajo: '', activo: true,
               correr: cerrar(() => this.setState({ analisisAbierto: true })) }
           ] }
         ];
+        if (this.props.onAbrirProyecto) {
+          grupos.push({ titulo: 'Control de proyectos', items: [
+            { label: 'Abrir proyecto Fabript/PIV', detalle: 'queda visible para el socio en Control', atajo: '', activo: true,
+              correr: cerrar(() => this.props.onAbrirProyecto(c, 'pib')) },
+            { label: 'Abrir proyecto de parcería', detalle: 'queda visible para el socio en Control', atajo: '', activo: true,
+              correr: cerrar(() => this.props.onAbrirProyecto(c, 'parceria')) }
+          ] });
+        }
         if (this.props.puedeAsignar === true && (this.props.usuarios || []).length > 1) {
           grupos.push({ titulo: 'Asignación', items: [{ label: 'Asignar a otro usuario', detalle: 'hoy: ' + ((usuariosProp.find(x => x.id === duenioId) || {}).nombre || 'sin asignar'), atajo: '', activo: true, correr: cerrar(() => this.setState({ asignarAbierto: true })) }] });
         }
