@@ -29,6 +29,36 @@ export function useAuth(): EstadoAuth {
     });
   }, []);
 
+  /**
+   * Comprobar contra el SERVIDOR que la sesión guardada todavía vale.
+   *
+   * `authStore.isValid` sólo mira que el token no esté vencido, y eso no
+   * alcanza: un token puede estar perfecto y apuntar a un usuario que ya no
+   * existe —la base se recreó, al usuario lo borraron, le revocaron el
+   * acceso—. Ahí el servidor contesta 401 a todo y la pantalla quedaba
+   * MOSTRANDO EL CRM VACÍO, con el cartel «Ningún lead con esos filtros»
+   * echándole la culpa a los filtros.
+   *
+   * Una sesión que no sirve tiene que llevar al login, no a un CRM sin datos:
+   * lo segundo parece que se perdió todo.
+   */
+  useEffect(() => {
+    if (!pb.authStore.isValid) return;
+    let vivo = true;
+    setCargando(true);
+    pb.collection('users')
+      .authRefresh()
+      .catch(() => {
+        if (vivo) pb.authStore.clear();
+      })
+      .finally(() => {
+        if (vivo) setCargando(false);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
   async function entrar(email: string, password: string) {
     setCargando(true);
     setError(null);
