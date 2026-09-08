@@ -28,6 +28,12 @@ migrate(
     const HOY = ahora.getFullYear() + '-' + String(ahora.getMonth() + 1).padStart(2, '0') + '-' + String(ahora.getDate()).padStart(2, '0');
     const mover = (dias) => new Date(Date.parse(HOY) + dias * DIA).toISOString().slice(0, 10);
 
+    // Cuantos dias lleva corriendo la semana. Hace falta para poder meter
+    // invitaciones DENTRO de la semana en curso: un martes son dos dias, y si
+    // se reparte a ciegas casi todo cae en la semana anterior.
+    const dow = new Date(Date.parse(HOY)).getUTCDay(); // 0 = domingo
+    const desdeLunes = dow === 0 ? 6 : dow - 1;
+
     const NOMBRES = [
       'Adriana', 'Bruno', 'Carla', 'Diego', 'Elena', 'Fabio', 'Gabriela', 'Hernan',
       'Ines', 'Joaquin', 'Karina', 'Leandro', 'Marisa', 'Nicolas', 'Olga', 'Pablo',
@@ -126,7 +132,95 @@ migrate(
       lead.set('etiquetas', etiquetas.length ? [etiquetas[i % etiquetas.length]] : []);
       lead.set('sin_leer_li', i % 11 === 0);
       lead.set('f_ultimo_contacto', mover(-((i % 30) + 1)));
+
+      // El ciclo de la invitacion, que es lo que mide Automatizaciones (§7.3).
+      //
+      // Sin estas cuatro fechas el panel sale entero en cero: no hay enviadas
+      // ni aceptadas de la semana, la conversion no existe y la tabla de
+      // "vuelven a la cola" queda vacia. Las fechas se reparten sobre las
+      // ultimas ocho semanas para que la semana en curso y la anterior tengan
+      // las dos volumen — la conversion que se muestra es la de la ya cerrada.
+      //
+      // NO SUMAN 187/200 COMO EL PROTOTIPO, y esta bien: para eso harian falta
+      // ~1.200 invitaciones en una semana y aca hay 181 leads en total. El
+      // numero sale de los datos; inflarlo seria mostrar un tablero que miente.
+      // El reparto NO es uniforme, y esa es la gracia. Con las fechas
+      // repartidas parejo sobre ocho semanas, la semana en curso —que un
+      // martes son dos dias— se queda con un lead por cuenta, la conversion de
+      // la semana cerrada no tiene con que calcularse, y ninguna invitacion es
+      // mas vieja que los 90 dias, asi que la columna "Cancel." sale toda en
+      // cero. Cada tramo esta puesto para que se vea un caso distinto.
+      const b = i % 20;
+      let diasAtras;
+      let esVieja = false;
+      let yaCancelada = false;
+      if (b < 8) {
+        diasAtras = i % (desdeLunes + 1); // 40% esta semana: da volumen a "Enviadas"
+      } else if (b < 13) {
+        diasAtras = desdeLunes + 1 + (i % 7); // 25% la semana cerrada: da la conversion
+      } else if (b < 17) {
+        diasAtras = desdeLunes + 8 + ((i * 3) % 40); // 20% mas atras
+      } else if (b < 19) {
+        diasAtras = 100 + ((i * 7) % 60); // 10% ya canceladas: vuelven a la cola
+        yaCancelada = true;
+      } else {
+        diasAtras = 95 + ((i * 11) % 70); // 5% pasadas de los 90 sin aceptar
+        esVieja = true;
+      }
+      lead.set('f_invitacion', mover(-diasAtras));
+
+      // ~60% acepta, entre 1 y 9 dias despues. Las viejas y las canceladas no:
+      // son justamente las que nadie acepto.
+      const acepta = !esVieja && !yaCancelada && i % 5 !== 0 && i % 7 !== 0;
+      if (acepta) lead.set('f_aceptacion', mover(-diasAtras + 1 + (i % 9)));
+
+      // Los envios de la cadencia hasta la etapa donde esta parado.
+      //
+      // SIN ESTO la tabla "Rendimiento por R" sale entera en cero: mide envios
+      // reales, y la base de demo no tenia ninguno. Un lead parado en R4 tuvo
+      // que pasar por R1, R2 y R3 — inventar la etapa sin los envios que la
+      // explican deja la etapa contando una historia que no ocurrio.
+      const etapaIdx = i % ETAPAS.length; // R0 = 0, R1 = 1, ...
+      const enviosDelLead = [];
+      if (acepta) {
+        for (let k = 1; k <= etapaIdx; k++) {
+          const cuando = -diasAtras + 1 + (i % 9) + k * 3;
+          if (cuando > 0) break; // no se manda en el futuro
+          enviosDelLead.push([`R${k}`, mover(cuando)]);
+        }
+      }
+
+      // ~25% de los que aceptaron contesta, y contesta DESPUES de un envio
+      // concreto: asi la respuesta se le atribuye al paso que la provoco y no
+      // a un promedio. El desfase reparte las respuestas entre los dias de la
+      // semana; si no, "cuando responden" sale como una sola barra al 100%.
+      if (acepta && i % 4 === 0 && enviosDelLead.length) {
+        const cual = enviosDelLead[i % enviosDelLead.length];
+        lead.set('f_respuesta', mover(Math.min(0, Math.round((Date.parse(cual[1]) - Date.parse(HOY)) / DIA) + 1 + (i % 5))));
+      }
+
+      // Las ya canceladas vuelven como Recontacto cuando cumplen la espera de
+      // 60 dias. La fecha esta elegida para que el +60 caiga en los tres tramos
+      // que la tabla distingue: hoy, esta semana y la proxima.
+      if (yaCancelada) {
+        lead.set('f_cancelada', mover(-60 + (i % 3) * 5));
+        lead.set('situacion', 'agotado');
+      }
+
       app.save(lead);
+
+      for (const [paso, cuando] of enviosDelLead) {
+        const e = new Record(app.findCollectionByNameOrId('envio'));
+        e.set('lead', lead.id);
+        e.set('paso', paso);
+        e.set('enviado_en', cuando);
+        // R4 y R8 van por WhatsApp cuando hay telefono (config de cadencia).
+        e.set('canal', (paso === 'R4' || paso === 'R8') && tieneTel ? 'whatsapp' : 'linkedin');
+        e.set('idioma', lugar[0] === 'Brasil' ? 'pt' : 'es');
+        e.set('texto', `Mensaje ${paso} de demo.`);
+        e.set('a_mano', true); // D15: hoy los R se mandan a mano
+        app.save(e);
+      }
     }
   },
 

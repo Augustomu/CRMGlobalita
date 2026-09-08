@@ -16,10 +16,18 @@ import { Agenda } from './features/agenda/Agenda';
 import { Tareas } from './features/tareas/Tareas';
 import { Duplicados } from './features/duplicados/Duplicados';
 import { useDuplicados } from './features/duplicados/useDuplicados';
+import { Automatizaciones } from './features/automatizaciones/Automatizaciones';
 
 const TEMAS = ['tema-claro', 'tema-oscuro', 'tema-noche'] as const;
 
-type Seccion = 'followup' | 'control' | 'usuarios';
+type Seccion = 'followup' | 'control' | 'usuarios' | 'automatizaciones';
+
+/**
+ * Las secciones que traen sus propios datos y no dependen de `useLeads`.
+ * Sin esto, entrar a Control o Automatizaciones mostraba «Cargando leads…»
+ * arriba de una pantalla que no usa ni un lead de esa carga.
+ */
+const CON_DATOS_PROPIOS: Seccion[] = ['control', 'automatizaciones'];
 
 export function App() {
   const auth = useAuth();
@@ -169,9 +177,13 @@ export function App() {
             Follow-up, WA Personal, Usuarios. */}
         <nav className="header-tabs">
           {puedeUsuario(auth.usuario, 'automatizaciones') && (
-            <span className="tab tab-off tab-pendiente" title="Etapa 5, todavía no construida">
+            <button
+              type="button"
+              className={`tab ${seccion === 'automatizaciones' ? 'tab-on' : 'tab-off'}`}
+              onClick={() => irA(() => setSeccion('automatizaciones'))}
+            >
               Automatizaciones
-            </span>
+            </button>
           )}
           {puedeUsuario(auth.usuario, 'control') && (
             <button
@@ -410,8 +422,10 @@ export function App() {
       </header>
 
       <main className="cuerpo">
-        {seccion !== 'control' && cargando && <p className="vacio">Cargando leads…</p>}
-        {seccion !== 'control' && error && (
+        {seccion && !CON_DATOS_PROPIOS.includes(seccion) && cargando && (
+          <p className="vacio">Cargando leads…</p>
+        )}
+        {seccion && !CON_DATOS_PROPIOS.includes(seccion) && error && (
           <div className="aviso-error">
             <strong>No se pudo leer la base.</strong>
             <p>{error}</p>
@@ -421,6 +435,8 @@ export function App() {
           </div>
         )}
         {seccion === 'control' && auth.usuario && <Control usuario={auth.usuario} />}
+
+        {seccion === 'automatizaciones' && <Automatizaciones />}
 
         {!cargando && !error && seccion === 'usuarios' && auth.usuario && (
           <Usuarios usuarioActual={auth.usuario} leads={leads} onCambio={recargar} />
