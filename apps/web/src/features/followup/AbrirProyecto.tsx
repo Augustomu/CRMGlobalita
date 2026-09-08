@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { NOMBRE_TIPO, proyectoDesdeLead, type TipoProyecto } from '@crm/core/proyecto';
+import { diaLocal } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
 import { ProyectosDelLead } from './ProyectosDelLead';
 import type { LeadRecord } from '../../lib/types';
 
-const HOY = new Date().toISOString().slice(0, 10);
+const HOY = diaLocal();
 
 /** Los dos que se abren desde la ficha (§6). Los otros tipos se cargan a mano. */
 const DESDE_LA_FICHA: TipoProyecto[] = ['fabript_piv', 'parceria'];

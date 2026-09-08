@@ -13,9 +13,10 @@ import {
   type EstadoProyecto,
   type TipoProyecto,
 } from '@crm/core/proyecto';
+import { diaLocal } from '@crm/core/fecha';
 import type { ProyectoConDatos } from './useControl';
 
-const HOY = new Date().toISOString().slice(0, 10);
+const HOY = diaLocal();
 
 // Los tres vigentes. El prototipo saco «Prototipo» y sus proyectos pasaron a
 // Fabript/PIV: ofrecer un filtro que no matchea nada seria ruido.

@@ -1,16 +1,13 @@
 import { useMemo, useState } from 'react';
 import { coincide } from '@crm/core/busqueda';
 import { NOMBRE_CASA, type Casa } from '@crm/core/proyecto';
+import { ddmm } from '@crm/core/fecha';
 import type { LeadDeControl } from './useControl';
 
 interface Props {
   leads: LeadDeControl[];
 }
 
-function ddmm(iso: string | null): string {
-  const f = String(iso ?? '').slice(0, 10);
-  return f ? `${f.slice(8, 10)}/${f.slice(5, 7)}` : '—';
-}
 
 /**
  * Los leads que confirmaron interés (§7.11, decisión del 08/09).

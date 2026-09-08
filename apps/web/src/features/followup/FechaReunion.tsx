@@ -5,6 +5,7 @@ import {
   type EstadoReunion, type EventoDelDia,
 } from '@crm/core/reunion';
 import { cargaPorDia, estadoDelDia, fechaConCupo } from '@crm/core/carga';
+import { ddmm, diaLocal } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
 import { ConfirmarReunion } from './ConfirmarReunion';
 import type { LeadRecord, ReunionRecord, UsuarioRecord } from '../../lib/types';
@@ -29,20 +30,6 @@ const DURACIONES = [15, 30, 45, 60];
  */
 const TOPE_DIARIO = 40;
 
-/**
- * Hoy en la zona de QUIEN MIRA, no en UTC.
- *
- * Con toISOString() el 7 de septiembre a las 18:00 en México ya es el 8 en UTC,
- * y el calendario tachaba el día de hoy como si hubiera pasado.
- */
-const hoyIso = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-
-function ddmm(iso: string): string {
-  return iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : '';
-}
 
 /** Las celdas de un mes, empezando en lunes. `null` es relleno. */
 function celdasDelMes(anio: number, mes: number): (string | null)[] {
@@ -131,7 +118,7 @@ export function FechaReunion({
   const [pidiendoMails, setPidiendoMails] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const inicial = { anio: Number(hoyIso().slice(0, 4)), mes: Number(hoyIso().slice(5, 7)) - 1 };
+  const inicial = { anio: Number(diaLocal().slice(0, 4)), mes: Number(diaLocal().slice(5, 7)) - 1 };
   const [cal, setCal] = useState(inicial);
   const [calProx, setCalProx] = useState(inicial);
 
@@ -275,7 +262,7 @@ export function FechaReunion({
     return m;
   }, [reuniones, conNombre, ajenas]);
 
-  const hoy = hoyIso();
+  const hoy = diaLocal();
   const celdas = celdasDelMes(cal.anio, cal.mes);
 
   /**

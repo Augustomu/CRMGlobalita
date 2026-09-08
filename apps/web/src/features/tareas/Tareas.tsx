@@ -11,6 +11,7 @@ import {
   type FiltroTarea,
   type Tarea,
 } from '@crm/core/tarea';
+import { ddmm } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
 import type { UsuarioRecord } from '../../lib/types';
 
@@ -32,10 +33,6 @@ function hoyIso(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function ddmm(iso: string | null | undefined): string {
-  const f = String(iso ?? '').slice(0, 10);
-  return f ? `${f.slice(8, 10)}/${f.slice(5, 7)}` : '';
-}
 
 /** Las cinco estrellas de prioridad. */
 function Estrellas({ valor, onElegir }: { valor: number; onElegir?: (v: number) => void }) {

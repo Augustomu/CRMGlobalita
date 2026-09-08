@@ -148,14 +148,22 @@ comparaban en crudo. Tres buscadores, dos comportamientos.
 
 Ahora está en `core/busqueda.ts` (`sinAcentos`, `coincide`) y lo usan los tres.
 
-### B.4 · `HOY` sale de UTC en la lista de contactos
+### B.4 · `HOY` salía de UTC — ✅ **resuelto el 08/09**
 
-`ListaContactos.tsx:8` usa `new Date().toISOString().slice(0, 10)`. Cerca de la
-medianoche clasifica mal qué está vencido, y los filtros de la columna 1 quedan
-corridos un día.
+`new Date().toISOString().slice(0, 10)` da el día en UTC, y eso está mal en todo
+el continente: a las 21:00 en Buenos Aires ya es mañana en UTC. Con esa fecha la
+lista marcaba como vencido lo que vence mañana, el calendario tachaba hoy como
+si hubiera pasado, y «toca hoy» quedaba corrido un día — de noche, que es
+justamente cuando se cierra el día de trabajo.
 
-Es el mismo bug de zona que ya apareció cuatro veces en otras pantallas. Esta es
-la quinta.
+**No eran cinco apariciones: eran nueve.** Al ir a arreglar la de
+`ListaContactos` aparecieron las mismas ocho líneas en Proyectos, Reuniones,
+PanelProyecto, AbrirProyecto, EnviarMensaje, FichaLead, ProyectosDelLead y
+Vencimientos. Dos pantallas (Agenda y FechaReunion) ya lo tenían bien, cada una
+con su propia copia de la función correcta.
+
+Ahora la regla está una sola vez, en `core/fecha.ts` (`diaLocal`), con su test.
+De paso se fue `ddmm`, que estaba escrita cinco veces.
 
 ---
 

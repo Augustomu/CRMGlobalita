@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { coincide } from '@crm/core/busqueda';
 import { tocaHoy } from '@crm/core/cadencia';
+import { diaLocal } from '@crm/core/fecha';
 import type { LeadRecord, UsuarioRecord } from '../../lib/types';
 import { BurbujaWhatsApp } from './IconosCanal';
 import { pb } from '../../lib/pocketbase';
 import { ColaEnvios } from './ColaEnvios';
 
-const HOY = new Date().toISOString().slice(0, 10);
+const HOY = diaLocal();
 
 /** Etiquetas legibles de las seis situaciones de D17. */
 export const NOMBRE_SITUACION: Record<string, string> = {

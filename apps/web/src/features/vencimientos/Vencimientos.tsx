@@ -5,10 +5,11 @@ import { idiomaEfectivo } from '@crm/core/idioma';
 import { plantillasDe, resolverParaPaso, type Plantilla } from '@crm/core/plantilla';
 import { canalDe } from '@crm/core/cadencia';
 import type { Idioma, Paso } from '@crm/core/tipos';
+import { diaLocal } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
 import type { LeadRecord, PlantillaRecord } from '../../lib/types';
 
-const HOY = new Date().toISOString().slice(0, 10);
+const HOY = diaLocal();
 const IDIOMAS: Idioma[] = ['es', 'pt', 'en'];
 
 function aPlantilla(r: PlantillaRecord): Plantilla {

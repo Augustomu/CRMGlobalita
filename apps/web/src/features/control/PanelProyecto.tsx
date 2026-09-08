@@ -9,9 +9,10 @@ import {
   type Registro,
   type TipoProyecto,
 } from '@crm/core/proyecto';
+import { diaLocal } from '@crm/core/fecha';
 import type { ProyectoConDatos } from './useControl';
 
-const HOY = new Date().toISOString().slice(0, 10);
+const HOY = diaLocal();
 
 function fechaCorta(iso: string): string {
   const f = String(iso).slice(0, 10);

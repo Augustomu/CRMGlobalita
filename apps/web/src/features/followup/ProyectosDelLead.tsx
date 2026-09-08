@@ -9,10 +9,11 @@ import {
   type Registro,
   type TipoProyecto,
 } from '@crm/core/proyecto';
+import { diaLocal } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
 import type { LeadRecord } from '../../lib/types';
 
-const HOY = new Date().toISOString().slice(0, 10);
+const HOY = diaLocal();
 
 /** Los que se eligen a mano. `congelado` no está: lo pone el sistema (§3.1). */
 const ELEGIBLES: EstadoProyecto[] = [

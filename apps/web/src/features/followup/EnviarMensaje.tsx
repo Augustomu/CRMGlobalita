@@ -11,10 +11,11 @@ import {
   sinCuenta,
   estaDestacadaPara, plantillasDe, resolverParaPaso, type Plantilla } from '@crm/core/plantilla';
 import type { Canal, Idioma, Paso } from '@crm/core/tipos';
+import { diaLocal } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
 import type { EnvioRecord, LeadRecord, PlantillaRecord } from '../../lib/types';
 
-const HOY = new Date().toISOString().slice(0, 10);
+const HOY = diaLocal();
 const IDIOMAS: Idioma[] = ['es', 'pt', 'en'];
 
 /** Del registro de PocketBase al tipo que entienden las reglas de core. */

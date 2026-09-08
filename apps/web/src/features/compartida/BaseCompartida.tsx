@@ -9,6 +9,7 @@ import {
   type FilaCompartida,
   type FiltroEtapa,
 } from '@crm/core/compartida';
+import { ddmm } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
 
 interface LeadRecord {
@@ -55,10 +56,6 @@ const COLUMNAS = [
   'Etapa',
 ];
 
-function ddmm(iso: string | null | undefined): string {
-  const f = String(iso ?? '').slice(0, 10);
-  return f ? `${f.slice(8, 10)}/${f.slice(5, 7)}` : '—';
-}
 
 /** El chip de etapa usa el grupo, no la R cruda: R6 sin contexto no dice nada. */
 function claseDeGrupo(g: string): string {

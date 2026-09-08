@@ -3,6 +3,7 @@ import { tocaHoy } from '@crm/core/cadencia';
 import { idiomaEfectivo } from '@crm/core/idioma';
 import { linkWhatsApp } from '@crm/core/telefono';
 import { recientes, sePuedeSacar } from '@crm/core/etiqueta';
+import { diaLocal } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
 import type { EnvioRecord, EtiquetaRecord, LeadRecord, PlantillaRecord, UsuarioRecord } from '../../lib/types';
 import { puedeEditar, puedeUsuario } from './useLeads';
@@ -18,7 +19,7 @@ import { PanelEtiquetas } from './PanelEtiquetas';
 import { EditarLinks } from './EditarLinks';
 import { AnalisisPerfil } from './AnalisisPerfil';
 
-const HOY = new Date().toISOString().slice(0, 10);
+const HOY = diaLocal();
 
 /**
  * Los campos editables de la ficha, separados por dónde viven de verdad:

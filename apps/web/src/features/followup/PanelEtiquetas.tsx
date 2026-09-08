@@ -5,6 +5,7 @@ import {
   sePuedeRenombrar,
   type Etiqueta,
 } from '@crm/core/etiqueta';
+import { ddmm } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
 
 interface Props {
@@ -15,10 +16,6 @@ interface Props {
   onCerrar: () => void;
 }
 
-function ddmm(iso: string | null | undefined): string {
-  const f = String(iso ?? '').slice(0, 10);
-  return f ? `${f.slice(8, 10)}/${f.slice(5, 7)}` : '';
-}
 
 /**
  * Panel de etiquetas (§7.2). Portada de `docs/prototipo/PanelEtiquetas.dc.html`.

@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { diaLocal } from '@crm/core/fecha';
+import { enMinutos, hhmm } from '@crm/core/reunion';
 import type { UsuarioRecord, LeadRecord } from '../../lib/types';
 import { leadsConSeguimiento, useAgenda, type EventoAgenda } from './useAgenda';
 
@@ -21,24 +23,16 @@ const MESES = [
 
 type Vista = 'Diaria' | 'Semanal' | 'Lista';
 
-/** Hoy en la zona de quien mira. Nunca `toISOString`: eso es UTC. */
-function hoyIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
+/**
+ * Correr una fecha N días.
+ *
+ * El ancla es mediodía UTC a propósito: sumando desde medianoche, un cambio de
+ * horario de verano corre el resultado un día.
+ */
 function sumarDias(iso: string, dias: number): string {
   const d = new Date(`${iso}T12:00:00Z`);
   d.setUTCDate(d.getUTCDate() + dias);
   return d.toISOString().slice(0, 10);
-}
-
-function hhmm(minutos: number): string {
-  return `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`;
-}
-
-function enMinutos(hora: string): number {
-  return Number(hora.slice(0, 2)) * 60 + Number(hora.slice(3, 5));
 }
 
 /**
@@ -85,7 +79,7 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
   const [fCheck, setFCheck] = useState<'todos' | 'con' | 'sin'>('todos');
   const [chequeados, setChequeados] = useState<Set<string>>(new Set());
 
-  const hoy = hoyIso();
+  const hoy = diaLocal();
   const referencia = sumarDias(hoy, vista === 'Semanal' ? offset * 7 : offset);
   const diasVisibles = useMemo(() => {
     if (vista !== 'Semanal') return [referencia];

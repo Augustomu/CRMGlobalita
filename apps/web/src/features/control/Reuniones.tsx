@@ -14,8 +14,9 @@ import {
   type Rango,
   type ReunionMedida,
 } from '@crm/core/metricas';
+import { diaLocal } from '@crm/core/fecha';
 
-const HOY = new Date().toISOString().slice(0, 10);
+const HOY = diaLocal();
 
 const RANGOS: Rango[] = ['1m', '3m', '6m'];
 const AGRUPADORES: Agrupador[] = [
