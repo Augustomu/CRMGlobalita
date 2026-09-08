@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
+import { PANEL_AGENDA } from '@crm/core/anchos';
 import { diaLocal } from '@crm/core/fecha';
+import { useAncho } from '../../lib/useAncho';
 import { enMinutos, hhmm } from '@crm/core/reunion';
 import type { UsuarioRecord, LeadRecord } from '../../lib/types';
 import { leadsConSeguimiento, useAgenda, type EventoAgenda } from './useAgenda';
@@ -80,6 +82,8 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
   const [chequeados, setChequeados] = useState<Set<string>>(new Set());
 
   const hoy = diaLocal();
+  // §9.4: 340–900, doble clic vuelve a 560, persistido.
+  const anchoAgenda = useAncho(PANEL_AGENDA);
   const referencia = sumarDias(hoy, vista === 'Semanal' ? offset * 7 : offset);
   const diasVisibles = useMemo(() => {
     if (vista !== 'Semanal') return [referencia];
@@ -130,7 +134,12 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
   }, [leads, fCheck, chequeados]);
 
   return (
-    <aside className="agenda">
+    <aside className="agenda" style={anchoAgenda.estilo}>
+      <div
+        className="divisor divisor-izq"
+        title="Arrastra para cambiar el ancho de la agenda - doble clic para volver al ancho normal"
+        {...anchoAgenda.divisor}
+      />
       <div className="agenda-cabecera">
         <span className="colapsable-titulo">Agenda</span>
         <div className="reunion-segmentado">

@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { coincide } from '@crm/core/busqueda';
+import { COLUMNA_LISTA } from '@crm/core/anchos';
+import { LOTE, hayQueCrecer, scrollHasta, ventanaPara } from '@crm/core/ventana';
+import { useAncho } from '../../lib/useAncho';
 import { tocaHoy } from '@crm/core/cadencia';
 import { diaLocal } from '@crm/core/fecha';
 import type { LeadRecord, UsuarioRecord } from '../../lib/types';
@@ -81,6 +84,17 @@ export function ListaContactos({
   onImportar,
 }: Props) {
   const [busqueda, setBusqueda] = useState('');
+  /**
+   * Cuántas filas se dibujan (§7.2, §11 «transversal desde el día uno»).
+   *
+   * La base tiene miles de leads. Dibujarlos todos hacía que cada tecla del
+   * buscador remontara miles de filas, y el cursor iba atrás de lo que se
+   * escribía.
+   */
+  const [cuantas, setCuantas] = useState(LOTE);
+  // 9.4: 260-520, doble clic alterna compacto/normal, persistido.
+  const anchoCol = useAncho(COLUMNA_LISTA);
+  const refLista = useRef<HTMLDivElement>(null);
   const [cuenta, setCuenta] = useState('todas');
   const [colaborador, setColaborador] = useState('todos');
   const [soloVencidos, setSoloVencidos] = useState(false);
@@ -206,6 +220,36 @@ export function ListaContactos({
       });
   }, [leads, busqueda, cuenta, colaborador, soloVencidos, wa, reunion, rol, pais, ciudad, etiqueta, orden, reunionDe]);
 
+  // Cambiar el filtro o la búsqueda vuelve la ventana a 80: mantenerla estirada
+  // después de pasar de 3000 leads a 12 sigue costando lo mismo y no muestra
+  // nada más.
+  useEffect(() => {
+    setCuantas(LOTE);
+    if (refLista.current) refLista.current.scrollTop = 0;
+  }, [busqueda, cuenta, colaborador, soloVencidos, wa, reunion, rol, pais, ciudad, etiqueta, orden]);
+
+  const dibujadas = useMemo(() => visibles.slice(0, cuantas), [visibles, cuantas]);
+
+  /**
+   * Traer a la vista el lead elegido desde afuera de la lista.
+   *
+   * Un atajo o el panel de últimos pueden elegir el lead 900. Si la ventana no
+   * se estira, la ficha se abre pero la fila no existe y el scroll no tiene a
+   * dónde ir: parece que no pasó nada.
+   */
+  useEffect(() => {
+    if (!seleccionado) return;
+    const i = visibles.findIndex((l) => l.id === seleccionado);
+    if (i < 0) return;
+    const necesaria = ventanaPara(i, cuantas);
+    if (necesaria !== cuantas) {
+      setCuantas(necesaria);
+      return; // se hace scroll en el render siguiente, cuando la fila existe
+    }
+    const el = refLista.current;
+    if (el) el.scrollTop = scrollHasta(i, el.clientHeight);
+  }, [seleccionado]);
+
   // §7.2: los últimos leads editados, como accesos rápidos.
   const ultimos = useMemo(
     () => [...leads].sort((a, b) => b.updated.localeCompare(a.updated)).slice(0, 3),
@@ -247,7 +291,15 @@ export function ListaContactos({
   const abierto = conversacion ? (leads.find((l) => l.id === seleccionado) ?? null) : null;
 
   return (
-    <aside className="columna-lista">
+    <aside className="columna-lista" style={anchoCol.estilo}>
+      {/* 9.4. El divisor va pegado al borde que da a la ficha. Es de 5px y el
+          arrastre se escucha en document: si dependiera del divisor, el panel
+          dejaria de seguir al mouse apenas se sale de esos 5px. */}
+      <div
+        className="divisor divisor-der"
+        title="Arrastra para cambiar el ancho de la lista - doble clic para modo compacto"
+        {...anchoCol.divisor}
+      />
       {/* Se dibuja siempre: vacío ocupa 0 y así el resto de las filas del grid
           no se corren cuando la conversación se abre o se cierra. */}
       <div className={abierto ? 'conv-panel' : ''}>
@@ -518,8 +570,17 @@ export function ListaContactos({
       )}
 
       {/* fila 6: la lista */}
-      <div className="lista-filas">
-        {visibles.map((l) => {
+      <div
+        className="lista-filas"
+        ref={refLista}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          if (cuantas < visibles.length && hayQueCrecer(el.scrollTop, el.clientHeight, el.scrollHeight)) {
+            setCuantas((c) => c + LOTE);
+          }
+        }}
+      >
+        {dibujadas.map((l) => {
           const p = l.expand?.perfil;
           const activo = seleccionado === l.id;
           const vence = tocaHoy(

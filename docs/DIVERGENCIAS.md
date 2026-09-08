@@ -213,20 +213,29 @@ cuenta esté conectada. La función lo contempla y el argumento va en `false`.
 
 Ordenado por cuánto se usa.
 
-### D.1 · Escala de la columna 1 (§7.2, §11 «transversal desde el día uno»)
+### D.1 · Escala de la columna 1 — ✅ **resuelto el 08/09**
 
-La lista tiene que renderizar **80 leads y sumar de 80 en 80** al acercarse al
-final del scroll; si se selecciona un lead fuera de la ventana, la ventana se
-expande antes de hacer scroll a él. Hoy se dibujan todos.
+80 filas, y de a 80 al acercarse al final del scroll (400 px antes, para que no
+se vea el fondo vacío mientras dibuja). Cambiar el filtro o la búsqueda vuelve a
+80 y sube el scroll. Elegir un lead que quedó fuera de la ventana la estira
+hasta `i + 80` y recién entonces hace scroll, a un tercio del alto.
 
-El manual lo pone entre las cuatro cosas transversales *«desde el día uno»* y
-avisa: *«meterlos al final cuesta el triple»*.
+Está en `core/ventana.ts` con su test. No era una optimización prematura: con
+los leads dibujados todos, cada tecla del buscador remontaba miles de filas y el
+cursor iba atrás de lo que se escribía.
 
-### D.2 · Anchos arrastrables (§9.4, también transversal)
+### D.2 · Anchos arrastrables (§9.4, también transversal) — ✅ **dos de tres**
 
-Columna 1 (260–520), agenda (340–900) y repositorio (300–620), cada uno con
-doble clic para volver al ancho normal y persistencia local. Hoy los tres son
-fijos.
+Columna 1 (260–520, doble clic alterna 260/340) y agenda (340–900, doble clic
+vuelve a 560): arrastrables y persistidas en `localStorage`, con las reglas en
+`core/anchos.ts` y el arrastre en `lib/useAncho.ts`.
+
+Falta el **repositorio de mensajes**, y no es sólo el ancho: el manual §7.2 lo
+lista como *sidebar* junto a la agenda («Sidebars (una a la vez)») y hoy es un
+**overlay modal** de dos columnas. Como sidebar de 300–620 px las dos columnas
+no entran —a 300 px el editor mediría 40—, así que pasarlo es rehacer su
+interior en una sola columna, como `RepositorioMensajes.dc.html`, que es un
+grid de tres filas.
 
 ### D.3 · Conversaciones en la ficha (§3.2, §7.2, decisión cerrada #2)
 

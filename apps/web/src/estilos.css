@@ -4534,3 +4534,28 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   outline: none;
 }
 .dest-guardado-idioma .boton-mini { align-self: flex-start; }
+
+/* ---------- divisores arrastrables (§9.4) ---------- */
+/*
+ * Van dentro del panel, pegados al borde que da a la ficha, y no como hermanos
+ * en el flex: el ancho lo maneja el panel y así el divisor no puede quedar
+ * separado de él cuando una sidebar se abre o se cierra.
+ *
+ * Cinco píxeles es lo que dice el prototipo. Es angosto para apuntarle, y por
+ * eso el arrastre se escucha en `document`: alcanza con acertarle una vez.
+ */
+.divisor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  z-index: 5;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 150ms ease-out;
+}
+.divisor:hover { background: var(--accent-br); }
+.divisor-der { right: 0; }
+.divisor-izq { left: 0; }
+
+.columna-lista, .agenda { position: relative; }
