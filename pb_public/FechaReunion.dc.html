@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="background:var(--surface);border:.5px solid var(--border);border-radius:12px">
+  <div style="display:flex;align-items:center;gap:8px;padding:6px 10px 6px 12px">
+    <button type="button" onClick="{{ toggle }}" style="display:flex;align-items:center;gap:8px;padding:0;background:transparent;border:none;cursor:pointer;font-family:inherit;min-width:0;text-align:left">
+      <sc-if value="{{ abierto }}" hint-placeholder-val="{{ true }}">
+        <span style="font-size:9px;color:var(--hint);width:10px;flex-shrink:0">&#9662;</span>
+      </sc-if>
+      <sc-if value="{{ cerrado }}" hint-placeholder-val="{{ false }}">
+        <span style="font-size:9px;color:var(--hint);width:10px;flex-shrink:0">&#9656;</span>
+      </sc-if>
+      <span style="font-size:11px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap">Reuni&oacute;n</span>
+      <sc-if value="{{ confirmada }}" hint-placeholder-val="{{ false }}">
+        <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;background:var(--badge-meeting);color:var(--badge-meeting-text);white-space:nowrap;font-variant-numeric:tabular-nums;animation:om-agendada 340ms cubic-bezier(.4,0,.2,1),om-agendada-halo 700ms ease-out 120ms">{{ etiquetaConfirmada }}</span>
+      </sc-if>
+      <sc-if value="{{ sinConfirmar }}" hint-placeholder-val="{{ true }}">
+        <span style="font-size:10px;color:var(--hint);white-space:nowrap;font-variant-numeric:tabular-nums">{{ etiquetaPendiente }}</span>
+      </sc-if>
+    </button>
+
+    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-right:auto">
+      <sc-if value="{{ puedeConfirmar }}" hint-placeholder-val="{{ false }}">
+        <button type="button" onClick="{{ confirmar }}" title="Confirmar reunión y enviar email" style="width:28px;height:28px;border-radius:8px;border:.5px solid var(--accent-br);background:var(--accent-light);color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 150ms ease-out" style-hover="background:var(--accent);color:var(--surface)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M5 13l4 4L19 7"></path></svg>
+        </button>
+      </sc-if>
+      <sc-if value="{{ confirmarBloqueado }}" hint-placeholder-val="{{ true }}">
+        <span title="Elegí día y horario para confirmar" style="width:28px;height:28px;border-radius:8px;border:.5px solid var(--border);background:transparent;color:var(--hint);display:flex;align-items:center;justify-content:center;opacity:.5;cursor:not-allowed">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M5 13l4 4L19 7"></path></svg>
+        </span>
+      </sc-if>
+
+      <div style="display:flex;gap:0;border:.5px solid var(--border);border-radius:8px;overflow:hidden">
+        <sc-for list="{{ estados }}" as="e" hint-placeholder-count="3">
+          <sc-if value="{{ e.asistioOn }}" hint-placeholder-val="{{ false }}">
+            <button type="button" onClick="{{ e.elegir }}" title="{{ e.titulo }}" style="width:28px;height:28px;border:none;background:var(--success-light);color:var(--success);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.5 2.5L16 9.5"></path></svg>
+            </button>
+          </sc-if>
+          <sc-if value="{{ e.noAsistioOn }}" hint-placeholder-val="{{ false }}">
+            <button type="button" onClick="{{ e.elegir }}" title="{{ e.titulo }}" style="width:28px;height:28px;border:none;background:var(--error-light);color:var(--error);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px"><circle cx="12" cy="12" r="9"></circle><path d="M9 9l6 6M15 9l-6 6"></path></svg>
+            </button>
+          </sc-if>
+          <sc-if value="{{ e.canceladaOn }}" hint-placeholder-val="{{ false }}">
+            <button type="button" onClick="{{ e.elegir }}" title="{{ e.titulo }}" style="width:28px;height:28px;border:none;background:var(--warning-light);color:var(--warning);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px"><circle cx="12" cy="12" r="9"></circle><path d="M6 18L18 6"></path></svg>
+            </button>
+          </sc-if>
+          <sc-if value="{{ e.off }}" hint-placeholder-val="{{ true }}">
+            <button type="button" onClick="{{ e.elegir }}" title="{{ e.titulo }}" style="width:28px;height:28px;border:none;background:transparent;color:var(--hint);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 150ms ease-out,color 150ms ease-out" style-hover="background:var(--bg);color:var(--text)">
+              <sc-if value="{{ e.esAsistio }}" hint-placeholder-val="{{ true }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.5 2.5L16 9.5"></path></svg>
+              </sc-if>
+              <sc-if value="{{ e.esNoAsistio }}" hint-placeholder-val="{{ false }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px"><circle cx="12" cy="12" r="9"></circle><path d="M9 9l6 6M15 9l-6 6"></path></svg>
+              </sc-if>
+              <sc-if value="{{ e.esCancelada }}" hint-placeholder-val="{{ false }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px"><circle cx="12" cy="12" r="9"></circle><path d="M6 18L18 6"></path></svg>
+              </sc-if>
+            </button>
+          </sc-if>
+        </sc-for>
+      </div>
+
+      <div style="position:relative;flex-shrink:0">
+        <button type="button" onClick="{{ toggleHist }}" ref="{{ refHist }}" title="Histórico de asistencia" style="height:28px;padding:0 8px;border-radius:8px;border:.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit;transition:background 150ms ease-out" style-hover="background:var(--accent-light);border-color:var(--accent-br);color:var(--accent)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:13px;height:13px"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>
+          <span style="font-size:10px;font-weight:600;font-variant-numeric:tabular-nums">{{ nHistorial }}</span>
+        </button>
+        <sc-if value="{{ histAbierto }}" hint-placeholder-val="{{ false }}">
+          <div style="position:fixed;inset:0;z-index:49;background:transparent" onClick="{{ cerrarHist }}"></div>
+          <div style="position:fixed;left:{{ histLeft }}px;top:{{ histTop }}px;z-index:50;width:290px;max-height:260px;overflow-y:auto;background:var(--surface);border:.5px solid var(--border);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.12);padding:6px;display:flex;flex-direction:column;gap:2px;animation:om-abrir 160ms ease-out">
+            <sc-for list="{{ historial }}" as="h" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:8px;transition:background 150ms ease-out" style-hover="background:var(--bg)">
+                <span style="font-size:11px;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap">{{ h.cuando }}</span>
+                <sc-if value="{{ h.asistio }}" hint-placeholder-val="{{ true }}">
+                  <span style="font-size:9px;font-weight:600;padding:1px 6px;border-radius:10px;background:var(--success-light);color:var(--success);white-space:nowrap">{{ h.resultado }}</span>
+                </sc-if>
+                <sc-if value="{{ h.noAsistio }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size:9px;font-weight:600;padding:1px 6px;border-radius:10px;background:var(--error-light);color:var(--error);white-space:nowrap">{{ h.resultado }}</span>
+                </sc-if>
+                <sc-if value="{{ h.otro }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size:9px;font-weight:600;padding:1px 6px;border-radius:10px;background:var(--warning-light);color:var(--warning);white-space:nowrap">{{ h.resultado }}</span>
+                </sc-if>
+                <button type="button" onClick="{{ h.restaurar }}" title="Restaurar: vuelve a pendiente para corregir" style="margin-left:auto;width:24px;height:24px;flex-shrink:0;border-radius:8px;border:none;background:transparent;color:var(--hint);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 150ms ease-out" style-hover="background:var(--accent-light);color:var(--accent)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:11px;height:11px"><path d="M4 10a8 8 0 1114 5"></path><path d="M4 4v6h6"></path></svg>
+                </button>
+                <button type="button" onClick="{{ h.eliminar }}" title="Eliminar del histórico" style="width:24px;height:24px;flex-shrink:0;border-radius:8px;border:none;background:transparent;color:var(--hint);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 150ms ease-out" style-hover="background:var(--error-light);color:var(--error)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:11px;height:11px"><path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13"></path></svg>
+                </button>
+              </div>
+            </sc-for>
+            <sc-if value="{{ sinHistorial }}" hint-placeholder-val="{{ true }}">
+              <div style="font-size:11px;color:var(--hint);padding:12px 6px;text-align:center">sin reuniones registradas</div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+
+      <button type="button" onClick="{{ reenviarEvento }}" title="{{ tituloReenviar }}" style="width:28px;height:28px;border-radius:8px;border:.5px solid var(--border);background:{{ fondoReenviar }};color:{{ colorReenviar }};cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 150ms ease-out" style-hover="background:var(--accent-light);border-color:var(--accent-br);color:var(--accent)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:15px;height:15px"><rect x="5" y="2.5" width="12" height="9" rx="1.6"></rect><path d="M5 6h12M9 2.5v2.5M13 2.5v2.5"></path><path d="M3 18h14"></path><path d="M13 14l4.5 4-4.5 4"></path></svg>
+      </button>
+
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-top:.5px solid var(--border);background:transparent;flex-wrap:wrap">
+    <span style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);font-weight:600;white-space:nowrap">Pr&oacute;x. contacto</span>
+    <div style="position:relative;flex-shrink:0">
+      <button type="button" onClick="{{ toggleProx }}" ref="{{ refProximo }}" title="Fecha del pr&oacute;ximo contacto (D)" style="height:26px;padding:0 9px;border-radius:8px;border:.5px solid var(--border);background:var(--bg);color:var(--text);font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;font-variant-numeric:tabular-nums;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:background 150ms ease-out" style-hover="background:var(--accent-light);border-color:var(--accent-br);color:var(--accent)">
+        {{ proximoLabel }}<span style="font-size:8px;color:var(--hint)">&#9662;</span>
+      </button>
+      <sc-if value="{{ proxAbierto }}" hint-placeholder-val="{{ false }}">
+        <div style="position:fixed;inset:0;z-index:69;background:transparent" onClick="{{ cerrarProx }}"></div>
+        <div style="position:fixed;left:{{ proxLeft }}px;top:{{ proxTop }}px;z-index:70;width:452px;background:var(--surface);border:.5px solid var(--border);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.12);padding:10px 12px;display:flex;flex-direction:column;gap:9px;animation:om-abrir 160ms ease-out">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:10px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Pr&oacute;ximo contacto</span>
+            <span style="font-size:9px;color:var(--hint);white-space:nowrap">tope {{ tope }} leads por d&iacute;a</span>
+            <button type="button" onClick="{{ proxMesAtras }}" title="Meses anteriores" style="margin-left:auto;width:22px;height:22px;flex-shrink:0;border-radius:8px;border:.5px solid var(--border);background:var(--surface);color:var(--muted);font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;font-family:inherit;transition:background 150ms ease-out" style-hover="background:var(--accent);border-color:var(--accent-br);color:var(--surface)">&#8249;</button>
+            <button type="button" onClick="{{ proxMesAdelante }}" title="Meses siguientes" style="width:22px;height:22px;flex-shrink:0;border-radius:8px;border:.5px solid var(--border);background:var(--surface);color:var(--muted);font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;font-family:inherit;transition:background 150ms ease-out" style-hover="background:var(--accent);border-color:var(--accent-br);color:var(--surface)">&#8250;</button>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <sc-for list="{{ mesesProx }}" as="m" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+                <span style="font-size:10px;font-weight:600;color:var(--text);text-align:center">{{ m.titulo }}</span>
+                <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">
+                  <sc-for list="{{ m.dows }}" as="d" hint-placeholder-count="7">
+                    <span style="font-size:8px;color:var(--hint);text-align:center;font-weight:600;text-transform:uppercase">{{ d.l }}</span>
+                  </sc-for>
+                  <sc-for list="{{ m.celdas }}" as="c" hint-placeholder-count="35">
+                    <div style="display:flex;align-items:center;justify-content:center">
+                      <sc-if value="{{ c.vacio }}" hint-placeholder-val="{{ false }}">
+                        <span style="display:block;width:24px;height:24px"></span>
+                      </sc-if>
+                      <sc-if value="{{ c.elegido }}" hint-placeholder-val="{{ false }}">
+                        <button type="button" onClick="{{ c.elegir }}" title="{{ c.titulo }}" style="width:24px;height:24px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--surface);font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;padding:0;font-variant-numeric:tabular-nums">{{ c.n }}</button>
+                      </sc-if>
+                      <sc-if value="{{ c.lleno }}" hint-placeholder-val="{{ false }}">
+                        <button type="button" onClick="{{ c.elegir }}" title="{{ c.titulo }}" style="width:24px;height:24px;border-radius:8px;border:.5px solid var(--error);background:var(--error-light);color:var(--error);font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;padding:0;font-variant-numeric:tabular-nums">{{ c.n }}</button>
+                      </sc-if>
+                      <sc-if value="{{ c.cargado }}" hint-placeholder-val="{{ false }}">
+                        <button type="button" onClick="{{ c.elegir }}" title="{{ c.titulo }}" style="width:24px;height:24px;border-radius:8px;border:.5px solid var(--warning);background:var(--warning-light);color:var(--warning);font-size:10px;cursor:pointer;font-family:inherit;padding:0;font-variant-numeric:tabular-nums">{{ c.n }}</button>
+                      </sc-if>
+                      <sc-if value="{{ c.libre }}" hint-placeholder-val="{{ true }}">
+                        <button type="button" onClick="{{ c.elegir }}" title="{{ c.titulo }}" style="width:24px;height:24px;border-radius:8px;border:.5px solid var(--border);background:var(--surface);color:var(--text);font-size:10px;cursor:pointer;font-family:inherit;padding:0;font-variant-numeric:tabular-nums;transition:background 150ms ease-out" style-hover="background:var(--accent-light);border-color:var(--accent-br);color:var(--accent)">{{ c.n }}</button>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding-top:8px;border-top:.5px solid var(--border)">
+            <sc-for list="{{ atajos }}" as="a" hint-placeholder-count="4">
+              <button type="button" onClick="{{ a.elegir }}" title="{{ a.titulo }}" style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 9px;border-radius:8px;border:.5px solid var(--border);background:var(--surface);cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--accent-light);border-color:var(--accent-br)">
+                <span style="font-size:9px;font-weight:700;padding:0 4px;border-radius:4px;background:var(--bg);color:var(--muted);border:.5px solid var(--border)">{{ a.tecla }}</span>
+                <span style="font-size:10px;font-weight:500;color:var(--text)">{{ a.label }}</span>
+                <span style="font-size:9px;color:var(--hint);font-variant-numeric:tabular-nums">{{ a.fecha }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ hayCorrimiento }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:9px;font-weight:600;color:var(--warning);background:var(--warning-light);border:.5px solid var(--warning);border-radius:8px;padding:4px 8px;line-height:1.45">{{ corrimiento }}</span>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+    <sc-if value="{{ recOn }}" hint-placeholder-val="{{ false }}">
+      <button type="button" onClick="{{ toggleRec }}" style="display:inline-flex;align-items:center;gap:6px;padding:2px 8px 2px 4px;border-radius:8px;border:.5px solid var(--accent-br);background:var(--accent-light);cursor:pointer;font-family:inherit;white-space:nowrap">
+        <span style="width:14px;height:14px;border-radius:4px;background:var(--accent);color:var(--surface);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width:9px;height:9px"><path d="M5 13l4 4L19 7"></path></svg></span>
+        <span style="font-size:10px;font-weight:600;color:var(--accent)">Recordatorios</span>
+      </button>
+    </sc-if>
+    <sc-if value="{{ recOff }}" hint-placeholder-val="{{ true }}">
+      <button type="button" onClick="{{ toggleRec }}" style="display:inline-flex;align-items:center;gap:6px;padding:2px 8px 2px 4px;border-radius:8px;border:.5px solid var(--border);background:var(--surface);cursor:pointer;font-family:inherit;white-space:nowrap;transition:border-color 150ms ease-out" style-hover="border-color:var(--accent-br)">
+        <span style="width:14px;height:14px;border-radius:4px;border:.5px solid var(--border);background:var(--surface);flex-shrink:0"></span>
+        <span style="font-size:10px;font-weight:500;color:var(--muted)">Recordatorios</span>
+      </button>
+    </sc-if>
+
+    <sc-if value="{{ agrOn }}" hint-placeholder-val="{{ false }}">
+      <button type="button" onClick="{{ toggleAgr }}" style="display:inline-flex;align-items:center;gap:6px;padding:2px 8px 2px 4px;border-radius:8px;border:.5px solid var(--accent-br);background:var(--accent-light);cursor:pointer;font-family:inherit;white-space:nowrap">
+        <span style="width:14px;height:14px;border-radius:4px;background:var(--accent);color:var(--surface);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width:9px;height:9px"><path d="M5 13l4 4L19 7"></path></svg></span>
+        <span style="font-size:10px;font-weight:600;color:var(--accent)">Agradecimiento</span>
+      </button>
+    </sc-if>
+    <sc-if value="{{ agrOff }}" hint-placeholder-val="{{ true }}">
+      <button type="button" onClick="{{ toggleAgr }}" style="display:inline-flex;align-items:center;gap:6px;padding:2px 8px 2px 4px;border-radius:8px;border:.5px solid var(--border);background:var(--surface);cursor:pointer;font-family:inherit;white-space:nowrap;transition:border-color 150ms ease-out" style-hover="border-color:var(--accent-br)">
+        <span style="width:14px;height:14px;border-radius:4px;border:.5px solid var(--border);background:var(--surface);flex-shrink:0"></span>
+        <span style="font-size:10px;font-weight:500;color:var(--muted)">Agradecimiento</span>
+      </button>
+    </sc-if>
+
+    <div style="margin-left:auto;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+      <sc-for list="{{ avisos }}" as="a" hint-placeholder-count="0">
+        <sc-if value="{{ a.programado }}" hint-placeholder-val="{{ true }}">
+          <span title="{{ a.titulo }}" style="display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:600;padding:2px 7px;border-radius:10px;background:var(--surface);color:var(--accent);border:.5px solid var(--accent-br);white-space:nowrap;font-variant-numeric:tabular-nums;animation:om-agendada 300ms cubic-bezier(.4,0,.2,1)">
+            <span style="width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0"></span>{{ a.label }}
+          </span>
+        </sc-if>
+        <sc-if value="{{ a.vencido }}" hint-placeholder-val="{{ false }}">
+          <span title="{{ a.titulo }}" style="display:inline-flex;align-items:center;gap:5px;font-size:9px;padding:2px 7px;border-radius:10px;background:transparent;color:var(--hint);border:.5px dashed var(--border);white-space:nowrap;font-variant-numeric:tabular-nums">
+            <span style="width:5px;height:5px;border-radius:50%;background:var(--hint);flex-shrink:0"></span>{{ a.label }}
+          </span>
+        </sc-if>
+        <sc-if value="{{ a.enviado }}" hint-placeholder-val="{{ false }}">
+          <span title="{{ a.titulo }}" style="display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:600;padding:2px 7px;border-radius:10px;background:var(--success-light);color:var(--success);border:.5px solid var(--success);white-space:nowrap;font-variant-numeric:tabular-nums">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width:9px;height:9px;flex-shrink:0"><path d="M5 13l4 4L19 7"></path></svg>{{ a.label }}
+          </span>
+        </sc-if>
+        <sc-if value="{{ a.cola }}" hint-placeholder-val="{{ false }}">
+          <span title="{{ a.titulo }}" style="display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:600;padding:2px 7px;border-radius:10px;background:var(--success-light);color:var(--success);border:.5px solid var(--success);white-space:nowrap;animation:om-agendada 300ms cubic-bezier(.4,0,.2,1),om-agendada-halo 700ms ease-out 120ms">
+            <span style="width:5px;height:5px;border-radius:50%;background:var(--success);flex-shrink:0"></span>{{ a.label }}
+          </span>
+        </sc-if>
+      </sc-for>
+      <sc-if value="{{ hayRegla }}" hint-placeholder-val="{{ false }}">
+        <span style="font-size:9px;font-weight:600;color:var(--warning);background:var(--warning-light);border:.5px solid var(--warning);border-radius:10px;padding:2px 7px;white-space:nowrap;animation:om-agendada 260ms ease-out">{{ avisoRegla }}</span>
+      </sc-if>
+      <sc-if value="{{ sinAvisos }}" hint-placeholder-val="{{ false }}">
+        <span style="font-size:9px;color:var(--hint);white-space:nowrap">{{ mensajeAvisos }}</span>
+      </sc-if>
+    </div>
+  </div>
+
+  <sc-if value="{{ abierto }}" hint-placeholder-val="{{ true }}">
+    <sc-if value="{{ tieneEvento }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:4px;padding:9px 12px;border-top:.5px solid var(--border);background:var(--bg)">
+        <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">Evento que se crea en Google Calendar</span>
+        <span style="font-size:12px;font-weight:600;color:var(--text);line-height:1.35;text-wrap:pretty">{{ tituloEvento }}</span>
+        <sc-if value="{{ tieneLinkEvento }}" hint-placeholder-val="{{ true }}">
+          <a href="{{ linkEvento }}" target="_blank" style="font-size:10px;color:var(--brand-linkedin);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ linkEvento }}</a>
+        </sc-if>
+        <sc-if value="{{ sinLinkEvento }}" hint-placeholder-val="{{ false }}">
+          <span style="font-size:10px;color:var(--warning)">Falta el link del perfil de LinkedIn en la ficha: el evento sale sin perfil.</span>
+        </sc-if>
+        <span style="font-size:10px;color:var(--hint);line-height:1.45;text-wrap:pretty">Nombre completo del lead &middot; primer nombre de la cuenta de origen &middot; tu nombre. El link es el del perfil, no el de Sales Navigator.</span>
+      </div>
+    </sc-if>
+    <sc-if value="{{ conCalendarios }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:9px 12px 0;border-top:.5px solid var(--border)">
+        <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);white-space:nowrap">Agendar en</span>
+        <div style="display:flex;gap:0;border:.5px solid var(--border);border-radius:8px;overflow:hidden">
+          <sc-for list="{{ calendarios }}" as="c" hint-placeholder-count="2">
+            <sc-if value="{{ c.on }}" hint-placeholder-val="{{ true }}">
+              <button type="button" onClick="{{ c.elegir }}" style="height:24px;padding:0 9px;border:none;background:var(--accent);color:var(--surface);font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">{{ c.label }}</button>
+            </sc-if>
+            <sc-if value="{{ c.off }}" hint-placeholder-val="{{ false }}">
+              <button type="button" onClick="{{ c.elegir }}" style="height:24px;padding:0 9px;border:none;background:var(--surface);color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--accent-light);color:var(--accent)">{{ c.label }}</button>
+            </sc-if>
+          </sc-for>
+        </div>
+        <span style="font-size:10px;color:var(--hint);line-height:1.45;flex:1;min-width:140px;text-wrap:pretty">{{ notaCalendario }}</span>
+      </div>
+    </sc-if>
+    <div style="display:grid;grid-template-columns:216px minmax(0,1fr);gap:14px;padding:10px 12px 12px;border-top:.5px solid var(--border);animation:om-abrir 180ms ease-out">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;align-items:center;gap:4px">
+          <button type="button" onClick="{{ mesAnterior }}" title="Mes anterior" style="width:24px;height:24px;border-radius:8px;border:.5px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;font-family:inherit;transition:background 150ms ease-out" style-hover="background:var(--accent);border-color:var(--accent-br);color:var(--surface)">&#8249;</button>
+          <span style="flex:1;text-align:center;font-size:11px;font-weight:600;color:var(--text)">{{ tituloMes }}</span>
+          <button type="button" onClick="{{ mesSiguiente }}" title="Mes siguiente" style="width:24px;height:24px;border-radius:8px;border:.5px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;font-family:inherit;transition:background 150ms ease-out" style-hover="background:var(--accent);border-color:var(--accent-br);color:var(--surface)">&#8250;</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">
+          <sc-for list="{{ dows }}" as="d" hint-placeholder-count="7">
+            <div style="font-size:9px;color:var(--hint);text-align:center;font-weight:600;text-transform:uppercase">{{ d.l }}</div>
+          </sc-for>
+          <sc-for list="{{ celdas }}" as="c" hint-placeholder-count="35">
+            <div style="display:flex;align-items:center;justify-content:center">
+              <sc-if value="{{ c.vacio }}" hint-placeholder-val="{{ false }}">
+                <span style="display:block;width:26px;height:26px"></span>
+              </sc-if>
+              <sc-if value="{{ c.libre }}" hint-placeholder-val="{{ true }}">
+                <button type="button" onClick="{{ c.elegir }}" style="width:26px;height:26px;border-radius:8px;border:.5px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;font-family:inherit;cursor:pointer;padding:0;font-variant-numeric:tabular-nums;transition:background 150ms ease-out" style-hover="background:var(--accent-light);border-color:var(--accent-br);color:var(--accent)">{{ c.n }}</button>
+              </sc-if>
+              <sc-if value="{{ c.ocupado }}" hint-placeholder-val="{{ false }}">
+                <span title="{{ c.titulo }}" style="width:26px;height:26px;border-radius:8px;border:.5px solid var(--border);background:var(--bg);color:var(--hint);font-size:11px;display:flex;align-items:center;justify-content:center;text-decoration:line-through;font-variant-numeric:tabular-nums;cursor:help">{{ c.n }}</span>
+              </sc-if>
+              <sc-if value="{{ c.elegido }}" hint-placeholder-val="{{ false }}">
+                <button type="button" onClick="{{ c.elegir }}" style="width:26px;height:26px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--surface);font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;padding:0;font-variant-numeric:tabular-nums">{{ c.n }}</button>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);white-space:nowrap">Duraci&oacute;n (min)</span>
+          <div style="display:flex;gap:0;border:.5px solid var(--border);border-radius:8px;overflow:hidden;flex:0 1 auto;min-width:0;flex-wrap:wrap">
+            <sc-for list="{{ duraciones }}" as="d" hint-placeholder-count="4">
+              <sc-if value="{{ d.on }}" hint-placeholder-val="{{ false }}">
+                <button type="button" onClick="{{ d.elegir }}" style="height:26px;padding:0 10px;border:none;background:var(--accent);color:var(--surface);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;font-variant-numeric:tabular-nums;white-space:nowrap">{{ d.label }}</button>
+              </sc-if>
+              <sc-if value="{{ d.off }}" hint-placeholder-val="{{ true }}">
+                <button type="button" onClick="{{ d.elegir }}" style="height:26px;padding:0 10px;border:none;background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;font-variant-numeric:tabular-nums;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--accent-light);color:var(--accent)">{{ d.label }}</button>
+              </sc-if>
+            </sc-for>
+          </div>
+          <span style="margin-left:auto;font-size:10px;color:var(--hint);white-space:nowrap;font-variant-numeric:tabular-nums">{{ resumenSlots }}</span>
+        </div>
+
+        <sc-if value="{{ haySlots }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:2px;max-height:210px;overflow-y:auto">
+            <sc-for list="{{ horas }}" as="h" hint-placeholder-count="10">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="display:flex;align-items:center;gap:6px;min-height:24px">
+                  <sc-if value="{{ h.hayLibres }}" hint-placeholder-val="{{ true }}">
+                    <button type="button" onClick="{{ h.elegirEnPunto }}" title="Elegir {{ h.label }}" style="width:44px;flex-shrink:0;height:24px;border-radius:8px;border:.5px solid var(--border);background:{{ h.fondoHora }};color:{{ h.colorHora }};font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;font-variant-numeric:tabular-nums;padding:0;transition:background 150ms ease-out" style-hover="background:var(--accent-light);border-color:var(--accent-br);color:var(--accent)">{{ h.label }}</button>
+                  </sc-if>
+                  <sc-if value="{{ h.sinLibres }}" hint-placeholder-val="{{ false }}">
+                    <span style="width:44px;flex-shrink:0;height:24px;border-radius:8px;border:.5px solid var(--border);background:var(--bg);color:var(--hint);font-size:11px;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums;text-decoration:line-through">{{ h.label }}</span>
+                  </sc-if>
+
+                  <sc-if value="{{ h.puedeAbrir }}" hint-placeholder-val="{{ true }}">
+                    <button type="button" onClick="{{ h.toggle }}" title="{{ h.tituloToggle }}" style="width:18px;height:24px;flex-shrink:0;border-radius:8px;border:none;background:transparent;color:var(--hint);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;font-size:8px;transition:color 150ms ease-out" style-hover="color:var(--accent)">{{ h.chevron }}</button>
+                  </sc-if>
+
+                  <sc-for list="{{ h.eventos }}" as="e" hint-placeholder-count="0">
+                    <span style="display:inline-flex;align-items:baseline;gap:5px;min-width:0;padding:2px 8px;border-radius:8px;background:var(--bg);border:.5px solid var(--border)">
+                      <span style="font-size:9px;color:var(--hint);font-variant-numeric:tabular-nums;flex-shrink:0">{{ e.rango }}</span>
+                      <span style="font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ e.titulo }}</span>
+                    </span>
+                  </sc-for>
+
+
+                </div>
+
+                <sc-if value="{{ h.abierta }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-wrap:wrap;gap:3px;padding:0 0 4px 50px;animation:om-abrir 150ms ease-out">
+                    <sc-for list="{{ h.cuartos }}" as="q" hint-placeholder-count="4">
+                      <sc-if value="{{ q.elegido }}" hint-placeholder-val="{{ false }}">
+                        <button type="button" onClick="{{ q.elegir }}" style="height:22px;padding:0 9px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--surface);font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;font-variant-numeric:tabular-nums">{{ q.label }}</button>
+                      </sc-if>
+                      <sc-if value="{{ q.libre }}" hint-placeholder-val="{{ true }}">
+                        <button type="button" onClick="{{ q.elegir }}" style="height:22px;padding:0 9px;border-radius:8px;border:.5px solid var(--border);background:var(--surface);color:var(--text);font-size:10px;cursor:pointer;font-family:inherit;font-variant-numeric:tabular-nums;transition:background 150ms ease-out" style-hover="background:var(--accent-light);border-color:var(--accent-br);color:var(--accent)">{{ q.label }}</button>
+                      </sc-if>
+                      <sc-if value="{{ q.ocupado }}" hint-placeholder-val="{{ false }}">
+                        <span title="{{ q.titulo }}" style="height:22px;padding:0 9px;border-radius:8px;border:.5px solid var(--border);background:var(--bg);color:var(--hint);font-size:10px;display:flex;align-items:center;font-variant-numeric:tabular-nums;text-decoration:line-through;cursor:help">{{ q.label }}</span>
+                      </sc-if>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ sinSlots }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:11px;color:var(--hint);border:.5px dashed var(--border);border-radius:8px;padding:16px;text-align:center">{{ mensajeSlots }}</div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:760,&quot;height&quot;:360},&quot;contactoId&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;ocupados&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string[]&quot;},&quot;eventos&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;Record&lt;string,{de:string,a:string,titulo:string,lead:string}[]&gt;&quot;},&quot;eventosDia&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;Record&lt;string,string&gt;&quot;},&quot;confirmada&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;fechaConfirmada&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;horaConfirmada&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;estado&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;historial&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;{fecha:string,hora:string,resultado:string}[]&quot;},&quot;avisoRegla&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;recordatorio&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;agradecimiento&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;onConfirmar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(f:string,h:string,d:number)=&gt;void&quot;},&quot;onEstado&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(e:string)=&gt;void&quot;},&quot;onCambiarFecha&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;()=&gt;void&quot;},&quot;onCambio&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;()=&gt;void&quot;},&quot;onRestaurarHistorial&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(i:number)=&gt;void&quot;},&quot;onEliminarHistorial&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(i:number)=&gt;void&quot;}}">
+class Component extends DCLogic {
+  static MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  static DOWS = ['lu','ma','mi','ju','vi','sa','do'];
+
+  state = { cal: null, abierto: null, offset: 0, dia: null, hora: null, duracion: 30, rec: null, agr: null, histAbierto: false, posHist: null, posProx: null, tick: 0, horaAbierta: null, proxAbierto: false, proxOffset: 0, corrimiento: '', reenviado: false };
+
+  static TOPE = 40;
+
+  calcPos(el, w, h) {
+    if (!el || !el.getBoundingClientRect) return { left: 12, top: 60 };
+    const r = el.getBoundingClientRect();
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8));
+    let top = r.bottom + 6;
+    if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+    return { left: Math.round(left), top: Math.round(top) };
+  }
+
+  cargaDe(fecha) { return (this.props.cargaDias || {})[fecha] || 0; }
+
+  static sumaDias(base, dias) {
+    const d = new Date(base + 'T12:00:00');
+    d.setDate(d.getDate() + dias);
+    return d.toISOString().slice(0, 10);
+  }
+
+  elegirConTope(semanas) {
+    const hoy = new Date().toISOString().slice(0, 10);
+    let dias = semanas * 7;
+    let extra = 0;
+    let fecha = Component.sumaDias(hoy, dias);
+    while (this.cargaDe(fecha) >= Component.TOPE && extra < 14) {
+      extra++;
+      fecha = Component.sumaDias(hoy, dias + extra);
+    }
+    const texto = extra
+      ? semanas + (semanas > 1 ? ' semanas' : ' semana') + ' y ' + extra + (extra > 1 ? ' días' : ' día') + ': el día original ya tenía ' + Component.TOPE + ' leads'
+      : '';
+    this.setState({ corrimiento: texto, proxAbierto: false });
+    if (this.props.onProximo) this.props.onProximo(fecha);
+  }
+
+  mesProx(y, m, sel) {
+    const lead = (new Date(y, m, 1).getDay() + 6) % 7;
+    const dias = new Date(y, m + 1, 0).getDate();
+    const celdas = [];
+    for (let i = 0; i < lead; i++) celdas.push({ vacio: true, libre: false, lleno: false, cargado: false, elegido: false, n: '' });
+    for (let d = 1; d <= dias; d++) {
+      const k = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      const carga = this.cargaDe(k);
+      const el = sel === k;
+      const lleno = carga >= Component.TOPE;
+      const cargado = !lleno && carga >= Component.TOPE * 0.6;
+      celdas.push({
+        vacio: false, n: d,
+        elegido: el,
+        lleno: lleno && !el,
+        cargado: cargado && !el,
+        libre: !el && !lleno && !cargado,
+        titulo: carga + ' de ' + Component.TOPE + ' leads ese día',
+        elegir: () => { this.setState({ proxAbierto: false, corrimiento: '' }); if (this.props.onProximo) this.props.onProximo(k); }
+      });
+    }
+    return { titulo: Component.MESES[m] + ' ' + y, dows: Component.DOWS.map(l => ({ l })), celdas };
+  }
+
+  componentDidMount() { this._t = setInterval(() => this.setState(s => ({ tick: s.tick + 1 })), 30000); }
+  componentWillUnmount() { clearInterval(this._t); }
+
+  componentDidUpdate(prev) {
+    if (prev.contactoId !== this.props.contactoId) {
+      this.setState({ abierto: null, offset: 0, dia: null, hora: null, duracion: 30, rec: null, agr: null, histAbierto: false });
+    }
+    if (prev.abrirNonce !== this.props.abrirNonce || prev.focoProximo !== this.props.focoProximo) {
+      this.setState({ abierto: true });
+      if (prev.focoProximo !== this.props.focoProximo) {
+        this.setState({ proxAbierto: true, posProx: this.calcPos(this._prox, 452, 380) });
+        if (this.props.onPanelProximo) this.props.onPanelProximo(true);
+      }
+    }
+    if (this.state.proxAbierto && !this._teclas) {
+      this._teclas = e => {
+        const t = e.target;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+        const k = (e.key || '').toLowerCase();
+        const mapa = { a: 1, s: 2, d: 3, f: 4 };
+        if (mapa[k]) { e.preventDefault(); e.stopPropagation(); this.elegirConTope(mapa[k]); }
+        if (k === 'escape') this.setState({ proxAbierto: false });
+      };
+      document.addEventListener('keydown', this._teclas, true);
+    }
+    if (!this.state.proxAbierto && this._teclas) {
+      document.removeEventListener('keydown', this._teclas, true);
+      this._teclas = null;
+    }
+  }
+
+  get abierto() {
+    if (this.state.abierto !== null) return this.state.abierto;
+    return !this.props.confirmada;
+  }
+  static hhmm(m) { return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
+  static dm(iso) { return iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : ''; }
+  static fmt(d) {
+    return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + ' ' +
+      String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  static cuenta(ms) {
+    const min = Math.round(ms / 60000);
+    if (min < 60) return 'en ' + min + ' min';
+    const h = Math.floor(min / 60), d = Math.floor(h / 24);
+    if (h < 24) return 'en ' + h + ' h ' + (min % 60) + ' min';
+    return 'en ' + d + ' d ' + (h % 24) + ' h';
+  }
+
+  eventosDe(fecha) {
+    const mapa = this.props.eventos || {};
+    if (mapa[fecha]) return mapa[fecha].map(e => ({
+      a: Number(e.de.slice(0, 2)) * 60 + Number(e.de.slice(3)),
+      b: Number(e.a.slice(0, 2)) * 60 + Number(e.a.slice(3)),
+      titulo: e.titulo + (e.lead ? '\n' + e.lead : '') + '\n' + e.de + '–' + e.a
+    }));
+    const d = Number(fecha.slice(8, 10));
+    const base = [[[600, 660], [840, 900]], [[540, 600], [780, 870]], [[660, 720], [900, 960]]][d % 3];
+    return base.map(([a, b]) => ({ a, b, titulo: 'Bloqueado en Google Calendar\n' + Component.hhmm(a) + '–' + Component.hhmm(b) }));
+  }
+
+  ocupadosDe(fecha) { return this.eventosDe(fecha).map(e => [e.a, e.b]); }
+
+  avisos(fecha, hora, estado) {
+    const rec = this.state.rec !== null ? this.state.rec : this.props.recordatorio === true;
+    const agr = this.state.agr !== null ? this.state.agr : this.props.agradecimiento === true;
+    const out = [];
+    if (!fecha) return { out, rec, agr, mensaje: 'sin reunión agendada' };
+    const inicio = new Date(fecha + 'T' + (hora || '09:00') + ':00');
+    const ahora = new Date();
+    if (rec) {
+      [[24 * 60, 'confirmación 24 h antes'], [90, 'aviso 1 h 30 antes']].forEach(([min, titulo]) => {
+        const cuando = new Date(inicio.getTime() - min * 60000);
+        const futuro = cuando > ahora;
+        const enviado = !futuro && !!this.props.confirmada;
+        const etiqueta = (min === 90 ? '1 h 30' : '24 h') + ' · ' + Component.fmt(cuando);
+        out.push({
+          label: enviado ? etiqueta : (futuro ? etiqueta + ' · ' + Component.cuenta(cuando - ahora) : etiqueta),
+          titulo: enviado ? 'Enviado: ' + titulo : (futuro ? 'En cola: ' + titulo : 'Fuera de plazo: ' + titulo),
+          programado: futuro, vencido: !futuro && !enviado, enviado, cola: false
+        });
+      });
+    }
+    if (agr && estado === 'asistio') {
+      out.push({ label: 'agradecimiento en cola', titulo: 'Mensaje de agradecimiento encolado tras la reunión', programado: false, vencido: false, enviado: false, cola: true });
+    }
+    let mensaje = '';
+    if (!out.length) mensaje = agr ? 'agradecimiento se encola al marcar asistió' : 'sin avisos programados';
+    return { out, rec, agr, mensaje };
+  }
+
+  renderVals() {
+    const cals = this.props.calendarios || [];
+    const calBase = cals[0] ? cals[0].id : 'mio';
+    const calSel = this.state.cal || calBase;
+    const calAjeno = calSel !== calBase;
+    const dias = (this.props.ocupados || []).concat(calAjeno ? (this.props.ocupadosAjenos || []) : []);
+    const base = new Date(2026, 8 + this.state.offset, 1);
+    const y = base.getFullYear(), m = base.getMonth();
+    const lead = (new Date(y, m, 1).getDay() + 6) % 7;
+    const total = new Date(y, m + 1, 0).getDate();
+    const sel = this.state.dia;
+    const celdas = [];
+    for (let i = 0; i < lead; i++) celdas.push({ vacio: true, libre: false, ocupado: false, elegido: false, n: '' });
+    for (let d = 1; d <= total; d++) {
+      const k = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      const oc = dias.includes(k), el = sel === k;
+      const tituloDia = (this.props.eventosDia || {})[k] || 'Día sin disponibilidad en Google Calendar';
+      celdas.push({ vacio: false, libre: !oc && !el, ocupado: oc && !el, elegido: el, n: d, titulo: tituloDia, elegir: () => this.setState({ dia: k, hora: null }) });
+    }
+
+    const dur = this.state.duracion;
+    let slots = [], libres = 0, mensaje = 'Elegí un día en el calendario';
+    if (sel) {
+      if (dias.includes(sel)) { mensaje = 'Sin disponibilidad ese día'; }
+      else {
+        const ocup = this.eventosDe(sel);
+        for (let t = 540; t + dur <= 1080; t += 15) {
+          const ev = ocup.find(e => t < e.b && t + dur > e.a);
+          const label = Component.hhmm(t);
+          const el = this.state.hora === label;
+          if (!ev) libres++;
+          slots.push({ label, elegido: el, libre: !ev && !el, ocupado: !!ev && !el, titulo: ev ? ev.titulo : 'Libre', elegir: () => this.setState({ hora: label }) });
+        }
+        if (!libres) mensaje = 'Sin huecos de ' + dur + ' min ese día';
+      }
+    }
+    const hay = slots.length > 0 && libres > 0;
+
+    const horas = [];
+    if (sel && slots.length) {
+      const eventosDia = this.eventosDe(sel);
+      for (let h = 9; h <= 17; h++) {
+        const label = String(h).padStart(2, '0') + ':00';
+        const cuartos = slots.filter(q => Number(q.label.slice(0, 2)) === h);
+        if (!cuartos.length) continue;
+        const libresH = cuartos.filter(q => q.libre || q.elegido);
+        const enPunto = cuartos.find(q => q.label === label);
+        const evs = eventosDia.filter(e => e.a < (h + 1) * 60 && e.b > h * 60).map(e => ({
+          rango: Component.hhmm(e.a) + '–' + Component.hhmm(e.b),
+          titulo: (e.titulo || '').split('\n')[0]
+        }));
+        const abierta = this.state.horaAbierta === label;
+        horas.push({
+          label,
+          hayLibres: libresH.length > 0,
+          sinLibres: libresH.length === 0,
+          fondoHora: enPunto && enPunto.elegido ? 'var(--accent)' : 'var(--surface)',
+          colorHora: enPunto && enPunto.elegido ? 'var(--surface)' : 'var(--text)',
+          elegirEnPunto: () => {
+            const q = enPunto && (enPunto.libre || enPunto.elegido) ? enPunto : libresH[0];
+            if (q) this.setState({ hora: q.label });
+          },
+          eventos: evs,
+          libreTotal: evs.length === 0,
+          resumen: '',
+          puedeAbrir: cuartos.length > 1,
+          abierta,
+          tituloToggle: abierta ? 'Cerrar los tramos' : 'Ver tramos de 15 min',
+          chevron: abierta ? '\u25b4' : '\u25be',
+          toggle: () => this.setState({ horaAbierta: abierta ? null : label }),
+          cuartos
+        });
+      }
+    }
+    const listo = !!(sel && this.state.hora);
+    const est = this.props.estado || null;
+    const av = this.avisos(this.props.confirmada ? this.props.fechaConfirmada : sel, this.props.confirmada ? this.props.horaConfirmada : this.state.hora, est);
+
+    const estados = [
+      { key: 'asistio', titulo: 'Asistió (archiva la ficha)' },
+      { key: 'no-asistio', titulo: 'No asistió (archiva la ficha)' },
+      { key: 'cancelada', titulo: 'Cancelada' }
+    ].map(e => ({
+      titulo: e.titulo,
+      asistioOn: est === e.key && e.key === 'asistio',
+      noAsistioOn: est === e.key && e.key === 'no-asistio',
+      canceladaOn: est === e.key && e.key === 'cancelada',
+      off: est !== e.key,
+      esAsistio: e.key === 'asistio',
+      esNoAsistio: e.key === 'no-asistio',
+      esCancelada: e.key === 'cancelada',
+      elegir: () => { if (this.props.onEstado) this.props.onEstado(est === e.key ? null : e.key); }
+    }));
+
+    return {
+      tituloEvento: this.props.tituloEvento || '',
+      tieneEvento: !!this.props.tituloEvento,
+      linkEvento: this.props.linkPerfilEvento || '',
+      tieneLinkEvento: !!this.props.linkPerfilEvento,
+      sinLinkEvento: !this.props.linkPerfilEvento,
+      conCalendarios: cals.length > 1,
+      calendarios: cals.map(c => ({ label: c.label, on: calSel === c.id, off: calSel !== c.id, elegir: () => this.setState({ cal: c.id, dia: null, hora: null }) })),
+      notaCalendario: calAjeno ? 'Los horarios ya tomados figuran como ocupado, sin detalle.' : 'Disponibilidad de tu propio calendario.',
+      abierto: this.abierto,
+      cerrado: !this.abierto,
+      toggle: () => this.setState({ abierto: !this.abierto }),
+      confirmada: !!this.props.confirmada,
+      sinConfirmar: !this.props.confirmada,
+      etiquetaConfirmada: Component.dm(this.props.fechaConfirmada) + (this.props.horaConfirmada ? ' · ' + this.props.horaConfirmada : '') + ' confirmada',
+      etiquetaPendiente: listo ? Component.dm(sel) + ' · ' + this.state.hora + ' · ' + dur + ' min · sin confirmar' : 'sin confirmar',
+      puedeConfirmar: listo,
+      confirmarBloqueado: !listo,
+      confirmar: () => { if (this.props.onConfirmar) this.props.onConfirmar(sel, this.state.hora, dur); },
+      estados,
+      reenviarEvento: () => {
+        this.setState({ reenviado: true });
+        clearTimeout(this._reT);
+        this._reT = setTimeout(() => this.setState({ reenviado: false }), 3000);
+      },
+      tituloReenviar: this.state.reenviado ? 'Evento reenviado al lead' : 'Reenviar el evento de Google Calendar',
+      fondoReenviar: this.state.reenviado ? 'var(--accent-light)' : 'transparent',
+      colorReenviar: this.state.reenviado ? 'var(--accent)' : 'var(--muted)',
+
+      histAbierto: this.state.histAbierto,
+      histLeft: (this.state.posHist || {}).left || 12,
+      histTop: (this.state.posHist || {}).top || 60,
+      refHist: el => { this._hist = el; },
+      toggleHist: () => this.setState(s => ({ histAbierto: !s.histAbierto, posHist: !s.histAbierto ? this.calcPos(this._hist, 290, 260) : null })),
+      cerrarHist: () => this.setState({ histAbierto: false }),
+      nHistorial: (this.props.historial || []).length,
+      historial: (this.props.historial || []).map((h, i) => ({
+        cuando: Component.dm(h.fecha) + (h.hora ? ' · ' + h.hora : ''),
+        resultado: h.resultado,
+        asistio: h.resultado === 'asistió',
+        noAsistio: h.resultado === 'no asistió',
+        otro: h.resultado !== 'asistió' && h.resultado !== 'no asistió',
+        restaurar: () => { if (this.props.onRestaurarHistorial) this.props.onRestaurarHistorial(i); },
+        eliminar: () => { if (this.props.onEliminarHistorial) this.props.onEliminarHistorial(i); }
+      })),
+      sinHistorial: (this.props.historial || []).length === 0,
+      avisoRegla: this.props.avisoRegla || '',
+      hayRegla: !!this.props.avisoRegla,
+
+      recOn: av.rec, recOff: !av.rec,
+      proximoContacto: this.props.proximoContacto || '',
+      proximoLabel: this.props.proximoContacto ? Component.dm(this.props.proximoContacto) : 'sin fecha',
+      proxAbierto: this.state.proxAbierto,
+      proxLeft: (this.state.posProx || {}).left || 12,
+      proxTop: (this.state.posProx || {}).top || 60,
+      toggleProx: () => this.setState(st => {
+        const abrir = !st.proxAbierto;
+        if (this.props.onPanelProximo) this.props.onPanelProximo(abrir);
+        return { proxAbierto: abrir, posProx: abrir ? this.calcPos(this._prox, 452, 380) : null };
+      }),
+      cerrarProx: () => { if (this.props.onPanelProximo) this.props.onPanelProximo(false); this.setState({ proxAbierto: false }); },
+      proxMesAtras: () => this.setState(st => ({ proxOffset: st.proxOffset - 1 })),
+      proxMesAdelante: () => this.setState(st => ({ proxOffset: st.proxOffset + 1 })),
+      tope: Component.TOPE,
+      mesesProx: (() => {
+        const hoy = new Date();
+        const base = new Date(hoy.getFullYear(), hoy.getMonth() + this.state.proxOffset, 1);
+        const nxt = new Date(base.getFullYear(), base.getMonth() + 1, 1);
+        const sel = this.props.proximoContacto || '';
+        return [this.mesProx(base.getFullYear(), base.getMonth(), sel), this.mesProx(nxt.getFullYear(), nxt.getMonth(), sel)];
+      })(),
+      atajos: [['A', 1], ['S', 2], ['D', 3], ['F', 4]].map(([tecla, sem]) => {
+        const hoy = new Date().toISOString().slice(0, 10);
+        let extra = 0, f = Component.sumaDias(hoy, sem * 7);
+        while (this.cargaDe(f) >= Component.TOPE && extra < 14) { extra++; f = Component.sumaDias(hoy, sem * 7 + extra); }
+        return {
+          tecla,
+          label: sem + (sem > 1 ? ' semanas' : ' semana'),
+          fecha: Component.dm(f) + (extra ? ' +' + extra + 'd' : ''),
+          titulo: extra ? 'El día original estaba lleno: corre ' + extra + ' días' : 'Libre',
+          elegir: () => this.elegirConTope(sem)
+        };
+      }),
+      corrimiento: this.state.corrimiento,
+      hayCorrimiento: !!this.state.corrimiento,
+      refProximo: el => { this._prox = el; },
+      setProximo: e => { if (this.props.onProximo) this.props.onProximo(e.target.value); },
+      agrOn: av.agr, agrOff: !av.agr,
+      toggleRec: () => { this.setState({ rec: !av.rec }); if (this.props.onCambio) this.props.onCambio(); },
+      toggleAgr: () => { this.setState({ agr: !av.agr }); if (this.props.onCambio) this.props.onCambio(); },
+      avisos: av.out,
+      sinAvisos: av.out.length === 0,
+      mensajeAvisos: av.mensaje,
+
+      tituloMes: Component.MESES[m] + ' ' + y,
+      dows: Component.DOWS.map(l => ({ l })),
+      celdas,
+      mesAnterior: () => this.setState(s => ({ offset: s.offset - 1 })),
+      mesSiguiente: () => this.setState(s => ({ offset: s.offset + 1 })),
+      duraciones: [15, 30, 45, 60].map(v => ({
+        label: String(v), on: dur === v, off: dur !== v,
+        elegir: () => this.setState({ duracion: v, hora: null })
+      })),
+      slots, haySlots: hay, sinSlots: !hay,
+      horas: horas,
+      mensajeSlots: mensaje,
+      resumenSlots: hay ? libres + ' horarios libres' : ''
+    };
+  }
+}
+</script>
+</body>
+</html>

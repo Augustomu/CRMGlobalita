@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="height:100%;min-height:0;display:flex;flex-direction:column;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,sans-serif;overflow:hidden">
+
+  <div style="height:44px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 14px;background:var(--surface);border-bottom:.5px solid var(--border)">
+    <span style="font-size:13px;font-weight:600;flex-shrink:0">Control de proyectos</span>
+    <div style="display:flex;gap:0;border:.5px solid var(--border);border-radius:8px;overflow:hidden;flex-shrink:0">
+      <sc-for list="{{ vistas }}" as="v" hint-placeholder-count="2">
+        <button type="button" onClick="{{ v.elegir }}" style="height:27px;padding:0 11px;border:none;background:{{ v.fondo }};color:{{ v.color }};font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px">{{ v.label }}<span style="font-size:9px;font-variant-numeric:tabular-nums;opacity:.8">{{ v.n }}</span></button>
+      </sc-for>
+    </div>
+    <span style="margin-left:auto;display:flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:7px;background:var(--info-light);border:.5px solid var(--info-br);color:var(--info);font-size:10px;font-weight:600;flex-shrink:0">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:12px;height:12px"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      <span style="white-space:nowrap">Solo lectura</span>
+    </span>
+  </div>
+
+  <div style="flex:1;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px">
+
+    <sc-if value="{{ enProyectos }}" hint-placeholder-val="{{ true }}">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:9px">
+        <sc-for list="{{ tarjetasProy }}" as="t" hint-placeholder-count="5">
+          <div style="padding:11px 12px;border-radius:12px;border:.5px solid var(--border);background:var(--surface);display:flex;flex-direction:column;gap:3px">
+            <span style="font-size:22px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;color:{{ t.color }}">{{ t.n }}</span>
+            <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">{{ t.label }}</span>
+            <span style="font-size:10px;color:var(--muted);line-height:1.4;text-wrap:pretty">{{ t.detalle }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:9px;padding:12px;border-radius:12px;border:.5px solid var(--border);background:var(--surface)">
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="width:52px;flex-shrink:0;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">Empresa</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ chipsCasa }}" as="c" hint-placeholder-count="3">
+                <button type="button" onClick="{{ c.elegir }}" style="height:25px;padding:0 10px;border-radius:8px;border:.5px solid {{ c.borde }};background:{{ c.fondo }};color:{{ c.color }};font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap">{{ c.label }} &middot; {{ c.n }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="width:52px;flex-shrink:0;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">Tipo</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ chipsTipo }}" as="c" hint-placeholder-count="4">
+                <button type="button" onClick="{{ c.elegir }}" style="height:25px;padding:0 10px;border-radius:8px;border:.5px solid {{ c.borde }};background:{{ c.fondo }};color:{{ c.color }};font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap">{{ c.label }} · {{ c.n }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="width:52px;flex-shrink:0;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">Estado</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ chipsEstado }}" as="c" hint-placeholder-count="7">
+                <button type="button" onClick="{{ c.elegir }}" style="height:25px;padding:0 10px;border-radius:8px;border:.5px solid {{ c.borde }};background:{{ c.fondo }};color:{{ c.color }};font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap">{{ c.label }} · {{ c.n }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:minmax(0,1.55fr) 88px 108px minmax(0,.8fr) minmax(0,.8fr) 44px 88px minmax(0,1.45fr) minmax(0,1.05fr);gap:0;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);padding-bottom:6px;border-bottom:.5px solid var(--border)">
+          <span>Proyecto</span><span>Empresa y tipo</span><span>Estado</span><span>Lugar</span><span>Industria y rol</span><span style="text-align:right;padding-right:8px">Reun.</span><span>&Uacute;lt. reuni&oacute;n</span><span>Actualizaci&oacute;n</span><span>Pr&oacute;xima acci&oacute;n</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:0">
+          <sc-for list="{{ filas }}" as="f" hint-placeholder-count="8">
+            <div style="display:flex;flex-direction:column;gap:0;border-bottom:.5px solid var(--border);background:{{ f.fondoFila }}">
+              <div onClick="{{ f.abrir }}" style="display:grid;grid-template-columns:minmax(0,1.55fr) 88px 108px minmax(0,.8fr) minmax(0,.8fr) 44px 88px minmax(0,1.45fr) minmax(0,1.05fr);gap:0;align-items:center;padding:8px 0;cursor:pointer">
+                <div style="display:flex;align-items:flex-start;gap:7px;min-width:0;padding-right:10px">
+                  <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1">
+                    <span style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.nombre }}</span>
+                    <span style="font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.empresa }}</span>
+                  </div>
+                  <span title="{{ f.notaTitulo }}" style="flex-shrink:0;width:22px;height:22px;border-radius:7px;border:.5px solid {{ f.notaBorde }};background:{{ f.notaBg }};color:{{ f.notaFg }};display:flex;align-items:center;justify-content:center">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:12px;height:12px"><path d="M4 5h16v11l-4 4H4z"></path><path d="M7 9h10M7 13h6"></path></svg>
+                  </span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:2px;align-items:flex-start;min-width:0;padding-right:6px">
+                  <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:{{ f.casaFg }}">{{ f.casa }}</span>
+                  <span style="height:20px;padding:0 8px;border-radius:6px;background:{{ f.tipoBg }};color:{{ f.tipoFg }};font-size:10px;font-weight:600;display:flex;align-items:center;white-space:nowrap">{{ f.tipo }}</span>
+                </div>
+                <span style="justify-self:start;height:20px;padding:0 8px;border-radius:6px;background:{{ f.estadoBg }};color:{{ f.estadoFg }};font-size:10px;font-weight:600;display:flex;align-items:center;white-space:nowrap">{{ f.estado }}</span>
+                <div style="display:flex;flex-direction:column;gap:1px;min-width:0;padding-right:8px">
+                  <span style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.pais }}</span>
+                  <span style="font-size:10px;color:var(--hint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.ciudad }}</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:1px;min-width:0;padding-right:8px">
+                  <span style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.industria }}</span>
+                  <span style="font-size:10px;color:var(--hint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.rol }}</span>
+                </div>
+                <span style="text-align:right;font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted);padding-right:8px">{{ f.reuniones }}</span>
+                <div style="display:flex;flex-direction:column;gap:1px;min-width:0;padding-right:6px">
+                  <span style="font-size:11px;font-variant-numeric:tabular-nums;color:var(--text)">{{ f.ultimaReunion }}</span>
+                  <span style="font-size:9px;color:var(--hint);line-height:1.3">{{ f.ultimaReunionEstado }}</span>
+                </div>
+                <div title="{{ f.updTitulo }}" style="display:flex;flex-direction:column;gap:1px;min-width:0;padding:0 10px 0 8px">
+                  <span style="font-size:9px;font-variant-numeric:tabular-nums;color:var(--hint)">{{ f.updFecha }}</span>
+                  <span style="font-size:10px;color:var(--text);line-height:1.35;text-wrap:pretty;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ f.updTexto }}</span>
+                </div>
+                <span style="font-size:10px;color:var(--muted);line-height:1.35;text-wrap:pretty;padding-right:4px">{{ f.paso }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <span style="font-size:10px;color:var(--hint);line-height:1.5;text-wrap:pretty">La columna Actualizaci&oacute;n muestra la &uacute;ltima novedad del proyecto. Cliqueando la fila se abre la ficha: notas, actualizaciones y pr&oacute;ximas acciones en columnas.</span>
+      </div>
+
+      <div style="padding:12px;border-radius:12px;border:.5px solid var(--border);background:var(--surface);display:flex;flex-direction:column;gap:8px">
+        <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">Los estados y cu&aacute;ndo se aplican</span>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">
+          <sc-for list="{{ leyenda }}" as="l" hint-placeholder-count="6">
+            <div style="display:flex;gap:8px;align-items:flex-start">
+              <span style="margin-top:2px;flex-shrink:0;height:18px;padding:0 7px;border-radius:6px;background:{{ l.bg }};color:{{ l.fg }};font-size:9px;font-weight:600;display:flex;align-items:center;white-space:nowrap">{{ l.label }}</span>
+              <span style="font-size:10px;color:var(--muted);line-height:1.45;text-wrap:pretty">{{ l.regla }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ enReuniones }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">Per&iacute;odo</span>
+        <div style="display:flex;gap:0;border:.5px solid var(--border);border-radius:8px;overflow:hidden">
+          <sc-for list="{{ rangos }}" as="r" hint-placeholder-count="3">
+            <button type="button" onClick="{{ r.elegir }}" style="height:26px;padding:0 11px;border:none;background:{{ r.fondo }};color:{{ r.color }};font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap">{{ r.label }}</button>
+          </sc-for>
+        </div>
+        <span style="font-size:10px;color:var(--hint)">{{ rangoDetalle }}</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">Empresa</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <sc-for list="{{ chipsCasaReu }}" as="c" hint-placeholder-count="4">
+            <button type="button" onClick="{{ c.elegir }}" style="height:25px;padding:0 10px;border-radius:8px;border:.5px solid {{ c.borde }};background:{{ c.fondo }};color:{{ c.color }};font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap">{{ c.label }} &middot; {{ c.n }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:9px">
+        <sc-for list="{{ tarjetasReu }}" as="t" hint-placeholder-count="8">
+          <div style="padding:11px 12px;border-radius:12px;border:.5px solid var(--border);background:var(--surface);display:flex;flex-direction:column;gap:3px">
+            <span style="font-size:22px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;color:{{ t.color }}">{{ t.n }}</span>
+            <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">{{ t.label }}</span>
+            <span style="font-size:10px;color:var(--muted);line-height:1.4;text-wrap:pretty">{{ t.detalle }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:12px">
+        <div style="padding:12px;border-radius:12px;border:.5px solid var(--border);background:var(--surface);display:flex;flex-direction:column;gap:10px;min-width:0">
+          <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+            <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">Reuniones por mes</span>
+            <span style="font-size:10px;color:var(--hint);margin-left:auto">banda oscura = las que derivaron en proyecto</span>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:8px;height:150px">
+            <sc-for list="{{ barras }}" as="b" hint-placeholder-count="6">
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end">
+                <span style="font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--muted)">{{ b.n }}</span>
+                <div title="{{ b.titulo }}" style="width:100%;height:{{ b.alto }};min-height:3px;border-radius:6px 6px 0 0;background:{{ b.fondo }};display:flex;flex-direction:column;justify-content:flex-end;transition:height 250ms ease-out">
+                  <div style="width:100%;height:{{ b.altoProy }};background:var(--accent);border-radius:0 0 6px 6px;opacity:.55"></div>
+                </div>
+                <span style="font-size:10px;color:var(--hint);white-space:nowrap">{{ b.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;padding-top:2px;border-top:.5px solid var(--border)">
+            <span style="font-size:10px;color:var(--muted)">Promedio: <strong style="color:var(--text);font-variant-numeric:tabular-nums">{{ promedio }}</strong> por mes</span>
+            <span style="font-size:10px;color:var(--muted)">Mejor mes: <strong style="color:var(--text)">{{ mejor }}</strong></span>
+            <span style="font-size:10px;color:var(--muted)">Duraci&oacute;n promedio: <strong style="color:var(--text)">{{ duracion }}</strong></span>
+          </div>
+        </div>
+
+        <div style="padding:12px;border-radius:12px;border:.5px solid var(--border);background:var(--surface);display:flex;flex-direction:column;gap:9px;min-width:0">
+          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+            <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">Agrupar por</span>
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              <sc-for list="{{ agrupadores }}" as="g" hint-placeholder-count="8">
+                <button type="button" onClick="{{ g.elegir }}" style="height:23px;padding:0 9px;border-radius:7px;border:.5px solid {{ g.borde }};background:{{ g.fondo }};color:{{ g.color }};font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap">{{ g.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="6">
+              <div style="display:flex;flex-direction:column;gap:3px">
+                <div style="display:flex;align-items:baseline;gap:8px">
+                  <span style="font-size:11px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ g.label }}</span>
+                  <span style="font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text)">{{ g.n }}</span>
+                  <span style="font-size:10px;color:var(--hint);font-variant-numeric:tabular-nums;width:34px;text-align:right">{{ g.pct }}</span>
+                </div>
+                <div style="height:7px;border-radius:4px;background:var(--bg);overflow:hidden">
+                  <div style="height:100%;width:{{ g.ancho }};border-radius:4px;background:{{ g.fondo }};transition:width 250ms ease-out"></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:12px;border-radius:12px;border:.5px solid var(--border);background:var(--surface);display:flex;flex-direction:column;gap:8px">
+        <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">Reuniones del per&iacute;odo</span>
+        <div style="display:grid;grid-template-columns:34px 78px 74px minmax(0,1.5fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,.9fr) 74px 96px minmax(0,1.2fr);gap:0;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);padding-bottom:6px;border-bottom:.5px solid var(--border)">
+          <span>#</span><span>Fecha</span><span>Hora</span><span>Con qui&eacute;n</span><span>Empresa</span><span>Lugar</span><span>Industria</span><span>Gener&oacute;</span><span>Estado</span><span>Nota</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:0">
+          <sc-for list="{{ reunionesFilas }}" as="r" hint-placeholder-count="10">
+            <div style="display:grid;grid-template-columns:34px 78px 74px minmax(0,1.5fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,.9fr) 74px 96px minmax(0,1.2fr);gap:0;align-items:center;padding:7px 0;border-bottom:.5px solid var(--border)">
+              <span style="font-size:10px;font-variant-numeric:tabular-nums;color:var(--hint)">{{ r.i }}</span>
+              <span style="font-size:11px;font-variant-numeric:tabular-nums;color:var(--text)">{{ r.fecha }}</span>
+              <span style="font-size:11px;font-variant-numeric:tabular-nums;color:var(--muted)">{{ r.hora }}</span>
+              <div style="display:flex;flex-direction:column;gap:1px;min-width:0;padding-right:8px">
+                <span style="font-size:11px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.quien }}</span>
+                <span style="font-size:10px;color:var(--hint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.cargo }}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:1px;min-width:0;padding-right:8px">
+                <span style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.empresa }}</span>
+                <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:{{ r.casaFg }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.casa }}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:1px;min-width:0;padding-right:8px">
+                <span style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.pais }}</span>
+                <span style="font-size:10px;color:var(--hint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.ciudad }}</span>
+              </div>
+              <span style="font-size:10px;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px">{{ r.industria }}</span>
+              <span style="font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px">{{ r.genero }}</span>
+              <span style="justify-self:start;height:19px;padding:0 7px;border-radius:6px;background:{{ r.estadoBg }};color:{{ r.estadoFg }};font-size:9px;font-weight:600;display:flex;align-items:center;white-space:nowrap">{{ r.estado }}</span>
+              <span style="font-size:10px;color:var(--muted);line-height:1.35;text-wrap:pretty">{{ r.nota }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+  </div>
+
+  <sc-if value="{{ panelAbierto }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ cerrarPanel }}" style="position:fixed;inset:0;background:rgba(20,20,18,.32);z-index:60;display:flex;justify-content:flex-end">
+      <div onClick="{{ noCerrar }}" style="width:min(720px,96vw);height:100%;background:var(--surface);border-left:.5px solid var(--border);display:flex;flex-direction:column;overflow:hidden;animation:om-abrir 160ms ease-out">
+        <div style="flex-shrink:0;display:flex;align-items:flex-start;gap:10px;padding:13px 14px;border-bottom:.5px solid var(--border)">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+            <span style="font-size:14px;font-weight:600;line-height:1.25;text-wrap:pretty">{{ pNombre }}</span>
+            <span style="font-size:11px;color:var(--muted)">{{ pEmpresa }}</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:3px">
+              <span style="height:20px;padding:0 8px;border-radius:6px;background:{{ pTipoBg }};color:{{ pTipoFg }};font-size:10px;font-weight:600;display:flex;align-items:center">{{ pTipo }}</span>
+              <span style="height:20px;padding:0 8px;border-radius:6px;background:{{ pEstadoBg }};color:{{ pEstadoFg }};font-size:10px;font-weight:600;display:flex;align-items:center">{{ pEstado }}</span>
+            </div>
+          </div>
+          <button type="button" onClick="{{ cerrarPanel }}" style="width:27px;height:27px;flex-shrink:0;border-radius:8px;border:.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+          </button>
+        </div>
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:13px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px">
+            <sc-for list="{{ pDatos }}" as="d" hint-placeholder-count="8">
+              <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">{{ d.k }}</span>
+                <span style="font-size:12px;color:var(--text);line-height:1.35;text-wrap:pretty">{{ d.v }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;align-items:start">
+            <sc-for list="{{ pLanes }}" as="c" hint-placeholder-count="3">
+              <div style="padding:11px;border-radius:11px;border:.5px solid var(--border);background:var(--bg);display:flex;flex-direction:column;gap:8px;min-width:0">
+                <div style="display:flex;align-items:center;gap:7px">
+                  <span style="width:7px;height:7px;border-radius:50%;background:{{ c.punto }}"></span>
+                  <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">{{ c.label }}</span>
+                  <span style="font-size:10px;color:var(--hint);font-variant-numeric:tabular-nums;margin-left:auto">{{ c.n }}</span>
+                </div>
+                <sc-for list="{{ c.items }}" as="i" hint-placeholder-count="3">
+                  <div style="display:flex;flex-direction:column;gap:2px;padding-top:7px;border-top:.5px solid var(--border)">
+                    <span style="font-size:9px;color:var(--hint);font-variant-numeric:tabular-nums">{{ i.fecha }}</span>
+                    <span style="font-size:11px;color:var(--text);line-height:1.5;text-wrap:pretty">{{ i.texto }}</span>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ c.vacio }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size:10px;color:var(--hint)">Sin registros.</span>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">Reuniones de este proyecto</span>
+            <sc-if value="{{ pSinReuniones }}" hint-placeholder-val="{{ false }}">
+              <span style="font-size:11px;color:var(--hint)">Todav&iacute;a no hubo reuniones.</span>
+            </sc-if>
+            <sc-for list="{{ pReuniones }}" as="r" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-top:.5px solid var(--border)">
+                <span style="font-size:10px;color:var(--hint);font-variant-numeric:tabular-nums;width:18px">{{ r.i }}</span>
+                <span style="font-size:11px;font-variant-numeric:tabular-nums;color:var(--text);flex-shrink:0">{{ r.fecha }} {{ r.hora }}</span>
+                <span style="font-size:10px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.quien }}</span>
+                <span style="height:19px;padding:0 7px;border-radius:6px;background:{{ r.estadoBg }};color:{{ r.estadoFg }};font-size:9px;font-weight:600;display:flex;align-items:center;flex-shrink:0">{{ r.estado }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="padding:11px;border-radius:10px;border:.5px solid var(--border);background:var(--bg);display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">Nota de la ficha del lead</span>
+            <span style="font-size:11px;color:var(--text);line-height:1.55;text-wrap:pretty">{{ pNotaLead }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:800}}">
+class Component extends DCLogic {
+  static HOY = '2026-09-04';
+
+  static CASAS = [
+    { k: 'globalita', label: 'Globalita', fg: 'var(--accent)', detalle: 'Fabript/PIV y parcerías' },
+    { k: 'seng', label: 'Seng', fg: 'var(--warning)', detalle: 'Inversiones' }
+  ];
+
+  static TIPOS = [
+    { k: 'pib', casa: 'globalita', label: 'Fabript/PIV', bg: 'var(--accent-light)', fg: 'var(--accent)', br: 'var(--accent-br)' },
+    { k: 'parceria', casa: 'globalita', label: 'Parcería', bg: 'var(--brand-linkedin-light)', fg: 'var(--brand-linkedin)', br: 'var(--brand-linkedin-br)' },
+    { k: 'inversion', casa: 'seng', label: 'Inversión', bg: 'var(--warning-light)', fg: 'var(--warning)', br: 'var(--warning-light)' }
+  ];
+
+  static ESTADOS = [
+    { k: 'sin-hablar', label: 'Sin hablar', bg: 'var(--info-light)', fg: 'var(--hint)', regla: 'El proyecto existe pero todavía no hubo una conversación sobre él.' },
+    { k: 'conversacion', label: 'En conversación', bg: 'var(--info-light)', fg: 'var(--info)', regla: 'Hay ida y vuelta activo, sin propuesta formal enviada.' },
+    { k: 'propuesta', label: 'Propuesta enviada', bg: 'var(--badge-await)', fg: 'var(--badge-await-text)', regla: 'La pelota está del otro lado: mandamos algo y esperamos respuesta.' },
+    { k: 'nuestra', label: 'Nuestra pelota', bg: 'var(--warning-light)', fg: 'var(--warning)', regla: 'Nos falta hacer algo: armar la propuesta, mandar el material, definir precio.' },
+    { k: 'congelado', label: 'Congelado', bg: 'var(--bg)', fg: 'var(--muted)', regla: 'Más de 30 días sin movimiento. No se descarta, pero no avanza.' },
+    { k: 'ganado', label: 'Cerrado ganado', bg: 'var(--success-light)', fg: 'var(--success)', regla: 'Se cerró y arrancó el trabajo.' },
+    { k: 'perdido', label: 'Cerrado perdido', bg: 'var(--error-light)', fg: 'var(--error)', regla: 'Se cerró sin avanzar. Queda en el historial con el motivo.' }
+  ];
+
+  static PROYECTOS = [
+    {
+      id: 'p-opus', leadId: 'wellington', nombre: 'Planta Guarulhos — control de formato', empresa: 'Opus CM',
+      tipo: 'pib', estado: 'conversacion', pais: 'Brasil', ciudad: 'São Paulo', industria: 'Construcción / Manufactura',
+      rol: 'Gerente de Operaciones', contacto: 'Wellington Abner Simoes', cuenta: 'AL', duenio: 'Alberto Córdoba',
+      abierto: '21/08',
+      notaLead: 'Aceptó la invitación el 21/08 y respondió el mismo día. Interesado para la planta de Guarulhos. Pidió propuesta por email: enviada el 26/08, sin respuesta todavía.',
+      notas: [
+        { fecha: '21/08', texto: 'Decide él sobre operaciones, pero compras revisa el número final.' },
+        { fecha: '02/09', texto: 'Prefiere WhatsApp para coordinar y email para lo formal.' }
+      ],
+      updates: [
+        { fecha: '21/08', texto: 'Aceptó la invitación y respondió el mismo día: le interesa para Guarulhos.' },
+        { fecha: '26/08', texto: 'Enviada propuesta por email con alcance de una planta.' },
+        { fecha: '02/09', texto: 'Confirmó reunión para el 17/09 con el gerente de planta.' }
+      ],
+      acciones: [
+        { fecha: '17/09', texto: 'Reunión 15:00 con el gerente de planta para revisar la propuesta.' },
+        { fecha: '10/09', texto: 'Mandar el caso de la planta de Córdoba antes de la reunión.' }
+      ]
+    },
+    {
+      id: 'p-metal', leadId: 'gonzalo', nombre: 'Fabript/PIV para línea de laminado', empresa: 'Metalúrgica del Sur',
+      tipo: 'pib', estado: 'propuesta', pais: 'Argentina', ciudad: 'Rosario', industria: 'Metalurgia',
+      rol: 'Jefe de Planta', contacto: 'Gonzalo Adrián Núñez', cuenta: 'AU', duenio: 'Sofía Ferrer',
+      abierto: '28/08',
+      notaLead: 'Referido por contacto en común. Reunión del 02/09 realizada, quedó en revisar presupuesto con el gerente general.',
+      notas: [
+        { fecha: '28/08', texto: 'Llegó por referido, no por invitación: el ciclo va más rápido.' },
+        { fecha: '02/09', texto: 'Responde a la noche, entre 19 y 20 h.' }
+      ],
+      updates: [
+        { fecha: '28/08', texto: 'Escribió él por WhatsApp, referido por un contacto en común.' },
+        { fecha: '19/08', texto: 'Primera reunión cancelada por él, movida al 02/09.' },
+        { fecha: '02/09', texto: 'Reunión realizada: le cierra el alcance, revisa presupuesto con el gerente general.' }
+      ],
+      acciones: [
+        { fecha: '12/09', texto: 'Si no responde, llamarlo: la propuesta ya lleva 10 días.' }
+      ]
+    },
+    {
+      id: 'p-villagran', leadId: 'largo', nombre: 'Fabript/PIV cadena de suministro LATAM', empresa: 'Grupo Industrial Villagrán',
+      tipo: 'pib', estado: 'nuestra', pais: 'México', ciudad: 'Monterrey', industria: 'Maquinaria',
+      rol: 'Directora de Operaciones', contacto: 'María de los Ángeles Fernández Villagrán', cuenta: 'ED', duenio: 'Sofía Ferrer',
+      abierto: '01/09',
+      notaLead: 'Nombre completo tal como figura en LinkedIn, con cargo incluido. Verificar si el teléfono es directo o conmutador.',
+      notas: [
+        { fecha: '01/09', texto: 'Es decisora regional: si avanza, entra por cinco plantas, no una.' },
+        { fecha: '03/09', texto: 'La demora en responder es nuestra, no de ella.' }
+      ],
+      updates: [
+        { fecha: '01/09', texto: 'Aceptó y escribió a los 10 minutos pidiendo material.' },
+        { fecha: '04/09', texto: 'Reunión de hoy 16:00 para entender el alcance regional.' }
+      ],
+      acciones: [
+        { fecha: '05/09', texto: 'Mandar el resumen de una carilla que pidió.' },
+        { fecha: '08/09', texto: 'Confirmar si el teléfono es directo o conmutador.' }
+      ]
+    },
+    {
+      id: 'p-pinheiro', leadId: 'lucia', nombre: 'Parcería de reventa en Uruguay', empresa: 'Pinheiro & Asoc.',
+      tipo: 'parceria', estado: 'congelado', pais: 'Uruguay', ciudad: 'Montevideo', industria: 'Consultoría',
+      rol: 'Consultora Senior', contacto: 'Lucía Gonçalves', cuenta: 'AMU', duenio: 'Alberto Córdoba',
+      abierto: '27/08',
+      notaLead: 'No se conectó a la reunión del 26/08. Escribió al día siguiente pidiendo reagendar.',
+      notas: [
+        { fecha: '27/08', texto: 'Trabaja sola: cualquier parcería depende de su agenda personal.' }
+      ],
+      updates: [
+        { fecha: '09/08', texto: 'Aceptó la invitación, sin respuesta a los mensajes.' },
+        { fecha: '26/08', texto: 'No asistió a la reunión.' },
+        { fecha: '27/08', texto: 'Escribió pidiendo reagendar. No volvió a contestar.' }
+      ],
+      acciones: [
+        { fecha: '19/09', texto: 'Último intento de reagendar; si no, se cierra.' }
+      ]
+    },
+    {
+      id: 'p-jordao', leadId: 'jordao', nombre: 'Fabript/PIV para flota automotriz', empresa: 'Sin empresa cargada',
+      tipo: 'pib', estado: 'sin-hablar', pais: 'Brasil', ciudad: 'Rio de Janeiro', industria: 'Automotriz',
+      rol: 'Sin cargo cargado', contacto: 'Alexandre Jordão', cuenta: 'DL', duenio: 'Alberto Córdoba',
+      abierto: '12/08',
+      notaLead: 'Contacto inicial por LinkedIn el 12/08. Respondió pidiendo información pero aclaró que la decisión la toma compras en São Paulo. Quedó en pasar el contacto.',
+      notas: [
+        { fecha: '13/08', texto: 'Falta empresa y cargo en la ficha: no se puede evaluar el tamaño.' }
+      ],
+      updates: [
+        { fecha: '12/08', texto: 'Respondió pidiendo información, aclaró que decide compras SP.' },
+        { fecha: '13/08', texto: 'Le pedimos el contacto de compras. Sin respuesta.' }
+      ],
+      acciones: [
+        { fecha: '08/09', texto: 'Pedirle el contacto de compras en São Paulo por LinkedIn.' }
+      ]
+    },
+    {
+      id: 'p-andes', leadId: null, nombre: 'Tablero de flota', empresa: 'Transportes Andes',
+      tipo: 'pib', estado: 'conversacion', pais: 'Chile', ciudad: 'Santiago', industria: 'Logística',
+      rol: 'Director de Operaciones', contacto: 'Rodrigo Vera', cuenta: 'AL', duenio: 'Alberto Córdoba',
+      abierto: '14/07',
+      notaLead: 'Sin ficha en el CRM: entró por recomendación directa, no por prospección.',
+      notas: [
+        { fecha: '14/07', texto: 'El equipo de tráfico es el que va a usarlo todos los días.' },
+        { fecha: '20/08', texto: 'Buena devolución de la primera demo, quieren el corte por conductor.' }
+      ],
+      updates: [
+        { fecha: '14/07', texto: 'Reunión inicial: definieron dos tableros y el corte por ruta.' },
+        { fecha: '20/08', texto: 'Primera demo. Pidieron agregar corte por conductor.' },
+        { fecha: '01/09', texto: 'Enviada la versión con el corte nuevo, esperan juntar al equipo de tráfico.' }
+      ],
+      acciones: [
+        { fecha: '11/09', texto: 'Segunda demo con el equipo de tráfico completo.' }
+      ]
+    },
+    {
+      id: 'p-parana', leadId: null, nombre: 'Control de planta', empresa: 'Alimentos Paraná',
+      tipo: 'pib', estado: 'ganado', pais: 'Argentina', ciudad: 'Paraná', industria: 'Alimentos',
+      rol: 'Gerente de Producción', contacto: 'Silvina Duarte', cuenta: 'AU', duenio: 'Alberto Córdoba',
+      abierto: '05/05',
+      notaLead: 'Sin ficha en el CRM: viene de un contacto anterior a la prospección.',
+      notas: [
+        { fecha: '18/08', texto: 'Sirve como caso de referencia para el resto del sector alimentos.' }
+      ],
+      updates: [
+        { fecha: '05/05', texto: 'Primera reunión, pidieron ver el flujo de paradas de línea.' },
+        { fecha: '11/06', texto: 'Demo del prototipo con datos reales de dos líneas.' },
+        { fecha: '18/08', texto: 'Aprobado. Pasa a implementación con alcance de planta completa.' }
+      ],
+      acciones: [
+        { fecha: '15/09', texto: 'Pedirle permiso para usarlo como caso público.' }
+      ]
+    },
+    {
+      id: 'p-tecnosul', leadId: null, nombre: 'Parcería con integrador SP', empresa: 'TecnoSul Integradores',
+      tipo: 'parceria', estado: 'conversacion', pais: 'Brasil', ciudad: 'São Paulo', industria: 'Tecnología',
+      rol: 'Socio', contacto: 'Fábio Menezes', cuenta: 'DL', duenio: 'Alberto Córdoba',
+      abierto: '02/06',
+      notaLead: 'Sin ficha en el CRM: la charla arrancó en una feria del sector.',
+      notas: [
+        { fecha: '17/07', texto: 'Tienen equipo de campo propio en tres estados.' },
+        { fecha: '28/08', texto: 'El punto trabado es quién factura al cliente final.' }
+      ],
+      updates: [
+        { fecha: '02/06', texto: 'Primera charla sobre revender con su equipo de campo.' },
+        { fecha: '17/07', texto: 'Segunda reunión: pidieron material técnico para su equipo.' },
+        { fecha: '28/08', texto: 'Discusión abierta sobre comisión y quién factura.' }
+      ],
+      acciones: [
+        { fecha: '10/09', texto: 'Mandar propuesta de reparto comercial por escrito.' }
+      ]
+    },
+    {
+      id: 'p-beira', leadId: null, nombre: 'Parcería logística Mozambique', empresa: 'Beira Log',
+      tipo: 'parceria', estado: 'congelado', pais: 'Mozambique', ciudad: 'Beira', industria: 'Logística',
+      rol: 'Diretor Comercial', contacto: 'Amílcar Sitoe', cuenta: 'FR', duenio: 'Alberto Córdoba',
+      abierto: '20/04',
+      notaLead: 'Sin ficha en el CRM. Conversaciones en portugués.',
+      notas: [
+        { fecha: '12/06', texto: 'No hay quién lleve el proyecto de su lado.' }
+      ],
+      updates: [
+        { fecha: '20/04', texto: 'Primera reunión en portugués, interés general sin proyecto concreto.' },
+        { fecha: '12/06', texto: 'Segunda reunión. Quedaron en definir un responsable interno y no lo hicieron.' }
+      ],
+      acciones: []
+    },
+    {
+      id: 'p-cuyo', leadId: null, nombre: 'App de campo', empresa: 'Minera Cuyo',
+      tipo: 'pib', estado: 'congelado', pais: 'Argentina', ciudad: 'Mendoza', industria: 'Minería',
+      rol: 'Jefe de Mantenimiento', contacto: 'Emilio Sosa', cuenta: 'ED', duenio: 'Sofía Ferrer',
+      abierto: '11/05',
+      notaLead: 'Sin ficha en el CRM: contacto por LinkedIn de Sofía.',
+      notas: [
+        { fecha: '03/07', texto: 'El prototipo funcionó; lo que se cortó fue el presupuesto.' }
+      ],
+      updates: [
+        { fecha: '11/05', texto: 'Reunión inicial sobre partes de mantenimiento en papel.' },
+        { fecha: '25/06', texto: 'Demo del prototipo en el celular del equipo de campo.' },
+        { fecha: '03/07', texto: 'Frenaron por presupuesto. Retoman el próximo ejercicio.' }
+      ],
+      acciones: [
+        { fecha: '01/12', texto: 'Volver a escribir cuando se apruebe el presupuesto del ejercicio.' }
+      ]
+    },
+    {
+      id: 'p-norte', leadId: null, nombre: 'Fabript/PIV frigorífico', empresa: 'Frigorífico Norte',
+      tipo: 'pib', estado: 'perdido', pais: 'Paraguay', ciudad: 'Asunción', industria: 'Alimentos',
+      rol: 'Gerente General', contacto: 'Hugo Benítez', cuenta: 'FR', duenio: 'Alberto Córdoba',
+      abierto: '08/04',
+      notaLead: 'Sin ficha en el CRM.',
+      notas: [
+        { fecha: '22/05', texto: 'Perdido por soporte en planta, no por precio. Vale volver en 2027.' }
+      ],
+      updates: [
+        { fecha: '08/04', texto: 'Reunión con el gerente general, interés fuerte.' },
+        { fecha: '22/05', texto: 'Avisaron que eligieron un proveedor local por el soporte en planta.' }
+      ],
+      acciones: []
+    },
+    {
+      id: 'p-seng-litoral', leadId: null, casa: 'seng', nombre: 'Ronda de inversión — Plásticos Del Litoral', empresa: 'Plásticos Del Litoral',
+      tipo: 'inversion', estado: 'nuestra', pais: 'Argentina', ciudad: 'Santa Fe', industria: 'Plásticos',
+      rol: 'Directora Industrial', contacto: 'Mariana Kessler', cuenta: 'AU', duenio: 'Alberto Córdoba',
+      abierto: '09/07',
+      notaLead: 'Sin ficha en el CRM: llegó por Seng.',
+      notas: [
+        { fecha: '20/08', texto: 'Buscan capital para la segunda planta, no software.' }
+      ],
+      updates: [
+        { fecha: '09/07', texto: 'Primera reunión por Seng: necesidad de capital de trabajo.' },
+        { fecha: '20/08', texto: 'Mandaron balances de los últimos dos ejercicios.' }
+      ],
+      acciones: [
+        { fecha: '11/09', texto: 'Devolver la valuación preliminar con el rango de ticket.' }
+      ]
+    },
+    {
+      id: 'p-seng-andina', leadId: null, casa: 'seng', nombre: 'Coinversión depósito Lima', empresa: 'Cerámica Andina',
+      tipo: 'inversion', estado: 'propuesta', pais: 'Perú', ciudad: 'Lima', industria: 'Construcción / Manufactura',
+      rol: 'Gerente de Compras', contacto: 'Ana Lucía Prado', cuenta: 'DL', duenio: 'Sofía Ferrer',
+      abierto: '06/08',
+      notaLead: 'Sin ficha en el CRM.',
+      notas: [],
+      updates: [
+        { fecha: '06/08', texto: 'Presentamos la estructura de coinversión al 40%.' },
+        { fecha: '29/08', texto: 'Term sheet enviado. Lo revisa el directorio.' }
+      ],
+      acciones: [
+        { fecha: '15/09', texto: 'Seguimiento del term sheet si no responden.' }
+      ]
+    }
+  ];
+
+  static REUNIONES = [
+    { f: '2026-09-17', hora: '15:00', dur: 45, quien: 'Wellington Abner Simoes', cargo: 'Gerente de Operaciones', empresa: 'Opus CM', pais: 'Brasil', ciudad: 'São Paulo', industria: 'Construcción / Manufactura', cuenta: 'AL', genero: 'Alberto Córdoba', estado: 'pendiente', proy: 'p-opus', nota: 'Revisar la propuesta con el gerente de planta.' },
+    { f: '2026-09-04', hora: '16:00', dur: 45, quien: 'María de los Ángeles Fernández', cargo: 'Directora de Operaciones', empresa: 'Grupo Industrial Villagrán', pais: 'México', ciudad: 'Monterrey', industria: 'Maquinaria', cuenta: 'ED', genero: 'Sofía Ferrer', estado: 'pendiente', proy: 'p-villagran', nota: 'Alcance regional LATAM.' },
+    { f: '2026-09-04', hora: '09:30', dur: 30, quien: 'Herik Pires', cargo: 'Sin cargo cargado', empresa: 'Sin empresa cargada', pais: 'Brasil', ciudad: 'Belo Horizonte', industria: 'Automotriz', cuenta: 'FR', genero: 'Bruno Etchart', estado: 'pendiente', proy: null, nota: 'Primera charla, sin proyecto abierto.' },
+    { f: '2026-09-02', hora: '11:00', dur: 50, quien: 'Gonzalo Adrián Núñez', cargo: 'Jefe de Planta', empresa: 'Metalúrgica del Sur', pais: 'Argentina', ciudad: 'Rosario', industria: 'Metalurgia', cuenta: 'AU', genero: 'Sofía Ferrer', estado: 'asistio', proy: 'p-metal', nota: 'Revisa presupuesto con el gerente general.' },
+    { f: '2026-09-01', hora: '15:30', dur: 40, quien: 'Rodrigo Vera', cargo: 'Director de Operaciones', empresa: 'Transportes Andes', pais: 'Chile', ciudad: 'Santiago', industria: 'Logística', cuenta: 'AL', genero: 'Alberto Córdoba', estado: 'asistio', proy: 'p-andes', nota: 'Repaso del corte por conductor.' },
+    { f: '2026-08-29', hora: '11:00', dur: 45, quien: 'Mariana Kessler', cargo: 'Directora Industrial', empresa: 'Plásticos Del Litoral', pais: 'Argentina', ciudad: 'Santa Fe', industria: 'Plásticos', cuenta: 'AU', genero: 'Alberto Córdoba', estado: 'asistio', proy: 'p-seng-litoral', nota: 'Revisión de balances con el contador de ellos.' },
+    { f: '2026-08-28', hora: '10:00', dur: 55, quien: 'Fábio Menezes', cargo: 'Socio', empresa: 'TecnoSul Integradores', pais: 'Brasil', ciudad: 'São Paulo', industria: 'Tecnología', cuenta: 'DL', genero: 'Alberto Córdoba', estado: 'asistio', proy: 'p-tecnosul', nota: 'Comisión y facturación sin cerrar.' },
+    { f: '2026-08-27', hora: '16:30', dur: 30, quien: 'Ana Lucía Prado', cargo: 'Gerente de Compras', empresa: 'Cerámica Andina', pais: 'Perú', ciudad: 'Lima', industria: 'Construcción / Manufactura', cuenta: 'DL', genero: 'Sofía Ferrer', estado: 'asistio', proy: 'p-seng-andina', nota: 'Repaso del term sheet antes de mandarlo al directorio.' },
+    { f: '2026-08-26', hora: '10:30', dur: 30, quien: 'Lucía Gonçalves', cargo: 'Consultora Senior', empresa: 'Pinheiro & Asoc.', pais: 'Uruguay', ciudad: 'Montevideo', industria: 'Consultoría', cuenta: 'AMU', genero: 'Alberto Córdoba', estado: 'no-asistio', proy: 'p-pinheiro', nota: 'No se conectó. Pidió reagendar al día siguiente.' },
+    { f: '2026-08-20', hora: '14:00', dur: 60, quien: 'Rodrigo Vera', cargo: 'Director de Operaciones', empresa: 'Transportes Andes', pais: 'Chile', ciudad: 'Santiago', industria: 'Logística', cuenta: 'AL', genero: 'Alberto Córdoba', estado: 'asistio', proy: 'p-andes', nota: 'Primera demo del tablero.' },
+    { f: '2026-08-19', hora: '16:00', dur: 30, quien: 'Gonzalo Adrián Núñez', cargo: 'Jefe de Planta', empresa: 'Metalúrgica del Sur', pais: 'Argentina', ciudad: 'Rosario', industria: 'Metalurgia', cuenta: 'AU', genero: 'Sofía Ferrer', estado: 'reagendada', proy: 'p-metal', nota: 'Cancelada por él, movida al 02/09.' },
+    { f: '2026-08-18', hora: '11:30', dur: 45, quien: 'Silvina Duarte', cargo: 'Gerente de Producción', empresa: 'Alimentos Paraná', pais: 'Argentina', ciudad: 'Paraná', industria: 'Alimentos', cuenta: 'AU', genero: 'Alberto Córdoba', estado: 'asistio', proy: 'p-parana', nota: 'Aprobaron el prototipo, pasa a implementación.' },
+    { f: '2026-08-06', hora: '09:00', dur: 35, quien: 'Ana Lucía Prado', cargo: 'Gerente de Compras', empresa: 'Cerámica Andina', pais: 'Perú', ciudad: 'Lima', industria: 'Construcción / Manufactura', cuenta: 'DL', genero: 'Alberto Córdoba', estado: 'asistio', proy: 'p-seng-andina', nota: 'Primera charla por Seng: estructura de coinversión al 40%.' },
+    { f: '2026-07-30', hora: '17:00', dur: 30, quien: 'Emilio Sosa', cargo: 'Jefe de Mantenimiento', empresa: 'Minera Cuyo', pais: 'Argentina', ciudad: 'Mendoza', industria: 'Minería', cuenta: 'ED', genero: 'Sofía Ferrer', estado: 'no-asistio', proy: 'p-cuyo', nota: 'No asistió, ya venía frenado por presupuesto.' },
+    { f: '2026-07-17', hora: '10:30', dur: 50, quien: 'Fábio Menezes', cargo: 'Socio', empresa: 'TecnoSul Integradores', pais: 'Brasil', ciudad: 'São Paulo', industria: 'Tecnología', cuenta: 'DL', genero: 'Alberto Córdoba', estado: 'asistio', proy: 'p-tecnosul', nota: 'Pidieron material técnico para su equipo.' },
+    { f: '2026-07-14', hora: '15:00', dur: 60, quien: 'Rodrigo Vera', cargo: 'Director de Operaciones', empresa: 'Transportes Andes', pais: 'Chile', ciudad: 'Santiago', industria: 'Logística', cuenta: 'AL', genero: 'Alberto Córdoba', estado: 'asistio', proy: 'p-andes', nota: 'Arranque del prototipo, dos tableros.' },
+    { f: '2026-07-09', hora: '11:00', dur: 40, quien: 'Mariana Kessler', cargo: 'Directora Industrial', empresa: 'Plásticos Del Litoral', pais: 'Argentina', ciudad: 'Santa Fe', industria: 'Plásticos', cuenta: 'AU', genero: 'Sofía Ferrer', estado: 'asistio', proy: 'p-seng-litoral', nota: 'Primera reunión por Seng: necesidad de capital de trabajo.' },
+    { f: '2026-07-03', hora: '09:30', dur: 25, quien: 'Emilio Sosa', cargo: 'Jefe de Mantenimiento', empresa: 'Minera Cuyo', pais: 'Argentina', ciudad: 'Mendoza', industria: 'Minería', cuenta: 'ED', genero: 'Sofía Ferrer', estado: 'asistio', proy: 'p-cuyo', nota: 'Avisó que frenaban por presupuesto.' },
+    { f: '2026-06-25', hora: '14:30', dur: 55, quien: 'Emilio Sosa', cargo: 'Jefe de Mantenimiento', empresa: 'Minera Cuyo', pais: 'Argentina', ciudad: 'Mendoza', industria: 'Minería', cuenta: 'ED', genero: 'Sofía Ferrer', estado: 'asistio', proy: 'p-cuyo', nota: 'Demo en el celular del equipo de campo.' },
+    { f: '2026-06-12', hora: '10:00', dur: 45, quien: 'Amílcar Sitoe', cargo: 'Diretor Comercial', empresa: 'Beira Log', pais: 'Mozambique', ciudad: 'Beira', industria: 'Logística', cuenta: 'FR', genero: 'Alberto Córdoba', estado: 'asistio', proy: 'p-beira', nota: 'Quedaron en definir un responsable interno.' },
+    { f: '2026-06-11', hora: '16:30', dur: 60, quien: 'Silvina Duarte', cargo: 'Gerente de Producción', empresa: 'Alimentos Paraná', pais: 'Argentina', ciudad: 'Paraná', industria: 'Alimentos', cuenta: 'AU', genero: 'Alberto Córdoba', estado: 'asistio', proy: 'p-parana', nota: 'Demo con datos reales de dos líneas.' },
+    { f: '2026-06-04', hora: '11:00', dur: 30, quien: 'Joaquín Ferreyra', cargo: 'Gerente de Planta', empresa: 'Vidriería Central', pais: 'Argentina', ciudad: 'Córdoba', industria: 'Vidrio', cuenta: 'AL', genero: 'Alberto Córdoba', estado: 'reagendada', proy: null, nota: 'Reagendada dos veces, nunca se hizo.' },
+    { f: '2026-06-02', hora: '15:00', dur: 50, quien: 'Fábio Menezes', cargo: 'Socio', empresa: 'TecnoSul Integradores', pais: 'Brasil', ciudad: 'São Paulo', industria: 'Tecnología', cuenta: 'DL', genero: 'Alberto Córdoba', estado: 'asistio', proy: 'p-tecnosul', nota: 'Primera charla de parcería.' },
+    { f: '2026-05-22', hora: '10:00', dur: 35, quien: 'Hugo Benítez', cargo: 'Gerente General', empresa: 'Frigorífico Norte', pais: 'Paraguay', ciudad: 'Asunción', industria: 'Alimentos', cuenta: 'FR', genero: 'Alberto Córdoba', estado: 'asistio', proy: 'p-norte', nota: 'Avisaron que eligieron un proveedor local.' },
+    { f: '2026-05-14', hora: '09:00', dur: 40, quien: 'Carla Ibáñez', cargo: 'Gerente de Operaciones', empresa: 'Textil Sur', pais: 'Uruguay', ciudad: 'Montevideo', industria: 'Textil', cuenta: 'AMU', genero: 'Alberto Córdoba', estado: 'asistio', proy: null, nota: 'Interesada, no volvió a responder.' },
+    { f: '2026-05-11', hora: '16:00', dur: 45, quien: 'Emilio Sosa', cargo: 'Jefe de Mantenimiento', empresa: 'Minera Cuyo', pais: 'Argentina', ciudad: 'Mendoza', industria: 'Minería', cuenta: 'ED', genero: 'Sofía Ferrer', estado: 'asistio', proy: 'p-cuyo', nota: 'Partes de mantenimiento en papel.' },
+    { f: '2026-05-05', hora: '11:30', dur: 55, quien: 'Silvina Duarte', cargo: 'Gerente de Producción', empresa: 'Alimentos Paraná', pais: 'Argentina', ciudad: 'Paraná', industria: 'Alimentos', cuenta: 'AU', genero: 'Alberto Córdoba', estado: 'asistio', proy: 'p-parana', nota: 'Primera reunión: paradas de línea.' },
+    { f: '2026-04-23', hora: '10:30', dur: 30, quien: 'Nadia Rocha', cargo: 'Jefa de Compras', empresa: 'Autopartes Litoral', pais: 'Brasil', ciudad: 'Curitiba', industria: 'Automotriz', cuenta: 'DL', genero: 'Alberto Córdoba', estado: 'no-asistio', proy: null, nota: 'No se conectó, no volvió a responder.' },
+    { f: '2026-04-20', hora: '09:00', dur: 45, quien: 'Amílcar Sitoe', cargo: 'Diretor Comercial', empresa: 'Beira Log', pais: 'Mozambique', ciudad: 'Beira', industria: 'Logística', cuenta: 'FR', genero: 'Alberto Córdoba', estado: 'asistio', proy: 'p-beira', nota: 'Interés general, sin proyecto concreto.' },
+    { f: '2026-04-08', hora: '15:30', dur: 50, quien: 'Hugo Benítez', cargo: 'Gerente General', empresa: 'Frigorífico Norte', pais: 'Paraguay', ciudad: 'Asunción', industria: 'Alimentos', cuenta: 'FR', genero: 'Alberto Córdoba', estado: 'asistio', proy: 'p-norte', nota: 'Interés fuerte del gerente general.' }
+  ];
+
+  static MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  static DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  static ESTADO_REU = {
+    asistio: { label: 'asistió', bg: 'var(--success-light)', fg: 'var(--success)' },
+    'no-asistio': { label: 'no asistió', bg: 'var(--error-light)', fg: 'var(--error)' },
+    reagendada: { label: 'reagendada', bg: 'var(--badge-await)', fg: 'var(--badge-await-text)' },
+    pendiente: { label: 'pendiente', bg: 'var(--info-light)', fg: 'var(--info)' }
+  };
+
+  state = { vista: 'proyectos', casa: 'todos', casaReu: 'todos', tipo: 'todos', estado: 'todos', rango: 3, agrupar: 'pais', sel: null };
+
+  casaDe(p) { return p.casa || 'globalita'; }
+  casaInfo(k) { return Component.CASAS.find(c => c.k === k) || Component.CASAS[0]; }
+  casaDeReunion(r) {
+    if (!r.proy) return 'ninguna';
+    const p = this.proyectos().find(x => x.id === r.proy);
+    return p ? this.casaDe(p) : 'ninguna';
+  }
+  casaReuLabel(k) {
+    if (k === 'ninguna') return 'Sin proyecto';
+    return this.casaInfo(k).label;
+  }
+
+  tipoDe(k) { return Component.TIPOS.find(t => t.k === k) || Component.TIPOS[0]; }
+  estadoDe(k) { return Component.ESTADOS.find(e => e.k === k) || Component.ESTADOS[0]; }
+  proyectos() { return (this.props.extra || []).concat(Component.PROYECTOS); }
+  reunionesDe(pid) { return Component.REUNIONES.filter(r => r.proy === pid); }
+  ddmm(iso) { const p = (iso || '').split('-'); return p.length === 3 ? p[2] + '/' + p[1] : iso; }
+
+  enRango(r) {
+    const hoy = new Date(Component.HOY + 'T00:00:00');
+    const desde = new Date(hoy.getFullYear(), hoy.getMonth() - (this.state.rango - 1), 1);
+    return new Date(r.f + 'T00:00:00') >= desde;
+  }
+
+  franja(hora) {
+    const h = parseInt((hora || '0').split(':')[0], 10);
+    if (h < 11) return 'Mañana (8–11)';
+    if (h < 14) return 'Mediodía (11–14)';
+    if (h < 17) return 'Tarde (14–17)';
+    return 'Última hora (17–20)';
+  }
+
+  renderVals() {
+    const ps = this.proyectos();
+    const vista = this.state.vista;
+    const hoy = new Date(Component.HOY + 'T00:00:00');
+    const activos = ps.filter(p => ['sin-hablar', 'conversacion', 'propuesta', 'nuestra'].indexOf(p.estado) >= 0);
+    const enCasaReu = r => this.state.casaReu === 'todos' || this.casaDeReunion(r) === this.state.casaReu;
+    const reuRango = Component.REUNIONES.filter(r => this.enRango(r) && enCasaReu(r));
+    const sel = ps.find(p => p.id === this.state.sel) || null;
+
+    const filtradasCasa = ps.filter(p => this.state.casa === 'todos' || this.casaDe(p) === this.state.casa);
+    const filtradas = ps.filter(p =>
+      (this.state.casa === 'todos' || this.casaDe(p) === this.state.casa) &&
+      (this.state.tipo === 'todos' || p.tipo === this.state.tipo) &&
+      (this.state.estado === 'todos' || p.estado === this.state.estado)
+    );
+
+    const grupoDefs = [
+      { k: 'pais', label: 'País', campo: r => r.pais },
+      { k: 'ciudad', label: 'Ciudad', campo: r => r.ciudad },
+      { k: 'industria', label: 'Industria', campo: r => r.industria },
+      { k: 'rol', label: 'Rol', campo: r => r.cargo },
+      { k: 'empresa', label: 'Empresa', campo: r => r.empresa },
+      { k: 'cuenta', label: 'Cuenta', campo: r => r.cuenta },
+      { k: 'genero', label: 'Quién la generó', campo: r => r.genero },
+      { k: 'estado', label: 'Estado', campo: r => (Component.ESTADO_REU[r.estado] || {}).label || r.estado },
+      { k: 'dia', label: 'Día de la semana', campo: r => Component.DIAS[new Date(r.f + 'T00:00:00').getDay()] },
+      { k: 'franja', label: 'Franja horaria', campo: r => this.franja(r.hora) },
+      { k: 'casa', label: 'Empresa propia', campo: r => this.casaReuLabel(this.casaDeReunion(r)) }
+    ];
+    const gdef = grupoDefs.find(g => g.k === this.state.agrupar) || grupoDefs[0];
+    const cuenta = {};
+    reuRango.forEach(r => { const k = gdef.campo(r) || '—'; cuenta[k] = (cuenta[k] || 0) + 1; });
+    const pares = Object.keys(cuenta).map(k => ({ k, n: cuenta[k] })).sort((a, b) => b.n - a.n);
+    const maxG = pares.length ? pares[0].n : 1;
+
+    const porMes = [];
+    for (let i = this.state.rango - 1; i >= 0; i--) {
+      const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+      const pref = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      const delMes = Component.REUNIONES.filter(r => r.f.indexOf(pref) === 0 && enCasaReu(r));
+      porMes.push({ label: Component.MESES[d.getMonth()], n: delMes.length, conProy: delMes.filter(r => r.proy).length });
+    }
+    const maxM = Math.max.apply(null, porMes.map(m => m.n).concat([1]));
+    const totalRango = reuRango.length;
+    const conProyecto = reuRango.filter(r => r.proy).length;
+    const asistio = reuRango.filter(r => r.estado === 'asistio').length;
+    const noAsistio = reuRango.filter(r => r.estado === 'no-asistio').length;
+    const reagendada = reuRango.filter(r => r.estado === 'reagendada').length;
+    const mejorMes = porMes.slice().sort((a, b) => b.n - a.n)[0] || { label: '—', n: 0 };
+    const empresas = reuRango.map(r => r.empresa).filter((v, i, a) => a.indexOf(v) === i).length;
+    const durProm = totalRango ? Math.round(reuRango.reduce((a, r) => a + r.dur, 0) / totalRango) : 0;
+
+    const isoDe = ddmm => { const p = (ddmm || '').split('/'); return p.length === 2 ? '2026-' + p[1] + '-' + p[0] : Component.HOY; };
+
+    return {
+      vistas: [
+        { k: 'proyectos', label: 'Proyectos', n: ps.length },
+        { k: 'reuniones', label: 'Reuniones', n: Component.REUNIONES.length }
+      ].map(v => ({
+        label: v.label, n: v.n,
+        fondo: vista === v.k ? 'var(--accent)' : 'var(--surface)',
+        color: vista === v.k ? 'var(--surface)' : 'var(--muted)',
+        elegir: () => this.setState({ vista: v.k })
+      })),
+      enProyectos: vista === 'proyectos',
+      enReuniones: vista === 'reuniones',
+
+      tarjetasProy: [
+        { n: activos.length, label: 'Activos', detalle: 'Con próximo paso definido', color: 'var(--accent)' },
+        { n: ps.filter(p => p.estado === 'propuesta').length, label: 'Propuesta enviada', detalle: 'Esperando respuesta de ellos', color: 'var(--badge-await-text)' },
+        { n: ps.filter(p => p.estado === 'nuestra').length, label: 'Nuestra pelota', detalle: 'Falta algo de nuestro lado', color: 'var(--warning)' },
+        { n: ps.filter(p => p.estado === 'congelado').length, label: 'Congelados', detalle: '+30 días sin movimiento', color: 'var(--muted)' },
+        { n: ps.filter(p => p.estado === 'ganado').length, label: 'Cerrados ganados', detalle: 'En implementación', color: 'var(--success)' }
+      ],
+
+      chipsCasa: [{ k: 'todos', label: 'Todas', fg: 'var(--info)', detalle: '' }].concat(Component.CASAS).map(c => {
+        const on = this.state.casa === c.k;
+        return {
+          label: c.label,
+          n: c.k === 'todos' ? ps.length : ps.filter(p => this.casaDe(p) === c.k).length,
+          fondo: on ? c.fg : 'var(--surface)',
+          color: on ? 'var(--surface)' : c.fg,
+          borde: on ? c.fg : 'var(--border)',
+          elegir: () => this.setState({ casa: c.k, tipo: 'todos' })
+        };
+      }),
+      chipsTipo: [{ k: 'todos', label: 'Todos', fg: 'var(--info)' }].concat(
+        Component.TIPOS.filter(t => this.state.casa === 'todos' || t.casa === this.state.casa)
+      ).map(t => {
+        const on = this.state.tipo === t.k;
+        return {
+          label: t.label,
+          n: t.k === 'todos' ? filtradasCasa.length : filtradasCasa.filter(p => p.tipo === t.k).length,
+          fondo: on ? t.fg : 'var(--surface)',
+          color: on ? 'var(--surface)' : t.fg,
+          borde: on ? t.fg : 'var(--border)',
+          elegir: () => this.setState({ tipo: t.k })
+        };
+      }),
+      chipsEstado: [{ k: 'todos', label: 'Todos', fg: 'var(--info)' }].concat(Component.ESTADOS).map(e => {
+        const on = this.state.estado === e.k;
+        return {
+          label: e.label,
+          n: e.k === 'todos' ? ps.length : ps.filter(p => p.estado === e.k).length,
+          fondo: on ? e.fg : 'var(--surface)',
+          color: on ? 'var(--surface)' : 'var(--muted)',
+          borde: on ? e.fg : 'var(--border)',
+          elegir: () => this.setState({ estado: e.k })
+        };
+      }),
+
+      filas: filtradas.map(p => {
+        const t = this.tipoDe(p.tipo), e = this.estadoDe(p.estado);
+        const ca = this.casaInfo(this.casaDe(p));
+        const rs = this.reunionesDe(p.id);
+        const pasadas = rs.filter(r => new Date(r.f + 'T00:00:00') <= hoy).sort((a, b) => a.f < b.f ? 1 : -1);
+        const ult = pasadas[0] || null;
+        const futuras = rs.filter(r => new Date(r.f + 'T00:00:00') > hoy).sort((a, b) => a.f > b.f ? 1 : -1);
+        const prox = (p.acciones || [])[0] || null;
+        const nota = (p.notas || [])[(p.notas || []).length - 1] || null;
+        const ups = p.updates || [];
+        const up = ups[ups.length - 1] || null;
+        return {
+          nombre: p.nombre, empresa: p.empresa + ' · ' + p.contacto,
+          tipo: t.label, tipoBg: t.bg, tipoFg: t.fg,
+          casa: ca.label, casaFg: ca.fg,
+          estado: e.label, estadoBg: e.bg, estadoFg: e.fg,
+          pais: p.pais, ciudad: p.ciudad, industria: p.industria, rol: p.rol,
+          reuniones: rs.length,
+          ultimaReunion: ult ? this.ddmm(ult.f) : (futuras[0] ? '—' : '—'),
+          ultimaReunionEstado: ult
+            ? (Component.ESTADO_REU[ult.estado] || {}).label
+            : (futuras[0] ? 'programada ' + this.ddmm(futuras[0].f) : 'sin reuniones'),
+          paso: prox ? prox.fecha + ' · ' + prox.texto : 'Sin próximo paso definido',
+          notaTitulo: 'Notas de la ficha: ' + (p.notaLead || 'sin nota') + (nota ? '\n\nÚltima nota del proyecto (' + nota.fecha + '): ' + nota.texto : ''),
+          notaBg: nota ? 'var(--accent-light)' : 'transparent',
+          notaFg: nota ? 'var(--accent)' : 'var(--hint)',
+          notaBorde: nota ? 'var(--accent-br)' : 'var(--border)',
+          updFecha: up ? up.fecha : '—',
+          updTexto: up ? up.texto : 'Sin actualizaciones',
+          updTitulo: ups.length
+            ? ups.slice().reverse().map(u => u.fecha + ' · ' + u.texto).join('\n\n')
+            : 'Sin actualizaciones del proyecto',
+          fondoFila: this.state.sel === p.id ? 'var(--info-light)' : 'transparent',
+          abrir: () => this.setState({ sel: p.id })
+        };
+      }),
+      leyenda: Component.ESTADOS.map(e => ({ label: e.label, bg: e.bg, fg: e.fg, regla: e.regla })),
+
+      rangos: [{ n: 1, label: 'Último mes' }, { n: 3, label: '3 meses' }, { n: 6, label: '6 meses' }].map(r => ({
+        label: r.label,
+        fondo: this.state.rango === r.n ? 'var(--accent)' : 'var(--surface)',
+        color: this.state.rango === r.n ? 'var(--surface)' : 'var(--muted)',
+        elegir: () => this.setState({ rango: r.n })
+      })),
+      rangoDetalle: totalRango + ' reuniones · ' + porMes[0].label + ' a ' + porMes[porMes.length - 1].label + ' 2026',
+      chipsCasaReu: [{ k: 'todos', label: 'Todas', fg: 'var(--info)' }]
+        .concat(Component.CASAS.map(c => ({ k: c.k, label: c.label, fg: c.fg })))
+        .concat([{ k: 'ninguna', label: 'Sin proyecto', fg: 'var(--muted)' }])
+        .map(c => {
+          const on = this.state.casaReu === c.k;
+          const enR = Component.REUNIONES.filter(r => this.enRango(r));
+          return {
+            label: c.label,
+            n: c.k === 'todos' ? enR.length : enR.filter(r => this.casaDeReunion(r) === c.k).length,
+            fondo: on ? c.fg : 'var(--surface)',
+            color: on ? 'var(--surface)' : c.fg,
+            borde: on ? c.fg : 'var(--border)',
+            elegir: () => this.setState({ casaReu: c.k })
+          };
+        }),
+      tarjetasReu: [
+        { n: totalRango, label: 'Reuniones', detalle: 'En el período elegido', color: 'var(--accent)' },
+        { n: asistio, label: 'Asistieron', detalle: totalRango ? Math.round(asistio / totalRango * 100) + '% del total' : '—', color: 'var(--success)' },
+        { n: noAsistio, label: 'No asistió', detalle: 'Sin aviso previo', color: 'var(--error)' },
+        { n: reagendada, label: 'Reagendadas', detalle: 'Movidas de fecha', color: 'var(--badge-await-text)' },
+        { n: conProyecto, label: 'Con proyecto', detalle: 'Derivaron en un proyecto abierto', color: 'var(--brand-linkedin)' },
+        { n: (totalRango ? Math.round(conProyecto / totalRango * 100) : 0) + '%', label: 'Conversión', detalle: 'Reunión que termina en proyecto', color: 'var(--accent)' },
+        { n: empresas, label: 'Empresas', detalle: 'Distintas en el período', color: 'var(--muted)' },
+        { n: (totalRango / (this.state.rango * 4.3)).toFixed(1), label: 'Por semana', detalle: 'Promedio del período', color: 'var(--muted)' }
+      ],
+      barras: porMes.map(m => ({
+        label: m.label, n: m.n,
+        alto: Math.round(m.n / maxM * 100) + '%',
+        altoProy: m.n ? Math.round(m.conProy / m.n * 100) + '%' : '0%',
+        fondo: m.n === maxM ? 'var(--accent-br)' : 'var(--teal-br)',
+        titulo: m.n + ' reuniones en ' + m.label + ', ' + m.conProy + ' con proyecto'
+      })),
+      promedio: (porMes.reduce((a, m) => a + m.n, 0) / porMes.length).toFixed(1),
+      mejor: mejorMes.label + ' (' + mejorMes.n + ')',
+      duracion: durProm + ' min',
+      agrupadores: grupoDefs.map(g => ({
+        label: g.label,
+        fondo: this.state.agrupar === g.k ? 'var(--accent)' : 'var(--surface)',
+        color: this.state.agrupar === g.k ? 'var(--surface)' : 'var(--muted)',
+        borde: this.state.agrupar === g.k ? 'var(--accent)' : 'var(--border)',
+        elegir: () => this.setState({ agrupar: g.k })
+      })),
+      grupos: pares.map(p => ({
+        label: p.k, n: p.n,
+        pct: totalRango ? Math.round(p.n / totalRango * 100) + '%' : '0%',
+        ancho: Math.round(p.n / maxG * 100) + '%',
+        fondo: p.n === maxG ? 'var(--accent)' : 'var(--accent-br)'
+      })),
+      reunionesFilas: reuRango.map((r, i) => {
+        const e = Component.ESTADO_REU[r.estado] || {};
+        const ck = this.casaDeReunion(r);
+        return {
+          i: i + 1,
+          fecha: this.ddmm(r.f), hora: r.hora + ' · ' + r.dur + '′',
+          quien: r.quien, cargo: r.cargo, empresa: r.empresa,
+          casa: this.casaReuLabel(ck),
+          casaFg: ck === 'ninguna' ? 'var(--hint)' : this.casaInfo(ck).fg,
+          pais: r.pais, ciudad: r.ciudad, industria: r.industria,
+          genero: (r.genero || '').split(' ')[0],
+          estado: e.label, estadoBg: e.bg, estadoFg: e.fg,
+          nota: r.nota
+        };
+      }),
+
+      panelAbierto: !!sel,
+      cerrarPanel: () => this.setState({ sel: null }),
+      noCerrar: e => e.stopPropagation(),
+      pNombre: sel ? sel.nombre : '',
+      pEmpresa: sel ? sel.empresa + ' · ' + sel.contacto : '',
+      pTipo: sel ? this.tipoDe(sel.tipo).label : '',
+      pTipoBg: sel ? this.tipoDe(sel.tipo).bg : 'transparent',
+      pTipoFg: sel ? this.tipoDe(sel.tipo).fg : 'var(--muted)',
+      pEstado: sel ? this.estadoDe(sel.estado).label : '',
+      pEstadoBg: sel ? this.estadoDe(sel.estado).bg : 'transparent',
+      pEstadoFg: sel ? this.estadoDe(sel.estado).fg : 'var(--muted)',
+      pDatos: sel ? (() => {
+        const rs = this.reunionesDe(sel.id);
+        const pasadas = rs.filter(r => new Date(r.f + 'T00:00:00') <= hoy).sort((a, b) => a.f < b.f ? 1 : -1);
+        return [
+          { k: 'Contacto', v: sel.contacto },
+          { k: 'Rol', v: sel.rol },
+          { k: 'Empresa', v: sel.empresa },
+          { k: 'Industria', v: sel.industria },
+          { k: 'País y ciudad', v: sel.pais + ' · ' + sel.ciudad },
+          { k: 'Cuenta de envío', v: sel.cuenta },
+          { k: 'Responsable', v: sel.duenio },
+          { k: 'Abierto', v: sel.abierto },
+          { k: 'Reuniones', v: rs.length + (pasadas[0] ? ' · última ' + this.ddmm(pasadas[0].f) : ' · sin reuniones') },
+          { k: 'Ficha del lead', v: sel.leadId ? 'Cargada en el CRM' : 'Sin lead asociado' }
+        ];
+      })() : [],
+      pLanes: sel ? [
+        { label: 'Notas', punto: 'var(--info)', items: (sel.notas || []).slice().reverse() },
+        { label: 'Actualización del proyecto', punto: 'var(--accent)', items: (sel.updates || []).slice().reverse() },
+        { label: 'Próximas acciones', punto: 'var(--warning)', items: sel.acciones || [] }
+      ].map(l => ({ label: l.label, punto: l.punto, n: l.items.length, items: l.items, vacio: l.items.length === 0 })) : [],
+      pReuniones: sel ? this.reunionesDe(sel.id).map((r, i) => {
+        const e = Component.ESTADO_REU[r.estado] || {};
+        return { i: i + 1, fecha: this.ddmm(r.f), hora: r.hora, quien: r.quien + ' · ' + r.dur + ' min', estado: e.label, estadoBg: e.bg, estadoFg: e.fg };
+      }) : [],
+      pSinReuniones: !!sel && this.reunionesDe(sel.id).length === 0,
+      pNotaLead: sel ? sel.notaLead : ''
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:210;display:flex;align-items:center;justify-content:center" onClick="{{ cerrar }}">
+  <div style="width:600px;max-width:94vw;max-height:86vh;background:var(--surface);border:.5px solid var(--border);border-radius:12px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;animation:om-agendada 240ms cubic-bezier(.4,0,.2,1)" onClick="{{ stop }}">
+    <div style="display:flex;align-items:center;gap:8px;padding:11px 16px;border-bottom:.5px solid var(--border)">
+      <span style="font-size:14px;font-weight:500;color:var(--text);white-space:nowrap">Vencimientos</span>
+      <span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:10px;background:var(--accent-light);color:var(--accent);white-space:nowrap;font-variant-numeric:tabular-nums">{{ progreso }}</span>
+      <div style="flex:1;min-width:0;height:4px;border-radius:8px;background:var(--bg);border:.5px solid var(--border);overflow:hidden">
+        <div style="height:100%;width:{{ avance }};background:var(--accent);border-radius:8px;transition:width 240ms ease-out"></div>
+      </div>
+      <button type="button" onClick="{{ cerrar }}" title="Cerrar" style="width:28px;height:28px;flex-shrink:0;border-radius:8px;border:.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 150ms ease-out" style-hover="background:var(--accent-light);border-color:var(--accent-br);color:var(--accent)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
+    </div>
+
+    <sc-if value="{{ hayActual }}" hint-placeholder-val="{{ true }}">
+      <div style="min-height:0;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:var(--accent);color:var(--surface);white-space:nowrap">{{ cuenta }}</span>
+          <span style="font-size:14px;font-weight:600;color:var(--text);text-wrap:pretty;max-width:340px">{{ nombre }}</span>
+          <span style="font-size:9px;font-weight:600;padding:1px 6px;border-radius:8px;background:var(--bg);color:var(--muted);border:.5px solid var(--border);white-space:nowrap">{{ etapa }}</span>
+          <sc-if value="{{ vencidoYa }}" hint-placeholder-val="{{ true }}">
+            <span style="margin-left:auto;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:var(--error-light);color:var(--error);white-space:nowrap;font-variant-numeric:tabular-nums">{{ vencimiento }}</span>
+          </sc-if>
+          <sc-if value="{{ porVencer }}" hint-placeholder-val="{{ false }}">
+            <span style="margin-left:auto;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:var(--warning-light);color:var(--warning);white-space:nowrap;font-variant-numeric:tabular-nums">{{ vencimiento }}</span>
+          </sc-if>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+          <sc-for list="{{ etiquetas }}" as="t" hint-placeholder-count="2">
+            <span style="font-size:10px;font-weight:500;padding:2px 8px;border-radius:10px;background:var(--accent-light);color:var(--accent);border:.5px solid var(--accent-br);white-space:nowrap">{{ t.nombre }}</span>
+          </sc-for>
+          <sc-if value="{{ pasaFase2 }}" hint-placeholder-val="{{ false }}">
+            <span title="Cumplió el ciclo: pasa a Fase 2 y el próximo contacto se corre 3 meses" style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;background:var(--warning-light);color:var(--warning);border:.5px solid var(--warning);white-space:nowrap">Fase 2</span>
+          </sc-if>
+          <sc-if value="{{ sinEtiquetas }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:10px;color:var(--hint)">sin etiquetas</span>
+          </sc-if>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+          <div style="display:flex;flex-direction:column;gap:2px;padding:7px 9px;border-radius:8px;background:var(--bg);border:.5px solid var(--border)">
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);font-weight:600">Vencimiento</span>
+            <span style="font-size:12px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums">{{ fechaVencimiento }}</span>
+            <span style="font-size:9px;color:var(--muted)">{{ hace }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px;padding:7px 9px;border-radius:8px;background:var(--accent-light);border:.5px solid var(--accent-br)">
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);font-weight:600">Pr&oacute;ximo contacto</span>
+            <span style="font-size:12px;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums">{{ proximoLabel }}</span>
+            <span style="font-size:9px;color:var(--accent)">{{ etapa }} &middot; {{ regla }}</span>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <sc-for list="{{ contexto }}" as="c" hint-placeholder-count="3">
+            <span style="display:inline-flex;align-items:baseline;gap:6px;padding:3px 9px;border-radius:8px;background:var(--bg);border:.5px solid var(--border);white-space:nowrap">
+              <span style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);font-weight:600">{{ c.label }}</span>
+              <span style="font-size:11px;color:var(--text)">{{ c.value }}</span>
+            </span>
+          </sc-for>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);font-weight:600">Mensajes destacados</span>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">
+            <sc-for list="{{ destacados }}" as="d" hint-placeholder-count="3">
+              <button type="button" onClick="{{ d.usar }}" title="{{ d.titulo }}" style="height:22px;padding:0 8px;border-radius:10px;border:.5px solid var(--border);background:var(--bg);color:var(--text);font-size:9px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--accent-light);border-color:var(--accent-br);color:var(--accent)">{{ d.etiqueta }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);font-weight:600">Mensaje que toca</span>
+            <span style="font-size:9px;color:var(--hint);padding:0 5px;border-radius:8px;border:.5px solid var(--border);white-space:nowrap">{{ origenMensaje }}</span>
+            <span title="Idioma sugerido según el país del lead" style="font-size:9px;font-weight:600;color:var(--accent);padding:1px 6px;border-radius:8px;background:var(--accent-light);white-space:nowrap">{{ idiomaSugerido }}</span>
+            <div style="margin-left:auto;display:flex;gap:0;border:.5px solid var(--border);border-radius:8px;overflow:hidden">
+              <sc-for list="{{ idiomas }}" as="i" hint-placeholder-count="3">
+                <sc-if value="{{ i.on }}" hint-placeholder-val="{{ true }}">
+                  <button type="button" onClick="{{ i.elegir }}" style="height:24px;padding:0 10px;border:none;background:var(--accent);color:var(--surface);font-size:10px;font-weight:600;cursor:pointer;font-family:inherit">{{ i.label }}</button>
+                </sc-if>
+                <sc-if value="{{ i.off }}" hint-placeholder-val="{{ false }}">
+                  <button type="button" onClick="{{ i.elegir }}" style="height:24px;padding:0 10px;border:none;background:var(--surface);color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit;transition:background 150ms ease-out" style-hover="background:var(--accent-light);color:var(--accent)">{{ i.label }}</button>
+                </sc-if>
+              </sc-for>
+            </div>
+          </div>
+          <textarea value="{{ mensaje }}" onChange="{{ escribir }}" style="width:100%;box-sizing:border-box;min-height:110px;padding:9px 11px;border:.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px;line-height:1.6;font-family:inherit;resize:vertical;outline:none;transition:border-color 150ms ease-out" style-focus="border-color:var(--accent)"></textarea>
+        </div>
+
+      </div>
+    </sc-if>
+    <sc-if value="{{ terminado }}" hint-placeholder-val="{{ false }}">
+      <div style="min-height:0;display:flex;align-items:center;justify-content:center;padding:36px 16px">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center">
+          <span style="font-size:14px;font-weight:600;color:var(--text)">{{ resumenFinal }}</span>
+          <span style="font-size:12px;color:var(--hint);text-wrap:pretty;max-width:320px">Los aprobados quedaron en cola, agrupados por cuenta con 30 a 40 segundos entre env&iacute;os.</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:.5px solid var(--border);background:var(--bg)">
+      <span style="font-size:10px;color:var(--hint);white-space:nowrap;font-variant-numeric:tabular-nums">{{ resumen }}</span>
+      <sc-if value="{{ hayActual }}" hint-placeholder-val="{{ true }}">
+        <button type="button" onClick="{{ saltar }}" style="margin-left:auto;height:28px;padding:0 12px;border-radius:8px;border:.5px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--surface);border-color:var(--accent-br);color:var(--accent)">Saltar</button>
+        <button type="button" onClick="{{ aprobar }}" style="height:28px;padding:0 16px;border-radius:8px;border:none;background:var(--accent);color:var(--surface);font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:background 150ms ease-out" style-hover="background:var(--accent-hover)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:12px;height:12px"><path d="M5 13l4 4L19 7"></path></svg>
+          Aprobar
+        </button>
+      </sc-if>
+      <sc-if value="{{ terminado }}" hint-placeholder-val="{{ false }}">
+        <button type="button" onClick="{{ cerrar }}" style="margin-left:auto;height:28px;padding:0 16px;border-radius:8px;border:none;background:var(--accent);color:var(--surface);font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">Listo</button>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:700,&quot;height&quot;:600},&quot;pendientes&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;object[]&quot;},&quot;onAprobar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(id:string,fecha:string)=&gt;void&quot;},&quot;onCerrar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;()=&gt;void&quot;}}">
+class Component extends DCLogic {
+  static SIGUIENTE = { R0: 'R1', R1: 'R2', R2: 'R3', R3: 'R4', R4: 'R5', R5: 'R6', R6: 'R7', R7: 'R8' };
+  state = { i: 0, aprobados: 0, salteados: 0, idioma: null, textos: {}, proximos: {} };
+
+  static LABEL_IDIOMA = { es: 'ES', pt: 'PT', en: 'EN' };
+
+  static dm(iso) { return iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : ''; }
+  static suma(dias) {
+    const d = new Date();
+    d.setDate(d.getDate() + dias);
+    return d.toISOString().slice(0, 10);
+  }
+
+  renderVals() {
+    const lista = this.props.pendientes || [];
+    const i = this.state.i;
+    const c = lista[i];
+    const hechos = this.state.aprobados + this.state.salteados;
+    const total = lista.length + this.state.aprobados;
+    const idioma = this.state.idioma || (c && c.idioma) || 'es';
+
+    if (!c) {
+      return {
+        hayActual: false, terminado: true,
+        progreso: total + ' de ' + total,
+        avance: '100%',
+        resumen: this.state.aprobados + ' aprobados · ' + this.state.salteados + ' salteados',
+        resumenFinal: this.state.aprobados ? this.state.aprobados + ' mensajes en cola' : 'no aprobaste ninguno',
+        stop: ev => ev.stopPropagation(),
+        cerrar: () => { if (this.props.onCerrar) this.props.onCerrar(); }
+      };
+    }
+
+    const clave = c.id + ':' + idioma;
+    const base = (c.mensajes || {})[idioma] || '';
+    const etapaSig = c.etapaSiguiente || Component.SIGUIENTE[c.etapa] || 'Fase 2';
+    const fase2 = !!c.fase2;
+    const prox = this.state.proximos[c.id] || c.recomendado || (fase2 ? Component.suma(90) : Component.suma(4));
+    const dv = c.diasVencido || 0;
+
+    return {
+      hayActual: true, terminado: false,
+      progreso: (i + 1 + this.state.aprobados) + ' de ' + total,
+      avance: Math.round((hechos / Math.max(1, total)) * 100) + '%',
+      cuenta: c.cuentaAbrev,
+      nombre: c.nombre,
+      etapa: c.etapa + ' → ' + etapaSig,
+      etiquetas: (c.etiquetas || []).map(nombre => ({ nombre })),
+      sinEtiquetas: (c.etiquetas || []).length === 0,
+      fechaVencimiento: Component.dm(c.proximoContacto),
+      hace: dv > 0 ? 'venció hace ' + dv + (dv === 1 ? ' día' : ' días') : (dv < 0 ? 'vence en ' + (-dv) + (dv === -1 ? ' día' : ' días') : 'vence hoy'),
+      proximoLabel: Component.dm(prox),
+      recomendadoLabel: Component.dm(c.recomendado || prox),
+      regla: c.regla || '',
+      idiomaSugerido: 'idioma detectado: ' + (Component.LABEL_IDIOMA[c.idioma] || 'ES'),
+      destacados: (c.destacados || []).map(d => {
+        const disponibles = ['es', 'pt', 'en'].filter(k => (d.textos || {})[k]);
+        const texto = (d.textos || {})[idioma] || (d.textos || {}).es || '';
+        const rTag = (d.nombre.match(/^R\d+/i) || [])[0] || '';
+        return {
+          nombre: d.nombre,
+          etiqueta: (rTag ? rTag + ' · ' : '') + d.nombre.replace(/^R\d+\s*[·\-:]?\s*/i, '').slice(0, 18),
+          titulo: d.nombre + (d.destacado ? ' · destacado en ' + d.destacado : '') + ' · ' + disponibles.map(k => Component.LABEL_IDIOMA[k]).join('/'),
+          usar: () => this.setState(s => ({ textos: { ...s.textos, [clave]: texto } }))
+        };
+      }),
+      usarRecomendado: () => this.setState(s => ({ proximos: { ...s.proximos, [c.id]: c.recomendado } })),
+      vencimiento: dv > 0 ? 'vencido · ' + Component.dm(c.proximoContacto) : (dv < 0 ? 'vence en ' + (-dv) + (dv === -1 ? ' día' : ' días') : 'vence hoy'),
+      vencidoYa: dv > 0,
+      porVencer: dv <= 0,
+      contexto: [
+        { label: 'Empresa', value: c.empresa || 'sin empresa' },
+        { label: 'Ciudad', value: c.ciudad || '—' },
+        { label: 'Mensajes', value: String(c.enviados || 0) },
+        { label: 'Último', value: c.ultimoContacto || '—' }
+      ],
+      origenMensaje: 'destacado ' + etapaSig,
+      idiomas: [{ k: 'es', label: 'ES' }, { k: 'pt', label: 'PT' }, { k: 'en', label: 'EN' }].map(x => ({
+        label: x.label, on: idioma === x.k, off: idioma !== x.k,
+        elegir: () => this.setState({ idioma: x.k })
+      })),      mensaje: this.state.textos[clave] !== undefined ? this.state.textos[clave] : base,
+      escribir: e => this.setState(s => ({ textos: { ...s.textos, [clave]: e.target.value } })),
+      proximo: prox,
+      setProximo: e => this.setState(s => ({ proximos: { ...s.proximos, [c.id]: e.target.value } })),
+      atajos: [['+4 días', 4], ['+7 días', 7], ['+15 días', 15], ['+3 meses', 90]].map(([label, d]) => ({
+        label,
+        elegir: () => this.setState(s => ({ proximos: { ...s.proximos, [c.id]: Component.suma(d) } }))
+      })),
+      pasaFase2: fase2,
+      resumen: this.state.aprobados + ' aprobados · ' + this.state.salteados + ' salteados',
+      aprobar: () => {
+        if (this.props.onAprobar) this.props.onAprobar(c.id, prox);
+        this.setState(s => ({ aprobados: s.aprobados + 1, idioma: null }));
+      },
+      saltar: () => this.setState(s => ({ i: s.i + 1, salteados: s.salteados + 1, idioma: null })),
+      stop: ev => ev.stopPropagation(),
+      cerrar: () => { if (this.props.onCerrar) this.props.onCerrar(); }
+    };
+  }
+}
+</script>
+</body>
+</html>

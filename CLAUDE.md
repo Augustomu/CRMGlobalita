@@ -12,19 +12,19 @@ esas son las cosas que todavía no están definidas y elegir mal cuesta un refac
 ## Estructura del proyecto
 
 ```
-apps/
-  web/        React + Vite. Carpetas por feature (followup/, agenda/, usuarios/).
-              CERO reglas de negocio adentro.
-  api/        Backend. Rutas finas: validar -> llamar a core -> responder.
-  worker/     Cola de envíos, Playwright (LinkedIn), sesión de WhatsApp.
-              Aislado detrás de una interfaz: el resto del sistema no sabe cómo se envía.
+pb_public/     EL FRONT-END. Es el prototipo de Design Components servido tal
+               cual, no una reescritura. NO se rediseña acá: se rediseña en
+               Design Components y se re-exporta. Ver docs/PLAN.md.
 packages/
-  core/       TODAS las reglas de negocio, como funciones puras, sin I/O.
-              cadencia.ts  cancelacion.ts  cupos.ts  telefono.ts  idioma.ts
-              permisos.ts  ruteo.ts  envio.ts  reglas.ts  reunion.ts  metricas.ts
-  db/         Esquema y migraciones de PocketBase.
-  shared/     Tipos y esquemas de validación compartidos.
-docs/         El vault. La documentación viaja con el código.
+  core/        TODAS las reglas de negocio, como funciones puras, sin I/O.
+               cadencia.ts  cancelacion.ts  cupos.ts  telefono.ts  idioma.ts
+               permisos.ts  ruteo.ts  envio.ts  reglas.ts  reunion.ts
+               metricas.ts  proyecto.ts  etiqueta.ts  dedupe.ts  fusion.ts
+  db/          Esquema, migraciones y hooks de PocketBase. Los hooks son el
+               lugar donde las reglas de core se aplican del lado del servidor.
+docs/          El vault. La documentación viaja con el código.
+  _bundle/     El export original del prototipo, tal como llegó.
+  prototipo/   Desempaque para LEER (gitignored). node docs/desempacar.mjs
 ```
 
 ## Las reglas que evitan el código de más

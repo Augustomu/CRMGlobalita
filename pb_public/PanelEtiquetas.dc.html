@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div>
+  <div style="position:fixed;inset:0;z-index:49;background:transparent" onClick="{{ cerrar }}"></div>
+  <div style="position:absolute;top:calc(100% + 6px);right:0;width:300px;max-height:340px;z-index:50;background:var(--surface);border:.5px solid var(--border);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.12);display:flex;flex-direction:column;overflow:hidden;animation:om-abrir 160ms ease-out">
+    <div style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:.5px solid var(--border)">
+      <span style="font-size:11px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:.05em">Etiquetas</span>
+      <span style="font-size:9px;color:var(--hint);white-space:nowrap">por &uacute;ltima edici&oacute;n</span>
+      <button type="button" onClick="{{ cerrar }}" title="Cerrar" style="margin-left:auto;width:24px;height:24px;border-radius:8px;border:none;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 150ms ease-out" style-hover="background:var(--bg);color:var(--text)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:12px;height:12px"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
+    </div>
+
+    <div style="display:flex;gap:6px;padding:8px 12px;border-bottom:.5px solid var(--border)">
+      <input type="text" value="{{ nueva }}" onChange="{{ setNueva }}" placeholder="Nueva etiqueta…" style="flex:1;min-width:0;height:26px;padding:0 8px;border:.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:11px;font-family:inherit;outline:none;transition:border-color 150ms ease-out" style-focus="border-color:var(--accent)" />
+      <button type="button" onClick="{{ crear }}" title="Crear etiqueta" style="width:26px;height:26px;flex-shrink:0;border-radius:8px;border:none;background:var(--accent);color:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 150ms ease-out" style-hover="background:var(--accent-hover)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
+    </div>
+
+    <div style="flex:1;min-height:0;overflow-y:auto;padding:4px 6px;display:flex;flex-direction:column;gap:1px">
+      <sc-for list="{{ items }}" as="t" hint-placeholder-count="6">
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:8px;transition:background 150ms ease-out" style-hover="background:var(--bg)">
+          <sc-if value="{{ t.editando }}" hint-placeholder-val="{{ false }}">
+            <input type="text" value="{{ t.borrador }}" onChange="{{ t.setBorrador }}" style="flex:1;min-width:0;height:24px;padding:0 6px;border:.5px solid var(--accent);border-radius:8px;background:var(--bg);color:var(--text);font-size:11px;font-family:inherit;outline:none" />
+            <button type="button" onClick="{{ t.guardar }}" title="Guardar" style="width:24px;height:24px;flex-shrink:0;border-radius:8px;border:none;background:var(--accent);color:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="width:11px;height:11px"><path d="M5 13l4 4L19 7"></path></svg>
+            </button>
+          </sc-if>
+          <sc-if value="{{ t.normal }}" hint-placeholder-val="{{ true }}">
+            <sc-if value="{{ t.aplicada }}" hint-placeholder-val="{{ false }}">
+              <button type="button" onClick="{{ t.alternar }}" style="flex:1;min-width:0;display:flex;align-items:center;gap:7px;padding:0;border:none;background:transparent;cursor:pointer;font-family:inherit;text-align:left">
+                <span style="width:14px;height:14px;border-radius:4px;background:var(--accent);color:var(--surface);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width:9px;height:9px"><path d="M5 13l4 4L19 7"></path></svg></span>
+                <span style="font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.nombre }}</span>
+              </button>
+            </sc-if>
+            <sc-if value="{{ t.libre }}" hint-placeholder-val="{{ true }}">
+              <button type="button" onClick="{{ t.alternar }}" style="flex:1;min-width:0;display:flex;align-items:center;gap:7px;padding:0;border:none;background:transparent;cursor:pointer;font-family:inherit;text-align:left">
+                <span style="width:14px;height:14px;border-radius:4px;border:.5px solid var(--border);background:var(--surface);flex-shrink:0"></span>
+                <span style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.nombre }}</span>
+              </button>
+            </sc-if>
+            <span style="font-size:9px;color:var(--hint);font-variant-numeric:tabular-nums;flex-shrink:0">{{ t.editada }}</span>
+            <button type="button" onClick="{{ t.editar }}" title="Renombrar" style="width:24px;height:24px;flex-shrink:0;border-radius:8px;border:none;background:transparent;color:var(--hint);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 150ms ease-out" style-hover="background:var(--accent-light);color:var(--accent)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:11px;height:11px"><path d="M4 20h4L20 8l-4-4L4 16v4z"></path></svg>
+            </button>
+            <button type="button" onClick="{{ t.borrar }}" title="Eliminar" style="width:24px;height:24px;flex-shrink:0;border-radius:8px;border:none;background:transparent;color:var(--hint);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 150ms ease-out" style-hover="background:var(--error-light);color:var(--error)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:11px;height:11px"><path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13"></path></svg>
+            </button>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:380,&quot;height&quot;:400},&quot;etiquetas&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;{nombre:string,editada:string,ts:number}[]&quot;},&quot;aplicadas&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string[]&quot;},&quot;onChange&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(a:string[])=&gt;void&quot;},&quot;onCerrar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;()=&gt;void&quot;}}">
+class Component extends DCLogic {
+  state = { lista: null, aplicadas: null, nueva: '', editando: null, borrador: '' };
+
+  get lista() { return this.state.lista || (this.props.etiquetas || []).slice(); }
+  get aplicadas() { return this.state.aplicadas || (this.props.aplicadas || []).slice(); }
+  hoy() { const d = new Date(); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'); }
+  emitir(aplicadas) { if (this.props.onChange) this.props.onChange(aplicadas); }
+
+  renderVals() {
+    const lista = this.lista.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    const ap = this.aplicadas;
+    return {
+      nueva: this.state.nueva,
+      setNueva: e => this.setState({ nueva: e.target.value }),
+      crear: () => {
+        const n = this.state.nueva.trim();
+        if (!n || this.lista.some(t => t.nombre === n)) return;
+        this.setState({ lista: this.lista.concat([{ nombre: n, editada: this.hoy(), ts: Date.now() }]), nueva: '' });
+      },
+      items: lista.map(t => ({
+        nombre: t.nombre,
+        editada: t.editada || '',
+        aplicada: ap.includes(t.nombre),
+        libre: !ap.includes(t.nombre),
+        editando: this.state.editando === t.nombre,
+        normal: this.state.editando !== t.nombre,
+        borrador: this.state.borrador,
+        setBorrador: e => this.setState({ borrador: e.target.value }),
+        editar: () => this.setState({ editando: t.nombre, borrador: t.nombre }),
+        guardar: () => {
+          const n = this.state.borrador.trim() || t.nombre;
+          const lista = this.lista.map(x => x.nombre === t.nombre ? { nombre: n, editada: this.hoy(), ts: Date.now() } : x);
+          const nuevas = ap.map(x => x === t.nombre ? n : x);
+          this.setState({ lista, aplicadas: nuevas, editando: null });
+          this.emitir(nuevas);
+        },
+        borrar: () => {
+          const nuevas = ap.filter(x => x !== t.nombre);
+          this.setState({ lista: this.lista.filter(x => x.nombre !== t.nombre), aplicadas: nuevas });
+          this.emitir(nuevas);
+        },
+        alternar: () => {
+          const nuevas = ap.includes(t.nombre) ? ap.filter(x => x !== t.nombre) : ap.concat([t.nombre]);
+          const lista = this.lista.map(x => x.nombre === t.nombre ? { ...x, editada: this.hoy(), ts: Date.now() } : x);
+          this.setState({ aplicadas: nuevas, lista });
+          this.emitir(nuevas);
+        }
+      })),
+      cerrar: () => { if (this.props.onCerrar) this.props.onCerrar(); }
+    };
+  }
+}
+</script>
+</body>
+</html>

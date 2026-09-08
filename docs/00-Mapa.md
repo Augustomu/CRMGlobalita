@@ -64,5 +64,6 @@ Transversal desde el día uno: los tres temas (`design/tokens.css`), los atajos,
 
 ## Estado del proyecto
 
+- [Plan de trabajo](PLAN.md) — el prototipo pasa a ser el front-end. Que se tira, que se queda y en que orden.
 - [Auditoria](AUDITORIA.md) — que hay construido de las 29 pantallas del prototipo, que falta y en que orden conviene seguir.
 - El prototipo vive en `_bundle/`. Se lee con `node docs/desempacar.mjs`.

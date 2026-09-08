@@ -17,6 +17,8 @@ const datos = path.join(pb, 'pb_data');
 const migraciones = path.join(raiz, 'packages/db/pb_migrations');
 const semilla = path.join(raiz, 'packages/db/pb_seed');
 const hooks = path.join(raiz, 'packages/db/pb_hooks');
+// El front-end ES el prototipo servido como estatico. PocketBase lo sirve solo.
+const publico = path.join(raiz, 'pb_public');
 
 const args = new Set(process.argv.slice(2));
 
@@ -57,7 +59,7 @@ if (args.has('--seed')) migrar(semilla);
 superusuarioLocal();
 
 console.log('\nPocketBase en http://127.0.0.1:8090/_/  (Ctrl+C para parar)\n');
-spawn(exe, ['serve', '--dir', datos, '--migrationsDir', migraciones, '--hooksDir', hooks], {
+spawn(exe, ['serve', '--dir', datos, '--migrationsDir', migraciones, '--hooksDir', hooks, '--publicDir', publico], {
   stdio: 'inherit',
 });
 

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div>
+  <div style="position:fixed;inset:0;z-index:49;background:transparent" onClick="{{ cerrar }}"></div>
+  <div style="position:absolute;top:calc(100% + 6px);right:0;width:330px;z-index:50;background:var(--surface);border:.5px solid var(--border);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.12);display:flex;flex-direction:column;overflow:hidden;animation:om-abrir 160ms ease-out">
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:.5px solid var(--border)">
+      <span style="font-size:11px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:.05em">Links</span>
+      <button type="button" onClick="{{ cerrar }}" title="Cerrar" style="margin-left:auto;width:24px;height:24px;border-radius:8px;border:none;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 150ms ease-out" style-hover="background:var(--bg);color:var(--text)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:12px;height:12px"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
+    </div>
+    <div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">Perfil</span>
+        <input type="text" value="{{ perfil }}" onChange="{{ setPerfil }}" placeholder="https://www.linkedin.com/in/…" style="width:100%;box-sizing:border-box;height:28px;padding:0 8px;border:.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:11px;font-family:inherit;outline:none;transition:border-color 150ms ease-out" style-focus="border-color:var(--accent)" />
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint)">Chat</span>
+        <input type="text" value="{{ chat }}" onChange="{{ setChat }}" placeholder="https://www.linkedin.com/messaging/thread/…" style="width:100%;box-sizing:border-box;height:28px;padding:0 8px;border:.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:11px;font-family:inherit;outline:none;transition:border-color 150ms ease-out" style-focus="border-color:var(--accent)" />
+      </div>
+      <button type="button" onClick="{{ guardar }}" style="align-self:flex-end;height:28px;padding:0 14px;border-radius:8px;border:none;background:var(--accent);color:var(--surface);font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;transition:background 150ms ease-out" style-hover="background:var(--accent-hover)">Aplicar</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:400,&quot;height&quot;:220},&quot;linkPerfil&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;linkChat&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;onGuardar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(p:string,c:string)=&gt;void&quot;},&quot;onCerrar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;()=&gt;void&quot;}}">
+class Component extends DCLogic {
+  state = { perfil: null, chat: null };
+  renderVals() {
+    const perfil = this.state.perfil !== null ? this.state.perfil : (this.props.linkPerfil || '');
+    const chat = this.state.chat !== null ? this.state.chat : (this.props.linkChat || '');
+    return {
+      perfil, chat,
+      setPerfil: e => this.setState({ perfil: e.target.value }),
+      setChat: e => this.setState({ chat: e.target.value }),
+      guardar: () => { if (this.props.onGuardar) this.props.onGuardar(perfil, chat); },
+      cerrar: () => { if (this.props.onCerrar) this.props.onCerrar(); }
+    };
+  }
+}
+</script>
+</body>
+</html>

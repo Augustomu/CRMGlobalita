@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:relative;flex-shrink:0;border-top:.5px solid var(--border);background:var(--surface)">
+  <button type="button" onClick="{{ toggle }}" style="width:100%;display:flex;align-items:center;gap:7px;padding:7px 12px;background:transparent;border:none;cursor:pointer;font-family:inherit;text-align:left;transition:background 150ms ease-out" style-hover="background:var(--bg)">
+    <sc-if value="{{ abierto }}" hint-placeholder-val="{{ false }}">
+      <span style="font-size:9px;color:var(--hint);width:10px;flex-shrink:0">&#9662;</span>
+    </sc-if>
+    <sc-if value="{{ cerrado }}" hint-placeholder-val="{{ true }}">
+      <span style="font-size:9px;color:var(--hint);width:10px;flex-shrink:0">&#9656;</span>
+    </sc-if>
+    <span style="font-size:10px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap">En cola</span>
+    <span style="font-size:9px;font-weight:600;padding:1px 6px;border-radius:8px;background:var(--accent-light);color:var(--accent);font-variant-numeric:tabular-nums">{{ n }}</span>
+    <sc-if value="{{ hayEnvio }}" hint-placeholder-val="{{ false }}">
+      <span style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:var(--success);white-space:nowrap;font-variant-numeric:tabular-nums">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--success);flex-shrink:0;animation:om-pulso 1.4s ease-in-out infinite"></span>{{ envioLabel }}
+      </span>
+    </sc-if>
+    <sc-if value="{{ sinEnvio }}" hint-placeholder-val="{{ true }}">
+      <span style="margin-left:auto;font-size:9px;color:var(--hint);white-space:nowrap;font-variant-numeric:tabular-nums">{{ proximo }}</span>
+    </sc-if>
+  </button>
+
+  <sc-if value="{{ abierto }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;bottom:100%;left:0;right:0;z-index:60;max-height:320px;overflow-y:auto;background:var(--surface);border-top:.5px solid var(--border);border-bottom:.5px solid var(--border);box-shadow:0 -8px 24px rgba(0,0,0,.12);animation:om-abrir 180ms ease-out">
+
+      <sc-for list="{{ lotes }}" as="g" hint-placeholder-count="0">
+        <div style="border-bottom:.5px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:6px;padding:6px 12px 4px;background:var(--success-light)">
+            <span style="width:6px;height:6px;border-radius:50%;background:var(--success);flex-shrink:0;animation:om-pulso 1.4s ease-in-out infinite"></span>
+            <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:var(--success);color:var(--surface);white-space:nowrap">{{ g.cuenta }}</span>
+            <span style="font-size:9px;font-weight:600;color:var(--success);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">en env&iacute;o</span>
+            <span style="margin-left:auto;font-size:9px;color:var(--success);white-space:nowrap;font-variant-numeric:tabular-nums">{{ g.meta }}</span>
+          </div>
+          <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="0">
+            <div onClick="{{ i.ir }}" style="display:flex;flex-direction:column;gap:3px;padding:6px 12px;cursor:pointer;background:var(--success-light);border-top:.5px solid var(--surface)">
+              <div style="display:flex;align-items:center;gap:7px">
+                <span style="font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0">{{ i.quien }}</span>
+                <span style="font-size:11px;font-weight:700;color:var(--success);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;letter-spacing:.02em">{{ i.countdown }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:9px;color:var(--success);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0">{{ i.detalle }}</span>
+                <span style="font-size:9px;color:var(--success);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums">{{ i.espera }}</span>
+              </div>
+              <div style="height:3px;border-radius:8px;background:var(--surface);overflow:hidden">
+                <div style="height:100%;width:{{ i.avance }};background:var(--success);border-radius:8px;transition:width 900ms linear"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+
+      <sc-if value="{{ hayProgramados }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:6px 12px 3px;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--hint);font-weight:600">Programados</div>
+      </sc-if>
+      <sc-for list="{{ programados }}" as="i" hint-placeholder-count="3">
+        <div onClick="{{ i.ir }}" style="display:flex;align-items:center;gap:7px;padding:6px 12px;border-bottom:.5px solid var(--border);cursor:pointer;transition:background 150ms ease-out" style-hover="background:var(--bg)">
+          <span style="width:20px;height:20px;flex-shrink:0;border-radius:8px;border:.5px solid var(--border);color:var(--muted);display:flex;align-items:center;justify-content:center" title="{{ i.tipoLabel }}">
+            <sc-if value="{{ i.esMensaje }}" hint-placeholder-val="{{ true }}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:11px;height:11px"><path d="M4 12l16-8-6 16-2-6-8-2z"></path></svg>
+            </sc-if>
+            <sc-if value="{{ i.esRecordatorio }}" hint-placeholder-val="{{ false }}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:11px;height:11px"><path d="M6 16V11a6 6 0 1112 0v5l2 3H4z"></path><path d="M10 22h4"></path></svg>
+            </sc-if>
+            <sc-if value="{{ i.esGracias }}" hint-placeholder-val="{{ false }}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:11px;height:11px"><path d="M12 20l-7-7a4.5 4.5 0 016.4-6.4L12 7l.6-.4A4.5 4.5 0 0119 13z"></path></svg>
+            </sc-if>
+          </span>
+          <span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;background:var(--bg);color:var(--muted);border:.5px solid var(--border);white-space:nowrap;flex-shrink:0">{{ i.cuenta }}</span>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+            <span style="font-size:11px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.quien }}</span>
+            <span style="font-size:9px;color:var(--hint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.detalle }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;flex-shrink:0">
+            <span style="font-size:10px;font-weight:600;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums">{{ i.countdown }}</span>
+            <span style="font-size:9px;color:var(--hint);white-space:nowrap;font-variant-numeric:tabular-nums">{{ i.cuandoLabel }}</span>
+          </div>
+        </div>
+      </sc-for>
+
+      <sc-if value="{{ hayEnviados }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:6px 12px 3px;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--hint);font-weight:600">Enviados</div>
+      </sc-if>
+      <sc-for list="{{ enviados }}" as="i" hint-placeholder-count="0">
+        <div onClick="{{ i.ir }}" style="display:flex;align-items:center;gap:7px;padding:6px 12px;border-bottom:.5px solid var(--border);cursor:pointer;transition:background 150ms ease-out" style-hover="background:var(--bg)">
+          <span style="width:20px;height:20px;flex-shrink:0;color:var(--muted);display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" style="width:11px;height:11px"><path d="M5 13l4 4L19 7"></path></svg>
+          </span>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+            <span style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.quien }}</span>
+            <span style="font-size:9px;color:var(--hint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.detalle }}</span>
+          </div>
+          <span style="font-size:9px;color:var(--hint);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums">{{ i.cuandoLabel }}</span>
+        </div>
+      </sc-for>
+
+      <sc-if value="{{ vacio }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:14px 12px;font-size:10px;color:var(--hint);text-align:center">nada en cola</div>
+      </sc-if>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:380,&quot;height&quot;:300},&quot;items&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;{id:string,tipo:string,cuenta:string,quien:string,detalle:string,cuando:string}[]&quot;},&quot;onIr&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(id:string)=&gt;void&quot;}}">
+class Component extends DCLogic {
+  static UMBRAL = 15 * 60000;
+  static LOTE = 5;
+  state = { abierto: null, tick: 0 };
+  componentDidMount() { this._t = setInterval(() => this.setState(s => ({ tick: s.tick + 1 })), 1000); }
+  componentWillUnmount() { clearInterval(this._t); }
+  get abierto() { return this.state.abierto !== null ? this.state.abierto : false; }
+
+  static reloj(ms) {
+    const s = Math.max(0, Math.round(ms / 1000));
+    if (s < 60) return s + ' s';
+    const min = Math.floor(s / 60);
+    if (min < 60) return min + ':' + String(s % 60).padStart(2, '0');
+    const h = Math.floor(min / 60);
+    if (h < 24) return h + ' h ' + (min % 60) + ' m';
+    return Math.floor(h / 24) + ' d ' + (h % 24) + ' h';
+  }
+  static fecha(d) {
+    return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + ' ' +
+      String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+  static espaciado(i) { return 30 + ((i * 13) % 11); }
+
+  renderVals() {
+    const ahora = Date.now();
+    const base = (this.props.items || []).map(i => ({
+      ...i,
+      t: new Date(i.cuando).getTime(),
+      ir: () => { if (this.props.onIr) this.props.onIr(i.id); }
+    })).sort((a, b) => a.t - b.t);
+
+    const enviados = base.filter(i => i.t <= ahora && i.tipo !== 'mensaje').map(i => ({
+      quien: i.quien, detalle: i.detalle, cuandoLabel: Component.fecha(new Date(i.t)), ir: i.ir
+    }));
+
+    const mensajes = base.filter(i => i.tipo === 'mensaje' && i.t <= ahora + Component.UMBRAL);
+    const futuros = base.filter(i => i.tipo === 'mensaje' && i.t > ahora + Component.UMBRAL);
+    const porCuenta = {};
+    mensajes.forEach(m => { (porCuenta[m.cuenta || '—'] = porCuenta[m.cuenta || '—'] || []).push(m); });
+
+    const lotes = [];
+    const fueraDeLote = [];
+    Object.keys(porCuenta).sort().forEach(cuenta => {
+      const lista = porCuenta[cuenta];
+      const lote = lista.slice(0, Component.LOTE);
+      const resto = lista.slice(Component.LOTE);
+      let acum = 0;
+      lote.forEach((m, idx) => {
+        if (idx > 0) acum += Component.espaciado(idx);
+        m.sale = Math.max(m.t, ahora + 8000) + acum * 1000;
+        m.cuentaLote = cuenta;
+        m.posicion = idx;
+        m.espaciado = Component.espaciado(idx);
+        m.tamLote = lote.length;
+      });
+      lote.forEach(m => fueraDeLote.push(m));
+      resto.forEach(m => fueraDeLote.push(m));
+    });
+    futuros.forEach(m => fueraDeLote.push(m));
+
+    const enCamino = fueraDeLote.filter(m => m.sale).sort((a, b) => a.sale - b.sale);
+    const siguiente = enCamino[0];
+    if (siguiente) {
+      const resta = siguiente.sale - ahora;
+      const ventana = 45000;
+      lotes.push({
+        cuenta: siguiente.cuentaLote,
+        meta: 'lote de ' + siguiente.tamLote + ' · cada 30-40 s',
+        items: [{
+          quien: siguiente.quien,
+          detalle: siguiente.detalle,
+          countdown: Component.reloj(resta),
+          espera: siguiente.posicion === 0 ? 'primero del lote' : 'posición ' + (siguiente.posicion + 1) + ' del lote',
+          avance: Math.max(2, Math.min(100, 100 - (resta / ventana) * 100)) + '%',
+          ir: siguiente.ir
+        }]
+      });
+    }
+
+    const programados = base.filter(i => i.tipo !== 'mensaje' && i.t > ahora)
+      .concat(fueraDeLote.filter(m => m !== siguiente))
+      .sort((a, b) => (a.sale || a.t) - (b.sale || b.t))
+      .map(i => ({
+        quien: i.quien, detalle: i.detalle, cuenta: i.cuenta || '—',
+        tipoLabel: i.tipoLabel || i.tipo,
+        esMensaje: i.tipo === 'mensaje',
+        esRecordatorio: i.tipo === 'recordatorio',
+        esGracias: i.tipo === 'gracias',
+        countdown: Component.reloj((i.sale || i.t) - ahora),
+        cuandoLabel: Component.fecha(new Date(i.sale || i.t)),
+        ir: i.ir
+      }));
+
+    const enEnvio = lotes.reduce((a, g) => a + g.items.length, 0);
+    return {
+      abierto: this.abierto,
+      cerrado: !this.abierto,
+      toggle: () => this.setState({ abierto: !this.abierto }),
+      n: enEnvio + programados.length,
+      lotes, programados, enviados,
+      hayEnvio: enEnvio > 0,
+      sinEnvio: enEnvio === 0,
+      envioLabel: enEnvio ? 'sale en ' + lotes[0].items[0].countdown : '',
+      hayProgramados: programados.length > 0,
+      hayEnviados: enviados.length > 0,
+      proximo: programados.length ? 'próximo en ' + programados[0].countdown : 'sin envíos pendientes',
+      vacio: enEnvio + programados.length + enviados.length === 0
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -39,10 +39,10 @@ npm run web:build
 echo "==> Subiendo la interfaz"
 # --delete deja pb_public identico al build: sin restos de versiones viejas.
 if command -v rsync >/dev/null 2>&1; then
-  rsync -az --delete -e "ssh ${SSH_ARGS[*]}" apps/web/dist/ "$USUARIO_SSH@$IP:$DESTINO/pb_public/"
+  rsync -az --delete -e "ssh ${SSH_ARGS[*]}" pb_public/ "$USUARIO_SSH@$IP:$DESTINO/pb_public/"
 else
   ssh "${SSH_ARGS[@]}" "$USUARIO_SSH@$IP" "rm -rf $DESTINO/pb_public/* "
-  scp "${SSH_ARGS[@]}" -r apps/web/dist/. "$USUARIO_SSH@$IP:$DESTINO/pb_public/"
+  scp "${SSH_ARGS[@]}" -r pb_public/. "$USUARIO_SSH@$IP:$DESTINO/pb_public/"
 fi
 
 echo "==> Subiendo las migraciones"
