@@ -282,3 +282,25 @@ export function sinCuenta(a: Alcance, cuenta: string, todasLasCuentas: string[] 
   const cuentas = a.cuentas.filter((x) => x !== c);
   return cuentas.length ? { tipo: 'cuentas', cuentas } : SIN_ALCANCE;
 }
+
+/**
+ * Si el nombre de la plantilla ya dice a qué paso responde.
+ *
+ * Casi todas se llaman «R2 · Seguimiento corto», y en la fila del repositorio
+ * el chip del paso al lado repetía la misma información comiéndole al nombre el
+ * ancho que necesitaba para no cortarse. Una renombrada a «Saludo corto» sí
+ * necesita el chip.
+ *
+ * Compara sólo el arranque: «R0 · Reinvitación» no nombra a `R0-recontacto`
+ * —dice R0, que es otro paso— y por eso el chip aparece.
+ */
+export function nombraElPaso(nombre: string | null | undefined, paso: string | null | undefined): boolean {
+  const p = String(paso ?? '').trim().toLowerCase();
+  if (!p) return false;
+  const n = String(nombre ?? '').trim().toLowerCase();
+  if (!n.startsWith(p)) return false;
+  // Lo que sigue tiene que ser un corte, no más nombre: si no, `R0` daría por
+  // nombrado a `R0-recontacto`.
+  const resto = n.slice(p.length);
+  return resto === '' || /^[\s·:.-]/.test(resto);
+}

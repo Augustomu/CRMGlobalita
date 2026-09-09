@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { pb } from '../../lib/pocketbase';
+import { IconoNotas } from '../../ui/iconos';
 import { PANEL_AGENDA } from '@crm/core/anchos';
 import { diaLocal } from '@crm/core/fecha';
 import { useAncho } from '../../lib/useAncho';
@@ -573,10 +574,7 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
                     setBorradorNota(l.nota ?? '');
                   }}
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
-                    <path d="M5 4h14v12l-4 4H5z" />
-                    <path d="M8 9h8M8 13h5" />
-                  </svg>
+                  <IconoNotas />
                 </button>
 
                 <div className="agenda-lista-links">

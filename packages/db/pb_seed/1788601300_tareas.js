@@ -28,10 +28,29 @@ migrate(
 
     // Un par de tareas se cuelgan de un lead, que es el caso que prueba que la
     // tarea NO necesita uno: las demas van sueltas.
+    //
+    // Se busca uno con TELEFONO, no uno por el nombre de su lista: la version
+    // anterior filtraba por 'Sales Navigator - Gerentes SP' con guion, y el
+    // dato lleva punto medio, asi que no encontraba nada y las dos tareas
+    // quedaban sueltas sin que nada fallara. Con telefono ademas se ve el caso
+    // completo: el bloque del lead muestra LinkedIn y WhatsApp activos.
     let unLead = '';
-    try {
-      unLead = app.findFirstRecordByFilter('lead', "lista = 'Sales Navigator - Gerentes SP'").id;
-    } catch (_) {}
+    for (const l of app.findAllRecords('lead')) {
+      let perfil = null;
+      try {
+        perfil = app.findRecordById('perfil', String(l.get('perfil')));
+      } catch (_) {
+        continue;
+      }
+      if (perfil.get('telefono') && perfil.get('telefono_valido')) {
+        unLead = l.id;
+        break;
+      }
+    }
+    if (!unLead) {
+      const todos = app.findAllRecords('lead');
+      if (todos.length) unLead = todos[0].id;
+    }
 
     const TAREAS = [
       // nombre, prioridad, dias hasta el vencimiento (null = sin fecha), hecha, notas, notifica, conLead, etiquetas

@@ -12,15 +12,29 @@ import {
   type Tarea,
 } from '@crm/core/tarea';
 import { ddmm } from '@crm/core/fecha';
+import { nombreDePersona } from '@crm/core/linkedin';
+import { linkWhatsApp } from '@crm/core/telefono';
 import { pb } from '../../lib/pocketbase';
 import { useEscape } from '../../lib/useEscape';
-import type { UsuarioRecord } from '../../lib/types';
+import { IconoLinkedIn, IconoNotas, IconoWhatsApp } from '../../ui/iconos';
+import { Vencimientos, leadsVencidos } from '../vencimientos/Vencimientos';
+import type { LeadRecord, PlantillaRecord, UsuarioRecord } from '../../lib/types';
+
+interface PerfilDeTarea {
+  nombre?: string;
+  empresa?: string;
+  cargo?: string;
+  slug?: string;
+  telefono?: string;
+  telefono_valido?: boolean;
+  telefono_raw?: string;
+}
 
 interface TareaRecord extends Tarea {
   etiquetas: string;
   usuario: string;
   lead: string;
-  expand?: { lead?: { expand?: { perfil?: { nombre?: string } } } };
+  expand?: { lead?: { id?: string; expand?: { perfil?: PerfilDeTarea } } };
 }
 
 const ORDENES: { clave: ClaveOrden; titulo: string }[] = [
@@ -55,9 +69,99 @@ function Estrellas({ valor, onElegir }: { valor: number; onElegir?: (v: number) 
   );
 }
 
+/**
+ * El lead de la tarea, con lo que hace falta para trabajarla.
+ *
+ * «Una tarea conectada a un lead tiene que traer sus datos»: el nombre, cómo
+ * escribirle y cómo llegar a la ficha. Antes decía sólo «Sobre Fulano», que
+ * obliga a ir a buscarlo a la lista para hacer cualquier cosa.
+ */
+function LeadDeLaTarea({
+  perfil,
+  lead,
+  onIrAlLead,
+}: {
+  perfil: PerfilDeTarea;
+  lead: string;
+  onIrAlLead?: (id: string) => void;
+}) {
+  const wa = perfil.telefono
+    ? linkWhatsApp({ valor: perfil.telefono, valido: perfil.telefono_valido === true })
+    : undefined;
+  return (
+    <div className="tarea-lead">
+      <span className="tarea-lead-quien">
+        <button
+          type="button"
+          className="tarea-lead-nombre"
+          title="Abrir la ficha del lead"
+          onClick={() => onIrAlLead?.(lead)}
+          disabled={!onIrAlLead}
+        >
+          {nombreDePersona(perfil.nombre ?? '') || 'Sin nombre'}
+        </button>
+        {(perfil.empresa || perfil.cargo) && (
+          <span className="campo-ayuda">{[perfil.empresa, perfil.cargo].filter(Boolean).join(' · ')}</span>
+        )}
+      </span>
+
+      {/* §9.7: lo que no se puede usar se muestra deshabilitado con el motivo,
+          no se esconde. Si no está, uno se pregunta si el lead lo tiene. */}
+      {perfil.slug ? (
+        <a
+          className="boton-icono-22 boton-li-on"
+          href={`https://www.linkedin.com/in/${perfil.slug}`}
+          target="_blank"
+          rel="noreferrer"
+          title="Abrir el perfil de LinkedIn"
+        >
+          <IconoLinkedIn />
+        </a>
+      ) : (
+        <span className="boton-icono-22 boton-off" title="Sin perfil de LinkedIn cargado">
+          <IconoLinkedIn />
+        </span>
+      )}
+
+      {wa ? (
+        <a
+          className="boton-icono-22 boton-wa-on"
+          href={wa}
+          target="_blank"
+          rel="noreferrer"
+          title="Abrir el chat de WhatsApp"
+        >
+          <IconoWhatsApp />
+        </a>
+      ) : (
+        <span
+          className="boton-icono-22 boton-off"
+          title={perfil.telefono ? `Teléfono a revisar: ${perfil.telefono_raw || perfil.telefono}` : 'Sin teléfono cargado'}
+        >
+          <IconoWhatsApp />
+        </span>
+      )}
+    </div>
+  );
+}
+
 interface Props {
   usuario: UsuarioRecord | null;
   onCerrar: () => void;
+  /** Para saltar a la ficha desde una tarea. Falta cuando Tareas se abre sin follow-up. */
+  onIrAlLead?: (id: string) => void;
+  /**
+   * Los vencimientos, para el panel de la derecha.
+   *
+   * Van juntos porque son la misma cola del día: lo que hay que hacer y a
+   * quién hay que escribirle. En dos overlays separados hay que cerrar uno
+   * para ver el otro, y en la práctica se termina mirando sólo uno.
+   *
+   * Si falta el permiso `vencimientos`, no llegan y el panel no existe.
+   */
+  leads?: LeadRecord[];
+  plantillas?: PlantillaRecord[];
+  onCambio?: () => void;
 }
 
 /**
@@ -68,7 +172,7 @@ interface Props {
  * según el largo del nombre y no se podían comparar de un vistazo, que es para
  * lo único que sirve una lista de pendientes.
  */
-export function Tareas({ usuario, onCerrar }: Props) {
+export function Tareas({ usuario, onCerrar, onIrAlLead, leads, plantillas, onCambio }: Props) {
   useEscape(onCerrar);
   const [tareas, setTareas] = useState<TareaRecord[]>([]);
   const [filtro, setFiltro] = useState<FiltroTarea>('Abiertas');
@@ -81,13 +185,21 @@ export function Tareas({ usuario, onCerrar }: Props) {
   const [notas, setNotas] = useState('');
   const [notifica, setNotifica] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** Abierto por defecto cuando hay algo que hacer: si no, no se entera. */
+  const [panelVenc, setPanelVenc] = useState(true);
 
   const hoy = hoyIso();
+  const vencidos = useMemo(() => (leads ? leadsVencidos(leads) : []), [leads]);
+  const hayVenc = Boolean(leads && plantillas);
 
   const recargar = useCallback(async () => {
     try {
       const r = await pb.collection('tarea').getFullList<TareaRecord>({
+        // El perfil entero, no sólo el nombre: una tarea sobre un lead tiene
+        // que traer con qué escribirle. Ir a buscar el teléfono a la ficha
+        // convierte «llamar a Wellington» en tres pantallas.
         expand: 'lead.perfil',
+        fields: '*,expand.lead.id,expand.lead.expand.perfil.nombre,expand.lead.expand.perfil.empresa,expand.lead.expand.perfil.cargo,expand.lead.expand.perfil.slug,expand.lead.expand.perfil.telefono,expand.lead.expand.perfil.telefono_valido,expand.lead.expand.perfil.telefono_raw',
         sort: '-created',
       });
       setTareas(r);
@@ -152,15 +264,28 @@ export function Tareas({ usuario, onCerrar }: Props) {
 
   return (
     <div className="overlay-fondo" onClick={onCerrar}>
-      <div className="overlay-caja overlay-tareas" onClick={(e) => e.stopPropagation()}>
+      <div
+        className={`overlay-caja overlay-tareas ${hayVenc && panelVenc ? 'overlay-tareas-con-panel' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="overlay-header">
           <span className="overlay-titulo">Tareas</span>
           {nVencidas > 0 && <span className="pastilla pastilla-error">{nVencidas} vencidas</span>}
           {nHoy > 0 && <span className="pastilla pastilla-alerta">{nHoy} hoy</span>}
           <span className="campo-ayuda">{abiertas.length} abiertas</span>
+          {hayVenc && (
+            <button
+              type="button"
+              className={`chip al-final ${panelVenc ? 'chip-on' : ''}`}
+              title={panelVenc ? 'Ocultar los vencimientos' : 'Mostrar los vencimientos'}
+              onClick={() => setPanelVenc((v) => !v)}
+            >
+              {vencidos.length} vencen
+            </button>
+          )}
           <button
             type="button"
-            className="boton-icono-28 al-final"
+            className={`boton-icono-28 ${hayVenc ? '' : 'al-final'}`}
             title="Agregar tarea"
             onClick={() => setNuevaAbierta((a) => !a)}
           >
@@ -271,10 +396,11 @@ export function Tareas({ usuario, onCerrar }: Props) {
                   {ddmm(t.fin) || '—'}
                 </span>
 
-                {/* El emoji de notas: solo se ve si hay algo escrito. Uno vacío
-                    en cada fila sería una columna de ruido. */}
-                <span className="tarea-notas-marca" title={t.notas || ''}>
-                  {t.notas ? '🗒' : ''}
+                {/* El icono de notas, el mismo de Control y de la agenda.
+                    Sólo se ve si hay algo escrito: uno vacío en cada fila
+                    sería una columna de ruido. */}
+                <span className={`tarea-notas-marca ${t.notas ? 'tarea-notas-on' : ''}`} title={t.notas || ''}>
+                  {t.notas ? <IconoNotas /> : null}
                 </span>
                 <span className="tarea-alerta" title={t.notificar ? 'Notifica al vencer' : 'Sin aviso'}>
                   {t.notificar ? '🔔' : ''}
@@ -326,10 +452,8 @@ export function Tareas({ usuario, onCerrar }: Props) {
                       placeholder="Notas de la tarea…"
                       onChange={(e) => void guardar(t.id, { notas: e.target.value })}
                     />
-                    {t.expand?.lead?.expand?.perfil?.nombre && (
-                      <span className="campo-ayuda">
-                        Sobre {t.expand.lead.expand.perfil.nombre}
-                      </span>
+                    {t.expand?.lead?.expand?.perfil && (
+                      <LeadDeLaTarea perfil={t.expand.lead.expand.perfil} onIrAlLead={onIrAlLead} lead={t.lead} />
                     )}
                   </div>
                 )}
@@ -337,6 +461,20 @@ export function Tareas({ usuario, onCerrar }: Props) {
             );
           })}
         </div>
+
+        {/* Los vencimientos, a la derecha. Es la misma pantalla de §7.7 sin su
+            marco: no hay una segunda version. */}
+        {hayVenc && panelVenc && (
+          <div className="tarea-panel-venc">
+            <Vencimientos
+              leads={leads ?? []}
+              plantillas={plantillas ?? []}
+              onCerrar={() => setPanelVenc(false)}
+              onCambio={() => onCambio?.()}
+              comoPanel
+            />
+          </div>
+        )}
       </div>
     </div>
   );

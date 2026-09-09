@@ -3,6 +3,7 @@ import { PANEL_REPOSITORIO } from '@crm/core/anchos';
 import {
   escribirAlcance,
   leerAlcance,
+  nombraElPaso,
   nombreDeAlcance,
   reordenar,
   resolverTexto,
@@ -347,7 +348,12 @@ export function Repositorio({ onCerrar, onCambio, cuentaActual }: Props) {
                   <span className="repo-nombre">{p.nombre}</span>
                 </button>
 
-                {p.paso && (
+                {/* El chip del paso, sólo cuando el nombre no lo dice ya.
+                    Casi todas se llaman «R2 · Seguimiento corto», y repetir
+                    «R2» al lado le comía al nombre los 40 px que necesitaba
+                    para no cortarse. Una renombrada a «Saludo corto» sí lo
+                    muestra, que es cuando hace falta. */}
+                {p.paso && !nombraElPaso(p.nombre, p.paso) && (
                   <span className="pastilla" title="El paso al que responde (§5.2)">
                     {p.paso}
                   </span>

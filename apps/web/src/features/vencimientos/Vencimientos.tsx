@@ -47,6 +47,18 @@ interface Props {
   plantillas: PlantillaRecord[];
   onCerrar: () => void;
   onCambio: () => void;
+  /**
+   * Montarlo como panel en vez de como overlay.
+   *
+   * Es la misma pantalla, sin el velo ni la caja flotante: se usa en Tareas,
+   * donde va pegado a la derecha. Se pidió así porque las dos listas son la
+   * misma cola de trabajo del día —lo que hay que hacer y a quién hay que
+   * escribirle— y tenerlas en dos overlays obliga a cerrar una para ver la
+   * otra.
+   *
+   * No es una segunda versión de Vencimientos: es la de siempre sin marco.
+   */
+  comoPanel?: boolean;
 }
 
 /**
@@ -56,7 +68,7 @@ interface Props {
  * Es la cola de trabajo diaria: dado que los R se mandan a mano (D15), esta
  * pantalla es donde el equipo pasa la mayor parte del tiempo.
  */
-export function Vencimientos({ leads, plantillas, onCerrar, onCambio }: Props) {
+export function Vencimientos({ leads, plantillas, onCerrar, onCambio, comoPanel }: Props) {
   const pendientes = useMemo(() => leadsVencidos(leads), [leads]);
   const cfg = CADENCIA_POR_DEFECTO;
 
@@ -175,9 +187,11 @@ export function Vencimientos({ leads, plantillas, onCerrar, onCambio }: Props) {
       ).proximo_contacto_propuesto
     : null;
 
-  return (
-    <div className="overlay-fondo" onClick={onCerrar}>
-      <div className="overlay-caja" onClick={(e) => e.stopPropagation()}>
+  // El contenido va en una variable y no en un componente envoltorio: uno
+  // definido acá adentro se remonta en cada render, y el textarea del mensaje
+  // perdería el foco a cada tecla.
+  const cuerpo = (
+    <>
         <header className="overlay-header">
           <span className="overlay-titulo">Vencimientos</span>
           <span className="overlay-progreso">
@@ -186,11 +200,14 @@ export function Vencimientos({ leads, plantillas, onCerrar, onCambio }: Props) {
           <div className="barra">
             <div className="barra-avance" style={{ width: `${avance}%` }} />
           </div>
-          <button type="button" className="boton-icono-26" onClick={onCerrar} title="Cerrar (Esc)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-          </button>
+          {/* Como panel no hay nada que cerrar: se cierra Tareas. */}
+          {!comoPanel && (
+            <button type="button" className="boton-icono-26" onClick={onCerrar} title="Cerrar (Esc)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+          )}
         </header>
 
         {lead && !terminado ? (
@@ -383,6 +400,16 @@ export function Vencimientos({ leads, plantillas, onCerrar, onCambio }: Props) {
             </button>
           )}
         </footer>
+    </>
+  );
+
+  // Como panel el marco lo pone quien lo monta —en Tareas va pegado a la
+  // derecha—; como overlay, el velo y la caja son suyos.
+  if (comoPanel) return cuerpo;
+  return (
+    <div className="overlay-fondo" onClick={onCerrar}>
+      <div className="overlay-caja" onClick={(e) => e.stopPropagation()}>
+        {cuerpo}
       </div>
     </div>
   );

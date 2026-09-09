@@ -13,6 +13,7 @@ import {
   reordenar,
   resolverParaPaso,
   resolverTexto,
+  nombraElPaso,
   type Plantilla,
 } from '../src/plantilla.ts';
 
@@ -234,4 +235,18 @@ test('tocar la estrella de una cuenta no desarma un alcance por casa', () => {
   // Y sacarla no lo convierte en una lista: perderia lo que lo hace util, que
   // es que las cuentas nuevas lo hereden. Eso se cambia desde el Repositorio.
   assert.deepEqual(sinCuenta(casa, 'DL', ['AL', 'DL', 'ED']), casa);
+});
+
+test('§7.9 · el chip del paso se omite cuando el nombre ya lo dice', () => {
+  assert.equal(nombraElPaso('R2 · Seguimiento corto', 'R2'), true);
+  assert.equal(nombraElPaso('R0 · Invitación con nota', 'R0'), true);
+  assert.equal(nombraElPaso('Agradecimiento post reunión', 'agradecimiento'), true);
+});
+
+test('§7.9 · el chip aparece cuando el nombre no nombra el paso', () => {
+  assert.equal(nombraElPaso('Saludo corto', 'R2'), false);
+  // El caso que importa: «R0 · Reinvitación» dice R0, que NO es R0-recontacto.
+  assert.equal(nombraElPaso('R0 · Reinvitación', 'R0-recontacto'), false);
+  assert.equal(nombraElPaso('', 'R2'), false);
+  assert.equal(nombraElPaso('R2 · algo', ''), false);
 });

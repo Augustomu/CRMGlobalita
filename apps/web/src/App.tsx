@@ -729,7 +729,24 @@ export function App() {
       )}
 
       {tareasAbierto && (
-        <Tareas usuario={usuario} onCerrar={() => setTareasAbierto(false)} />
+        <Tareas
+          usuario={usuario}
+          onCerrar={() => setTareasAbierto(false)}
+          // Los vencimientos, al lado. Solo con el permiso: sin el, el panel
+          // no existe y Tareas queda como estaba.
+          leads={puedeUsuario(usuario, 'vencimientos') ? leads : undefined}
+          plantillas={puedeUsuario(usuario, 'vencimientos') ? plantillas : undefined}
+          onCambio={recargar}
+          // Una tarea sobre un lead tiene que poder llevar a su ficha; si no,
+          // hay que buscarlo a mano en una lista de 1.500.
+          onIrAlLead={(id) => {
+            setTareasAbierto(false);
+            irA(() => {
+              setSeleccionado(id);
+              setSeccion('followup');
+            });
+          }}
+        />
       )}
 
       {compartidaAbierta && <BaseCompartida onCerrar={() => setCompartidaAbierta(false)} />}

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { IconoNotas } from '../../ui/iconos';
 import {
   ESTADOS_ACTIVOS,
   NOMBRE_ESTADO,
@@ -204,10 +205,7 @@ export function Proyectos({ proyectos, onAbrir, seleccionado }: Props) {
                         p.proyecto.nota_lead || notas.at(-1)?.texto || 'Sin notas'
                       }
                     >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
-                        <path d="M4 5h16v11l-4 4H4z" />
-                        <path d="M7 9h10M7 13h6" />
-                      </svg>
+                      <IconoNotas />
                     </span>
                   </div>
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { tocaHoy } from '@crm/core/cadencia';
 import { idiomaEfectivo } from '@crm/core/idioma';
 import { linkWhatsApp } from '@crm/core/telefono';
+import { IconoWhatsApp } from '../../ui/iconos';
 import { recientes, sePuedeSacar } from '@crm/core/etiqueta';
 import { diaLocal } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
@@ -447,18 +448,14 @@ export function FichaLead({
               rel="noreferrer"
               title="Abrir el chat de WhatsApp"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
-                <path d="M21 11.5a8.5 8.5 0 01-12.6 7.4L3 20.5l1.7-5.2A8.5 8.5 0 1121 11.5z" />
-              </svg>
+              <IconoWhatsApp />
             </a>
           ) : (
             <span
               className="boton-icono-26 boton-off"
               title={p?.telefono ? `Teléfono a revisar: ${p.telefono_raw || p.telefono}` : 'Sin teléfono cargado'}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
-                <path d="M21 11.5a8.5 8.5 0 01-12.6 7.4L3 20.5l1.7-5.2A8.5 8.5 0 1121 11.5z" />
-              </svg>
+              <IconoWhatsApp />
             </span>
           )}
         </div>
