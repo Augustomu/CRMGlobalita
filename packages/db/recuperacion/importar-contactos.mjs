@@ -229,12 +229,38 @@ for (const p of personas) {
     huella: p.huella,
   };
 
-  if (ya.length === 1) {
+  // Una coincidencia por telefono NO alcanza para decir que es la misma
+  // persona: dos personas distintas pueden compartir un numero —una linea de
+  // empresa, un familiar— y el propio README lo advierte.
+  //
+  // Antes este caso completaba campos sobre el perfil que ya estaba, y como ese
+  // perfil ya tenia nombre, el patch no lo pisaba: la segunda persona
+  // desaparecia sin dejar rastro. Asi se perdieron Paul Goris (comparte numero
+  // con Mauricio Mantovani) y Nicolas Valencia Garcia (con Nicolas Guadalupe
+  // Valencia). Dos de 248, y ninguna senal de que faltaban.
+  //
+  // Ahora manda la HUELLA: mismo nombre normalizado = la misma persona con mas
+  // datos; nombre distinto = otra persona, se crea y se marcan las dos para que
+  // lo resuelva alguien (D02).
+  const mismaPersona = ya.length === 1 && ya[0].huella === p.huella;
+
+  if (mismaPersona) {
     // Ya existe: se completa lo que falte sin pisar lo que ya tiene.
     const v = ya[0];
     const patch = {};
     for (const [k, val] of Object.entries(datos)) if (val && !v[k]) patch[k] = val;
     if (Object.keys(patch).length) { await pb.collection('perfil').update(v.id, patch); actualizados++; }
+  } else if (ya.length === 1) {
+    // Mismo telefono, otro nombre: entra igual, y las dos quedan marcadas.
+    const nuevo = await pb.collection('perfil').create({
+      ...datos,
+      posible_duplicado_de: [ya[0].id],
+    });
+    await pb.collection('perfil').update(ya[0].id, {
+      posible_duplicado_de: [...(ya[0].posible_duplicado_de ?? []), nuevo.id],
+    });
+    creados++;
+    marcados++;
   } else if (ya.length > 1) {
     // Mas de un perfil con el mismo telefono: NO se toca nada, se marca para
     // que lo resuelva una persona. La fusion nunca es automatica (D02).

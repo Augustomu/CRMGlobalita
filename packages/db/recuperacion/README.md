@@ -140,6 +140,23 @@ Mauricio Mantovani      +31 6 3179xxxx
 Paul Goris              +31 6 3179xxxx
 ```
 
+> **El importador no respetaba esto y perdía gente (arreglado el 09/09/2026).**
+>
+> Cuando encontraba **un** perfil con ese teléfono, daba por hecho que era la
+> misma persona y sólo completaba campos vacíos. Como el perfil que ya estaba
+> tenía nombre, el patch no lo pisaba: la segunda persona no se creaba y no
+> quedaba ningún rastro de que faltaba.
+>
+> Así se perdieron 2 de los 248: **Paul Goris** y **Nicolás Valencia García**.
+> El caso de `ya.length > 1` sí estaba bien resuelto; el de `=== 1` no.
+>
+> Ahora manda la **huella**: mismo nombre normalizado = la misma persona con más
+> datos; nombre distinto = otra persona, se crea y se marcan las dos para que lo
+> resuelva alguien.
+>
+> Es el tipo de error que no avisa. El total decía «246 creados» y parecía
+> correcto — sólo aparece si uno cuenta el archivo contra la base.
+
 Ese último caso es exactamente por qué la fusión no puede ser automática: por
 teléfono son idénticos y son dos personas. El importador los marca en
 `posible_duplicado_de` y no toca nada más.
