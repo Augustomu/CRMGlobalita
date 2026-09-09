@@ -6196,7 +6196,10 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   background: var(--accent-light);
   border-radius: 8px;
 }
-.dest-paso-control { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-left: 0; }
+/* El control del paso NO se estira: un segmentado de tres letras ocupando
+   media pantalla deja un hueco enorme a la derecha, que es lo que se ve. */
+.dest-paso-control { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-left: 0; justify-self: start; }
+.dest-paso .selector-idioma { margin-left: 0; width: fit-content; flex: 0 0 auto; }
 
 /* La fila elegida en la vista Lista.
    Al tocar un lead en la ficha, su fila acá se ilumina: sin eso, con doscientas
@@ -6212,8 +6215,8 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 /* La marca de sin leer, a la izquierda del nombre: es lo primero que se busca
    al recorrer la lista, y es el mismo boton que lo devuelve a sin leer. */
 .wap-punto-boton {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   flex: 0 0 auto;
   font-size: var(--txt-xs);
@@ -6229,11 +6232,15 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 
 /* Los dos iconos fijos de cada usuario. El de baja se pone rojo solo al pasar
    por encima: en reposo es un icono mas, no una alarma. */
+/* Los dos iconos de cada usuario. Ahora llevan SVG adentro, asi que el tamano
+   lo fija la caja y no la fuente: dos emoji que cada sistema dibuja distinto se
+   veian de dos productos distintos. */
 .usuario-icono {
-  height: 22px;
-  min-width: 22px;
-  padding: 0 6px;
-  font-size: var(--txt-md);
+  display: grid;
+  place-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   line-height: 1;
   color: var(--muted);
   background: var(--surface);
@@ -6261,8 +6268,15 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 .wap-chat-hora { font-size: var(--txt-xs); color: var(--hint); flex: 0 0 auto; }
 
 /* El punto de sin leer: mas grande, que era lo que costaba apuntarle. */
-.wap-punto-boton { font-size: var(--txt-md); }
+.wap-punto-boton { font-size: 15px; }
 
 /* El tilde del chip destacado cuyo paso ya salio con este lead. */
 .dest-chip-enviado { border-color: var(--accent-br); background: var(--accent-light); }
 .dest-chip-tilde { color: var(--accent); font-weight: 700; margin-right: 3px; }
+
+.usuario-icono svg { width: 15px; height: 15px; }
+/* El de «mandando…»: un punto que late, del alto del icono. */
+.usuario-icono-punto { font-size: 17px; line-height: 1; }
+/* En dos tiempos el boton lleva texto, asi que ahi si se ensancha. */
+.usuario-icono-peligro { width: auto; padding: 0 8px; font-size: var(--txt-sm); font-weight: 600; }
+.usuario-rapidos { margin-left: auto; margin-top: 0; padding: 0; border-top: 0; }

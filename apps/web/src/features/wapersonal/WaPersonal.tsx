@@ -30,6 +30,25 @@ type FiltroChat = 'sin_leer' | 'no_agendados';
 // ahí los mensajes de números desconocidos. Esta pantalla dejó de leerla el
 // 09/09 —ver el comentario del triage— así que su tipo tampoco vive acá.
 
+/**
+ * Los chats, del que escribió recién al que escribió hace más.
+ *
+ * No se puede pedir ordenado a la base: la hora vive adentro del último mensaje
+ * del JSON, no en una columna. Antes se ordenaba por `updated`, que es cuándo
+ * se TOCÓ la fila —marcar leído la toca— así que las horas salían salteadas:
+ * 08:12, 11:24, 17:40, 10:45, 13:45.
+ */
+function porUltimoMensaje<T extends { mensajes: MensajeChat[] | null; updated?: string }>(
+  chats: T[],
+): T[] {
+  const cuando = (c: T) => {
+    const ms = c.mensajes ?? [];
+    const ultimo = ms.length ? ms[ms.length - 1] : null;
+    return String(ultimo?.en ?? c.updated ?? '');
+  };
+  return [...chats].sort((a, b) => (cuando(a) < cuando(b) ? 1 : cuando(a) > cuando(b) ? -1 : 0));
+}
+
 function hoyIso(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -102,6 +121,9 @@ export function WaPersonal({ onIrAlLead }: Props) {
 
   const recargar = useCallback(async () => {
     try {
+      // Ordenados por la hora del ÚLTIMO MENSAJE, como cualquier lista de
+      // chats. `updated` es cuándo se tocó la fila —marcar leído la toca— así
+      // que ordenaba por otra cosa y las horas salían salteadas.
       const [c, conTelefono] = await Promise.all([
         // Por el último mensaje, como cualquier lista de chats: arriba el que
         // escribió recién.
@@ -116,7 +138,7 @@ export function WaPersonal({ onIrAlLead }: Props) {
           })
           .catch(() => []),
       ]);
-      setChats(c);
+      setChats(porUltimoMensaje(c));
       setTelefonosEnLaBase(
         new Set(
           conTelefono
@@ -273,14 +295,9 @@ export function WaPersonal({ onIrAlLead }: Props) {
               {chats.filter((c) => !telefonosEnLaBase.has(ultimosOcho(c.telefono))).length}
             </span>
           </button>
-          {/* El conteo sólo cuando hay un filtro puesto: sirve para saber
-              cuánto sacó el filtro. Sin filtro es la lista entera y decir
-              «5 chats» arriba de cinco chats no agrega nada. */}
-          {filtros.size > 0 && (
-            <span className="campo-ayuda tabular">
-              {visibles.length} de {chats.length}
-            </span>
-          )}
+          {/* Sin conteo suelto. Cada interruptor ya trae el suyo, y un «5 de 5»
+              al lado no dice de qué: hay que deducir a cuál de los dos se
+              refiere. La información ya está en los botones. */}
         </div>
 
         <div className="wap-chats">

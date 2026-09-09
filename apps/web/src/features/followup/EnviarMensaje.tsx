@@ -8,6 +8,7 @@ import {
   leerAlcance,
   nombreDeAlcance,
   reordenar,
+  sacarElDestacado,
   sinCuenta,
   estaDestacadaPara, resolverParaPaso, type Plantilla } from '@crm/core/plantilla';
 import { casaDeLinea } from '@crm/core/proyecto';
@@ -451,8 +452,12 @@ export function EnviarMensaje({
               <button
                 type="button"
                 className="dest-chip-x"
-                title="Sacar el chip de esta cuenta"
-                onClick={() => void guardarAlcance(p.id, sinCuenta(alcance, cuenta, abrevs))}
+                title={
+                  alcance.tipo === 'casa'
+                    ? `Está destacado en ${nombreDeAlcance(alcance)}: sacarlo lo saca de todas esas cuentas`
+                    : 'Sacar el chip de esta cuenta'
+                }
+                onClick={() => void guardarAlcance(p.id, sacarElDestacado(alcance, cuenta, abrevs))}
               >
                 ×
               </button>

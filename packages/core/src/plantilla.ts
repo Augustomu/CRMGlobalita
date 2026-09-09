@@ -284,6 +284,29 @@ export function sinCuenta(a: Alcance, cuenta: string, todasLasCuentas: string[] 
 }
 
 /**
+ * Sacar el chip de la fila, sea cual sea su alcance.
+ *
+ * EL PROBLEMA QUE RESUELVE. La × del chip llamaba a `sinCuenta()`, que con un
+ * alcance por casa devuelve el alcance INTACTO —a proposito: sacar una cuenta
+ * de «toda Globalita» lo desarmaria en una lista y le haria perder lo que lo
+ * hace util, que las cuentas nuevas lo hereden—. Resultado: la × no hacia
+ * nada. Augusto destaco dos mensajes «en todo Globalita» y no pudo sacarlos.
+ *
+ * Que hace ahora: si el alcance es por casa, saca el destacado ENTERO. No hay
+ * termino medio honesto — o vale para la casa o no vale— y quien aprieta la ×
+ * quiere que el chip desaparezca. La pantalla avisa en el title que eso lo
+ * saca de todas las cuentas de esa casa.
+ */
+export function sacarElDestacado(
+  a: Alcance,
+  cuenta: string,
+  todasLasCuentas: string[] = [],
+): Alcance {
+  if (a.tipo === 'casa') return SIN_ALCANCE;
+  return sinCuenta(a, cuenta, todasLasCuentas);
+}
+
+/**
  * Si el nombre de la plantilla ya dice a qué paso responde.
  *
  * Casi todas se llaman «R2 · Seguimiento corto», y en la fila del repositorio

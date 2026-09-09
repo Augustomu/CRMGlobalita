@@ -342,29 +342,22 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
                       identifica a alguien. */}
                   {u.name && <span className="usuario-correo">{u.email}</span>}
                 </div>
-              </div>
-              <div className="fila-abajo">
-                <span className="fila-etapa">{u.rol}</span>
-                <span className={`fila-contacto ${u.estado !== 'activo' ? 'fila-contacto-vencido' : ''}`}>
-                  {u.estado}
-                </span>
-                <span className="fila-contacto">
-                  {leads.filter((l) => l.asignado === u.id).length} leads
-                </span>
+                {/* Los dos iconos, A LA ALTURA DEL NOMBRE.
 
-              {/* Los dos iconos, en la MISMA línea que el rol y los leads.
-                  Estaban en un renglón propio abajo y hacían la fila el doble
-                  de alta para dos botones de 22 px. Antes de eso, aparecían Las dos cosas
-                  que se hacen sobre otra persona —mandarle un enlace nuevo o
-                  darla de baja— sin bajar a la ficha. La baja sigue en dos
-                  tiempos: el primer clic pregunta. */}
-              {/* Las dos acciones, FIJAS en la fila y como iconos.
-                  Antes aparecían recién al elegir el usuario: había que hacer
-                  clic para descubrir que existían. La baja sigue en dos tiempos
-                  —el primer toque pregunta— porque un icono que borra al primer
-                  clic, al lado de otro que no, se aprieta por inercia. */}
+                    Pasaron por tres lugares: un renglón propio abajo —que hacía la
+                    fila el doble de alta—, después la línea del rol, y ahora acá.
+                    Es donde corresponde: son acciones sobre la PERSONA, y la persona
+                    es el nombre. Al lado del rol parecían acciones del rol.
+
+                    La baja sigue en dos tiempos: el primer toque pregunta, porque un
+                    icono que borra al primer clic, al lado de otro que no, se aprieta
+                    por inercia. */}
               {u.id !== usuarioActual.id && (
                 <div className="usuario-rapidos" onClick={(e) => e.stopPropagation()}>
+                  {/* Dibujados, no emoji. El ✉ y el 🗑 los pinta cada sistema a
+                      su manera —uno sale plano y el otro a todo color— así que
+                      dos botones al lado se veían de dos productos distintos.
+                      Un SVG es del mismo trazo que los demás iconos del CRM. */}
                   <button
                     type="button"
                     className="usuario-icono"
@@ -376,7 +369,14 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
                     }
                     onClick={() => void reenviarAcceso()}
                   >
-                    {enviandoAcceso ? '…' : '✉'}
+                    {enviandoAcceso ? (
+                      <span className="usuario-icono-punto">·</span>
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                        <rect x="3" y="5" width="18" height="14" rx="2" />
+                        <path d="M3 7l9 6 9-6" />
+                      </svg>
+                    )}
                   </button>
                   {seleccionado === u.id && confirmarBaja ? (
                     <>
@@ -394,7 +394,9 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
                         title="Cancelar"
                         onClick={() => setConfirmarBaja(false)}
                       >
-                        ✕
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                          <path d="M6 6l12 12M18 6L6 18" />
+                        </svg>
                       </button>
                     </>
                   ) : (
@@ -407,7 +409,10 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
                         setConfirmarBaja(true);
                       }}
                     >
-                      🗑
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                        <path d="M4 7h16M10 11v6M14 11v6" />
+                        <path d="M6 7l1 13h10l1-13M9 7V4h6v3" />
+                      </svg>
                     </button>
                   )}
                   {avisoAcceso && seleccionado === u.id && (
@@ -415,6 +420,16 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
                   )}
                 </div>
               )}
+              </div>
+              <div className="fila-abajo">
+                <span className="fila-etapa">{u.rol}</span>
+                <span className={`fila-contacto ${u.estado !== 'activo' ? 'fila-contacto-vencido' : ''}`}>
+                  {u.estado}
+                </span>
+                <span className="fila-contacto">
+                  {leads.filter((l) => l.asignado === u.id).length} leads
+                </span>
+
               </div>
             </div>
           ))}
