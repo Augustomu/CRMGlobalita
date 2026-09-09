@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { pb } from '../../lib/pocketbase';
+import { abrirConPerfil } from '../../lib/abrir';
 import { IconoNotas } from '../../ui/iconos';
 import { PANEL_AGENDA } from '@crm/core/anchos';
 import { diaLocal } from '@crm/core/fecha';
@@ -103,6 +104,34 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
    * guarda: un PATCH por cada píxel serían cientos de escrituras.
    */
   const [estirando, setEstirando] = useState<{ id: string; y0: number; base: number; dur: number } | null>(null);
+  /**
+   * 7.7 · Con qué perfil de Chrome se abren los links de esta pantalla.
+   *
+   * En la agenda es SIEMPRE el mismo, sin importar de qué cuenta venga el lead:
+   * acá uno está mirando su semana, no actuando desde una cuenta. Sale de
+   * la configuracion «navegador», asi que se cambia sin tocar codigo.
+   */
+  const [perfilChrome, setPerfilChrome] = useState<string | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    pb.collection('configuracion')
+      .getFirstListItem<{ valor: string }>('clave = "navegador"')
+      .then((r) => {
+        if (!vivo) return;
+        try {
+          setPerfilChrome(JSON.parse(r.valor)?.lista ?? null);
+        } catch {
+          setPerfilChrome(null);
+        }
+      })
+      .catch(() => {
+        // Sin configuración se abre como siempre.
+      });
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
   /** Qué fila tiene abiertas las notas, en la vista Lista. */
   const [notasDe, setNotasDe] = useState<string | null>(null);
   /** Lo escrito sin guardar todavía, para no pedir un PATCH por tecla. */
@@ -441,6 +470,7 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
                     const c = reparto[i] ?? { carril: 0, carriles: 1 };
                     return (
                       <Evento
+                        perfilChrome={perfilChrome}
                         key={e.id}
                         e={e}
                         caja={{
@@ -476,6 +506,7 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
           <div className="agenda-lista-cabeza">
             <span />
             <span>Última</span>
+            <span />
             <span>Próx.</span>
             <span />
             <span>Lead</span>
@@ -517,9 +548,49 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
                 >
                   {chequeados.has(l.id) ? '✓' : ''}
                 </button>
-                <span className={`agenda-lista-fecha tabular ${ultima?.estado === 'no-asistio' ? 'agenda-no-asistio' : ultima?.estado === 'asistio' ? 'agenda-asistio' : ''}`}>
+                {/* 7.6 · La última reunión, y si todavía nadie dijo qué pasó,
+                    las dos formas de decirlo. De las 288 importadas, 173 están
+                    en «sin dato»: la reunión consta y el resultado no. Se
+                    confirma acá, sin abrir nada, porque es lo que uno recuerda
+                    mientras recorre la lista. */}
+                <span
+                  className={`agenda-lista-fecha tabular ${ultima?.estado === 'no-asistio' ? 'agenda-no-asistio' : ultima?.estado === 'asistio' ? 'agenda-asistio' : ''}`}
+                  title={
+                    ultima
+                      ? ultima.estado === 'asistio'
+                        ? `Reunión del ${ultima.fecha}: asistió`
+                        : ultima.estado === 'no-asistio'
+                          ? `Reunión del ${ultima.fecha}: no asistió`
+                          : `Reunión del ${ultima.fecha}: falta confirmar si asistió`
+                      : 'Todavía no hubo ninguna reunión'
+                  }
+                >
                   {ultima ? `${ultima.fecha.slice(8, 10)}/${ultima.fecha.slice(5, 7)}` : '—'}
                 </span>
+
+                {/* 7.6 · Confirmar si fue o no fue, sin abrir nada. Sólo
+                    aparece cuando falta el dato: una reunión ya confirmada no
+                    necesita dos botones al lado pidiendo que se la confirme. */}
+                {ultima && ultima.estado !== 'asistio' && ultima.estado !== 'no-asistio' ? (
+                  <span className="agenda-lista-confirmar">
+                    <button
+                      type="button"
+                      title="Sí asistió"
+                      onClick={() => void cambiarEstado(ultima.id, 'asistio')}
+                    >
+                      ✓
+                    </button>
+                    <button
+                      type="button"
+                      title="No asistió"
+                      onClick={() => void cambiarEstado(ultima.id, 'no-asistio')}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ) : (
+                  <span className="agenda-lista-confirmar" />
+                )}
                 {/* §7.6: el próximo contacto se EDITA acá. Es la mitad del
                     sentido de esta vista: se recorre el seguimiento y se
                     corrigen fechas sin abrir ficha por ficha. */}
@@ -585,7 +656,17 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
                     }
                     target="_blank"
                     rel="noreferrer"
-                    title="Perfil de LinkedIn"
+                    title={
+                      perfilChrome
+                        ? `Perfil de LinkedIn — se abre en el Chrome «${perfilChrome}»`
+                        : 'Perfil de LinkedIn'
+                    }
+                    onClick={(ev) => {
+                      const slug = l.expand?.perfil?.slug;
+                      if (!slug || !perfilChrome) return;
+                      ev.preventDefault();
+                      void abrirConPerfil(`https://www.linkedin.com/in/${slug}`, perfilChrome);
+                    }}
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                       <path d="M7 17L17 7M17 7h-7M17 7v7" />
@@ -669,6 +750,7 @@ function Evento({
   onFoto,
   onMover,
   onAviso,
+  perfilChrome,
 }: {
   e: EventoAgenda;
   /** Dónde va dentro de la columna del día: hora, duración y carril. */
@@ -684,6 +766,8 @@ function Evento({
   /** §7.6: la tarjeta edita notas, foto y la fecha/hora de la reunión. */
   onNotas: (id: string, notas: string) => Promise<void>;
   onFoto: (perfilId: string) => Promise<boolean>;
+  /** 7.7 · Con que perfil de Chrome se abre el LinkedIn desde la tarjeta. */
+  perfilChrome: string | null;
   onMover: (id: string, fecha: string, hora: string) => Promise<void>;
   /** El cartel vive en la agenda: la tarjeta se desmonta al recargar. */
   onAviso: (texto: string) => void;
@@ -882,6 +966,12 @@ function Evento({
                 target="_blank"
                 rel="noreferrer"
                 className="boton-mini"
+                title={perfilChrome ? `Se abre en el Chrome «${perfilChrome}»` : undefined}
+                onClick={(ev) => {
+                  if (!perfilChrome) return;
+                  ev.preventDefault();
+                  void abrirConPerfil(`https://www.linkedin.com/in/${e.slug}`, perfilChrome);
+                }}
               >
                 LinkedIn
               </a>

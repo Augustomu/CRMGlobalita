@@ -2724,12 +2724,16 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .agenda-lista-cabeza,
 .agenda-lista-fila {
   display: grid;
-  /* §7.6: check · última · próximo · foto · lead · nueva · notas · links ·
-     etiquetas. Nueve columnas en un sidebar de 340 px son imposibles, por eso
-     el panel se puede ensanchar hasta 900 (§9.4). */
+  /* §7.6: check · última · confirmar · próximo · foto · lead · nueva ·
+     notas · links · etiquetas. Diez columnas en un sidebar de 340 px son
+     imposibles, por eso el panel se puede ensanchar hasta 900 (§9.4).
+     «Confirmar» son los dos botones de asistió / no asistió (7.6): ocupa su
+     ancho aunque esté vacío, para que las filas no se desalineen cuando unas
+     lo tienen y otras no. */
   grid-template-columns:
     26px
     calc(46px * var(--escala-texto))
+    34px
     calc(112px * var(--escala-texto))
     26px
     minmax(0, 1.4fr)
@@ -6070,3 +6074,23 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   width: 100%;
   padding-top: 5px;
 }
+
+/* 7.6 · Confirmar asistencia desde la vista Lista. Dos botones chicos y solo
+   cuando falta el dato: una reunion ya confirmada no necesita que le pidan que
+   se la confirme. El ancho fijo aunque esten vacios mantiene las columnas
+   alineadas cuando algunas filas los tienen y otras no. */
+.agenda-lista-confirmar { display: inline-flex; gap: 2px; width: 34px; flex: 0 0 34px; }
+.agenda-lista-confirmar button {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  font-size: var(--txt-xs);
+  line-height: 1;
+  color: var(--hint);
+  background: var(--surface);
+  border: .5px solid var(--border);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.agenda-lista-confirmar button:first-child:hover { color: var(--success); border-color: var(--success); }
+.agenda-lista-confirmar button:last-child:hover { color: var(--error); border-color: var(--error); }

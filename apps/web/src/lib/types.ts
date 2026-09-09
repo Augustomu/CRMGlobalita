@@ -49,6 +49,8 @@ export interface CuentaRecord {
   objetivo_semanal: number;
   /** Las cuentas estan segmentadas por producto: IA o inversiones. */
   linea_negocio: LineaNegocio;
+  /** 7.7 · El perfil de Chrome que tiene la sesion de LinkedIn de esta cuenta. */
+  chrome_perfil?: string;
 }
 
 export interface EtiquetaRecord {

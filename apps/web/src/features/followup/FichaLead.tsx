@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { tocaHoy } from '@crm/core/cadencia';
 import { linkWhatsApp } from '@crm/core/telefono';
+import { abrirConPerfil } from '../../lib/abrir';
 import { recientes, sePuedeSacar } from '@crm/core/etiqueta';
 import { diaLocal } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
@@ -156,6 +157,8 @@ export function FichaLead({
 
   const wa = p?.telefono ? linkWhatsApp({ valor: p.telefono, valido: p.telefono_valido }) : undefined;
   const linkPerfil = p?.slug ? `https://www.linkedin.com/in/${p.slug}` : '';
+  /** El Chrome de la cuenta de origen del lead (7.7). */
+  const chromeDeLaCuenta = lead.expand?.cuenta?.chrome_perfil || null;
   const vence = tocaHoy(
     { situacion: lead.situacion, proximo_contacto: lead.proximo_contacto || null },
     HOY,
@@ -395,8 +398,27 @@ export function FichaLead({
 
         <div className="ficha-botonera">
           {editable && <AbrirProyecto lead={lead} puedeEditar={editable} />}
+          {/* 0.4 y 7.7 · El perfil se abre en el Chrome de la CUENTA DE ORIGEN,
+              el que tiene esa sesión de LinkedIn. Antes salía con el perfil que
+              estuviera activo —casi siempre el personal— y mirar a un prospecto
+              desde la cuenta equivocada deja rastro en LinkedIn. */}
           {veLinks && linkPerfil && (
-            <a className="boton-icono-26" href={linkPerfil} target="_blank" rel="noreferrer" title="Abrir perfil de LinkedIn">
+            <a
+              className="boton-icono-26"
+              href={linkPerfil}
+              target="_blank"
+              rel="noreferrer"
+              title={
+                chromeDeLaCuenta
+                  ? `Abrir perfil de LinkedIn en el Chrome de ${lead.expand?.cuenta?.abrev ?? "la cuenta"}`
+                  : "Abrir perfil de LinkedIn"
+              }
+              onClick={(ev) => {
+                if (!linkPerfil || !chromeDeLaCuenta) return;
+                ev.preventDefault();
+                void abrirConPerfil(linkPerfil, chromeDeLaCuenta);
+              }}
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <path d="M7 17L17 7M17 7h-7M17 7v7" />
               </svg>

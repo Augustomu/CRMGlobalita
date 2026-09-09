@@ -172,6 +172,16 @@ spawn(exe, ['serve', '--dir', datos, '--migrationsDir', migraciones, '--hooksDir
      * PB_URL ni se define.
      */
     PB_URL: process.env.PB_URL || 'http://127.0.0.1:8090',
+    /*
+     * Habilita /api/abrir, que lanza Chrome con el perfil de cada cuenta.
+     *
+     * Solo tiene sentido cuando PocketBase corre en la maquina de la persona,
+     * que es exactamente el caso de desarrollo. El servicio del VPS NO define
+     * esta variable, asi que ahi el endpoint contesta 404 y no existe: un
+     * servidor remoto abriendo navegadores no le sirve a nadie y es una puerta
+     * de mas.
+     */
+    CHROME_LOCAL: process.env.CHROME_LOCAL ?? '1',
     MAIL_DESDE: process.env.MAIL_DESDE || 'crm@globalita.test',
   },
 });
