@@ -12,7 +12,20 @@ interface ChatRecord {
   telefono: string;
   no_leido: boolean;
   mensajes: MensajeChat[] | null;
+  /** Personal o de trabajo. Vacío = todavía no se clasificó (§7.9). */
+  tipo: 'personal' | 'trabajo' | '';
 }
+
+/** Los filtros rápidos de la columna de chats. */
+type FiltroChat = 'todos' | 'sin_leer' | 'no_agendados' | 'personal' | 'trabajo';
+
+const NOMBRE_FILTRO: Record<FiltroChat, string> = {
+  todos: 'todos',
+  sin_leer: 'sin leer',
+  no_agendados: 'no agendados',
+  personal: 'personal',
+  trabajo: 'trabajo',
+};
 
 interface EntranteRecord {
   id: string;
@@ -33,6 +46,17 @@ function hoyIso(): string {
 function hora(iso: string): string {
   const s = String(iso ?? '');
   return s.length >= 16 ? s.slice(11, 16) : '';
+}
+
+/**
+ * Los últimos ocho dígitos de un teléfono.
+ *
+ * El mismo número aparece escrito de tres formas —con +52, con 52, con
+ * espacios— según de dónde venga, así que compararlos enteros no encuentra
+ * nada. La cola es lo que sobrevive a todos los formatos.
+ */
+function ultimosOcho(tel: string): string {
+  return String(tel ?? '').replace(/\D/g, '').slice(-8);
 }
 
 /** El teléfono como se muestra: los últimos dígitos alcanzan para reconocerlo. */
@@ -74,6 +98,17 @@ export function WaPersonal({ onIrAlLead }: Props) {
     }
   });
   const [chats, setChats] = useState<ChatRecord[]>([]);
+  const [filtro, setFiltro] = useState<FiltroChat>('todos');
+  const [marcando, setMarcando] = useState<string | null>(null);
+  /**
+   * Los teléfonos que YA existen como lead.
+   *
+   * Es lo que hace falta para «no agendados»: un chat cuyo número no está en la
+   * base es alguien con quien se habla y que el CRM no conoce. Se guardan los
+   * últimos ocho dígitos porque el mismo número aparece escrito de tres formas
+   * —con +52, con 52, con espacios— y compararlos enteros no encuentra nada.
+   */
+  const [telefonosEnLaBase, setTelefonosEnLaBase] = useState<Set<string>>(new Set());
   const [entrantes, setEntrantes] = useState<EntranteRecord[]>([]);
   const [sel, setSel] = useState<string | null>(null);
   const [borrador, setBorrador] = useState('');
@@ -85,11 +120,27 @@ export function WaPersonal({ onIrAlLead }: Props) {
 
   const recargar = useCallback(async () => {
     try {
-      const [c, e] = await Promise.all([
+      const [c, conTelefono, e] = await Promise.all([
         pb.collection('chat_personal').getFullList<ChatRecord>({ sort: '-updated' }),
+        // Los leads que ya existen, sólo para saber qué número YA está en la
+        // base. Es lo que hace falta para el filtro «no agendados».
+        pb
+          .collection('lead')
+          .getFullList<{ expand?: { perfil?: { telefono?: string } } }>({
+            expand: 'perfil',
+            fields: 'id,expand.perfil.telefono',
+          })
+          .catch(() => []),
         pb.collection('entrante').getFullList<EntranteRecord>({ sort: '-recibido_en' }),
       ]);
       setChats(c);
+      setTelefonosEnLaBase(
+        new Set(
+          conTelefono
+            .map((l) => ultimosOcho(l.expand?.perfil?.telefono ?? ''))
+            .filter((t) => t.length >= 6),
+        ),
+      );
       setEntrantes(e);
       setError(null);
     } catch (err) {
@@ -105,6 +156,40 @@ export function WaPersonal({ onIrAlLead }: Props) {
   const hilo = useMemo(() => conDias(activo?.mensajes ?? [], hoy), [activo, hoy]);
 
   // Los que YA se rutearon solos: se avisa, no se pide nada.
+  const visibles = useMemo(() => {
+    if (filtro === 'todos') return chats;
+    if (filtro === 'sin_leer') return chats.filter((c) => c.no_leido);
+    if (filtro === 'personal') return chats.filter((c) => c.tipo === 'personal');
+    if (filtro === 'trabajo') return chats.filter((c) => c.tipo === 'trabajo');
+    return chats.filter((c) => !telefonosEnLaBase.has(ultimosOcho(c.telefono)));
+  }, [chats, filtro, telefonosEnLaBase]);
+
+  /** 6.2 · Marca el chat como personal o de trabajo; vacío lo deja sin clasificar. */
+  async function marcarTipo(c: ChatRecord, tipo: 'personal' | 'trabajo' | '') {
+    setMarcando(c.id);
+    try {
+      await pb.collection('chat_personal').update(c.id, { tipo });
+      setChats((v) => v.map((x) => (x.id === c.id ? { ...x, tipo } : x)));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setMarcando(null);
+    }
+  }
+
+  /** 6.3 · Devolverlo a «sin leer» para retomarlo más tarde. */
+  async function marcarSinLeer(c: ChatRecord) {
+    setMarcando(c.id);
+    try {
+      await pb.collection('chat_personal').update(c.id, { no_leido: true });
+      setChats((v) => v.map((x) => (x.id === c.id ? { ...x, no_leido: true } : x)));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setMarcando(null);
+    }
+  }
+
   const rutedos = entrantes.filter((e) => e.resuelto && e.ruteo === 'conocido_en_esta_cuenta');
   // Los que piden una decisión.
   const pendientes = entrantes.filter((e) => !e.resuelto);
@@ -311,8 +396,39 @@ export function WaPersonal({ onIrAlLead }: Props) {
           )}
         </div>
 
+        {/* 6.1, 6.2, 6.3 · Los filtros rápidos. «No agendados» es el que
+            contesta la pregunta con la que se abre esta pantalla: con quién
+            estoy hablando que el CRM no conoce. */}
+        <div className="wap-filtros">
+          {(['todos', 'sin_leer', 'no_agendados', 'personal', 'trabajo'] as const).map((f) => {
+            const cuantos =
+              f === 'todos'
+                ? chats.length
+                : f === 'sin_leer'
+                  ? chats.filter((c) => c.no_leido).length
+                  : f === 'no_agendados'
+                    ? chats.filter((c) => !telefonosEnLaBase.has(ultimosOcho(c.telefono))).length
+                    : chats.filter((c) => c.tipo === f).length;
+            return (
+              <button
+                key={f}
+                type="button"
+                className={`chip ${filtro === f ? 'chip-on' : ''}`}
+                onClick={() => setFiltro(f)}
+                title={
+                  f === 'no_agendados'
+                    ? 'Números con los que hablás y que no existen como lead en el CRM'
+                    : undefined
+                }
+              >
+                {NOMBRE_FILTRO[f]} <span className="tabular">{cuantos}</span>
+              </button>
+            );
+          })}
+        </div>
+
         <div className="wap-chats">
-          {chats.map((c) => (
+          {visibles.map((c) => (
             <div
               key={c.id}
               className={`wap-chat ${activo?.id === c.id ? 'wap-chat-on' : ''}`}
@@ -323,21 +439,55 @@ export function WaPersonal({ onIrAlLead }: Props) {
                 <span className="wap-chat-nombre">{c.nombre}</span>
                 <span className="wap-chat-ultimo">{ultimoTexto(c.mensajes ?? [])}</span>
               </div>
+              {/* 6.2 · Personal o trabajo. Es una etiqueta, no un estado: no
+                  mueve nada ni dispara nada, sólo sirve para filtrar. Mover a
+                  Follow-up sigue siendo otra cosa —crea un lead y entra en la
+                  cadencia— y hay gente de trabajo a la que uno no prospecta. */}
+              {c.tipo && <span className={`wap-tipo wap-tipo-${c.tipo}`}>{c.tipo}</span>}
+
               {activo?.id === c.id && (
-                <button
-                  type="button"
-                  className="wap-mover-mini"
-                  title="Es de trabajo: mover a follow-up"
-                  onClick={(ev) => {
-                    ev.stopPropagation();
-                    void moverAFollowup(c.telefono, c.nombre, c.cuenta, undefined, c.id);
-                  }}
-                >
-                  Mover a FU
-                </button>
+                <div className="wap-chat-acciones" onClick={(ev) => ev.stopPropagation()}>
+                  {(['personal', 'trabajo'] as const).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      className={`boton-mini ${c.tipo === t ? 'chip-on' : ''}`}
+                      disabled={marcando === c.id}
+                      title={`Marcar este chat como ${t}`}
+                      onClick={() => void marcarTipo(c, c.tipo === t ? '' : t)}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                  {/* 6.3 · Volver a dejarlo sin leer, para retomarlo después. */}
+                  {!c.no_leido && (
+                    <button
+                      type="button"
+                      className="boton-mini"
+                      disabled={marcando === c.id}
+                      title="Dejarlo sin leer para volver más tarde"
+                      onClick={() => void marcarSinLeer(c)}
+                    >
+                      sin leer
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="wap-mover-mini"
+                    title="Es de trabajo: mover a follow-up"
+                    onClick={() => {
+                      void moverAFollowup(c.telefono, c.nombre, c.cuenta, undefined, c.id);
+                    }}
+                  >
+                    Mover a FU
+                  </button>
+                </div>
               )}
             </div>
           ))}
+          {visibles.length === 0 && chats.length > 0 && (
+            <div className="wap-vacio">ningún chat con ese filtro</div>
+          )}
           {!chats.length && <p className="vacio">Todavía no hay chats personales.</p>}
         </div>
       </div>

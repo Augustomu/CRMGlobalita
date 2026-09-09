@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { IconoNotas } from '../../ui/iconos';
+import { pb } from '../../lib/pocketbase';
+import { AdminEstados } from './AdminEstados';
 import {
   ESTADOS_ACTIVOS,
   NOMBRE_ESTADO,
@@ -50,6 +52,41 @@ interface Props {
 export function Proyectos({ proyectos, onAbrir, seleccionado }: Props) {
   const [tipo, setTipo] = useState<TipoProyecto | null>(null);
   const [estado, setEstado] = useState<EstadoProyecto | null>(null);
+
+  /**
+   * Los nombres y significados que se editaron desde el administrador (§3.13.2).
+   *
+   * Las constantes de `core/proyecto.ts` quedan como respaldo: si la colección
+   * todavía no existe —o el pedido falla— la pantalla muestra los textos de
+   * siempre en vez de quedarse en blanco. Un estado sin nombre no se puede
+   * leer, y esto es una etiqueta, no un dato del negocio.
+   */
+  const [textos, setTextos] = useState<Record<string, { nombre: string; significado: string }>>({});
+  const [adminAbierto, setAdminAbierto] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    pb.collection('estado_proyecto')
+      .getFullList<{ clave: string; nombre: string; significado: string }>({ sort: 'orden' })
+      .then((r) => {
+        if (!vivo) return;
+        setTextos(
+          Object.fromEntries(
+            r.map((x) => [x.clave, { nombre: x.nombre, significado: x.significado }]),
+          ),
+        );
+      })
+      .catch(() => {
+        // Sin la colección se usan las constantes. No es un error que valga la
+        // pena mostrarle a nadie: la pantalla funciona igual.
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [adminAbierto]);
+
+  const nombreDe = (e: EstadoProyecto) => textos[e]?.nombre || NOMBRE_ESTADO[e];
+  const reglaDe = (e: EstadoProyecto) => textos[e]?.significado || REGLA_ESTADO[e];
 
   // El estado mostrado es el efectivo, no el guardado: Congelado se deriva del
   // último movimiento (§3, regla 1). Se calcula una vez y se reusa en los
@@ -152,7 +189,7 @@ export function Proyectos({ proyectos, onAbrir, seleccionado }: Props) {
                   className={`ctrl-chip ctrl-estado-${e} ${estado === e ? 'ctrl-chip-on' : ''}`}
                   onClick={() => setEstado(estado === e ? null : e)}
                 >
-                  {NOMBRE_ESTADO[e]} · {cuenta((p) => p.efectivo === e)}
+                  {nombreDe(e)} · {cuenta((p) => p.efectivo === e)}
                 </button>
               ))}
             </div>
@@ -265,16 +302,30 @@ export function Proyectos({ proyectos, onAbrir, seleccionado }: Props) {
       </div>
 
       <div className="ctrl-bloque">
-        <span className="ctrl-filtro-label">Los estados y cuándo se aplican</span>
+        <div className="ctrl-leyenda-cabeza">
+          <span className="ctrl-filtro-label">Los estados y cuándo se aplican</span>
+          {/* §3.13.2 · Acá se editan. Antes esta leyenda salía de un archivo de
+              código y corregir una palabra era un cambio de programa. */}
+          <button
+            type="button"
+            className="boton-mini al-final"
+            title="Cambiar el nombre y el significado de cada estado"
+            onClick={() => setAdminAbierto(true)}
+          >
+            Editar los estados
+          </button>
+        </div>
         <div className="ctrl-leyenda">
           {ESTADOS.map((e) => (
             <div key={e} className="ctrl-leyenda-item">
-              <span className={`ctrl-pastilla ctrl-estado-${e}`}>{NOMBRE_ESTADO[e]}</span>
-              <span className="ctrl-tarjeta-detalle">{REGLA_ESTADO[e]}</span>
+              <span className={`ctrl-pastilla ctrl-estado-${e}`}>{nombreDe(e)}</span>
+              <span className="ctrl-tarjeta-detalle">{reglaDe(e)}</span>
             </div>
           ))}
         </div>
       </div>
+
+      {adminAbierto && <AdminEstados onCerrar={() => setAdminAbierto(false)} />}
     </>
   );
 }

@@ -37,7 +37,9 @@ routerAdd(
       return inv.malo(403, 'Hace falta el permiso de usuarios para dar de alta a alguien.');
     }
 
-    const cuerpo = new DynamicModel({ nombre: '', email: '', rol: '', usuario_id: '' });
+    // `permisos` viaja como JSON en un string: DynamicModel mapea por el tipo
+    // del valor por defecto, y un objeto libre no tiene forma fija.
+    const cuerpo = new DynamicModel({ nombre: '', email: '', rol: '', usuario_id: '', permisos: '' });
     e.bindBody(cuerpo);
 
     const email = String(cuerpo.email || '').trim().toLowerCase();
@@ -101,7 +103,26 @@ routerAdd(
       // §3.1: `pendiente` = invitado y todavia no entro. No puede iniciar
       // sesion hasta aceptar, y eso lo hace el hook de login mas abajo.
       usuario.set('estado', 'pendiente');
-      usuario.set('permisos', {});
+      // Los ajustes que se hicieron sobre el preset del rol (5.1). Vacio =
+      // el preset puro, que es lo que pasaba siempre antes.
+      //
+      // Se filtra clave por clave y solo se aceptan booleanos: esto viene del
+      // navegador y termina en la fila de permisos de una persona. Un objeto
+      // cualquiera metido ahi es una puerta que nadie abrio a proposito.
+      let ajustes = {};
+      try {
+        const crudo = String(cuerpo.permisos || '');
+        if (crudo) {
+          const leido = JSON.parse(crudo);
+          for (const k in leido) {
+            if (typeof leido[k] === 'boolean') ajustes[k] = leido[k];
+          }
+        }
+      } catch (_) {
+        // JSON roto: se ignora y queda el preset. Un alta no se cae por esto.
+        ajustes = {};
+      }
+      usuario.set('permisos', ajustes);
       usuario.set('metodo_invitacion', 'link');
       usuario.set('invitado_en', new Date().toISOString().replace('T', ' '));
       usuario.set('debe_cambiar_clave', true);

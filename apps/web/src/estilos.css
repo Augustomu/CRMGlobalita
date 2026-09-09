@@ -5977,3 +5977,96 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 }
 .dest-alcance { border-top: .5px solid var(--border); margin-top: 6px; }
 .dest-filtro { border-bottom: .5px solid var(--border); margin-bottom: 4px; }
+
+/* Usuarios: el correo debajo del nombre y los accesos rapidos en la fila
+   elegida (5.2, 5.3), y la tabla de permisos del alta (5.1). */
+.usuario-identidad { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.usuario-correo {
+  font-size: var(--txt-sm);
+  color: var(--hint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.usuario-rapidos {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding: 6px 0 2px;
+  margin-top: 5px;
+  border-top: .5px solid var(--border);
+}
+
+.alta-permisos-cabeza { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
+.alta-permisos-grupo { display: flex; flex-direction: column; gap: 1px; padding: 5px 0; }
+.alta-permisos-grupo + .alta-permisos-grupo { border-top: .5px solid var(--border); }
+.alta-permiso {
+  display: grid;
+  grid-template-columns: 14px minmax(110px, auto) 1fr auto;
+  align-items: baseline;
+  gap: 7px;
+  padding: 2px 0;
+  cursor: pointer;
+}
+.alta-permiso:hover { background: var(--bg); }
+.alta-permiso input { margin: 0; cursor: pointer; }
+.alta-permiso-que { font-size: var(--txt-md); font-weight: 500; color: var(--text); }
+/* Un permiso que no viene del rol se marca: dentro de un mes, la unica forma de
+   saber por que esta persona puede algo raro es que lo diga la pantalla. */
+.pastilla-especial {
+  background: var(--warning-light);
+  color: var(--warning);
+  border-color: transparent;
+  font-weight: 600;
+}
+
+/* El administrador de estados de proyecto (bloque 4). Una fila por estado: el
+   nombre editable arriba con su clave al lado, y el significado abajo. La clave
+   se ve y no se toca — es lo que hace que las reglas y los proyectos ya
+   cargados sigan encontrandose. */
+.ctrl-leyenda-cabeza { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.estado-fila { padding: 8px 0; border-bottom: .5px solid var(--border); }
+.estado-fila-arriba { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
+.estado-nombre {
+  font-size: var(--txt-md);
+  font-weight: 600;
+  min-width: 150px;
+  height: 24px;
+}
+.estado-clave {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--txt-sm);
+  color: var(--hint);
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+.estado-significado { width: 100%; font-size: var(--txt-md); resize: vertical; }
+
+/* WA Personal: los filtros rapidos y la etiqueta personal/trabajo (bloque 6).
+   "No agendados" contesta la pregunta con la que se abre esta pantalla: con
+   quien estoy hablando que el CRM no conoce. */
+.wap-filtros {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 6px 8px;
+  border-bottom: .5px solid var(--border);
+}
+.wap-tipo {
+  font-size: var(--txt-xs);
+  padding: 0 4px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.wap-tipo-personal { color: var(--info); background: var(--info-light); }
+.wap-tipo-trabajo { color: var(--accent); background: var(--accent-light); }
+.wap-chat-acciones {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
+  padding-top: 5px;
+}

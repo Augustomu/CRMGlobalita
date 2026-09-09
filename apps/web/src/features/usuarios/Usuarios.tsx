@@ -4,6 +4,7 @@ import {
   LINEAS,
   NOMBRE_LINEA,
   origen,
+  permisosEfectivos,
   puede,
   type Clave,
   type LineaNegocio,
@@ -333,7 +334,14 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
             >
               <div className="fila-arriba">
                 <span className="avatar">{iniciales(u.name || u.email)}</span>
-                <span className="fila-nombre">{u.name || u.email}</span>
+                <div className="usuario-identidad">
+                  <span className="fila-nombre">{u.name || u.email}</span>
+                  {/* 5.2 · El correo, debajo del nombre. Estaba arriba en el
+                      encabezado de la ficha, lejos de la persona a la que
+                      pertenece; acá se lee junto al nombre, que es como se
+                      identifica a alguien. */}
+                  {u.name && <span className="usuario-correo">{u.email}</span>}
+                </div>
               </div>
               <div className="fila-abajo">
                 <span className="fila-etapa">{u.rol}</span>
@@ -344,6 +352,60 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
                   {leads.filter((l) => l.asignado === u.id).length} leads
                 </span>
               </div>
+
+              {/* 5.3 · Los accesos rápidos, en la fila elegida. Las dos cosas
+                  que se hacen sobre otra persona —mandarle un enlace nuevo o
+                  darla de baja— sin bajar a la ficha. La baja sigue en dos
+                  tiempos: el primer clic pregunta. */}
+              {seleccionado === u.id && u.id !== usuarioActual.id && (
+                <div className="usuario-rapidos" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="boton-mini"
+                    disabled={enviandoAcceso}
+                    title={
+                      u.estado === 'pendiente'
+                        ? 'Mandarle otro enlace para elegir su contraseña'
+                        : 'Reiniciar su contraseña: la actual deja de servir y le llega un enlace'
+                    }
+                    onClick={() => void reenviarAcceso()}
+                  >
+                    {enviandoAcceso
+                      ? 'mandando…'
+                      : u.estado === 'pendiente'
+                        ? 'Reenviar invitación'
+                        : 'Reiniciar contraseña'}
+                  </button>
+                  {confirmarBaja ? (
+                    <>
+                      <button
+                        type="button"
+                        className="boton-mini-peligro"
+                        onClick={() => void darDeBaja()}
+                      >
+                        Sí, borrar
+                      </button>
+                      <button
+                        type="button"
+                        className="boton-mini"
+                        onClick={() => setConfirmarBaja(false)}
+                      >
+                        Cancelar
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="boton-mini"
+                      title="Dar de baja: se borra el usuario y sus leads quedan sin asignar"
+                      onClick={() => setConfirmarBaja(true)}
+                    >
+                      Dar de baja
+                    </button>
+                  )}
+                  {avisoAcceso && <span className="pastilla pastilla-ok">{avisoAcceso}</span>}
+                </div>
+              )}
             </div>
           ))}
           {usuarios.length === 0 && <p className="vacio">Cargando…</p>}
@@ -389,7 +451,9 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
                 </div>
               </div>
               <div className="ficha-chips">
-                <span className="pastilla">{usuario.email}</span>
+                {/* 5.2 · El correo ya NO va acá: vive debajo del nombre en la
+                    columna 1. Tenerlo en los dos lados era el mismo dato
+                    ocupando el doble, y arriba estaba lejos de la persona. */}
 
                 {/*
                   Reenviar el acceso (§6.7).
@@ -682,6 +746,16 @@ function AltaUsuario({ onCerrar, onCreado }: { onCerrar: () => void; onCreado: (
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [rol, setRol] = useState<Rol>('colaborador');
+  /**
+   * 5.1 · Lo que se tocó sobre el preset del rol.
+   *
+   * Guarda SÓLO las diferencias, no la lista entera. Es la misma forma que usa
+   * la ficha: `puede()` mira acá primero y si no está, cae al preset. Guardar
+   * la lista completa congelaría los permisos del día del alta — si mañana el
+   * preset de colaborador suma una sección, esta persona no la vería y nadie
+   * entendería por qué.
+   */
+  const [ajustes, setAjustes] = useState<Partial<Record<Clave, boolean>>>({});
   const [error, setError] = useState<string | null>(null);
   const [creando, setCreando] = useState(false);
   const [listo, setListo] = useState<string | null>(null);
@@ -696,7 +770,14 @@ function AltaUsuario({ onCerrar, onCreado }: { onCerrar: () => void; onCreado: (
           'Content-Type': 'application/json',
           Authorization: pb.authStore.token,
         },
-        body: JSON.stringify({ nombre, email: email.trim().toLowerCase(), rol }),
+        body: JSON.stringify({
+          nombre,
+          email: email.trim().toLowerCase(),
+          rol,
+          // Como JSON adentro del JSON: el servidor lo parsea y valida clave por
+          // clave. Vacío significa «el preset puro».
+          permisos: JSON.stringify(ajustes),
+        }),
       });
       const d = (await r.json()) as { ok?: boolean; error?: string; email?: string };
       if (!r.ok || !d.ok) {
@@ -773,15 +854,84 @@ function AltaUsuario({ onCerrar, onCreado }: { onCerrar: () => void; onCreado: (
                       key={r}
                       type="button"
                       className={rol === r ? 'idioma-on' : 'idioma-off'}
-                      onClick={() => setRol(r)}
+                      onClick={() => {
+                        setRol(r);
+                        // Los ajustes se sueltan al cambiar de rol: un
+                        // «especial» sobre el preset de colaborador no
+                        // significa lo mismo sobre el de observador, y
+                        // arrastrarlo dejaría permisos que nadie eligió.
+                        setAjustes({});
+                      }}
                     >
                       {r}
                     </button>
                   ))}
                 </div>
                 <span className="campo-ayuda">
-                  El rol es un preset de permisos (§6.2). Después se ajusta uno por uno desde su ficha.
+                  El rol es un preset de permisos (§6.2). Abajo se ve qué trae, y se puede ajustar
+                  antes de invitar.
                 </span>
+              </div>
+
+              {/* 5.1 · Qué trae ese rol, a la vista y editable.
+                  Antes había que invitar a ciegas y después abrir la ficha para
+                  descubrir qué podía hacer la persona. Lo que se cambia queda
+                  marcado como «especial», para que después se lea de un vistazo
+                  que ésa no tiene el preset puro. */}
+              <div className="campo">
+                <div className="alta-permisos-cabeza">
+                  <span className="campo-label">Qué va a poder hacer</span>
+                  {Object.keys(ajustes).length > 0 && (
+                    <>
+                      <span className="pastilla pastilla-especial">
+                        {Object.keys(ajustes).length} especial
+                        {Object.keys(ajustes).length === 1 ? '' : 'es'}
+                      </span>
+                      <button
+                        type="button"
+                        className="boton-mini al-final"
+                        onClick={() => setAjustes({})}
+                        title="Dejarlo con el preset del rol, sin ajustes"
+                      >
+                        Volver al preset
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {GRUPOS.map((g) => (
+                  <div key={g.titulo} className="alta-permisos-grupo">
+                    <span className="campo-ayuda">{g.titulo}</span>
+                    {g.claves.map((clave) => {
+                      const efectivos = permisosEfectivos({ rol, permisos: ajustes });
+                      const activo = efectivos[clave];
+                      const especial = clave in ajustes;
+                      return (
+                        <label key={clave} className="alta-permiso">
+                          <input
+                            type="checkbox"
+                            checked={activo}
+                            onChange={() =>
+                              setAjustes((a) => {
+                                const preset = permisosEfectivos({ rol, permisos: {} })[clave];
+                                const siguiente = { ...a };
+                                // Si el valor nuevo coincide con el del preset,
+                                // deja de ser un ajuste: se saca del objeto en
+                                // vez de guardarlo igual al preset.
+                                if (!activo === preset) delete siguiente[clave];
+                                else siguiente[clave] = !activo;
+                                return siguiente;
+                              })
+                            }
+                          />
+                          <span className="alta-permiso-que">{EXPLICACION[clave].que}</span>
+                          <span className="campo-ayuda">{EXPLICACION[clave].detalle}</span>
+                          {especial && <span className="pastilla pastilla-especial">especial</span>}
+                        </label>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
               {error && <div className="login-error">{error}</div>}
             </div>
