@@ -1144,7 +1144,7 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .overlay-fondo {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, .45);
+  background: var(--velo);
   z-index: 210;
   display: flex;
   align-items: center;
@@ -1626,7 +1626,8 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   align-items: center;
   justify-content: center;
   padding: 0;
-  font-size: 8px;
+  /* 9px, el piso de la escala. Estaba en 8, que no existe en el producto. */
+  font-size: 9px;
   transition: color 150ms ease-out;
 }
 .reunion-hora-chevron:hover { color: var(--accent); }
@@ -1713,7 +1714,7 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
  * cuál ganaba dependía del orden del archivo. El sidebar está en «el
  * repositorio como sidebar», al final.
  */
-.repo-vacio { font-size: var(--txt-xs); color: var(--hint); padding: 2px 8px; font-style: italic; }
+.repo-vacio { font-style: italic; }
 
 /* --- bandeja de duplicados (D02) ------------------------------------------
    No viene del prototipo: es posterior. Usa las mismas medidas que el resto
@@ -2217,7 +2218,7 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .panel-fondo {
   position: fixed;
   inset: 0;
-  background: rgba(20, 20, 18, .32);
+  background: var(--velo-suave);
   z-index: 60;
   display: flex;
   justify-content: flex-end;
@@ -2583,7 +2584,6 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 
 .agenda-hora-col {
   font-size: var(--txt-xs);
-  color: var(--hint);
   text-align: right;
   padding: 2px 6px 0 0;
   flex-shrink: 0;
@@ -2629,7 +2629,7 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .agenda-col {
   position: relative;
   height: calc(var(--alto-hora) * var(--horas));
-  border-left: .5px solid var(--rule-fuerte, var(--border));
+  border-left: .5px solid var(--border);
   background: var(--surface);
   background-image:
     /* la hora en punto */
@@ -4655,13 +4655,12 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   background: transparent;
   color: var(--hint);
   cursor: pointer;
-  padding: 0 2px;
   font-size: var(--txt-md);
   line-height: 1;
   flex-shrink: 0;
 }
 .repo-destacar-on { color: var(--accent); }
-.repo-alcance { width: 240px; display: flex; flex-direction: column; gap: 7px; }
+.repo-alcance { width: 240px; display: flex; flex-direction: column; }
 .repo-alcance-pie { display: flex; align-items: center; gap: 6px; padding-top: 6px; border-top: .5px solid var(--border); }
 .chip-destacado { border-color: var(--accent-br); color: var(--accent); }
 
@@ -6098,33 +6097,10 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 /* El porqué de que ninguna sesión esté viva. Va una sola vez arriba de las dos
    listas: siete filas diciendo «sin vincular» se leen como siete cosas rotas
    que hay que ir a arreglar de a una, y la causa es una sola. */
-.cc-aviso {
-  margin: 0 0 10px;
-  padding: 8px 10px;
-  border: .5px solid var(--info-br);
-  border-radius: 3px;
-  background: var(--info-light);
-  color: var(--muted);
-  font-size: var(--txt-sm);
-  line-height: 1.45;
-}
-
 /* 3.3 · La última reunión en la fila de la lista. El color responde de un
    vistazo la única pregunta que se hace recorriendo la columna: ¿esta persona
    vino o no vino? El gris junta «todavía no pasó» y «nadie lo registró»: en
    los dos casos no hay nada que celebrar ni que lamentar. */
-.fila-reunion {
-  font-size: var(--txt-sm);
-  font-variant-numeric: tabular-nums;
-  padding: 0 4px;
-  border-radius: 2px;
-  white-space: nowrap;
-  flex: 0 0 auto;
-}
-.fila-reunion-asistio { color: var(--success); background: var(--success-light); }
-.fila-reunion-no-asistio { color: var(--error); background: var(--error-light); }
-.fila-reunion-neutro { color: var(--hint); }
-
 /* ===========================================================================
    Lo agregado el 09/09/2026. Todo pasa por los tokens y por los controles que
    ya existen: radio 8px como el resto, verde --accent para lo activo, bordes
@@ -6222,9 +6198,6 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   align-items: center;
   gap: 5px;
   flex-wrap: wrap;
-  padding: 6px 0 2px;
-  margin-top: 5px;
-  border-top: .5px solid var(--border);
 }
 
 /* El checklist de permisos del alta. Es la misma fila que .dest-opcion del
@@ -6482,14 +6455,16 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   height: 26px;
   padding: 0;
   flex: 0 0 auto;
-  font-size: var(--txt-xs);
+  /* Grande a proposito: es lo primero que se busca al recorrer la lista y
+     costaba apuntarle. 14px es el techo de la escala para texto. */
+  font-size: 14px;
   line-height: 1;
   color: transparent;
   background: transparent;
   border: 0;
   cursor: pointer;
 }
-.wap-chat:hover .wap-punto-boton { color: var(--rule-fuerte, var(--border)); }
+.wap-chat:hover .wap-punto-boton { color: var(--border); }
 .wap-punto-on, .wap-chat:hover .wap-punto-on { color: var(--accent); }
 .wap-punto-boton:hover { color: var(--accent-hover); }
 
@@ -6529,9 +6504,6 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 .wap-chat-arriba { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
 .wap-chat-arriba .wap-chat-nombre { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wap-chat-hora { font-size: var(--txt-xs); color: var(--hint); flex: 0 0 auto; }
-
-/* El punto de sin leer: mas grande, que era lo que costaba apuntarle. */
-.wap-punto-boton { font-size: 15px; }
 
 /* El tilde del chip destacado cuyo paso ya salio con este lead. */
 .dest-chip-enviado { border-color: var(--accent-br); background: var(--accent-light); }

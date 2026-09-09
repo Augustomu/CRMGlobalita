@@ -9,6 +9,12 @@
   --bg: #F2EEE6;
   --surface: #FAF7F1;
   --border: #D9D3C8;
+  /* El fondo oscuro detras de un panel. Dos capas: el velo del modal, que
+     tapa la pantalla entera, y el suave de los paneles que se abren sobre el
+     contenido sin querer esconderlo del todo. Estaban escritos a mano en
+     estilos.css y por eso vivian fuera de la paleta. */
+  --velo: rgb(0 0 0 / .45);
+  --velo-suave: rgb(20 20 18 / .32);
   --text: #2D2D2A;
   --muted: #5E5A52;
   --hint: #8A8580;

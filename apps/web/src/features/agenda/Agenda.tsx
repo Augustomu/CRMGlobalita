@@ -233,6 +233,22 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
   }, [visibles]);
 
   /**
+   * Lo mismo pero SIN el filtro de cuenta, para calcular los ratos libres.
+   *
+   * El filtro esconde bloques; no los borra de la agenda. Calculando los
+   * huecos sobre lo filtrado, poner el filtro en «BR» haría aparecer «2 h
+   * libre» encima de una reunión de AL que sigue estando ahí — y ese cartel
+   * termina en dos reuniones a la misma hora, que es el error que la agenda
+   * existe para evitar. El contador de la cabecera sí respeta el filtro:
+   * ahí la pregunta es «cuántas de ESTA cuenta», no «cuándo estoy libre».
+   */
+  const porDiaSinFiltrar = useMemo(() => {
+    const m = new Map<string, EventoAgenda[]>();
+    for (const e of eventos) m.set(e.fecha, [...(m.get(e.fecha) ?? []), e]);
+    return m;
+  }, [eventos]);
+
+  /**
    * El estirado, escuchado en `document`.
    *
    * Igual que los divisores: la manija mide 9 px y el mouse se le sale en
@@ -533,7 +549,7 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
               // fecha —el hueco que sirve es el que está libre en las dos
               // agendas—, y un hueco con el almuerzo encima no es un hueco.
               const libres = huecosDelDia(
-                delDia.map((e) => ({
+                (porDiaSinFiltrar.get(iso) ?? []).map((e) => ({
                   desde: enMinutos(e.hora),
                   hasta: enMinutos(e.hora) + e.duracion,
                 })),

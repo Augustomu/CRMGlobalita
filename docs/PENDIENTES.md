@@ -3,7 +3,7 @@
 Lo decidido y todavía no hecho. La especificación —cómo tiene que ser— está
 entera en `docs/MANUAL.md`. Acá va sólo el control de qué falta.
 
-Última revisión: **09/09/2026 · 21:15**, verificada contra el código, contra la
+Última revisión: **09/09/2026 · 22:00**, verificada contra el código, contra la
 base y contra los logs de PocketBase. Los números de acá salen de consultas, no
 de memoria.
 
@@ -328,6 +328,43 @@ programadas de Windows.
 
 ---
 
+## 12 · La auditoría de la hoja de estilos (09/09)
+
+Se hizo después de encontrar, por tercera vez, una regla vieja que había
+quedado **debajo** de la nueva y la pisaba en silencio. En vez de buscar a
+ojo se escribieron dos comprobaciones que recorren el archivo entero.
+
+- [x] **Selectores que se pisan a sí mismos: eran 8, quedaron 0.** Cinco
+      reglas estaban declaradas dos veces y la primera no se aplicaba nunca
+      (`.cc-aviso`, `.fila-reunion` y sus tres variantes, `.repo-vacio`,
+      `.repo-destacar`, `.repo-alcance`, `.agenda-hora-col`, `.usuario-rapidos`).
+      Es el mismo mecanismo que dejó el nombre de las reuniones invisible
+      durante tres rondas. Se borraron las muertas; las que ganaban no se
+      tocaron, así que no cambia nada en pantalla.
+- [x] **Tamaños de texto fuera de escala: eran 2, quedaron 0.** CLAUDE.md
+      fija 9/10/11/12/13/14/17px. Había un `8px` en el chevron de la hora y un
+      `15px` en el punto de sin leer —éste lo puse yo al agrandarlo—. Quedaron
+      en 9 y 14.
+- [x] **Colores sueltos: eran 2, quedaron 0.** Los dos fondos oscuros de los
+      overlays estaban escritos a mano. Ahora son `--velo` y `--velo-suave`
+      en `design-tokens.css`, con los mismos valores: se nombran, no se
+      cambian.
+- [x] **Un token fantasma.** `var(--rule-fuerte, var(--border))` aparecía dos
+      veces y `--rule-fuerte` **no está definido en ningún lado**: las dos caían
+      en el fallback. Se lee como si hiciera algo y no hacía nada.
+- [x] **Los ratos libres mentían con el filtro de cuenta puesto.** Se
+      calculaban sobre los eventos VISIBLES, así que filtrando por «BR»
+      aparecía «2 h libre» encima de una reunión de AL que seguía estando.
+      Ese cartel termina en dos reuniones a la misma hora, que es el error que
+      la agenda existe para evitar. Ahora se calculan sobre todos los eventos.
+      El contador de la cabecera sí respeta el filtro, y está bien que lo
+      haga: ahí la pregunta es «cuántas de esta cuenta».
+
+Las dos comprobaciones son scripts de una sola pasada; conviene volver a
+correrlas después de cada tanda de cambios de diseño.
+
+---
+
 ## Deuda técnica anotada
 
 - ⚠️ **Una regla del repo está escrita dos veces, y es la única.**
@@ -337,6 +374,10 @@ programadas de Windows.
   `espejo-del-hook.test.ts`, que carga el archivo del hook de verdad y le exige
   la misma respuesta en diez casos. **Si se toca una, se tocan las dos.** La
   salida limpia sería un paso de build que compile core a JS para los hooks.
+- **La lista de leads trae todo de una vez.** `useLeads.ts` usa `getFullList`
+  y §7.2 pide renderizar de a 80 sumando al hacer scroll. Con 242 leads entra
+  sin problema y la regla de paginado ya está en `core` con sus tests; lo que
+  falta es conectarla. Se vuelve un problema arriba de ~1.500 leads.
 - **No hay login de pruebas.** Al borrar `alberto@globalita.test` se perdió la
   sesión con la que se verificaban las pantallas: las comprobaciones visuales las
   tiene que hacer Augusto hasta que haya un usuario de pruebas.
