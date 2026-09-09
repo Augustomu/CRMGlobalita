@@ -26,16 +26,9 @@ interface ChatRecord {
  */
 type FiltroChat = 'sin_leer' | 'no_agendados';
 
-interface EntranteRecord {
-  id: string;
-  cuenta: string;
-  telefono: string;
-  texto: string;
-  recibido_en: string;
-  ruteo: 'desconocido' | 'conocido_en_esta_cuenta' | 'conocido_otra_cuenta' | 'ambiguo';
-  candidatos: { perfil?: string; lead?: string; nombre?: string }[] | null;
-  resuelto: boolean;
-}
+// La colección «entrante» sigue existiendo en la base: el worker va a escribir
+// ahí los mensajes de números desconocidos. Esta pantalla dejó de leerla el
+// 09/09 —ver el comentario del triage— así que su tipo tampoco vive acá.
 
 function hoyIso(): string {
   const d = new Date();
@@ -89,13 +82,6 @@ export function WaPersonal({ onIrAlLead }: Props) {
   // Follow-up. Es la misma clase de panel y se usa igual de seguido.
   const anchoCol = useAncho(COLUMNA_WA);
 
-  const [gmail, setGmail] = useState(() => {
-    try {
-      return Boolean(localStorage.getItem('om.gmail'));
-    } catch {
-      return false;
-    }
-  });
   const [chats, setChats] = useState<ChatRecord[]>([]);
   const [filtros, setFiltros] = useState<Set<FiltroChat>>(new Set());
   const [marcando, setMarcando] = useState<string | null>(null);
@@ -108,18 +94,15 @@ export function WaPersonal({ onIrAlLead }: Props) {
    * —con +52, con 52, con espacios— y compararlos enteros no encuentra nada.
    */
   const [telefonosEnLaBase, setTelefonosEnLaBase] = useState<Set<string>>(new Set());
-  const [entrantes, setEntrantes] = useState<EntranteRecord[]>([]);
   const [sel, setSel] = useState<string | null>(null);
   const [borrador, setBorrador] = useState('');
-  const [agendando, setAgendando] = useState<string | null>(null);
-  const [nombreNuevo, setNombreNuevo] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const hoy = hoyIso();
 
   const recargar = useCallback(async () => {
     try {
-      const [c, conTelefono, e] = await Promise.all([
+      const [c, conTelefono] = await Promise.all([
         // Por el último mensaje, como cualquier lista de chats: arriba el que
         // escribió recién.
         pb.collection('chat_personal').getFullList<ChatRecord>({ sort: '-updated' }),
@@ -132,7 +115,6 @@ export function WaPersonal({ onIrAlLead }: Props) {
             fields: 'id,expand.perfil.telefono',
           })
           .catch(() => []),
-        pb.collection('entrante').getFullList<EntranteRecord>({ sort: '-recibido_en' }),
       ]);
       setChats(c);
       setTelefonosEnLaBase(
@@ -142,7 +124,6 @@ export function WaPersonal({ onIrAlLead }: Props) {
             .filter((t) => t.length >= 6),
         ),
       );
-      setEntrantes(e);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -186,28 +167,6 @@ export function WaPersonal({ onIrAlLead }: Props) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setMarcando(null);
-    }
-  }
-
-  const rutedos = entrantes.filter((e) => e.resuelto && e.ruteo === 'conocido_en_esta_cuenta');
-  // Los que piden una decisión.
-  const pendientes = entrantes.filter((e) => !e.resuelto);
-
-  async function esPersonal(e: EntranteRecord, nombre?: string) {
-    try {
-      await pb.collection('chat_personal').create({
-        cuenta: e.cuenta,
-        nombre: nombre?.trim() || corto(e.telefono),
-        telefono: e.telefono,
-        no_leido: false,
-        mensajes: [{ quien: 'in', texto: e.texto, en: e.recibido_en }],
-      });
-      await pb.collection('entrante').update(e.id, { resuelto: true });
-      setAgendando(null);
-      setNombreNuevo('');
-      await recargar();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -278,128 +237,18 @@ export function WaPersonal({ onIrAlLead }: Props) {
           <span className="campo-ayuda tabular al-final">{chats.length} chats</span>
         </div>
 
-        {/* El triage de números desconocidos SÓLO bajo «no agendados».
-            Antes estaba siempre arriba, empujando la lista de chats hacia
-            abajo con una sección que la mayoría de los días está vacía. Es
-            justo lo que ese filtro pregunta, así que vive ahí. */}
-        {filtros.has('no_agendados') && (
-        <div className="wap-triage">
-          {rutedos.length > 0 && (
-            <div className="wap-auto">
-              <span className="wap-auto-titulo">Ya estaban en la base: fueron al follow-up</span>
-              {rutedos.map((e) => (
-                <button
-                  key={e.id}
-                  type="button"
-                  className="wap-auto-fila"
-                  onClick={() => e.candidatos?.[0]?.lead && onIrAlLead(e.candidatos[0].lead!)}
-                >
-                  <span className="wap-auto-nombre">{e.candidatos?.[0]?.nombre ?? corto(e.telefono)}</span>
-                  <span className="wap-auto-hora tabular">{hora(e.recibido_en)}</span>
-                </button>
-              ))}
-            </div>
-          )}
+        {/*
+          EL TRIAGE DE NÚMEROS DESCONOCIDOS SE FUE (09/09/2026).
 
-          {pendientes.length > 0 ? (
-            <div className="wap-nuevos">
-              <span className="wap-nuevos-titulo">Números que no están en la base</span>
-              {/* §8.5 y decisión #8: «Gmail queda como toggle de interfaz, sin
-                  flujo de permisos». Estaba deshabilitado esperando una conexión
-                  de Google que la decisión dice explícitamente que no hace
-                  falta. Es un estado, y como tal se guarda por navegador.
+          Era un bloque arriba de la lista que separaba «ya estaban en la base»
+          de «números que no están en la base», con sus propios botones. Augusto:
+          «eso no se debe mostrar ahí; no agendados es sólo un filtro normal,
+          como no leídos, nada especial».
 
-                  El title dice lo que hoy es cierto: el guardado en Gmail llega
-                  con la integración. Prometer en el botón lo que todavía no
-                  pasa sería peor que no tenerlo. */}
-              <button
-                type="button"
-                className={gmail ? 'wap-gmail wap-gmail-on' : 'wap-gmail'}
-                title={
-                  gmail
-                    ? 'Desconectar Gmail. El guardado real llega con la integración.'
-                    : 'Marcarlo para agendar también en Gmail. El guardado real llega con la integración.'
-                }
-                onClick={() => {
-                  const v = !gmail;
-                  setGmail(v);
-                  try {
-                    localStorage.setItem('om.gmail', v ? '1' : '');
-                  } catch {
-                    // Ventana privada: vale para esta sesión y ya.
-                  }
-                }}
-              >
-                {gmail ? 'Gmail conectado · lo que agendes se guarda ahí' : 'Conectar Gmail para agendar ahí también'}
-              </button>
-
-              {pendientes.map((e) => (
-                <div key={e.id} className="wap-entrante">
-                  <div className="wap-entrante-fila">
-                    <span className="wap-entrante-nombre">{corto(e.telefono)}</span>
-                    {e.ruteo === 'ambiguo' && (
-                      <span
-                        className="auto-chip auto-chip-agotada"
-                        title="El teléfono coincide con más de un perfil: hay que elegir a mano para no colgarle el mensaje al lead equivocado"
-                      >
-                        ambiguo
-                      </span>
-                    )}
-                    <span className="campo-ayuda tabular">{hora(e.recibido_en)}</span>
-                  </div>
-                  <span className="wap-entrante-txt">{e.texto}</span>
-                  <div className="wap-acciones">
-                    <button
-                      type="button"
-                      className="wap-boton-fu"
-                      title="Lo pasa a la base y abre su ficha en Follow-up"
-                      onClick={() => void moverAFollowup(e.telefono, corto(e.telefono), e.cuenta, e.id)}
-                    >
-                      Mover a FU
-                    </button>
-                    <button
-                      type="button"
-                      className="wap-boton"
-                      title="Amigo o familia: queda en esta pestaña"
-                      onClick={() => void esPersonal(e)}
-                    >
-                      Es personal
-                    </button>
-                    <button
-                      type="button"
-                      className="wap-boton wap-boton-plano"
-                      title="Guardarlo en la agenda de contactos"
-                      onClick={() => {
-                        setAgendando(agendando === e.id ? null : e.id);
-                        setNombreNuevo('');
-                      }}
-                    >
-                      Agendar
-                    </button>
-                  </div>
-                  {agendando === e.id && (
-                    <div className="wap-agendar">
-                      <input
-                        autoFocus
-                        value={nombreNuevo}
-                        placeholder="Nombre para la agenda…"
-                        onChange={(ev) => setNombreNuevo(ev.target.value)}
-                        onKeyDown={(ev) => ev.key === 'Enter' && void esPersonal(e, nombreNuevo)}
-                      />
-                      <button type="button" className="wap-boton-fu" onClick={() => void esPersonal(e, nombreNuevo)}>
-                        Guardar
-                      </button>
-                      <span className="campo-ayuda">se guarda solo en la agenda local</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="wap-vacio">sin números nuevos por identificar</div>
-          )}
-        </div>
-        )}
+          Y es cierto: la lista de chats YA tiene esos números, y el filtro de no
+          agendados los deja solos. Dos formas de ver lo mismo, una encima de la
+          otra, empujando la lista de chats hacia abajo.
+        */}
 
         {/* Los dos interruptores. Apagados es «todos», así que no hay un botón
             «todos»: sería un tercero para decir lo mismo. */}
@@ -457,7 +306,16 @@ export function WaPersonal({ onIrAlLead }: Props) {
                 ●
               </button>
               <div className="wap-chat-medio">
-                <span className="wap-chat-nombre">{c.nombre}</span>
+                {/* La hora va PEGADA AL NOMBRE, no contra el borde derecho.
+                    Suelta al final quedaba desalineada entre filas —cada nombre
+                    tiene otro largo— y para leer «Vero, 14:30» había que cruzar
+                    la fila entera con la vista. */}
+                <span className="wap-chat-arriba">
+                  <span className="wap-chat-nombre">{c.nombre}</span>
+                  <span className="wap-chat-hora tabular">
+                    {hora(String(c.mensajes?.[c.mensajes.length - 1]?.en ?? ''))}
+                  </span>
+                </span>
                 <span className="wap-chat-ultimo">{ultimoTexto(c.mensajes ?? [])}</span>
               </div>
               {/* Las dos acciones de la derecha, siempre visibles y con ancho

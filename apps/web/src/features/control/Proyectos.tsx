@@ -145,6 +145,34 @@ export function Proyectos({ proyectos, onAbrir, seleccionado }: Props) {
 
   return (
     <>
+      {/* Los estados, ARRIBA. Estaban al final de la pantalla, después de la
+          tabla entera: había que bajar hasta el fondo para leer qué significa
+          «Nuestra pelota», que es justamente lo que uno necesita ANTES de
+          mirar la tabla. */}
+      <div className="ctrl-bloque">
+        <div className="ctrl-leyenda-cabeza">
+          <span className="ctrl-filtro-label">Los estados y cuándo se aplican</span>
+          {/* §3.13.2 · Acá se editan. Antes esta leyenda salía de un archivo de
+              código y corregir una palabra era un cambio de programa. */}
+          <button
+            type="button"
+            className="boton-mini al-final"
+            title="Cambiar el nombre y el significado de cada estado"
+            onClick={() => setAdminAbierto(true)}
+          >
+            Editar los estados
+          </button>
+        </div>
+        <div className="ctrl-leyenda">
+          {ESTADOS.map((e) => (
+            <div key={e} className="ctrl-leyenda-item">
+              <span className={`ctrl-pastilla ctrl-estado-${e}`}>{nombreDe(e)}</span>
+              <span className="ctrl-tarjeta-detalle">{reglaDe(e)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="ctrl-tarjetas">
         {tarjetas.map((t) => (
           <div key={t.label} className="ctrl-tarjeta">
@@ -299,30 +327,6 @@ export function Proyectos({ proyectos, onAbrir, seleccionado }: Props) {
           La columna Actualización muestra la última novedad del proyecto. Cliqueando la fila se
           abre la ficha: notas, actualizaciones y próximas acciones en columnas.
         </span>
-      </div>
-
-      <div className="ctrl-bloque">
-        <div className="ctrl-leyenda-cabeza">
-          <span className="ctrl-filtro-label">Los estados y cuándo se aplican</span>
-          {/* §3.13.2 · Acá se editan. Antes esta leyenda salía de un archivo de
-              código y corregir una palabra era un cambio de programa. */}
-          <button
-            type="button"
-            className="boton-mini al-final"
-            title="Cambiar el nombre y el significado de cada estado"
-            onClick={() => setAdminAbierto(true)}
-          >
-            Editar los estados
-          </button>
-        </div>
-        <div className="ctrl-leyenda">
-          {ESTADOS.map((e) => (
-            <div key={e} className="ctrl-leyenda-item">
-              <span className={`ctrl-pastilla ctrl-estado-${e}`}>{nombreDe(e)}</span>
-              <span className="ctrl-tarjeta-detalle">{reglaDe(e)}</span>
-            </div>
-          ))}
-        </div>
       </div>
 
       {adminAbierto && <AdminEstados onCerrar={() => setAdminAbierto(false)} />}

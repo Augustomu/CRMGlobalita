@@ -137,6 +137,8 @@ export interface PlantillaRecord {
   por_defecto: boolean;
   textos: Partial<Record<'es' | 'pt' | 'en', string>>;
   destacado: string;
+  /** En que idioma quedo destacado. El chip lo usa al tocarlo (§7.2). */
+  destacado_idioma?: 'es' | 'pt' | 'en' | '';
   orden: number;
 }
 

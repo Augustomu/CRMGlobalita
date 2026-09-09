@@ -6161,12 +6161,14 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
    los eventos «tentativos» de Google. Se ve que el horario está tomado y que
    eso no se toca desde acá. */
 .agenda-evento-calendario {
+  /* Relleno propio y borde entero, no un tono apenas distinto del fondo: el
+     bloque tiene que verse como un bloque aunque no sea del CRM. */
   background: var(--info-light);
-  border: .5px solid var(--info-br);
-  border-left: 3px solid var(--info);
-  color: var(--muted);
+  border: .5px solid var(--info);
+  border-left: 4px solid var(--info);
+  color: var(--text);
   cursor: default;
-  box-shadow: none;
+  box-shadow: 0 1px 2px rgb(0 0 0 / .07);
 }
 .agenda-evento-calendario:hover { background: var(--info-light); box-shadow: 0 1px 3px rgb(0 0 0 / .1); }
 .agenda-evento-calendario .agenda-evento-nombre { font-weight: 500; color: var(--text); }
@@ -6210,8 +6212,8 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 /* La marca de sin leer, a la izquierda del nombre: es lo primero que se busca
    al recorrer la lista, y es el mismo boton que lo devuelve a sin leer. */
 .wap-punto-boton {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   flex: 0 0 auto;
   font-size: var(--txt-xs);
@@ -6221,7 +6223,7 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   border: 0;
   cursor: pointer;
 }
-.wap-chat:hover .wap-punto-boton { color: var(--border); }
+.wap-chat:hover .wap-punto-boton { color: var(--rule-fuerte, var(--border)); }
 .wap-punto-on, .wap-chat:hover .wap-punto-on { color: var(--accent); }
 .wap-punto-boton:hover { color: var(--accent-hover); }
 
@@ -6250,3 +6252,17 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 .conectar-telefono { width: 100%; margin: 4px 0 2px; }
 .conectar-lista { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
 .conectar-lista .dest-opcion { width: 100%; }
+
+/* El nombre y la hora del ultimo mensaje, en la misma linea y pegados. Suelta
+   contra el borde derecho la hora quedaba desalineada entre filas —cada nombre
+   tiene otro largo— y habia que cruzar la fila con la vista para leerla. */
+.wap-chat-arriba { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.wap-chat-arriba .wap-chat-nombre { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wap-chat-hora { font-size: var(--txt-xs); color: var(--hint); flex: 0 0 auto; }
+
+/* El punto de sin leer: mas grande, que era lo que costaba apuntarle. */
+.wap-punto-boton { font-size: var(--txt-md); }
+
+/* El tilde del chip destacado cuyo paso ya salio con este lead. */
+.dest-chip-enviado { border-color: var(--accent-br); background: var(--accent-light); }
+.dest-chip-tilde { color: var(--accent); font-weight: 700; margin-right: 3px; }

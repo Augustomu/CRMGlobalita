@@ -9,7 +9,7 @@ import {
   nombreDeAlcance,
   reordenar,
   sinCuenta,
-  estaDestacadaPara, plantillasDe, resolverParaPaso, type Plantilla } from '@crm/core/plantilla';
+  estaDestacadaPara, resolverParaPaso, type Plantilla } from '@crm/core/plantilla';
 import { casaDeLinea } from '@crm/core/proyecto';
 import type { Canal, Idioma, Paso } from '@crm/core/tipos';
 import { diaLocal } from '@crm/core/fecha';
@@ -329,25 +329,13 @@ export function EnviarMensaje({
       <div className="enviar-cabecera">
         <span className="colapsable-titulo">Enviar mensaje</span>
 
-        {/* 1.5 · El idioma en dos letras, acá y en ningún otro lado.
-            Es el MISMO control segmentado que usa el resto del CRM
-            (`selector-idioma`, radio 8px, verde de acento). La primera versión
-            era un desplegable cuadrado y desentonaba: cada cosa nueva usa los
-            controles que ya existen, no unos parecidos. */}
-        <div className="selector-idioma enviar-idiomas" role="group" aria-label="Idioma">
-          {IDIOMAS.map((i) => (
-            <button
-              key={i}
-              type="button"
-              className={idioma === i ? 'idioma-on' : 'idioma-off'}
-              title={`Mandar en ${i.toUpperCase()}`}
-              onClick={() => setIdioma(i)}
-            >
-              {i.toUpperCase()}
-            </button>
-          ))}
-        </div>
+        {/*
+          EL IDIOMA YA NO SE ELIGE ACÁ (09/09/2026).
 
+          Estaba como ES/PT/EN al lado del título y era una pregunta ya
+          contestada: el idioma se elige AL DESTACAR el mensaje —«quiero éste,
+          en portugués»— así que viaja con el chip, no con la pantalla.
+        */}
         {/* 1.2 · El switch de canal. Lo que se elige acá es POR DÓNDE SALE:
             decide el mensaje que se registra y a dónde lleva la flecha.
             Mismo control segmentado que el idioma y que el resto del CRM. */}
@@ -393,96 +381,35 @@ export function EnviarMensaje({
       </div>
 
       {/*
-        La secuencia, en vez del desplegable «Paso».
+        LA FILA SON LOS MENSAJES QUE UNO TIENE A MANO. Nada más.
 
-        El desplegable decía cuál tocaba pero escondía el resto: para saber si
-        el R1 había salido —y en qué idioma— había que abrir el historial. La
-        fila muestra las dos cosas de un vistazo, que es lo que uno mira antes
-        de escribir.
+        Tuvo tres versiones y las dos primeras estaban mal por el mismo motivo:
+        eran una lista que el sistema decidía. Primero un desplegable «Paso»,
+        después los once chips fijos —R0 a R8, «reinvitar», «gracias»— que
+        aparecían quisiera uno o no.
 
-        Se puede tocar cualquiera: a veces hay que repetir un paso, o saltear.
-        Lo que la fila NO hace es esconder que se salteó.
+        Augusto: «todo esto se elimina, yo elijo qué es lo que queda guardado».
+        Y tiene razón: los pasos de la cadencia son una regla del sistema, pero
+        cuáles tener A MANO es una decisión de quien escribe.
+
+        Cada chip trae su paso y su idioma de cuando se destacó, así que tocarlo
+        deja el mensaje listo: no hay que elegir nada más. El tilde verde dice
+        que ese paso ya salió con este lead.
       */}
       <div className="enviar-secuencia">
-        {secuencia.map((x) => (
-          <button
-            key={x.paso}
-            type="button"
-            className={[
-              'paso-chip',
-              x.enviado ? 'paso-chip-enviado' : '',
-              x.toca ? 'paso-chip-toca' : '',
-              paso === x.paso ? 'paso-chip-elegido' : '',
-            ].join(' ')}
-            title={
-              [
-                x.enviado
-                  ? `Ya se mandó${x.idioma ? ` en ${x.idioma}` : ''}. Tocá para volver a escribirlo.`
-                  : x.toca
-                    ? 'Es el que toca'
-                    : 'Todavía no se mandó',
-                plantillasDe(catalogo, x.paso).length > 1 && paso === x.paso
-                  ? 'Tocá de nuevo para pasar a la otra versión de este paso.'
-                  : '',
-              ]
-                .filter(Boolean)
-                .join(' ')
-            }
-            onClick={() => {
-              // Tocar el que YA está elegido cicla entre las variantes de ese
-              // paso, cuando hay más de una. Es lo que reemplaza a la fila de
-              // abajo que mostraba los nombres completos: R3 tiene dos textos y
-              // sin esto el segundo quedaba inalcanzable.
-              if (paso === x.paso) {
-                const variantes = plantillasDe(catalogo, x.paso);
-                if (variantes.length > 1) {
-                  const i = variantes.findIndex(
-                    (v) => v.id === (plantillaId ?? variantes[0]!.id),
-                  );
-                  setPlantillaId(variantes[(i + 1) % variantes.length]!.id);
-                  setTocado(false);
-                }
-                return;
-              }
-              setPaso(x.paso);
-            }}
-          >
-            {x.enviado && <span className="paso-chip-tilde">✓</span>}
-            <span>{x.paso}</span>
-            {/* El idioma va sólo en los enviados: en los que faltan sería una
-                promesa, no un dato. */}
-            {x.enviado && x.idioma && <span className="paso-chip-idioma">{x.idioma}</span>}
-          </button>
-        ))}
-
-        {/* Los dos pasos que no son de la cadencia y que a veces hacen falta. */}
-        {(['R0-recontacto', 'agradecimiento'] as const).map((extra) => (
-          <button
-            key={extra}
-            type="button"
-            className={`paso-chip paso-chip-aparte ${paso === extra ? 'paso-chip-elegido' : ''}`}
-            title={
-              extra === 'agradecimiento'
-                ? 'Después de la reunión. No mueve la etapa (§5.10)'
-                : 'La reinvitación, cuando el lead vuelve del recontacto (D24)'
-            }
-            onClick={() => setPaso(extra)}
-          >
-            {extra === 'agradecimiento' ? 'gracias' : 'reinvitar'}
-          </button>
-        ))}
-
-        {/* 1.3 · Los destacados viven en ESTA fila, después de una separación.
-            Son lo mismo que un paso —un texto que se pone en el cuadro— así que
-            tenerlos en dos renglones distintos era partir una sola decisión. */}
-        <span className="enviar-corte" aria-hidden="true" />
 
         {destacados.map((p) => {
           const alcance = leerAlcance(p.destacado);
+          // El idioma con el que se destacó. Los de antes de este cambio no lo
+          // tienen: se caen a español, que es el que todas las plantillas
+          // cargadas tienen escrito.
+          const suIdioma = (p.destacado_idioma || 'es') as Idioma;
+          // ¿Ese paso ya salió con este lead? El tilde lo dice sin abrir nada.
+          const yaSalio = Boolean(p.paso && secuencia.some((x) => x.paso === p.paso && x.enviado));
           return (
             <span
               key={p.id}
-              className={arrastrando === p.id ? 'dest-chip dest-chip-yendo' : 'dest-chip'}
+              className={`${arrastrando === p.id ? 'dest-chip dest-chip-yendo' : 'dest-chip'} ${yaSalio ? 'dest-chip-enviado' : ''}`}
               draggable
               onDragStart={() => setArrastrando(p.id)}
               onDragOver={(e) => e.preventDefault()}
@@ -502,11 +429,23 @@ export function EnviarMensaje({
               <button
                 type="button"
                 className="dest-chip-usar"
+                title={
+                  `${p.nombre} · ${suIdioma.toUpperCase()}` +
+                  (yaSalio ? ' — ya se mandó con este lead' : '') +
+                  ` · destacado en ${nombreDeAlcance(alcance)}`
+                }
                 onClick={() => {
-                  setTexto(p.textos?.[idioma] ?? p.textos?.es ?? '');
-                  setTocado(true);
+                  // El chip trae TODO: su texto, su idioma y su paso. Antes
+                  // había que elegir el paso arriba y el idioma al lado, y si
+                  // uno se olvidaba de alguno el mensaje salía mal registrado.
+                  setTexto(p.textos?.[suIdioma] ?? p.textos?.es ?? '');
+                  setIdioma(suIdioma);
+                  if (p.paso) setPaso(p.paso as Paso);
+                  setPlantillaId(p.id);
+                  setTocado(false);
                 }}
               >
+                {yaSalio && <span className="dest-chip-tilde">✓</span>}
                 {p.nombre}
               </button>
               <button
@@ -641,9 +580,10 @@ export function EnviarMensaje({
                     <span className="dest-opcion-texto">
                       <span className="dest-opcion-titulo">
                         <b>{m.nombre}</b>
-                        <span className="dest-chip-idioma">
-                          {Object.keys(m.textos ?? {}).join(' ').toUpperCase() || '—'}
-                        </span>
+                        {/* Sin la etiqueta de idiomas: la lista YA está
+                            filtrada por el idioma del paso 1, así que decir
+                            «ES PT» en cada fila es repetir la pregunta que se
+                            acaba de contestar. */}
                         {alcance.tipo !== 'ninguno' && (
                           <span className="campo-ayuda">en {nombreDeAlcance(alcance)}</span>
                         )}
@@ -693,9 +633,12 @@ export function EnviarMensaje({
                               ? { tipo: 'casa' as const, casa: 'seng' as const }
                               : conCuenta(antes, cuenta)
                         : sinCuenta(antes, cuenta, abrevs);
-                      await pb
-                        .collection('plantilla')
-                        .update(m.id, { destacado: escribirAlcance(despues) });
+                      await pb.collection('plantilla').update(m.id, {
+                        destacado: escribirAlcance(despues),
+                        // El idioma viaja con el chip: es lo que se eligió en
+                        // el paso 1 y lo que va a poner al tocarlo.
+                        destacado_idioma: quiere ? idiomaModal : '',
+                      });
                     }
                     setListaAbierta(false);
                     onPlantillasCambiadas?.();

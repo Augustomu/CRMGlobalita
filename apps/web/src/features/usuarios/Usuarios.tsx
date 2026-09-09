@@ -351,9 +351,10 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
                 <span className="fila-contacto">
                   {leads.filter((l) => l.asignado === u.id).length} leads
                 </span>
-              </div>
 
-              {/* 5.3 · Los accesos rápidos, en la fila elegida. Las dos cosas
+              {/* Los dos iconos, en la MISMA línea que el rol y los leads.
+                  Estaban en un renglón propio abajo y hacían la fila el doble
+                  de alta para dos botones de 22 px. Antes de eso, aparecían Las dos cosas
                   que se hacen sobre otra persona —mandarle un enlace nuevo o
                   darla de baja— sin bajar a la ficha. La baja sigue en dos
                   tiempos: el primer clic pregunta. */}
@@ -414,6 +415,7 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
                   )}
                 </div>
               )}
+              </div>
             </div>
           ))}
           {usuarios.length === 0 && <p className="vacio">Cargando…</p>}
