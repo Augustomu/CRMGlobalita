@@ -42,18 +42,62 @@ export interface PorQueEsProspeccion {
 const LINK = /https?:\/\/(?:[a-z0-9-]+\.)*linkedin\.com\//i;
 
 /**
- * El título de una reunión de prospección: tres partes separadas por barras.
+ * Quiénes son «los nuestros» en el título.
  *
- * No alcanza con que haya una barra: «Almuerzo con Juan / martes» tiene una y
- * no es una reunión. Se piden las TRES partes con texto, que es la forma que
- * el equipo usa y la que escribe el CRM.
+ * El título de una reunión de prospección termina en alguien de casa: la cuenta
+ * desde la que se prospecta, o el propio Augusto. Es lo que distingue
+ * «Rodrigues - Augusto» de «Dentista - Belgrano».
  */
-export function tieneFormaDeTitulo(titulo: string): boolean {
-  const partes = String(titulo ?? '')
-    .split('/')
+export const LOS_NUESTROS = [
+  'augusto',
+  'alejandro',
+  'francisco',
+  'edith',
+  'bruno',
+  'david',
+  'alberto',
+  'delia',
+];
+
+/** Las partes de un título, cortado por barra o por guión. */
+export function partesDelTitulo(titulo: string): string[] {
+  return String(titulo ?? '')
+    // El guión SUELTO, con espacios a los lados. Sin eso, «Jean-Pierre» y
+    // «Coca-Cola» se partirían al medio y el nombre quedaria roto.
+    .split(/\s+[-–—]\s+|\//)
     .map((x) => x.trim())
     .filter(Boolean);
-  return partes.length >= 3;
+}
+
+/**
+ * El título de una reunión de prospección.
+ *
+ * DOS FORMAS, y las dos estaban en el calendario de Augusto desde antes del
+ * CRM:
+ *
+ *     Marcelo Carneiro / Francisco / Augusto     tres partes, con barras
+ *     Rodrigues - Augusto                        dos partes, con guión
+ *
+ * La primera version de esto pedia TRES partes separadas por BARRA, y dejaba
+ * afuera media agenda: «Julio - Augusto», «Brenno - Augusto», «Rodrigues -
+ * Augusto» son reuniones de prospección y no entraban. Augusto lo marco.
+ *
+ * Lo que hace que un título cuente no es la cantidad de partes: es que la
+ * ÚLTIMA sea alguien de casa. «Almuerzo con Juan / martes» tiene dos partes y
+ * «martes» no es nadie; «Rodrigues - Augusto» tiene dos y Augusto sí.
+ */
+export function tieneFormaDeTitulo(titulo: string): boolean {
+  const partes = partesDelTitulo(titulo);
+  if (partes.length < 2) return false;
+
+  const ultima = partes[partes.length - 1]!
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  // Alcanza con que la ultima parte EMPIECE con uno de los nuestros: «Augusto
+  // Unzaga» y «Augusto» son la misma persona.
+  return LOS_NUESTROS.some((n) => ultima === n || ultima.startsWith(n + ' '));
 }
 
 export function porQueEsProspeccion(ev: EventoDelCalendario): PorQueEsProspeccion {

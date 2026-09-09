@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { tocaHoy } from '@crm/core/cadencia';
 import { linkWhatsApp } from '@crm/core/telefono';
 import { abrirConPerfil } from '../../lib/abrir';
+import { ConectarTelefono } from './ConectarTelefono';
 import { recientes, sePuedeSacar } from '@crm/core/etiqueta';
 import { diaLocal } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
@@ -157,6 +158,8 @@ export function FichaLead({
 
   const wa = p?.telefono ? linkWhatsApp({ valor: p.telefono, valido: p.telefono_valido }) : undefined;
   const linkPerfil = p?.slug ? `https://www.linkedin.com/in/${p.slug}` : '';
+  /** El buscador de teléfonos huérfanos, abierto o no (§13). */
+  const [conectandoTelefono, setConectandoTelefono] = useState(false);
   /** El Chrome de la cuenta de origen del lead (7.7). */
   const chromeDeLaCuenta = lead.expand?.cuenta?.chrome_perfil || null;
   const vence = tocaHoy(
@@ -640,6 +643,38 @@ export function FichaLead({
               : undefined
           }
         />
+
+        {/*
+          Conectar un teléfono que ya está en la base.
+
+          Los datos entraron por dos puertas y no se tocan: los leads salieron
+          del calendario y los teléfonos de dos exportaciones de WhatsApp, que
+          entraron como perfiles sin lead. Duplicados cruzó los que tenían el
+          nombre igual y ahí se terminó lo automático — el resto no coincide
+          exacto y adivinar de más junta a dos personas distintas.
+
+          Sólo aparece cuando falta el número: con teléfono cargado, este botón
+          sería una invitación a pisarlo.
+        */}
+        {editable && veTelefono && !p?.telefono && (
+          <button
+            type="button"
+            className="boton-mini conectar-telefono"
+            title="Buscar entre los contactos de WhatsApp que todavía no son de nadie"
+            onClick={() => setConectandoTelefono(true)}
+          >
+            Conectar un teléfono de la base
+          </button>
+        )}
+
+        {conectandoTelefono && p && (
+          <ConectarTelefono
+            perfilDelLead={p.id}
+            nombreDelLead={p.nombre ?? ''}
+            onCerrar={() => setConectandoTelefono(false)}
+            onConectado={onGuardado}
+          />
+        )}
 
         <FechaReunion
           lead={lead}

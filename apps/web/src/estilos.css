@@ -6244,3 +6244,9 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 .usuario-icono:disabled { opacity: .4; cursor: default; }
 .usuario-icono-peligro { color: var(--error); border-color: var(--error); background: var(--error-light); font-size: var(--txt-sm); }
 .usuario-icono-peligro:hover { color: var(--surface); background: var(--error); border-color: var(--error); }
+
+/* El buscador de telefonos huerfanos. Ancho completo y debajo de Contacto: no
+   es una accion del encabezado, es lo que falta de ese bloque. */
+.conectar-telefono { width: 100%; margin: 4px 0 2px; }
+.conectar-lista { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.conectar-lista .dest-opcion { width: 100%; }

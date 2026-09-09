@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   esProspeccion,
+  partesDelTitulo,
   porQueEsProspeccion,
   tieneFormaDeTitulo,
 } from '../src/prospeccion.ts';
@@ -37,10 +38,26 @@ test('«Nombre / Cuenta / Augusto» es el título de siempre', () => {
   assert.equal(esProspeccion({ titulo: 'Marcelo Carneiro / Francisco / Augusto' }), true);
 });
 
-test('una sola barra no alcanza', () => {
-  // «Almuerzo con Juan / martes» tiene una barra y no es una reunión.
+test('el GUIÓN también cuenta: «Rodrigues - Augusto»', () => {
+  // La primera versión pedía tres partes con barra y dejaba afuera media
+  // agenda: estos tres son reuniones de prospección y no entraban.
+  for (const t of ['Rodrigues - Augusto', 'Julio - Augusto', 'Brenno - Augusto']) {
+    assert.equal(esProspeccion({ titulo: t }), true, t);
+  }
+});
+
+test('lo que decide es que la última parte sea alguien de casa', () => {
+  // «martes» no es nadie; Augusto sí.
   assert.equal(tieneFormaDeTitulo('Almuerzo con Juan / martes'), false);
-  assert.equal(esProspeccion({ titulo: 'Almuerzo con Juan / martes' }), false);
+  assert.equal(tieneFormaDeTitulo('Dentista - Belgrano'), false);
+  assert.equal(tieneFormaDeTitulo('Charlison / Augusto'), true);
+});
+
+test('un guión pegado no parte el nombre', () => {
+  // «Jean-Pierre» y «Coca-Cola» quedarían rotos si se cortara por cualquier
+  // guión. Se corta sólo por el guión suelto, con espacios a los lados.
+  assert.equal(tieneFormaDeTitulo('Jean-Pierre Dupont'), false);
+  assert.equal(tieneFormaDeTitulo('Jean-Pierre Dupont - Augusto'), true);
 });
 
 test('las barras vacías no cuentan como partes', () => {
@@ -74,14 +91,20 @@ test('dice cuál de las dos señales lo decidió', () => {
     porQueEsProspeccion({ descripcion: 'https://www.linkedin.com/in/x' }).senal,
     'link',
   );
-  assert.equal(porQueEsProspeccion({ titulo: 'A / B / C' }).senal, 'titulo');
+  assert.equal(porQueEsProspeccion({ titulo: 'Marcelo / Francisco / Augusto' }).senal, 'titulo');
   assert.equal(porQueEsProspeccion({ titulo: 'Almuerzo' }).senal, 'ninguna');
 });
 
 test('el link gana sobre el título: es la señal más explícita', () => {
   const r = porQueEsProspeccion({
-    titulo: 'A / B / C',
+    titulo: 'Marcelo / Francisco / Augusto',
     descripcion: 'https://www.linkedin.com/in/x',
   });
   assert.equal(r.senal, 'link');
+});
+
+test('parte por barra y por guión suelto', () => {
+  assert.deepEqual(partesDelTitulo('Marcelo / Francisco / Augusto'), ['Marcelo', 'Francisco', 'Augusto']);
+  assert.deepEqual(partesDelTitulo('Rodrigues - Augusto'), ['Rodrigues', 'Augusto']);
+  assert.deepEqual(partesDelTitulo('Jean-Pierre - Augusto'), ['Jean-Pierre', 'Augusto']);
 });
