@@ -80,3 +80,20 @@ La primera vez pide crear un superusuario desde la consola web.
 **No usa la instalación de PocketBase que ya tenés en `~/pocketbase`**: copia el
 ejecutable a `.pb/` y trabaja con su propia base, para no tocar los datos que ya viven ahí.
 
+
+## Probar el correo de alta en desarrollo
+
+El alta de usuario manda un correo (§6.7 del manual). En desarrollo hay dos
+opciones:
+
+**a) Sin SMTP.** Dar de alta falla y lo dice. Es el estado por defecto y está
+bien para todo lo que no toque usuarios.
+
+**b) Con un SMTP de mentira**, para ver el correo que sale. Cualquier servidor
+que acepte la conversación SMTP en un puerto local sirve (MailHog, Mailpit, o
+uno de veinte líneas en Node). Después, en `http://127.0.0.1:8090/_/` →
+**Settings → Mail settings**: host `127.0.0.1`, el puerto que uses, sin TLS.
+
+Lo que NO hay que hacer es apuntar el desarrollo al SMTP de Hostinger: los
+correos saldrían de verdad, a direcciones de prueba que en general no existen,
+y eso ensucia la reputación del dominio.

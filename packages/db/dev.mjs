@@ -59,6 +59,19 @@ superusuarioLocal();
 console.log('\nPocketBase en http://127.0.0.1:8090/_/  (Ctrl+C para parar)\n');
 spawn(exe, ['serve', '--dir', datos, '--migrationsDir', migraciones, '--hooksDir', hooks], {
   stdio: 'inherit',
+  /*
+   * APP_URL es lo que va adentro del enlace del correo de alta (§6.7). En
+   * produccion lo pone el .service; aca apunta al Vite local, para que el
+   * enlace del correo abra la app que estas corriendo y no la de internet.
+   *
+   * Sin esto, dar de alta a alguien falla en desarrollo con "Falta APP_URL" —
+   * que es correcto, pero pasaria en cada corrida.
+   */
+  env: {
+    ...process.env,
+    APP_URL: process.env.APP_URL || 'http://localhost:5173',
+    MAIL_DESDE: process.env.MAIL_DESDE || 'crm@globalita.test',
+  },
 });
 
 /**
