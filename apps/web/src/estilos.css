@@ -5707,3 +5707,21 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   text-overflow: ellipsis;
 }
 .dup-lista-cuentas { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+
+/* ---------- el estado del lead no es una etiqueta (§3.2, D17) ---------- */
+/*
+ * La etapa y la situación se veían con la misma pastilla que las etiquetas, al
+ * lado de las que llevan × para sacarlas. Augusto preguntó por qué no podía
+ * borrar «R1» y «Contestó»: porque no se borran, se cambian — pero la pantalla
+ * no lo decía.
+ *
+ * Van en un tono más apagado y sin borde: se leen como estado, no como algo
+ * que uno le puso al lead y le puede sacar.
+ */
+.pastilla-estado {
+  background: var(--bg);
+  color: var(--muted);
+  border-color: transparent;
+  font-weight: 600;
+  cursor: help;
+}

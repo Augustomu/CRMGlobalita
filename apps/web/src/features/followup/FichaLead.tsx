@@ -568,9 +568,32 @@ export function FichaLead({
         )}
 
         <div className="ficha-chips">
-          <span className="pastilla">{lead.etapa}</span>
-          <span className="pastilla">{NOMBRE_SITUACION[lead.situacion] ?? lead.situacion}</span>
-          <span className="pastilla" title="Idioma sugerido por país (§5.6)">{idioma}</span>
+          {/*
+            La etapa y la situación NO son etiquetas, y hasta ahora se veían
+            igual que ellas —misma pastilla, al lado de las que sí tienen ×—.
+            Augusto preguntó por qué no podía borrar «R1» y «Contestó»: la
+            respuesta es que no se borran, se cambian, y eso la pantalla no lo
+            decía en ningún lado.
+
+            Son los dos ejes del estado del lead (D17): la etapa dice DÓNDE
+            está en la cadencia, la situación QUÉ hacer con él. Ahora llevan su
+            propio estilo y dicen qué son al pasar por encima.
+          */}
+          <span
+            className="pastilla pastilla-estado"
+            title={`Etapa: en qué punto de la cadencia está (§5.1). Se cambia al registrar un envío, no se borra.`}
+          >
+            {lead.etapa}
+          </span>
+          <span
+            className="pastilla pastilla-estado"
+            title="Situación: qué hacer con este lead (§3.2). Se cambia desde Datos, no se borra."
+          >
+            {NOMBRE_SITUACION[lead.situacion] ?? lead.situacion}
+          </span>
+          <span className="pastilla pastilla-estado" title="Idioma sugerido por país (§5.6)">
+            {idioma}
+          </span>
           {vence && <span className="pastilla pastilla-alerta">le toca hoy</span>}
           {p?.no_contactar && (
             <span className="pastilla pastilla-error" title={p.no_contactar_motivo}>
