@@ -12,11 +12,18 @@ import { coincide } from './busqueda.ts';
 import { esFase2 } from './cadencia.ts';
 import type { Paso } from './tipos.ts';
 
-export type GrupoEtapa = 'En cadencia' | 'Recontacto' | 'Fase 2' | 'Sin aceptar';
+export type GrupoEtapa = 'En cadencia' | 'Recontacto' | 'Fase 2' | 'Sin aceptar' | 'Sin trabajar';
 
 export type FiltroEtapa = 'todas' | GrupoEtapa;
 
-export const FILTROS_ETAPA: FiltroEtapa[] = ['todas', 'En cadencia', 'Recontacto', 'Fase 2', 'Sin aceptar'];
+export const FILTROS_ETAPA: FiltroEtapa[] = [
+  'todas',
+  'En cadencia',
+  'Recontacto',
+  'Fase 2',
+  'Sin aceptar',
+  'Sin trabajar',
+];
 
 export interface FilaCompartida {
   perfil_id: string;
@@ -54,6 +61,16 @@ export function estaCompartido(f: FilaCompartida): boolean {
  * aparecerían como «En cadencia» y el filtro no serviría para nada.
  */
 export function grupoDeEtapa(f: FilaCompartida): GrupoEtapa {
+  /*
+   * «Sin trabajar» va primero de todo: es la persona que está en la base y a la
+   * que NINGUNA cuenta invitó todavía —no tiene lead—, y eso no es lo mismo que
+   * «sin aceptar», que es «la invitamos y no contestó».
+   *
+   * La diferencia importa antes de invitar a alguien: uno es material nuevo, el
+   * otro ya se quemó. Sin este grupo, los 175 contactos del CSV de WhatsApp
+   * aparecían como si les hubiéramos escrito y nos hubieran ignorado.
+   */
+  if (!f.cuentas.length) return 'Sin trabajar';
   if (f.situacion === 'esperando_recontacto' || f.etapa === 'R0-recontacto') return 'Recontacto';
   if (!f.f_aceptacion) return 'Sin aceptar';
   if (esFase2(f.etapa as Paso)) return 'Fase 2';
@@ -125,8 +142,20 @@ export function historial(
   }));
 }
 
-/** «respondió en R2» / «sin respuesta» / «sin mensajes aún» / «nunca aceptó». */
+/**
+ * «respondió en R2» / «sin respuesta» / «sin mensajes aún» / «nunca aceptó» /
+ * «sin invitar».
+ *
+ * Los dos últimos parecen lo mismo y son opuestos. «Nunca aceptó» es alguien a
+ * quien le escribimos y no contestó: material quemado. «Sin invitar» es alguien
+ * que está en la base y al que nadie le escribió todavía: material nuevo.
+ *
+ * Decirle «nunca aceptó» a los 175 contactos del CSV de WhatsApp los hacía ver
+ * como el peor grupo de la base cuando son el mejor: tienen teléfono y nadie
+ * los tocó.
+ */
 export function resumenDeRespuesta(f: FilaCompartida, pasos: PasoDelHistorial[]): string {
+  if (!f.cuentas.length) return 'sin invitar';
   if (!f.f_aceptacion) return 'nunca aceptó';
   if (!pasos.length) return 'sin mensajes aún';
   const conRespuesta = pasos.find((p) => p.estado === 'respondió');

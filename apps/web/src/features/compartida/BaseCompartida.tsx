@@ -45,6 +45,17 @@ interface EnvioRecord {
   enviado_en: string;
 }
 
+/** Lo que hace falta del perfil para la fila. */
+interface PerfilRecord {
+  id: string;
+  nombre?: string;
+  cargo?: string;
+  empresa?: string;
+  industria?: string;
+  pais?: string;
+  ciudad?: string;
+}
+
 const COLUMNAS = [
   'Lead y rol',
   'Cuenta',
@@ -82,6 +93,7 @@ export function BaseCompartida({ onCerrar }: Props) {
   useEscape(onCerrar);
   const [leads, setLeads] = useState<LeadRecord[]>([]);
   const [envios, setEnvios] = useState<EnvioRecord[]>([]);
+  const [perfiles, setPerfiles] = useState<PerfilRecord[]>([]);
   const [q, setQ] = useState('');
   const [cuenta, setCuenta] = useState('todas');
   const [etapa, setEtapa] = useState<FiltroEtapa>('todas');
@@ -90,10 +102,23 @@ export function BaseCompartida({ onCerrar }: Props) {
 
   const recargar = useCallback(async () => {
     try {
-      const [l, e] = await Promise.all([
+      // Los PERFILES son la base, no los leads.
+      //
+      // Antes esta pantalla se armaba recorriendo `lead`, así que un perfil sin
+      // ningún lead no existía acá. Con el import del CSV de WhatsApp eso dejó
+      // 249 personas invisibles: están en la base, tienen teléfono y país, y no
+      // había forma de encontrarlas en ninguna pantalla.
+      //
+      // Y es justo al revés de lo que dice §3.12: la base compartida ES la
+      // tabla `perfil`, con los leads de cada uno colgando. Un perfil sin lead
+      // es el caso normal —alguien que todavía ninguna cuenta trabajó— y es
+      // exactamente lo que hay que poder ver antes de invitar a alguien.
+      const [ps, l, e] = await Promise.all([
+        pb.collection('perfil').getFullList<PerfilRecord>({ sort: 'nombre' }),
         pb.collection('lead').getFullList<LeadRecord>({ expand: 'perfil,cuenta' }),
         pb.collection('envio').getFullList<EnvioRecord>(),
       ]);
+      setPerfiles(ps);
       setLeads(l);
       setEnvios(e);
     } catch (err) {
@@ -121,6 +146,35 @@ export function BaseCompartida({ onCerrar }: Props) {
   const { filas, enviosPorPerfil } = useMemo(() => {
     const porPerfil = new Map<string, FilaCompartida>();
     const env = new Map<string, EnvioRecord[]>();
+
+    // Primero TODOS los perfiles, con o sin lead. Los que tengan alguno se
+    // completan abajo; los que no, quedan con la cuenta en «—» y sin etapa,
+    // que es la verdad: nadie los trabajó todavía.
+    for (const p of perfiles) {
+      porPerfil.set(p.id, {
+        perfil_id: p.id,
+        nombre: p.nombre ?? 'sin nombre',
+        cargo: p.cargo ?? '',
+        empresa: p.empresa ?? '',
+        industria: p.industria ?? '',
+        pais: p.pais ?? '',
+        ciudad: p.ciudad ?? '',
+        // `cuentas` vacío es la marca de que ninguna cuenta lo trabajó: es lo
+        // que distingue esta fila base de una que vino de un lead.
+        cuentas: [],
+        // Sin lead no hay etapa ni situación: no son un dato faltante, es que
+        // la relación de trabajo no existe.
+        etapa: '',
+        situacion: '',
+        f_invitacion: null,
+        f_aceptacion: null,
+        f_respuesta: null,
+        proximo_contacto: null,
+        ultimo_paso: null,
+        ultimo_en: null,
+      });
+    }
+
     for (const l of leads) {
       const p = l.expand?.perfil;
       if (!p) continue;
@@ -152,7 +206,11 @@ export function BaseCompartida({ onCerrar }: Props) {
         ultimo_en: ultimo?.enviado_en ?? null,
       };
 
-      if (!previa) {
+      // Sin cuentas, `previa` es la fila base del perfil —no viene de ningún
+      // lead— y no tiene con qué competir: la del lead gana siempre. Sin esta
+      // distinción, un lead sin envíos empataba 0 a 0 contra la fila vacía y
+      // se quedaba la vacía, borrando su etapa y su cuenta.
+      if (!previa || previa.cuentas.length === 0) {
         porPerfil.set(p.id, nueva);
         continue;
       }

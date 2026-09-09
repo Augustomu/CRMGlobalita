@@ -107,3 +107,28 @@ test('el resumen distingue los cuatro casos', () => {
     'respondió en R2',
   );
 });
+
+test('§3.12 · un perfil que ninguna cuenta trabajó no es «sin aceptar»', () => {
+  // Los 175 contactos del CSV de WhatsApp: están en la base, nadie los invitó.
+  // Contarlos como «sin aceptar» diría que les escribimos y nos ignoraron —
+  // material quemado — cuando en realidad son material nuevo.
+  const f = fila({ perfil_id: 'p1', cuentas: [], etapa: '', situacion: '', f_aceptacion: null });
+  assert.equal(grupoDeEtapa(f), 'Sin trabajar');
+});
+
+test('§3.12 · con una cuenta y sin aceptación, sí es «sin aceptar»', () => {
+  const f = fila({ perfil_id: 'p2', cuentas: ['AL'], etapa: 'R0', situacion: 'en_curso', f_aceptacion: null });
+  assert.equal(grupoDeEtapa(f), 'Sin aceptar');
+});
+
+test('§3.12 · «sin invitar» y «nunca aceptó» no son lo mismo', () => {
+  // Opuestos: uno es material nuevo, el otro es material quemado.
+  assert.equal(
+    resumenDeRespuesta(fila({ perfil_id: 'p3', cuentas: [], f_aceptacion: null }), []),
+    'sin invitar',
+  );
+  assert.equal(
+    resumenDeRespuesta(fila({ perfil_id: 'p4', cuentas: ['AL'], f_aceptacion: null }), []),
+    'nunca aceptó',
+  );
+});
