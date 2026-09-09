@@ -801,6 +801,7 @@ export function App() {
               <Agenda
                 leads={leads}
                 usuario={usuario}
+                seleccionado={seleccionado}
                 onCerrar={() => setAgendaAbierta(false)}
                 onIrAlLead={(id) => irA(() => setSeleccionado(id))}
               />

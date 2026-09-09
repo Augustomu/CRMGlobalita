@@ -2602,20 +2602,36 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
  * Las líneas son fondo, no bordes de elementos: dibujarlas con divs sería
  * trece elementos por columna que no hacen nada más que estar ahí.
  */
+/*
+ * La grilla de horas, con BANDAS ALTERNAS.
+ *
+ * Antes eran doce franjas del mismo blanco separadas por una línea de medio
+ * píxel: para saber si un bloque caía a las 11 o a las 12 había que contar
+ * desde arriba. La banda alterna se lee sin contar, y la línea de la media hora
+ * queda como referencia fina adentro de cada una.
+ */
 .agenda-col {
   position: relative;
   height: calc(var(--alto-hora) * var(--horas));
   border-left: .5px solid var(--border);
   background-image:
+    /* la línea de la hora en punto, la más marcada */
+    repeating-linear-gradient(
+      to bottom,
+      var(--border) 0 1px,
+      transparent 1px var(--alto-hora)
+    ),
+    /* la de la media hora, apenas insinuada */
     repeating-linear-gradient(
       to bottom,
       var(--border) 0 .5px,
-      transparent .5px var(--alto-hora)
+      transparent .5px calc(var(--alto-hora) / 2)
     ),
+    /* y la banda: una hora sí, una hora no */
     repeating-linear-gradient(
       to bottom,
-      var(--bg) 0 .5px,
-      transparent .5px calc(var(--alto-hora) / 2)
+      var(--bg) 0 var(--alto-hora),
+      transparent var(--alto-hora) calc(var(--alto-hora) * 2)
     );
 }
 .agenda-col-hoy { background: var(--info-light); }
@@ -2641,19 +2657,32 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 }
 .agenda-bloque-abierto { z-index: 40; }
 
+/*
+ * La reunión agendada desde el CRM: verde y con cuerpo.
+ *
+ * Es la que se puede mover, abrir y confirmar, y la única que el CRM controla.
+ * Al lado de un evento del calendario —gris, punteado, que no se toca— la
+ * diferencia tiene que leerse sin pasar el mouse por encima. Antes las dos eran
+ * casi del mismo claro y la agenda parecía una hoja en blanco con texto.
+ */
 .agenda-evento {
   position: absolute;
   inset: 0 2px 1px 0;
   display: flex;
   flex-direction: column;
   gap: 1px;
-  padding: 1px 5px;
-  border-radius: 6px;
-  border-left: 2px solid var(--accent);
+  padding: 2px 6px;
+  border-radius: 8px;
+  border: .5px solid var(--accent-br);
+  border-left: 3px solid var(--accent);
   background: var(--accent-light);
+  color: var(--text);
   cursor: grab;
   overflow: hidden;
 }
+.agenda-evento:hover { border-color: var(--accent); background: var(--accent-br); }
+.agenda-evento .agenda-evento-nombre { font-weight: 600; color: var(--text); }
+.agenda-evento .agenda-evento-hora { color: var(--accent-hover); font-weight: 600; }
 /*
  * Un bloque de quince minutos no tiene alto para dos líneas, así que ahí la
  * hora y el nombre van en la misma. Se mide el bloque, no la ventana: el alto
@@ -6154,3 +6183,13 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   border-radius: 8px;
 }
 .dest-paso-control { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-left: 0; }
+
+/* La fila elegida en la vista Lista.
+   Al tocar un lead en la ficha, su fila acá se ilumina: sin eso, con doscientas
+   filas iguales, no hay forma de saber cuál se está mirando. Es el mismo verde
+   que usa la lista de contactos para lo mismo. */
+.agenda-lista-fila-on {
+  background: var(--accent-light);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.agenda-lista-fila-on .agenda-lista-nombre { font-weight: 600; color: var(--text); }

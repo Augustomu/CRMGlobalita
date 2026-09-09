@@ -61,6 +61,8 @@ function fechaLarga(iso: string): string {
 }
 
 interface Props {
+  /** Qué lead está abierto en la ficha, para iluminar su fila en la Lista. */
+  seleccionado: string | null;
   leads: LeadRecord[];
   /** Quién mira: decide qué reuniones ve con detalle y cuáles como «Ocupado». */
   usuario: UsuarioRecord | null;
@@ -74,7 +76,7 @@ interface Props {
  * Es un sidebar de Follow-up, no una sección: se abre al lado de la lista para
  * poder mirar la semana sin perder de vista en qué lead se estaba.
  */
-export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
+export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: Props) {
   const {
     eventos,
     cargando,
@@ -532,7 +534,7 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
               .toUpperCase();
             return (
               <div key={l.id} className="agenda-lista-envoltorio">
-              <div className="agenda-lista-fila">
+              <div className={`agenda-lista-fila ${seleccionado === l.id ? 'agenda-lista-fila-on' : ''}`}>
                 <button
                   type="button"
                   className={`agenda-check ${chequeados.has(l.id) ? 'agenda-check-on' : ''}`}
