@@ -18,6 +18,14 @@ interface Props {
   cuenta?: string;
   /** Quién queda siguiendo al lead. Es el que está cargando. */
   asignado?: string;
+  /**
+   * El nombre con el que arranca el formulario.
+   *
+   * Lo usa «Conectar con un lead» de la agenda: ahí ya se sabe cómo se llama la
+   * persona —está en el título del evento del calendario— y volver a tipearlo
+   * sería pedir un dato que la pantalla anterior ya tenía.
+   */
+  nombre?: string;
   onCerrar: () => void;
   /** Se llama con el id del lead nuevo para poder abrirlo. */
   onCreado: (leadId: string) => void;
@@ -50,10 +58,10 @@ interface Parecido {
  * Cargar dos veces al mismo es el error caro: se le escribe desde dos cuentas
  * y se quema el contacto.
  */
-export function NuevoLead({ cuenta, asignado, onCerrar, onCreado }: Props) {
+export function NuevoLead({ cuenta, asignado, nombre, onCerrar, onCreado }: Props) {
   const [cuentas, setCuentas] = useState<CuentaRecord[]>([]);
   const [a, setA] = useState<AltaDeLead>({
-    nombre: '',
+    nombre: nombre ?? '',
     cuenta: cuenta ?? '',
     proximo_contacto: proximoSugerido(HOY),
   });

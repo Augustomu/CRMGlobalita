@@ -6198,9 +6198,50 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 .agenda-evento-calendario:hover { background: var(--info); box-shadow: 0 2px 6px rgb(0 0 0 / .22); }
 .agenda-evento-calendario .agenda-evento-nombre { font-weight: 500; color: var(--surface); }
 .agenda-evento-calendario .agenda-evento-hora { color: var(--surface); opacity: .8; font-weight: 600; }
-.agenda-evento-calendario:hover { background: var(--info-light); box-shadow: 0 1px 3px rgb(0 0 0 / .1); }
-.agenda-evento-calendario .agenda-evento-nombre { font-weight: 500; color: var(--text); }
-.agenda-evento-calendario .agenda-evento-hora { color: var(--info); opacity: 1; font-weight: 600; }
+
+/* §7.6 · UN EVENTO DE GOOGLE QUE YA TIENE LEAD.
+   Deja de ser un bloque de horario: es una reunion con alguien, y se pinta con
+   el verde del CRM porque eso es lo que es. El borde en --accent-br al costado
+   es lo unico que lo distingue de una reunion agendada desde aca —sigue siendo
+   de Google, no se arrastra— y el cursor dice que se puede abrir. */
+.agenda-evento-vinculado {
+  background: var(--accent);
+  border: none;
+  border-left: 4px solid var(--accent-br);
+  color: var(--surface);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgb(0 0 0 / .18);
+}
+.agenda-evento-vinculado:hover { box-shadow: 0 2px 6px rgb(0 0 0 / .26); }
+.agenda-evento-vinculado .agenda-evento-nombre { color: var(--surface); font-weight: 600; }
+.agenda-evento-vinculado .agenda-evento-hora { color: var(--surface); opacity: .85; font-weight: 600; }
+
+/* §7.6 · UN EVENTO DE GOOGLE DE PROSPECCION Y SIN LEAD.
+   Es el que Augusto veia «palido». El color decia la verdad —no hay lead
+   detras— asi que no se le sube el tono: se le agrega lo que faltaba, que es
+   poder hacer algo. El punteado del borde izquierdo dice «falta algo aca» sin
+   pelearle color al bloque, y la etiqueta dice QUE falta, para no repetir el
+   error del boton de conectar telefono, que estaba y nadie encontro. */
+.agenda-evento-conectable {
+  cursor: pointer;
+  border-left: 4px dashed var(--accent-br);
+}
+.agenda-evento-conectable:hover { box-shadow: 0 2px 6px rgb(0 0 0 / .26); }
+.agenda-evento-conectar {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  font-size: var(--txt-xs);
+  font-weight: 600;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--surface);
+  /* En un bloque de quince minutos no entra, y esta bien que no entre: el
+     titulo del bloque lo dice igual. */
+  pointer-events: none;
+}
 
 /* Los tres pasos de destacar un mensaje: idioma, para quien, cuales. El numero
    no es adorno — el orden es la correccion: antes se elegia el mensaje primero

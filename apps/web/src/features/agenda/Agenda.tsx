@@ -11,6 +11,8 @@ import {
 } from '@crm/core/reunion';
 import type { UsuarioRecord, LeadRecord } from '../../lib/types';
 import { leadsConSeguimiento, useAgenda, type EventoAgenda } from './useAgenda';
+import { personasSinLead, type PersonaDelCalendario } from '@crm/core/vincular';
+import { ConectarEvento } from './ConectarEvento';
 
 /**
  * La franja de trabajo. Fuera de 8 a 20 no se agenda, así que dibujar el resto
@@ -90,12 +92,31 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
     pegarFoto,
     nuevaReunion,
     guardarNotas,
+    externos,
+    vincularEventos,
   } = useAgenda(true, usuario);
   const [vista, setVista] = useState<Vista>('Semanal');
   const [offset, setOffset] = useState(0);
+  /**
+   * De qué persona del calendario es cada evento sin lead (§7.6).
+   *
+   * Se calcula sobre TODOS los eventos y no sobre los de la semana que se está
+   * mirando: al hacer clic en «Brenno» del martes hay que conectar los 38 que
+   * tiene repartidos en el año, no los dos que se ven en pantalla.
+   */
+  const personaPorEvento = useMemo(() => {
+    const mapa = new Map<string, PersonaDelCalendario>();
+    for (const persona of personasSinLead(externos)) {
+      for (const id of persona.eventos) mapa.set(id, persona);
+    }
+    return mapa;
+  }, [externos]);
+
   const [arrastrando, setArrastrando] = useState<EventoAgenda | null>(null);
   const [destino, setDestino] = useState<{ fecha: string; hora: string } | null>(null);
   const [hover, setHover] = useState<string | null>(null);
+  /** La persona del calendario que se está por conectar con un lead (§7.6). */
+  const [conectando, setConectando] = useState<PersonaDelCalendario | null>(null);
   /** Tres estados, sin texto: todos → con check → sin check (§7.6). */
   const [fCheck, setFCheck] = useState<'todos' | 'con' | 'sin'>('todos');
   /** §7.6: filtro por cuenta. Con seis cuentas, la semana es ilegible sin él. */
@@ -301,6 +322,24 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
         </div>
       )}
 
+      {/* §7.6 · Conectar los eventos de una persona del calendario con un
+          lead. Se abre desde cualquier bloque de Google que sea de prospección
+          y todavía no tenga lead. */}
+      {conectando && (
+        <ConectarEvento
+          persona={conectando}
+          onVincular={vincularEventos}
+          onCerrar={() => setConectando(null)}
+          onConectado={() =>
+            setAviso(
+              conectando.cuantos === 1
+                ? `«${conectando.nombre}» quedó conectado.`
+                : `Los ${conectando.cuantos} eventos de «${conectando.nombre}» quedaron conectados.`,
+            )
+          }
+        />
+      )}
+
       <div className="agenda-cabecera">
         <span className="colapsable-titulo">Agenda</span>
         <div className="reunion-segmentado">
@@ -493,6 +532,8 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
                         onFoto={pegarFoto}
                         onMover={mover}
                         onAviso={setAviso}
+                        onConectar={setConectando}
+                        persona={personaPorEvento.get(e.id) ?? null}
                       />
                     );
                   })}
@@ -773,6 +814,8 @@ function Evento({
   onMover,
   onAviso,
   perfilChrome,
+  onConectar,
+  persona,
 }: {
   e: EventoAgenda;
   /** Dónde va dentro de la columna del día: hora, duración y carril. */
@@ -793,6 +836,16 @@ function Evento({
   onMover: (id: string, fecha: string, hora: string) => Promise<void>;
   /** El cartel vive en la agenda: la tarjeta se desmonta al recargar. */
   onAviso: (texto: string) => void;
+  /**
+   * §7.6 · Conectar este evento del calendario con un lead.
+   *
+   * Sólo tiene sentido en los bloques que vinieron de Google y todavía no
+   * tienen lead. `persona` es null cuando el evento no es de prospección —el
+   * almuerzo, la clase— y entonces no se ofrece nada: no hay lead que ponerle
+   * a un almuerzo.
+   */
+  onConectar: (p: PersonaDelCalendario) => void;
+  persona: PersonaDelCalendario | null;
 }) {
   // Lo que se está escribiendo, sin guardar todavía.
   const [notas, setNotas] = useState(e.notas);
@@ -804,11 +857,57 @@ function Evento({
   // §6.3: el bloque de otro calendario dice CUÁNDO y nada más. No se arrastra
   // —no es tuyo—, no abre ficha —no hay lead que abrir— y no tiene tarjeta de
   // hover, porque no hay nada que mostrar ahí.
-  // 7.3 · Lo demás del propio Google Calendar: el almuerzo, la clase, la
+  // §7.6 · Lo demás del propio Google Calendar: el almuerzo, la clase, la
   // reunión interna. Se dibuja con su título —es de uno— pero no se arrastra
   // ni se abre: acá no hay lead, y moverlo desde el CRM daría a entender que
   // el CRM lo controla, cuando el dueño de ese evento es Google.
   if (e.origen === 'calendario') {
+    // §7.6 · Ya conectado con un lead. Deja de ser un bloque de horario y pasa
+    // a ser lo que siempre fue: una reunión con alguien. Se pinta como tal y
+    // el clic abre la ficha. Lo que NO cambia es que sigue siendo de Google:
+    // no se arrastra, porque moverlo desde acá daría a entender que el CRM lo
+    // controla.
+    if (e.vinculado && e.lead) {
+      return (
+        <div className="agenda-bloque" style={caja}>
+          <div
+            className="agenda-evento agenda-evento-vinculado"
+            title={`${e.nombre} · conectado con un lead · el evento sigue siendo de Google`}
+            onClick={() => onIrAlLead(e.lead)}
+          >
+            <span className="agenda-evento-hora tabular">{e.hora}</span>
+            <span className="agenda-evento-nombre">{e.nombre}</span>
+          </div>
+        </div>
+      );
+    }
+
+    // §7.6 · De prospección y sin lead: es lo que Augusto veía «pálido». El
+    // color decía la verdad —no hay lead detrás— y lo que faltaba era poder
+    // ponérselo. El clic abre la pantalla de conectar.
+    if (persona) {
+      return (
+        <div className="agenda-bloque" style={caja}>
+          <div
+            className="agenda-evento agenda-evento-calendario agenda-evento-conectable"
+            title={
+              persona.cuantos === 1
+                ? `${e.nombre} · sin lead. Tocá para conectarlo.`
+                : `${e.nombre} · sin lead. Tocá para conectar los ${persona.cuantos} eventos de esta persona.`
+            }
+            onClick={() => onConectar(persona)}
+          >
+            <span className="agenda-evento-hora tabular">{e.hora}</span>
+            <span className="agenda-evento-nombre">{e.nombre}</span>
+            <span className="agenda-evento-conectar">conectar</span>
+          </div>
+        </div>
+      );
+    }
+
+    // Lo demás del calendario propio: el almuerzo, la clase, la reunión
+    // interna. Se dibuja para que la agenda no muestre huecos que no existen,
+    // pero acá no hay nada que conectar.
     return (
       <div className="agenda-bloque" style={caja}>
         <div

@@ -1056,6 +1056,38 @@ propias con todo el detalle y los horarios de los demás administradores encima,
 como bloques ocupados**. Lo mismo en el panel de Fecha de reunión, donde el
 hueco que sirve es el que está libre en las dos agendas.
 
+**Conectar un evento del calendario con un lead** (09/09/2026).
+
+El calendario propio trae dos clases de bloque: las reuniones que agendó el CRM
+—que tienen lead— y todo lo demás, que llegó de Google y no tiene nada detrás.
+Los segundos se dibujan distinto, y eso es correcto: no son reuniones del CRM.
+Pero muchos **sí son reuniones de prospección** hechas antes de que el CRM
+existiera, y ahí lo que falta no es color: es el vínculo.
+
+- **Se conecta por PERSONA, no por evento.** Un evento suelto casi nunca está
+  solo: son reuniones que se repiten con la misma persona. Al 09/09/2026 hay
+  **278 eventos de prospección sin lead, y son 145 personas**: dos de ellas se
+  llevan 83 eventos. Conectar de a un evento sería pedir 278 respuestas para
+  145 preguntas. Elegir el lead una vez engancha **todos** los eventos de esa
+  persona.
+- **El nombre sale del título**, con la misma lectura que decide qué evento es
+  de prospección (§5.11): la última parte es alguien de casa, así que la
+  primera es la persona de afuera. «Rodrigues - Augusto» → Rodrigues.
+- **No adivina.** Los leads se ordenan poniendo primero los que comparten una
+  palabra entera del nombre, pero elige una persona. Es la misma decisión de
+  Duplicados y por el mismo motivo: juntar a dos personas distintas es el error
+  caro. Si esa persona todavía no es lead, se crea desde ahí con el alta de
+  siempre —con su detección de duplicados— y queda conectada al volver.
+- **Conectado, el bloque se pinta como reunión y el clic abre la ficha.** Lo
+  que no cambia es de quién es el evento: sigue siendo de Google, así que no se
+  arrastra. Moverlo desde el CRM daría a entender que el CRM lo controla.
+- **El vínculo sobrevive a la sincronización**: el reloj que trae los cambios
+  de Google pisa título, horario y duración, y no toca el lead. Si el evento se
+  cancela en Google, la fila se borra y el vínculo se va con ella — el evento
+  es de Google y ocurrió o no ocurrió allá.
+- **Borrar el lead no borra el evento** (`cascadeDelete: false`). El evento
+  pasó; el CRM no es quien para hacerlo desaparecer. Queda suelto otra vez.
+
 **Los bloques de otro calendario** dicen CUÁNDO y **de quién es la agenda**, y
 nada más (→ D18). De quién es hace falta para poder agendarle algo; con quién
 se reúne, no: eso sigue sin viajar al navegador, porque sale de la colección de

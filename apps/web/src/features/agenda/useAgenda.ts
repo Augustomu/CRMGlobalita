@@ -60,8 +60,25 @@ export interface EventoAgenda {
    * es cierto— pero la fila deja de pedir un dato que nadie va a poder dar.
    */
   confirmacionArchivada?: boolean;
+  /**
+   * Un evento de Google que YA se conectó con un lead (§7.6).
+   *
+   * Deja de ser un bloque anónimo: se pinta como reunión y se abre la ficha.
+   * Sigue sin poder moverse —el dueño de ese evento es Google, no el CRM— así
+   * que no es lo mismo que `delCrm`.
+   */
+  vinculado?: boolean;
 }
 
+
+/** Un evento del Google Calendar, como lo guarda la base. */
+export interface EventoExternoCrudo {
+  id: string;
+  titulo: string;
+  inicio: string;
+  /** El lead con el que se conectó, si alguien ya lo conectó. */
+  lead?: string;
+}
 
 interface ReunionCruda {
   id: string;
@@ -114,6 +131,15 @@ interface ReunionCruda {
  */
 export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
   const [eventos, setEventos] = useState<EventoAgenda[]>([]);
+  /**
+   * Los eventos del calendario tal como vinieron, sin convertir.
+   *
+   * La pantalla de conectar necesita AGRUPARLOS por persona, y para eso hace
+   * falta el título entero de todos —no sólo los de la semana que se está
+   * mirando—: «Brenno» aparece 38 veces repartido en un año, y conectarlo
+   * tiene que enganchar los 38, no los 2 que se ven hoy.
+   */
+  const [externos, setExternos] = useState<EventoExternoCrudo[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -203,6 +229,7 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
           duracion_min: number;
           zona: string;
           dia_entero: boolean;
+          lead?: string;
         }>({ filter: 'dia_entero = false', sort: 'inicio' })
         .catch(() => []);
 
@@ -210,7 +237,10 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
         const local = enSuZona(x.inicio, x.zona || ZONA);
         return {
           id: x.id,
-          lead: '',
+          // Conectado, el evento pasa a tener lead y la agenda lo trata como
+          // lo que es: una reunión con alguien, no un bloque de horario.
+          lead: x.lead ?? '',
+          vinculado: Boolean(x.lead),
           fecha: local.slice(0, 10),
           hora: local.slice(11, 16),
           duracion: x.duracion_min || 30,
@@ -282,6 +312,14 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
           });
       }
 
+      setExternos(
+        propiosDelCalendario.map((x) => ({
+          id: x.id,
+          titulo: x.titulo || '',
+          inicio: x.inicio || '',
+          lead: x.lead ?? '',
+        })),
+      );
       setEventos([...conDetalle, ...delCalendario, ...bloques]);
       setError(null);
     } catch (e) {
@@ -315,6 +353,23 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
   const archivarConfirmacion = useCallback(
     async (id: string) => {
       await pb.collection('reunion').update(id, { confirmacion_archivada: true });
+      await recargar();
+    },
+    [recargar],
+  );
+
+  /**
+   * Conectar todos los eventos de una persona con un lead (§7.6).
+   *
+   * En serie y no en paralelo: son hasta 45 pedidos para una sola persona, y
+   * cuarenta y cinco a la vez contra el servidor de desarrollo devuelven
+   * errores de conexión. Un vínculo a medias es peor que ninguno.
+   */
+  const vincularEventos = useCallback(
+    async (ids: string[], leadId: string) => {
+      for (const id of ids) {
+        await pb.collection('evento_externo').update(id, { lead: leadId });
+      }
       await recargar();
     },
     [recargar],
@@ -412,6 +467,8 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
     mover,
     cambiarEstado,
     archivarConfirmacion,
+    externos,
+    vincularEventos,
     cambiarDuracion,
     cambiarProximo,
     cambiarNota,

@@ -44,23 +44,25 @@ Miró la UI pantalla por pantalla y marcó lo que no cerraba. Lo que sigue es
 lo que **quedó abierto**; lo arreglado está en el historial de git y en la
 página de revisión.
 
-- [ ] **Conectar un evento del calendario con un lead.** Es lo que hace que
-      sus eventos dejen de verse pálidos: «Julio - Augusto» y «Bruno /
-      Augusto» son eventos de Google **sin lead detrás**, y el color lo está
-      diciendo bien. Sólo las 288 importadas son reuniones del CRM.
-      ❓ **Falta decidir cómo.** De los 220 eventos de prospección sin perfil,
-      **45 son «FabriPT Catchup Herik» y 38 son «Brenno»**: la misma persona
-      repetida. Evento por evento serían 45 clics para una sola. La propuesta
-      es hacerlo **por persona** —una pantalla con los nombres del calendario
-      que no tienen lead, y para cada uno «es este lead» o «creá el lead»—
-      y que se enganchen todos sus eventos de una.
-      **Verificado el 09/09 contra la base**: 1769 eventos externos, 278 de
-      prospección, 58 caen en 31 personas que ya tienen perfil y **220 caen en
-      114 personas que no**. Evento por evento serían 220 clics; por persona
-      son 114, y las dos primeras se llevan 83 eventos.
-      ⚠️ **Falta también en la base**: `evento_externo` no tiene campo `lead`.
-      No hay dónde guardar el vínculo todavía —hace falta una migración—, así
-      que esto no es sólo pantalla.
+- [x] **Conectar un evento del calendario con un lead.** Hecho el 09/09.
+      Está en la agenda: un bloque de Google que sea de prospección y no
+      tenga lead se toca y abre «Conectar con un lead».
+      **Se conecta por PERSONA, no por evento.** Son 278 eventos sueltos pero
+      **145 personas**: «FabriPT Catchup Herik» aparece 45 veces y «Brenno»
+      38. Elegir el lead una vez engancha los 45 de una.
+      Los leads se ordenan poniendo primero los que comparten una palabra
+      entera del nombre — ordena, no elige: juntar a dos personas distintas
+      es el error caro, el mismo de Duplicados.
+      Si esa persona no es lead todavía, se crea desde ahí con el alta de
+      siempre y queda conectada al volver. Hace falta: de las 145, **55 no
+      tienen ningún lead parecido** (111 eventos).
+      Conectado, el bloque se pinta verde y el clic abre la ficha. Sigue sin
+      arrastrarse: el dueño del evento es Google.
+      Migración `1788604000_evento_con_lead` (`evento_externo.lead`, y la
+      regla de escritura para el dueño del calendario). El vínculo sobrevive
+      a la sincronización: el reloj pisa título y horario, no el lead.
+      Regla en `core/vincular.ts` con 20 tests que citan §7.6, y §7.6 del
+      manual actualizado en el mismo commit.
 - [x] **Vista Lista: el botón de «no sé».** Es el tercer botón, «–», al lado
       del ✓ y la ✕. Archiva la confirmación sin afirmar nada de la reunión:
       la fecha sigue en la columna «Última» y la reunión sigue en el histórico.
@@ -335,6 +337,11 @@ programadas de Windows.
   8090 lo tiene ahora el CRM, así que prueba con la clave de Globalita, le
   dicen que no, y sigue con el siguiente puerto. El propio script lo tiene
   anotado en un comentario. La tarea termina en 0. **No hay que hacer nada.**
-- ⚠️ **`evento_externo` no tiene campo `lead`.** Los 1769 eventos del calendario
-  no tienen dónde guardar a quién pertenecen. Es lo que bloquea el pedido más
-  repetido de Augusto, y hace falta una migración, no sólo pantalla.
+- ~~**`evento_externo` no tiene campo `lead`.**~~ Resuelto el 09/09 con la
+  migración `1788604000_evento_con_lead`.
+- ⚠️ **Había un resto de la versión pálida del bloque de calendario pisando a
+  la nueva.** Tres reglas de `estilos.css` quedaron del intento anterior y,
+  por venir después en el archivo, ganaban: el hover volvía el bloque a
+  `--info-light` y el nombre quedaba en `--text`, o sea texto oscuro sobre
+  fondo oscuro. Explica por qué la vista semanal se seguía viendo mal después
+  de «arreglarla» dos veces. Sacadas el 09/09.
