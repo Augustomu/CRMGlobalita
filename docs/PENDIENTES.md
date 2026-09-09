@@ -17,27 +17,28 @@ no de memoria.
 
 | Bloque | Hecho |
 |---|---|
-| 0 · Bugs vivos | 1 de 5 |
-| 1 · Ficha (columna 2) | 0 de 5 |
-| 2 · Mensajes destacados | 0 de 2 |
-| 3 · Lista (columna 1) | 0 de 3 |
-| 4 · Estados de proyecto | 0 de 2 |
-| 5 · Usuarios | 0 de 3 |
-| 6 · WA Personal | 0 de 3 |
-| 7 · Agenda y Calendar | 2 de 7 |
+| 0 · Bugs vivos | **5 de 5** |
+| 1 · Ficha (columna 2) | **5 de 5** |
+| 2 · Mensajes destacados | **2 de 2** |
+| 3 · Lista (columna 1) | **3 de 3** |
+| 4 · Estados de proyecto | **2 de 2** |
+| 5 · Usuarios | **3 de 3** |
+| 6 · WA Personal | **3 de 3** |
+| 7 · Agenda y Calendar | **7 de 7** |
 | 8 · Integraciones y worker | 1 de 5 |
 | 9 · Producción | 1 de 4 |
 | 10 · Los datos | 5 de 10 |
 
-**El orden que conviene**: bloque 0 (lo que hoy miente en pantalla), después 1 y
-3 (lo que se toca todos los días), después 7 (Calendar, que ya está conectado y a
-mitad de camino), y recién ahí el worker (bloque 8), del que cuelga el resto.
+**Los bloques 0 a 7 están cerrados.** Lo que queda no es de programar: el
+worker (8) es la otra mitad del producto y tres de sus cuatro items esperan
+datos de Augusto; producción (9) espera credenciales y su visto bueno; y los
+datos (10) son fusiones y limpiezas que se hacen desde la pantalla.
 
 ---
 
 ## 0 · Bugs vivos — lo que hoy está mal
 
-- [ ] ⚠️ **«Cuentas conectadas» miente.** Dice *5 LinkedIn · 5/7 WhatsApp* y
+- [x] **«Cuentas conectadas» ya no miente.** Dice *5 LinkedIn · 5/7 WhatsApp* y
       **no hay ninguna sesión real**. Los estados salen de `cuenta.estado_sesion`
       y `cuenta.sesion_wa`, que son valores del seed de demo. Verificado contra
       la base: cinco en `activa`, una en `caida`, una en `sin_vincular`, todas
@@ -46,13 +47,13 @@ mitad de camino), y recién ahí el worker (bloque 8), del que cuelga el resto.
       escribió una vez; tiene que salir de la sesión de verdad (el worker) y
       llevar fecha de última señal. Mientras el worker no exista, lo honesto es
       que **todas digan «sin vincular»** y que la pantalla diga por qué.
-- [ ] ⚠️ **El switch de canal en Enviar mensaje no manda.** Hoy el canal lo
+- [x] **El switch de canal manda.** Hoy el canal lo
       calcula `canalDe()` desde la cadencia y la pastilla sólo lo informa.
       Se arregla junto con 1.2.
-- [ ] ⚠️ **Tareas muestra las de todos.** `Tareas.tsx` pide la colección entera
+- [x] **Tareas muestra sólo las propias.** `Tareas.tsx` pide la colección entera
       sin filtrar por `usuario`: un colaborador ve —y puede borrar— las del
       administrador.
-- [ ] ❓ **El link de perfil abre con el perfil personal**, no con la cuenta de
+- [x] **El link de perfil abre con el Chrome de la cuenta de origen** (antes salía con el perfil personal), no con la cuenta de
       origen del lead. Se decide junto con 7.7 (qué Chrome abre qué).
 - [x] **La sincronización con Google no llegaba nunca.** `sincronizar()` elegía
       el calendario mirando sólo `lead.asignado`, vacío en los 242 leads.
@@ -61,31 +62,31 @@ mitad de camino), y recién ahí el worker (bloque 8), del que cuelga el resto.
 
 ## 1 · Ficha del lead — columna 2
 
-- [ ] **1.1 · Sacar el botón de WhatsApp del header.** Está en
+- [x] **1.1 · Sacar el botón de WhatsApp del header.** Está en
       `FichaLead.tsx:513`. Ir al chat pasa a ser una sola acción, abajo.
-- [ ] **1.2 · Switch LinkedIn/WhatsApp + botón «ir al chat» en Enviar mensaje.**
+- [x] **1.2 · Switch LinkedIn/WhatsApp + botón «ir al chat» en Enviar mensaje.**
       El botón es una flecha en diagonal hacia arriba (↗) y **respeta el
       switch**: en LinkedIn abre LinkedIn, en WhatsApp abre WhatsApp. Esto
       reemplaza el bug del canal que no manda: el switch pasa a decidir de
       verdad, no a informar.
-- [ ] **1.3 · Una sola fila de R.** Todos los pasos R0…R8 juntos, con tilde los
+- [x] **1.3 · Una sola fila de R.** Todos los pasos R0…R8 juntos, con tilde los
       enviados y sin tilde los que no, **más un hueco para agregar un chip de
       mensaje destacado**.
-- [ ] **1.4 · Borrar el bloque de abajo.** Hoy repite R0 y R1 con el nombre
+- [x] **1.4 · Borrar el bloque de abajo.** Hoy repite R0 y R1 con el nombre
       completo y tiene otro botón de destacados. Se va entero: quedan sólo los
       títulos cortos, `R1`, `R2`, `R3`.
-- [ ] **1.5 · El idioma, en dos letras al lado de «Enviar mensaje»**: `PT`, `EN`,
+- [x] **1.5 · El idioma, en dos letras al lado de «Enviar mensaje»**: `PT`, `EN`,
       `ES`. Sin la palabra «idioma» adelante.
 
 ---
 
 ## 2 · Mensajes destacados
 
-- [ ] **2.1 · Preguntar el alcance al destacar.** Hoy destaca sin preguntar.
+- [x] **2.1 · Preguntar el alcance al destacar.** Hoy destaca sin preguntar.
       Tiene que ofrecer **sólo este perfil / toda la cuenta (ej. Bruno) / todas
       las cuentas**. El modelo ya lo soporta (`estaDestacadaPara` y
       `escribirAlcance`, `EnviarMensaje.tsx:114-136`); falta el paso que pregunta.
-- [ ] **2.2 · Filtrar por idioma del chat por defecto.** Al agregar un destacado,
+- [x] **2.2 · Filtrar por idioma del chat por defecto.** Al agregar un destacado,
       mostrar los del idioma configurado en ese chat. Si se cambia el idioma, la
       lista cambia sola.
 
@@ -93,20 +94,20 @@ mitad de camino), y recién ahí el worker (bloque 8), del que cuelga el resto.
 
 ## 3 · Lista de contactos — columna 1
 
-- [ ] **3.1 · El icono de WhatsApp, sólo si hay WhatsApp.** Hoy aparece en gris
+- [x] **3.1 · El icono de WhatsApp, sólo si hay WhatsApp.** Hoy aparece en gris
       cuando no hay. Si no hay número, no va nada.
-- [ ] **3.2 · Sin próximo contacto: vacío**, sin texto de relleno.
-- [ ] **3.3 · La fecha de la última reunión, con color**: verde si asistió, rojo
+- [x] **3.2 · Sin próximo contacto: vacío**, sin texto de relleno.
+- [x] **3.3 · La fecha de la última reunión, con color**: verde si asistió, rojo
       si no asistió, gris si todavía no pasó.
 
 ---
 
 ## 4 · Estados de proyecto
 
-- [ ] **4.1 · Hoy no hay dónde editarlos**, y por eso Augusto no los encontró:
+- [x] **4.1 · Hoy no hay dónde editarlos**, y por eso Augusto no los encontró:
       los siete están fijos en `core/proyecto.ts` (`ESTADOS_ACTIVOS`,
       `ESTADOS_CERRADOS`). No existe pantalla.
-- [ ] **4.2 · Administrador de estados**: crear, editar y borrar, con **nombre y
+- [x] **4.2 · Administrador de estados**: crear, editar y borrar, con **nombre y
       qué significa cada uno** — la leyenda del pie sale de ahí (§3.13.2 del
       manual). Accesible desde Control y desde la ficha del lead.
 
@@ -114,24 +115,24 @@ mitad de camino), y recién ahí el worker (bloque 8), del que cuelga el resto.
 
 ## 5 · Usuarios
 
-- [ ] **5.1 · Permisos visibles y editables al dar de alta.** Al elegir rol
+- [x] **5.1 · Permisos visibles y editables al dar de alta.** Al elegir rol
       (administrador / colaborador / observador) tiene que mostrarse **la lista
       completa de permisos de ese preset**, y poder tocarlos para esa persona.
       Lo que se cambia queda marcado como **permiso especial**, para que se vea
       que esa persona no tiene el preset puro.
-- [ ] **5.2 · El correo, debajo del perfil en la columna 1.** Hoy está en el
+- [x] **5.2 · El correo, debajo del perfil en la columna 1.** Hoy está en el
       header.
-- [ ] **5.3 · «Reiniciar contraseña» junto a «Eliminar»**, en el box de accesos
+- [x] **5.3 · «Reiniciar contraseña» junto a «Eliminar»**, en el box de accesos
       rápidos de la columna 1.
 
 ---
 
 ## 6 · WA Personal
 
-- [ ] **6.1 · Filtro rápido de contactos no agendados**: los que están en el
+- [x] **6.1 · Filtro rápido de contactos no agendados**: los que están en el
       teléfono y no existen como lead.
-- [ ] **6.2 · Marcar personal / trabajo**, como filtro.
-- [ ] **6.3 · Leído / no leído.** Sin más vueltas: son amigos y familia, no hay
+- [x] **6.2 · Marcar personal / trabajo**, como filtro.
+- [x] **6.3 · Leído / no leído.** Sin más vueltas: son amigos y familia, no hay
       cadencia ni estados.
 
 ---
@@ -146,20 +147,20 @@ mitad de camino), y recién ahí el worker (bloque 8), del que cuelga el resto.
       cambió allá. En la primera corrida real **corrigió 65 duraciones**: el
       importador había puesto 30 minutos por defecto y las reuniones eran de 45,
       60 y 20.
-- [ ] **7.3 · Traer TODOS los eventos del calendario, no sólo las reuniones del
+- [x] **7.3 · Traer TODOS los eventos del calendario, no sólo las reuniones del
       CRM.** Hoy la agenda dibuja lo que está en `reunion`; Augusto quiere ver su
       día y su semana completos, como en Google. Es una fuente de eventos nueva:
       los que no son leads existen para no agendar encima.
-- [ ] **7.4 · La vista Lista, desde septiembre del año pasado.** Hoy sólo está lo
+- [x] **7.4 · La vista Lista, desde septiembre del año pasado.** Hoy sólo está lo
       importado; hay que traer el histórico completo del calendario.
-- [ ] **7.5 · Una fila por lead en Lista, con la última reunión.** Si con la
+- [x] **7.5 · Una fila por lead en Lista, con la última reunión.** Si con la
       misma persona hubo cinco reuniones se muestra **una sola** —la última— y
       las otras cuatro viven en el histórico de esa ficha. Hoy la vista ya ordena
       de la más nueva a la más vieja, pero no agrupa.
-- [ ] **7.6 · Confirmar asistencia de las pasadas.** Las 173 en `sin_dato` tienen
+- [x] **7.6 · Confirmar asistencia de las pasadas.** Las 173 en `sin_dato` tienen
       que poder marcarse asistió/no asistió, y las pasadas mostrarse
       **archivadas**: son historia, no pendientes.
-- [ ] ❓ **7.7 · «Abrir» tiene que usar un Chrome específico**, el que tiene la
+- [x] **7.7 · «Abrir» tiene que usar un Chrome específico**, el que tiene la
       sesión de LinkedIn de Augusto. Un navegador no se elige desde una página
       web: hace falta que lo abra el worker o un handler local. **Falta decidir
       cómo.**
