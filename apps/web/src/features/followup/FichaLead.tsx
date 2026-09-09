@@ -129,6 +129,8 @@ export function FichaLead({
   const [error, setError] = useState<string | null>(null);
   const [envios, setEnvios] = useState<EnvioRecord[]>([]);
   const [linksAbierto, setLinksAbierto] = useState(false);
+  const [etiquetasAbierto, setEtiquetasAbierto] = useState(false);
+  const [logAbierto, setLogAbierto] = useState(false);
   const [infoVisible, setInfoVisible] = useState(false);
   const [propuesta, setPropuesta] = useState<Propuesta | null>(null);
   const [nonceEnviar, setNonceEnviar] = useState(0);
@@ -436,6 +438,70 @@ export function FichaLead({
             </div>
           )}
 
+          {/* Etiquetas: agrega y quita DEL LEAD. Nunca borra del catálogo —
+              eso se hace en el panel de etiquetas, y confundir las dos cosas
+              es la clase de error que no se deshace. */}
+          <div className="relativo">
+            <button
+              type="button"
+              className={`boton-icono-26 ${etiquetasAbierto ? 'boton-icono-on' : ''}`}
+              title={`Etiquetas · ${etiquetasAplicadas.length} en este lead`}
+              onClick={() => setEtiquetasAbierto((a) => !a)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                <path d="M3 12V5a2 2 0 012-2h7l9 9-9 9z" />
+                <path d="M7.5 7.5h.01" />
+              </svg>
+              {etiquetasAplicadas.length > 0 && (
+                <span className="badge-punto tabular">{etiquetasAplicadas.length}</span>
+              )}
+            </button>
+            {etiquetasAbierto && (
+              <>
+                <div className="popover-fondo" onClick={() => setEtiquetasAbierto(false)} />
+                <div className="ficha-popover">
+                  <PanelEtiquetas
+                    catalogo={catalogoEtiquetas}
+                    aplicadas={lead.etiquetas ?? []}
+                    onAlternar={(et, poner) => void cambiarEtiqueta(et as EtiquetaRecord, poner)}
+                    onCatalogoCambiado={() => onEtiquetasCambiadas?.()}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* El log. Reemplaza al tooltip del perfil: lo que se editó y quién
+              es exactamente lo que uno quiere saber antes de volver a tocarlo. */}
+          {p && (
+            <div className="relativo">
+              <button
+                type="button"
+                className={`boton-icono-26 ${logAbierto ? 'boton-icono-on' : ''}`}
+                title="Log de ediciones · qué se editó y quién"
+                onClick={() => setLogAbierto((a) => !a)}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                  <circle cx="12" cy="12" r="8.5" />
+                  <path d="M12 7.5V12l3 1.8" />
+                </svg>
+              </button>
+              {logAbierto && (
+                <>
+                  <div className="popover-fondo" onClick={() => setLogAbierto(false)} />
+                  <div className="ficha-popover ficha-popover-ancho">
+                    <LogEdiciones
+                      perfilId={p.id}
+                      leadId={lead.id}
+                      editable={editable}
+                      onRevertido={onGuardado}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {/* §9.7: sin teléfono, apagado con el motivo en el title — nunca
               oculto. Es un icono de 26px y no un botón con texto: en la fila
               del prototipo todo mide lo mismo, y una pastilla verde de 100px
@@ -602,38 +668,17 @@ export function FichaLead({
           </div>
         )}
 
-        {/* §7.2 los enumera: «Datos · Contacto · Fecha de reunión ·
-            Etiquetas · Log de ediciones · Análisis del perfil». Son seis, y
-            este es el orden.
+        {/*
+            Etiquetas y Log de ediciones NO son bloques (cambio del 08/09/2026).
+            Son iconos, arriba, al lado del perfil.
 
-            Etiquetas era un popover y el log un overlay. Los dos se consultan
-            MIENTRAS se trabaja el lead —qué etiquetas tiene, qué se le tocó
-            antes de volver a tocarlo— y las dos formas tapan justamente lo que
-            uno está mirando. */}
-        <Colapsable
-          titulo="Etiquetas"
-          contactoId={lead.id}
-          resumen={`${etiquetasAplicadas.length} en este lead`}
-        >
-          <PanelEtiquetas
-            catalogo={catalogoEtiquetas}
-            aplicadas={lead.etiquetas ?? []}
-            onAlternar={(et, poner) => void cambiarEtiqueta(et as EtiquetaRecord, poner)}
-            onCatalogoCambiado={() => onEtiquetasCambiadas?.()}
-          />
-        </Colapsable>
-
-        {p && (
-          <Colapsable titulo="Log de ediciones" contactoId={lead.id} resumen="qué se editó y quién">
-            <LogEdiciones
-              perfilId={p.id}
-              leadId={lead.id}
-              editable={editable}
-              onRevertido={onGuardado}
-            />
-          </Colapsable>
-        )}
-
+            §7.2 del PDF los enumera como colapsables y por eso estuvieron así
+            dos días. Augusto lo corrigió mirando la app andando, y la razón es
+            de uso: los dos se consultan de refilón —qué etiquetas tiene, qué se
+            le tocó antes de volver a tocarlo— y como bloques empujaban hacia
+            abajo Enviar mensaje, que es lo que se usa todo el día. Está anotado
+            en el registro de cambios del manual.
+        */}
         <Colapsable titulo="Análisis del perfil" contactoId={lead.id} resumen="qué pasó con este lead">
           <AnalisisPerfil lead={lead} leads={leads} />
         </Colapsable>

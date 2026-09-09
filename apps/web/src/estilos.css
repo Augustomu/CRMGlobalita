@@ -3501,10 +3501,13 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: calc(320px * var(--escala-texto)) minmax(0, 1fr);
+  /* La lista se arrastra (§9.4). El divisor es la columna del medio: 5px que
+     no se ven pero se agarran, igual que en Follow-up. */
+  grid-template-columns: var(--ancho-wa, calc(320px * var(--escala-texto))) 5px minmax(0, 1fr);
   overflow: hidden;
   background: var(--surface);
 }
+
 /* Tres franjas apiladas: lo ya ruteado, lo que hay que decidir, y el archivo.
    La pila ES el orden en que hay que mirarlas. */
 .wap-col {
@@ -4690,6 +4693,9 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .divisor:hover { background: var(--accent-br); }
 .divisor-der { right: 0; }
 .divisor-izq { left: 0; }
+/* En WA Personal el divisor es una columna de la grilla, no un absoluto pegado
+   al borde: no hay un panel con position:relative del que colgarse. */
+.wap > .divisor-der { position: static; right: auto; width: auto; height: 100%; }
 
 .columna-lista, .agenda { position: relative; }
 
@@ -5506,3 +5512,125 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   flex-shrink: 0;
 }
 .venc-destacado-on .venc-destacado-paso { background: var(--surface); }
+
+/* ---------- la fila de la lista: último mensaje, etiquetas, agente (§7.2) ---------- */
+/*
+ * Con 1.500 leads la fila decide si hay que abrir la ficha o no. Lo que no
+ * entra se ve al pasar por encima; nada se corta en el dato.
+ */
+.fila-ultimo {
+  font-size: var(--txt-xs);
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--accent-light);
+  color: var(--accent);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+/* Un mensaje suelto no es un paso de la cadencia: se marca distinto para que
+   se entienda por qué el próximo contacto no cuadra con la etapa. */
+.fila-ultimo-fu { background: var(--bg); color: var(--muted); }
+
+.fila-etiquetas {
+  display: flex;
+  gap: 3px;
+  min-width: 0;
+  overflow: hidden;
+  margin-left: auto;
+}
+.fila-etiqueta {
+  font-size: var(--txt-xs);
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--muted);
+  border: .5px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(84px * var(--escala-texto));
+}
+.fila-etiqueta-mas { color: var(--hint); border-style: dashed; flex-shrink: 0; }
+
+/* El chip del agente abre la lista para reasignar sin salir de la columna. */
+.fila-agente { position: relative; display: inline-flex; }
+.fila-duenio-boton { border: none; cursor: pointer; font-family: inherit; padding: 0; }
+.fila-duenio-boton:hover { background: var(--accent); color: var(--surface); }
+.fila-duenio-vacio { background: var(--bg); color: var(--hint); border: .5px dashed var(--border); }
+.fila-agentes {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 50;
+  min-width: calc(180px * var(--escala-texto));
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: .5px solid var(--border);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .16);
+  animation: om-abrir 140ms ease-out;
+}
+.fila-agente-op {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--txt-md);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.fila-agente-op:hover { background: var(--accent-light); }
+.fila-agente-op-on { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+
+/* ---------- ficha: etiquetas y log como iconos (§7.2, 08/09/2026) ---------- */
+/*
+ * Los dos se consultan de refilón mientras se trabaja el lead. Como bloques
+ * empujaban Enviar mensaje hacia abajo, que es lo que se usa todo el día.
+ * El popover se ancla al icono y no tapa la ficha entera.
+ */
+.ficha-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 5px);
+  z-index: 60;
+  width: calc(300px * var(--escala-texto));
+  max-height: calc(60vh);
+  overflow-y: auto;
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: .5px solid var(--border);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .16);
+  animation: om-abrir 140ms ease-out;
+}
+.ficha-popover-ancho { width: calc(420px * var(--escala-texto)); }
+
+/* ---------- alta de usuario por correo (§6.7) ---------- */
+.inv-usuario {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: .5px solid var(--border);
+}
+/* El email va tabular y seleccionable: es un dato que la gente copia. */
+.inv-email {
+  font-size: var(--txt-base);
+  font-weight: 600;
+  color: var(--text);
+  user-select: all;
+  word-break: break-all;
+}
+.inv-listo { font-size: var(--txt-base); color: var(--text); line-height: 1.5; }

@@ -11,10 +11,21 @@ WorkingDirectory=/opt/crm-globalita
 # Escucha SOLO en localhost: quien atiende desde afuera es nginx, que ya tiene
 # los puertos 80 y 443 sirviendo bitacorapersonal.online. Que PocketBase no se
 # asome a internet es ademas mas seguro: no hay forma de entrarle por el 8090.
+# APP_URL es lo que va adentro del enlace del correo de alta (§6.7). Sin
+# esto el correo saldria con un enlace a ningun lado, asi que el endpoint de
+# invitar corta antes de crear a nadie y lo dice.
+Environment=APP_URL=https://crm.globalita.tech
+Environment=MAIL_DESDE=crm@globalita.tech
+
+# --hooksDir NO estaba y sin el los hooks no cargan: ni el alta por correo, ni
+# la sincronizacion con Calendar, ni el barrido de retencion. En desarrollo se
+# pasaba a mano y en produccion faltaba, asi que era una diferencia silenciosa
+# entre las dos.
 ExecStart=/opt/crm-globalita/pocketbase serve \
   --dir=/opt/crm-globalita/pb_data \
   --publicDir=/opt/crm-globalita/pb_public \
   --migrationsDir=/opt/crm-globalita/pb_migrations \
+  --hooksDir=/opt/crm-globalita/pb_hooks \
   --http=127.0.0.1:8090
 
 Restart=always

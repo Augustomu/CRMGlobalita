@@ -9,7 +9,8 @@ import {
   type LineaNegocio,
   type Rol,
 } from '@crm/core/permisos';
-import { pb } from '../../lib/pocketbase';
+import { DIAS_DE_INVITACION } from '@crm/core/alta';
+import { apiUrl, pb } from '../../lib/pocketbase';
 import { Actividad } from './Actividad';
 import { AsignarEnLote } from './AsignarEnLote';
 import type { LeadRecord, UsuarioRecord } from '../../lib/types';
@@ -58,6 +59,8 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [enviandoAcceso, setEnviandoAcceso] = useState(false);
+  const [avisoAcceso, setAvisoAcceso] = useState<string | null>(null);
   /** Las dos vistas del prototipo: la lista de usuarios y el registro. */
   const [vista, setVista] = useState<'usuarios' | 'actividad'>('usuarios');
   const [loteAbierto, setLoteAbierto] = useState(false);
@@ -167,6 +170,42 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
       onCambio();
     } finally {
       setGuardando(false);
+    }
+  }
+
+  /**
+   * Le manda a esa persona un enlace para elegir su contraseña.
+   *
+   * Es el mismo mecanismo del alta, y a propósito: si «reiniciar la clave»
+   * fuera ponerle una nueva y decírsela, volveríamos a tener una contraseña
+   * que un tercero conoce y que viaja escrita.
+   *
+   * El servidor quema las invitaciones anteriores antes de emitir la nueva:
+   * dos correos abiertos son dos llaves.
+   */
+  async function reenviarAcceso() {
+    if (!usuario) return;
+    setEnviandoAcceso(true);
+    setError(null);
+    setAvisoAcceso(null);
+    try {
+      const r = await fetch(apiUrl('/api/invitar'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: pb.authStore.token },
+        body: JSON.stringify({ usuario_id: usuario.id }),
+      });
+      const d = (await r.json()) as { ok?: boolean; error?: string };
+      if (!r.ok || !d.ok) {
+        setError(d.error ?? 'No se pudo mandar el correo.');
+        return;
+      }
+      setAvisoAcceso('correo enviado');
+      // El cartel se va solo: es una confirmación, no un estado.
+      setTimeout(() => setAvisoAcceso(null), 6000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setEnviandoAcceso(false);
     }
   }
 
@@ -304,6 +343,38 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
               </div>
               <div className="ficha-chips">
                 <span className="pastilla">{usuario.email}</span>
+
+                {/*
+                  Reenviar el acceso (§6.7).
+                  Para el pendiente es «se le venció el enlace»; para el activo
+                  es «se olvidó la clave». El texto lo dice, porque son dos
+                  cosas distintas y el correo que sale también.
+
+                  No hay un botón de «ver la contraseña» ni de «ponerle una»:
+                  nadie, ni el administrador, tiene por qué conocer la clave de
+                  otro. Reiniciar significa mandar un enlace, no fijar una.
+                */}
+                <button
+                  type="button"
+                  className="boton-mini"
+                  disabled={enviandoAcceso || usuario.id === usuarioActual.id}
+                  title={
+                    usuario.id === usuarioActual.id
+                      ? 'Para cambiar tu propia contraseña, usá el enlace desde tu correo'
+                      : usuario.estado === 'pendiente'
+                        ? 'Mandarle otro enlace para elegir su contraseña'
+                        : 'Reiniciar su contraseña: la actual deja de servir y le llega un enlace'
+                  }
+                  onClick={() => void reenviarAcceso()}
+                >
+                  {enviandoAcceso
+                    ? 'Mandando…'
+                    : usuario.estado === 'pendiente'
+                      ? 'Reenviar invitación'
+                      : 'Reiniciar contraseña'}
+                </button>
+                {avisoAcceso && <span className="pastilla pastilla-ok">{avisoAcceso}</span>}
+
                 {repartoPorCuenta.map(([abrev, n]) => (
                   <span key={abrev} className="pastilla">
                     {abrev} {n}
@@ -485,41 +556,58 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
       {altaAbierta && (
         <AltaUsuario
           onCerrar={() => setAltaAbierta(false)}
-          onCreado={() => {
-            setAltaAbierta(false);
-            void recargar();
-          }}
+          // Solo recarga la lista: el overlay lo cierra el propio
+          // componente cuando la persona leyo a donde salio el correo.
+          onCreado={() => void recargar()}
         />
       )}
     </div>
   );
 }
 
-/** Alta de usuario (§7.5). El manual no tiene auto-registro: la crea un admin. */
+/**
+ * Alta de usuario (§7.5, §6.7).
+ *
+ * No hay campo de contraseña, y eso es el cambio: el administrador no elige ni
+ * ve la clave de nadie. Se manda un correo con el usuario y un enlace de un
+ * solo uso donde la persona elige la suya.
+ *
+ * Antes el admin escribía una clave temporal y se la pasaba por fuera —
+ * WhatsApp, un papel, un mensaje que queda ahí. Además de que la clave viajaba
+ * por donde fuera, nadie sabía si la persona había llegado a entrar.
+ *
+ * El alta la hace el SERVIDOR, no esta pantalla. La colección `users` no acepta
+ * `create` desde la API justamente para que no exista auto-registro: si lo
+ * aceptara, cualquiera que sepa la URL se da de alta solo.
+ */
 function AltaUsuario({ onCerrar, onCreado }: { onCerrar: () => void; onCreado: () => void }) {
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
-  const [clave, setClave] = useState('');
   const [rol, setRol] = useState<Rol>('colaborador');
   const [error, setError] = useState<string | null>(null);
   const [creando, setCreando] = useState(false);
+  const [listo, setListo] = useState<string | null>(null);
 
   async function crear() {
     setCreando(true);
     setError(null);
     try {
-      await pb.collection('users').create({
-        name: nombre,
-        email,
-        emailVisibility: true,
-        password: clave,
-        passwordConfirm: clave,
-        verified: true,
-        rol,
-        estado: 'activo',
-        permisos: {},
-        metodo_invitacion: 'clave_temporal',
+      const r = await fetch(apiUrl('/api/invitar'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: pb.authStore.token,
+        },
+        body: JSON.stringify({ nombre, email: email.trim().toLowerCase(), rol }),
       });
+      const d = (await r.json()) as { ok?: boolean; error?: string; email?: string };
+      if (!r.ok || !d.ok) {
+        setError(d.error ?? 'No se pudo dar de alta.');
+        return;
+      }
+      // No se cierra sola: hay que poder LEER a dónde se mandó el correo. Un
+      // alta que se cierra en silencio deja la duda de si salió.
+      setListo(d.email ?? email);
       onCreado();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -539,52 +627,82 @@ function AltaUsuario({ onCerrar, onCreado }: { onCerrar: () => void; onCreado: (
             </svg>
           </button>
         </header>
-        <div className="overlay-cuerpo">
-          <label className="campo">
-            <span className="campo-label">Nombre</span>
-            <input value={nombre} onChange={(e) => setNombre(e.target.value)} autoFocus />
-          </label>
-          <label className="campo">
-            <span className="campo-label">Email</span>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </label>
-          <label className="campo">
-            <span className="campo-label">Contraseña temporal</span>
-            <input value={clave} onChange={(e) => setClave(e.target.value)} />
-            <span className="campo-ayuda">Mínimo 8 caracteres. Que la cambie al entrar.</span>
-          </label>
-          <div className="campo">
-            <span className="campo-label">Rol</span>
-            <div className="selector-idioma">
-              {ROLES.map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  className={rol === r ? 'idioma-on' : 'idioma-off'}
-                  onClick={() => setRol(r)}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-          </div>
-          {error && <div className="login-error">{error}</div>}
-        </div>
-        <footer className="overlay-pie">
-          <button type="button" className="boton-secundario" onClick={onCerrar}>
-            Cancelar
-          </button>
-          <button
-            type="button"
-            className="boton-principal al-final"
-            disabled={!nombre || !email || clave.length < 8 || creando}
-            onClick={() => void crear()}
-          >
-            {creando ? 'Creando…' : 'Crear'}
-          </button>
-        </footer>
-      </div>
 
+        {listo ? (
+          <>
+            <div className="overlay-cuerpo">
+              <p className="inv-listo">
+                Le mandamos el correo a <strong>{listo}</strong>.
+              </p>
+              <p className="campo-ayuda">
+                Adentro tiene su usuario y un enlace para elegir su contraseña. Sirve una sola vez y
+                vence en {DIAS_DE_INVITACION} días; si se le vence, desde su ficha se le manda otro.
+              </p>
+              <p className="campo-ayuda">
+                Hasta que entre, figura como <strong>pendiente</strong> y no puede iniciar sesión.
+              </p>
+            </div>
+            <footer className="overlay-pie">
+              <button type="button" className="boton-principal al-final" onClick={onCerrar}>
+                Listo
+              </button>
+            </footer>
+          </>
+        ) : (
+          <>
+            <div className="overlay-cuerpo">
+              <label className="campo">
+                <span className="campo-label">Nombre</span>
+                <input value={nombre} onChange={(e) => setNombre(e.target.value)} autoFocus />
+              </label>
+              <label className="campo">
+                <span className="campo-label">Email</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && nombre && email && void crear()}
+                />
+                <span className="campo-ayuda">
+                  Es con lo que va a entrar, y a donde le llega el correo de acceso.
+                </span>
+              </label>
+              <div className="campo">
+                <span className="campo-label">Rol</span>
+                <div className="selector-idioma">
+                  {ROLES.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      className={rol === r ? 'idioma-on' : 'idioma-off'}
+                      onClick={() => setRol(r)}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+                <span className="campo-ayuda">
+                  El rol es un preset de permisos (§6.2). Después se ajusta uno por uno desde su ficha.
+                </span>
+              </div>
+              {error && <div className="login-error">{error}</div>}
+            </div>
+            <footer className="overlay-pie">
+              <button type="button" className="boton-secundario" onClick={onCerrar}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="boton-principal al-final"
+                disabled={!nombre || !email || creando}
+                onClick={() => void crear()}
+              >
+                {creando ? 'Mandando el correo…' : 'Invitar'}
+              </button>
+            </footer>
+          </>
+        )}
+      </div>
     </div>
   );
 }

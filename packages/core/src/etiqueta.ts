@@ -92,3 +92,38 @@ export function porUltimoUso(catalogo: Etiqueta[]): Etiqueta[] {
     return fecha !== 0 ? fecha : a.nombre.localeCompare(b.nombre);
   });
 }
+
+/** Cuántas etiquetas entran en una fila de la lista antes de tapar el nombre. */
+export const ETIQUETAS_EN_LA_FILA = 2;
+
+export interface EtiquetasDeLaFila {
+  /** Las que se dibujan, en orden. */
+  visibles: string[];
+  /** Las que no entraron: van en el hover, no se pierden. */
+  ocultas: string[];
+}
+
+/**
+ * Qué etiquetas se ven en la fila de la lista (§7.2).
+ *
+ * Augusto pidió dos cosas juntas: que lo que no entra se vea al pasar por
+ * encima, y **poder elegir cuáles se muestran y en qué orden**. Sin lo segundo,
+ * el criterio lo decide el orden en que alguien las cargó, que no tiene nada
+ * que ver con cuál importa: en una fila con `Frío`, `Recordatorio` y
+ * `Caliente`, la que hay que ver es la última.
+ *
+ * `preferidas` es la lista ordenada que eligió el usuario. Las que están en
+ * ella van primero y en ese orden; el resto conserva el orden del lead. Una
+ * preferida que este lead no tiene, simplemente no aparece — no deja un hueco.
+ */
+export function etiquetasDeLaFila(
+  delLead: string[],
+  preferidas: string[] = [],
+  cuantas: number = ETIQUETAS_EN_LA_FILA,
+): EtiquetasDeLaFila {
+  const tiene = delLead.filter(Boolean);
+  const primero = preferidas.filter((p) => tiene.includes(p));
+  const resto = tiene.filter((t) => !primero.includes(t));
+  const orden = [...primero, ...resto];
+  return { visibles: orden.slice(0, cuantas), ocultas: orden.slice(cuantas) };
+}

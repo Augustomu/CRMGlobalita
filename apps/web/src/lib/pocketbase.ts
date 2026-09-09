@@ -26,3 +26,19 @@ pb.autoCancellation(false);
 
 // El SDK persiste la sesión en localStorage. El manual (§6.6) lo llama
 // "mantener la sesión abierta"; el switch para desactivarlo llega en la Etapa 6.
+
+/**
+ * La URL de un endpoint propio del servidor (los de `pb_hooks`).
+ *
+ * Existe porque no todo lo que hace el CRM entra en el CRUD del SDK: dar de
+ * alta a alguien tiene que pasar por el servidor para que la colección `users`
+ * NO acepte `create` desde el navegador — si lo aceptara, cualquiera que sepa
+ * la URL se da de alta solo, y §7.5 dice que no hay auto-registro.
+ *
+ * En producción es el mismo origen; en desarrollo, la instancia local. Se
+ * arma con la misma base que usa el SDK para que no existan dos ideas de dónde
+ * está el servidor.
+ */
+export function apiUrl(ruta: string): string {
+  return `${url.replace(/\/+$/, '')}${ruta.startsWith('/') ? ruta : `/${ruta}`}`;
+}

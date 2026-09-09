@@ -216,6 +216,13 @@ La reescribí como sidebar hace dos días y **el diseño quedó mal**:
 
 ## 11 · Usuarios
 
+- ✅ **Hecho el 08/09.** El alta manda un correo con el usuario y un enlace de
+  un solo uso para elegir la contraseña (§6.7). Ni el administrador ve ni fija
+  la clave de nadie. Incluye reenviar la invitación y reiniciar la contraseña
+  desde la ficha.
+  - **Falta configurar el SMTP de Hostinger** para que salga de verdad: está en
+    `deploy/PASO-A-PASO.md`, paso 4.5. Hasta entonces, dar de alta falla y lo
+    dice; no crea a nadie a medias.
 - **Editar los permisos de cada rol** y que queden como preset: al invitar a
   alguien como colaborador ya sabe qué permisos trae.
 - Y **después** poder ajustarlo persona por persona (esto ya funciona).

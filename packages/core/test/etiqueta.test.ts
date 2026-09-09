@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
+import { etiquetasDeLaFila,
   CUANTAS_RECIENTES,
   nombreDisponible,
   porUltimoUso,
@@ -97,4 +97,32 @@ test('el catalogo se ordena por ultimo uso, y las nunca usadas van al fondo', ()
     { id: 'nueva', nombre: 'Nueva', usada_en: '2026-09-01' },
   ]).map((e) => e.id);
   assert.deepEqual(orden, ['nueva', 'vieja', 'nunca']);
+});
+
+/* --------------------------------------------------------------------------
+ * Las etiquetas de la fila (§7.2)
+ * ----------------------------------------------------------------------- */
+
+test('§7.2 · entran dos y el resto queda para el hover', () => {
+  const r = etiquetasDeLaFila(['Frío', 'Recordatorio', 'Caliente']);
+  assert.deepEqual(r.visibles, ['Frío', 'Recordatorio']);
+  assert.deepEqual(r.ocultas, ['Caliente']);
+});
+
+test('§7.2 · las preferidas van primero y en el orden elegido', () => {
+  // Sin preferencias mandaría el orden de carga, que no dice cuál importa.
+  const r = etiquetasDeLaFila(['Frío', 'Recordatorio', 'Caliente'], ['Caliente', 'Frío']);
+  assert.deepEqual(r.visibles, ['Caliente', 'Frío']);
+  assert.deepEqual(r.ocultas, ['Recordatorio']);
+});
+
+test('§7.2 · una preferida que el lead no tiene no deja un hueco', () => {
+  const r = etiquetasDeLaFila(['Frío'], ['Decisor', 'Frío']);
+  assert.deepEqual(r.visibles, ['Frío']);
+  assert.deepEqual(r.ocultas, []);
+});
+
+test('§7.2 · sin etiquetas no hay ni visibles ni ocultas', () => {
+  const r = etiquetasDeLaFila([], ['Caliente']);
+  assert.deepEqual(r, { visibles: [], ocultas: [] });
 });

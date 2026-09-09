@@ -100,3 +100,21 @@ export function planDeEnvio(
     proximo_contacto_propuesto: efecto.proximo_contacto_propuesto,
   };
 }
+
+/**
+ * Cómo se llama el último mensaje en la fila de la lista (§7.2).
+ *
+ * Augusto: *«el último mensaje enviado: si fue un R, decir cuál; si fue suelto,
+ * FU»*. La distinción no es cosmética — un `R3` dice en qué punto de la
+ * cadencia está la relación; un `FU` dice que se le escribió algo fuera de
+ * ella, y eso es lo que explica por qué el próximo contacto no cuadra con la
+ * etapa.
+ *
+ * `R0-recontacto` se muestra como `R0`: en una fila de la lista no entra el
+ * sufijo, y el detalle está en la ficha.
+ */
+export function etiquetaDeUltimoEnvio(paso: string | null | undefined): string {
+  const p = String(paso ?? '').trim();
+  const r = /^(R\d)/i.exec(p);
+  return r ? r[1]!.toUpperCase() : 'FU';
+}

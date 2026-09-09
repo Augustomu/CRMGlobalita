@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CADENCIA_POR_DEFECTO } from '../src/cadencia.ts';
-import { planDeEnvio } from '../src/envio.ts';
+import { etiquetaDeUltimoEnvio, planDeEnvio } from '../src/envio.ts';
 import type { LeadCadencia } from '../src/tipos.ts';
 
 const cfg = CADENCIA_POR_DEFECTO;
@@ -87,4 +87,14 @@ test('un texto escrito a mano queda sin plantilla, y eso es un dato válido', ()
     lead_id: 'lead-1', paso: 'R1', canal: 'linkedin', idioma: 'es', texto: 'escrito a mano', a_mano: true,
   }, HOY);
   assert.equal(plan.envio.plantilla, '');
+});
+
+test('§7.2 · el último mensaje se muestra como su R, o FU si fue suelto', () => {
+  assert.equal(etiquetaDeUltimoEnvio('R3'), 'R3');
+  assert.equal(etiquetaDeUltimoEnvio('R0'), 'R0');
+  // El sufijo no entra en la fila; el detalle está en la ficha.
+  assert.equal(etiquetaDeUltimoEnvio('R0-recontacto'), 'R0');
+  assert.equal(etiquetaDeUltimoEnvio('agradecimiento'), 'FU');
+  assert.equal(etiquetaDeUltimoEnvio(''), 'FU');
+  assert.equal(etiquetaDeUltimoEnvio(null), 'FU');
 });

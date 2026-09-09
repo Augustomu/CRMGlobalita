@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { COLUMNA_WA } from '@crm/core/anchos';
+import { useAncho } from '../../lib/useAncho';
 import { conDias, ultimoTexto, type MensajeChat } from '@crm/core/chat';
 import { paraWhatsApp } from '@crm/core/telefono';
 import { pb } from '../../lib/pocketbase';
@@ -60,6 +62,10 @@ export function WaPersonal({ onIrAlLead }: Props) {
    * pantalla de permisos ni elección de cuenta. Se guarda por navegador,
    * igual que los anchos: depende de cómo trabaja cada uno, no de quién es.
    */
+  // §9.4: la lista de chats se arrastra, igual que la columna 1 de
+  // Follow-up. Es la misma clase de panel y se usa igual de seguido.
+  const anchoCol = useAncho(COLUMNA_WA);
+
   const [gmail, setGmail] = useState(() => {
     try {
       return Boolean(localStorage.getItem('om.gmail'));
@@ -177,7 +183,10 @@ export function WaPersonal({ onIrAlLead }: Props) {
   }
 
   return (
-    <section className="wap">
+    <section
+      className="wap"
+      style={{ '--ancho-wa': `calc(${anchoCol.ancho}px * var(--escala-texto))` } as React.CSSProperties}
+    >
       <div className="wap-col">
         <div className="wap-cabecera">
           <span className="wap-titulo">WA Personal</span>
@@ -332,6 +341,13 @@ export function WaPersonal({ onIrAlLead }: Props) {
           {!chats.length && <p className="vacio">Todavía no hay chats personales.</p>}
         </div>
       </div>
+
+      {/* §9.4: 5 px, con doble clic para volver al ancho normal. */}
+      <div
+        className="divisor divisor-der"
+        title="Arrastrá para cambiar el ancho de la lista · doble clic para volver"
+        {...anchoCol.divisor}
+      />
 
       <div className="wap-hilo">
         <div className="wap-hilo-header">

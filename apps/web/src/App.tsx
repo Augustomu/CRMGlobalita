@@ -3,6 +3,8 @@ import { pb } from './lib/pocketbase';
 import type { UsuarioRecord } from './lib/types';
 import { useAuth } from './features/auth/useAuth';
 import { Login } from './features/auth/Login';
+import { Invitacion } from './features/auth/Invitacion';
+import { PARAMETRO_INVITACION } from '@crm/core/alta';
 import { useLeads, puedeUsuario } from './features/followup/useLeads';
 import { ListaContactos, iniciales } from './features/followup/ListaContactos';
 import { FichaLead } from './features/followup/FichaLead';
@@ -43,6 +45,41 @@ export function App() {
 
   const [viendoComo, setViendoComo] = useState<UsuarioRecord | null>(null);
   const [otrosUsuarios, setOtrosUsuarios] = useState<UsuarioRecord[]>([]);
+  /**
+   * El token del correo de invitación, si la URL lo trae.
+   *
+   * Se lee una sola vez al arrancar: después la URL se limpia, y volver a
+   * leerla en cada render haría reaparecer la pantalla.
+   */
+  const [tokenInvitacion, setTokenInvitacion] = useState<string | null>(() => {
+    try {
+      return new URLSearchParams(window.location.search).get(PARAMETRO_INVITACION);
+    } catch {
+      return null;
+    }
+  });
+  /**
+   * Qué etiquetas se ven primero en la fila de la lista (§7.2).
+   *
+   * Es una preferencia de quien mira y por eso vive en el navegador, no en el
+   * lead ni en el usuario: cuál etiqueta importa depende de para qué se esté
+   * usando la lista ese día, y no tiene por qué ser igual para todo el equipo.
+   */
+  const [etiquetasPreferidas, setEtiquetasPreferidas] = useState<string[]>(() => {
+    try {
+      const v = localStorage.getItem('crm.etiquetas-en-la-fila');
+      return v ? (JSON.parse(v) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('crm.etiquetas-en-la-fila', JSON.stringify(etiquetasPreferidas));
+    } catch {
+      // Sin almacenamiento (ventana privada) la preferencia dura la sesión.
+    }
+  }, [etiquetasPreferidas]);
 
   /**
    * Quién manda para lo que se DIBUJA.
@@ -199,6 +236,23 @@ export function App() {
     pendiente?.correr();
     setPendiente(null);
   }, [esperandoGuardado, sucio, pendiente]);
+
+  // El enlace del correo de alta (§6.7). Va ANTES del login: quien lo abre
+  // todavía no tiene con qué entrar, y mandarlo al login sería mandarlo a un
+  // formulario que no puede completar.
+  if (tokenInvitacion) {
+    return (
+      <Invitacion
+        token={tokenInvitacion}
+        onListo={() => {
+          // Se saca el token de la URL para que recargar no vuelva a abrir la
+          // pantalla con un enlace que ya se quemó.
+          window.history.replaceState({}, '', '/');
+          setTokenInvitacion(null);
+        }}
+      />
+    );
+  }
 
   if (!usuario) return <Login auth={auth} />;
 
@@ -662,6 +716,20 @@ export function App() {
               verColaboradores={puedeUsuario(usuario, 'verTodosLeads')}
               veTelefono={puedeUsuario(usuario, 'verTelefono')}
               veCola={puedeUsuario(usuario, 'colaEnvios')}
+              // Reasignar desde la fila. La lista de gente es la misma que la
+              // de «ver como», más uno mismo: son los usuarios activos.
+              usuarios={
+                usuarioReal && puedeUsuario(usuario, 'usuarios')
+                  ? [usuarioReal, ...otrosUsuarios]
+                  : []
+              }
+              puedeAsignar={puedeUsuario(usuario, 'usuarios')}
+              onAsignar={async (leadId, usuarioId) => {
+                await pb.collection('lead').update(leadId, { asignado: usuarioId ?? '' });
+                recargar();
+              }}
+              preferidas={etiquetasPreferidas}
+              onPreferidas={setEtiquetasPreferidas}
               onImportar={
                 puedeUsuario(usuario, 'importarLeads')
                   ? () => irA(() => setImportarAbierto(true))

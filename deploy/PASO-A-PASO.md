@@ -118,6 +118,46 @@ responde. **Si la bitácora no da 200, avisame antes de seguir.**
 
 ---
 
+## Paso 4.5 · El correo (para dar de alta gente)
+
+El CRM manda un correo cuando das de alta a alguien: le llega su usuario y un
+enlace para elegir su contraseña (§6.7 del manual). **Sin esto configurado, dar
+de alta falla y te lo dice** — no crea a nadie a medias.
+
+Hostinger da casillas con el dominio. Entrá al panel de Hostinger → **Emails** →
+creá `crm@globalita.tech` y anotá su contraseña.
+
+Después, en el panel de PocketBase (`https://crm.globalita.tech/_/`) →
+**Settings → Mail settings**:
+
+| Campo | Valor |
+|---|---|
+| Use SMTP mail server | tildado |
+| SMTP server host | `smtp.hostinger.com` |
+| Port | `465` |
+| Username | `crm@globalita.tech` |
+| Password | la de esa casilla |
+| TLS encryption | tildado (465 es SSL directo) |
+| Sender name | `CRM Globalita` |
+| Sender address | `crm@globalita.tech` |
+
+Si el 465 no conecta, probá **587 sin TLS tildado** (STARTTLS). Son las dos
+formas que ofrece Hostinger y depende de cómo tengan el servidor ese mes.
+
+**Probalo antes de invitar a nadie**: en esa misma pantalla hay un botón *Send
+test email*. Si llega, el alta funciona.
+
+> **Por qué el correo NO lleva la contraseña.** Una clave escrita en un mail
+> queda en esa bandeja para siempre, y quien entre a esa casilla dentro de dos
+> años tiene una llave del CRM. El enlace deja de servir apenas se usa, o a los
+> siete días — lo que pase antes.
+
+También conviene apagar, en **Settings → Mail settings**, el aviso automático
+de *«Login from a new location»*: le llega a la persona cada vez que entra
+desde otro navegador y no aporta nada en un equipo de cuatro.
+
+---
+
 ## Paso 5 · Crear los usuarios
 
 ```bash
@@ -136,10 +176,15 @@ Son dos cosas distintas:
 | Administrar la base | `_superusers` | `/_/` |
 | Usar el CRM | `users` | la app |
 
-Para entrar al CRM hay que crear además un registro en `users` desde el panel
-(**Colecciones → users → Nuevo registro**), con `rol`, `estado: activo` y
-`verified` tildado. Sin eso, la pantalla de login rechaza todo: la colección
-está vacía.
+Para entrar al CRM hay que crear además el **primer** usuario de `users` desde
+el panel (**Colecciones → users → Nuevo registro**), con `rol: administrador`,
+`estado: activo` y `verified` tildado. Sin eso, la pantalla de login rechaza
+todo: la colección está vacía.
+
+Ese es el único que se crea a mano. **Al resto los das de alta desde el CRM**,
+en Usuarios → **+** → Invitar: se les manda el correo con su enlace y no hay
+que tocar el panel nunca más. Mientras no hayan entrado figuran como
+`pendiente` y no pueden iniciar sesión.
 
 ---
 

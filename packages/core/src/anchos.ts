@@ -23,6 +23,13 @@ export interface Panel {
 export const COLUMNA_LISTA: Panel = { clave: 'om.anchoCol1', min: 260, max: 520, normal: 340, signo: 1 };
 export const PANEL_AGENDA: Panel = { clave: 'om.anchoAgenda', min: 340, max: 900, normal: 560, signo: -1 };
 export const PANEL_REPOSITORIO: Panel = { clave: 'om.anchoRepo', min: 300, max: 620, normal: 400, signo: -1 };
+/*
+ * La lista de chats de WA Personal. Los mismos límites que la columna 1 de
+ * Follow-up porque es lo mismo: una lista de gente al costado de una
+ * conversación. Clave propia, eso sí — son dos pantallas distintas y el ancho
+ * que sirve en una no tiene por qué servir en la otra.
+ */
+export const COLUMNA_WA: Panel = { clave: 'om.anchoWa', min: 260, max: 520, normal: 320, signo: 1 };
 
 /** El ancho que resulta de arrastrar, ya recortado a los límites del panel. */
 export function anchoArrastrado(panel: Panel, anchoInicial: number, deltaX: number): number {

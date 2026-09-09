@@ -800,12 +800,57 @@ Panel «Asignar en lote» en Usuarios:
 - Check por fila para el uno por uno.
 - La ficha del usuario muestra el reparto por cuenta (`AL 3 · DL 12`).
 
-### 6.7 Login y sesión
+### 6.7 Alta, login y sesión
+
+**El alta la hace un administrador. No hay auto-registro** (§7.5), y eso se
+sostiene en el servidor: la colección `users` no acepta `create` desde la API.
+Si lo aceptara, cualquiera que sepa la URL se da de alta solo.
+
+**El correo de alta no lleva la contraseña.** Lleva el usuario —el email con el
+que va a entrar— y un enlace donde la persona **elige** la suya. La diferencia no
+es de estilo: una clave escrita en un mail queda en esa bandeja para siempre, y
+quien acceda a esa casilla dentro de dos años tiene una llave del CRM. El
+enlace, en cambio, deja de servir apenas se usa, o a los **siete días**, lo que
+pase antes.
+
+El flujo, entero:
+
+| Paso | Qué pasa |
+|---|---|
+| 1 | El administrador carga nombre, email y rol. Ninguna contraseña |
+| 2 | El servidor crea el usuario en estado **pendiente**, con una clave aleatoria de 50 caracteres que **no viaja a ningún lado** — en ningún momento existe una clave que un tercero pudiera adivinar o encontrar escrita |
+| 3 | Sale el correo con el usuario y el enlace. Si el correo no sale, la cuenta recién creada **se deshace**: un usuario que nadie puede usar y que además bloquea ese email es peor que no haber hecho nada |
+| 4 | La persona abre el enlace, elige su contraseña y **entra directo** |
+| 5 | El usuario pasa a **activo**, y el enlace se quema |
+
+**El token**: 40 caracteres al azar, guardado **hasheado** en su propia
+colección cuyas cinco reglas están vacías — sólo el servidor la lee. Se guarda
+hasheado porque un backup que se filtre, con el token en claro, es entrar como
+cualquiera de los invitados pendientes.
+
+**Emitir un enlace quema los anteriores.** Dos correos abiertos son dos llaves.
+
+**Los tres «no» se distinguen**, porque no es lo mismo para quien abre el
+enlace: *vencido* → pedí otro; *ya usado* → entrá con tu contraseña;
+*inexistente* → se cortó al copiarlo. Un solo mensaje para los tres manda a
+escribirle al administrador a alguien que no lo necesitaba.
+
+**Un usuario `pendiente` no puede iniciar sesión** (§3.1), y eso se comprueba en
+el servidor, no en la pantalla de login.
+
+**Reiniciar una contraseña es lo mismo**: sale un enlace, con otro texto — el
+que dice que la anterior dejó de servir. **Nadie, ni el administrador, fija ni
+ve la contraseña de otro.** No hay botón para eso.
+
+Y del login en sí:
 
 - Usuario/email + contraseña.
 - «Mantener la sesión abierta» persiste la sesión localmente; si no, muere al cerrar.
 - Cerrar sesión desde el chip de sesión en el header.
 - **Una sesión con un token válido que apunta a un usuario que ya no existe se cierra sola.** Que el token no haya vencido no alcanza: si no se revalida contra el servidor, la app dibuja un CRM vacío y le echa la culpa a los filtros.
+
+**Hace falta un servidor de correo** (§13.1). Sin SMTP configurado el alta
+falla y lo dice; no crea a nadie a medias.
 
 ### 6.8 Qué ve cada rol
 
@@ -899,7 +944,7 @@ Sin botón «Ignorar» y sin etiqueta «Personal»: la pestaña ya lo implica.
 
 Dos pestañas.
 
-**Usuarios**: lista con rol, estado y último acceso; alta por invitación (link por email → queda `pendiente`; contraseña temporal → entra `activo`), suspender/reactivar, baja, reenviar invitación. La ficha del usuario muestra rol, tabla de los **19 permisos** con su origen (por rol / editado), el **alcance de Control** cuando corresponde, leads asignados (con cruz para quitarlos y buscador para agregar), reparto por cuenta (`AL 3 · DL 12`) y el panel «Asignar en lote».
+**Usuarios**: lista con rol, estado y último acceso; alta por invitación —siempre por enlace, nunca con una contraseña escrita (§6.7)—, suspender/reactivar, baja, y **reenviar el acceso**: para quien está `pendiente` es otro enlace de invitación; para quien ya entró, un reinicio de contraseña. La ficha del usuario muestra rol, tabla de los **19 permisos** con su origen (por rol / editado), el **alcance de Control** cuando corresponde, leads asignados (con cruz para quitarlos y buscador para agregar), reparto por cuenta (`AL 3 · DL 12`) y el panel «Asignar en lote».
 
 **Actividad**: cuándo, usuario, acción, sobre qué lead y canal, con filtro por usuario. Registra ingresos, envíos, ediciones de ficha, reuniones y cambios de permisos. Retención 90 días.
 

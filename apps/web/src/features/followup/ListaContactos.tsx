@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { coincide } from '@crm/core/busqueda';
+import { etiquetaDeUltimoEnvio } from '@crm/core/envio';
+import { ETIQUETAS_EN_LA_FILA, etiquetasDeLaFila } from '@crm/core/etiqueta';
 import { nombreDePersona } from '@crm/core/linkedin';
 import { COLUMNA_LISTA } from '@crm/core/anchos';
 import { LOTE, hayQueCrecer, scrollHasta, ventanaPara } from '@crm/core/ventana';
@@ -71,12 +73,133 @@ interface Props {
   veCola: boolean;
   /** Sin permiso de importar no se pasa la función y el botón no existe. */
   onImportar?: () => void;
+  /**
+   * Los usuarios a los que se puede asignar, para el chip de agente.
+   *
+   * Vacío = no se puede reasignar desde acá y el chip queda como una marca.
+   */
+  usuarios?: UsuarioRecord[];
+  puedeAsignar?: boolean;
+  onAsignar?: (leadId: string, usuarioId: string | null) => void;
+  /**
+   * Qué etiquetas mostrar primero en la fila, en orden.
+   *
+   * Es una preferencia de quien mira, no un dato del lead: con `Frío`,
+   * `Recordatorio` y `Caliente` en la misma fila, cuál importa depende de para
+   * qué se esté usando la lista ese día.
+   */
+  preferidas?: string[];
+  onPreferidas?: (v: string[]) => void;
+}
+
+/** Lo mínimo del último envío de un lead, para la fila. */
+export interface UltimoEnvio {
+  paso: string;
+  enviado_en: string;
+}
+
+/**
+ * El chip del agente asignado, en la fila (§7.2).
+ *
+ * Tocarlo abre la lista de gente. Reasignar es una operación de la LISTA —se
+ * mira el reparto y se corrige— y hasta ahora obligaba a abrir la ficha de cada
+ * lead, que es el gesto contrario al que uno está haciendo.
+ *
+ * §6.5: hay un responsable y puede haber acompañantes. En la fila entra un
+ * chip; cuando son varios, el chip muestra cuántos y el detalle va en el
+ * `title`, que es la misma regla que siguen las etiquetas de al lado.
+ */
+function ChipAgente({
+  lead,
+  usuarios,
+  puedeAsignar,
+  onAsignar,
+}: {
+  lead: LeadRecord;
+  usuarios: UsuarioRecord[];
+  puedeAsignar: boolean;
+  onAsignar?: (leadId: string, usuarioId: string | null) => void;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const asignado = lead.expand?.asignado;
+
+  if (!puedeAsignar || !onAsignar) {
+    if (!asignado) return null;
+    return (
+      <span className="fila-duenio" title={asignado.name}>
+        {iniciales(asignado.name)}
+      </span>
+    );
+  }
+
+  return (
+    <span className="fila-agente">
+      <button
+        type="button"
+        className={`fila-duenio fila-duenio-boton ${asignado ? '' : 'fila-duenio-vacio'}`}
+        title={asignado ? `${asignado.name} · tocá para reasignar` : 'Sin asignar · tocá para asignar'}
+        onClick={(e) => {
+          // Sin esto el clic también selecciona el lead y la lista salta.
+          e.stopPropagation();
+          setAbierto((a) => !a);
+        }}
+      >
+        {asignado ? iniciales(asignado.name) : '+'}
+      </button>
+
+      {abierto && (
+        <>
+          <span
+            className="popover-fondo"
+            onClick={(e) => {
+              e.stopPropagation();
+              setAbierto(false);
+            }}
+          />
+          <span className="fila-agentes" onClick={(e) => e.stopPropagation()}>
+            {usuarios.map((u) => (
+              <button
+                key={u.id}
+                type="button"
+                className={`fila-agente-op ${u.id === lead.asignado ? 'fila-agente-op-on' : ''}`}
+                onClick={() => {
+                  onAsignar(lead.id, u.id);
+                  setAbierto(false);
+                }}
+              >
+                <span className="fila-duenio">{iniciales(u.name)}</span>
+                <span>{u.name}</span>
+              </button>
+            ))}
+            {/* §3.6: sin asignación explícita el lead es del administrador. Por
+                eso «sin asignar» es una opción y no un estado prohibido. */}
+            <button
+              type="button"
+              className={`fila-agente-op ${lead.asignado ? '' : 'fila-agente-op-on'}`}
+              onClick={() => {
+                onAsignar(lead.id, null);
+                setAbierto(false);
+              }}
+            >
+              <span className="fila-duenio fila-duenio-vacio">—</span>
+              <span>Sin asignar</span>
+            </button>
+          </span>
+        </>
+      )}
+    </span>
+  );
 }
 
 export function ListaContactos({
   leads,
   conversacion = null,
   onCerrarConversacion,
+  usuarios = [],
+  puedeAsignar = false,
+  onAsignar,
+  preferidas = [],
+  onPreferidas,
   seleccionado,
   onSeleccionar,
   usuario,
@@ -94,9 +217,37 @@ export function ListaContactos({
    * escribía.
    */
   const [cuantas, setCuantas] = useState(LOTE);
+  /**
+   * El último envío de cada lead.
+   *
+   * Una sola consulta para toda la lista, no una por fila: con 189 leads
+   * serían 189 pedidos para escribir dos letras en cada una. Se traen sólo
+   * `lead`, `paso` y la fecha, ordenados, y se guarda el primero de cada lead.
+   */
+  const [ultimosEnvios, setUltimosEnvios] = useState<Record<string, UltimoEnvio>>({});
   // 9.4: 260-520, doble clic alterna compacto/normal, persistido.
   const anchoCol = useAncho(COLUMNA_LISTA);
   const refLista = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    pb.collection('envio')
+      .getFullList<{ lead: string; paso: string; enviado_en: string }>({
+        fields: 'lead,paso,enviado_en',
+        sort: '-enviado_en',
+      })
+      .then((es) => {
+        if (!vivo) return;
+        const m: Record<string, UltimoEnvio> = {};
+        // Vienen del más nuevo al más viejo: el primero de cada lead es el suyo.
+        for (const e of es) if (!m[e.lead]) m[e.lead] = { paso: e.paso, enviado_en: e.enviado_en };
+        setUltimosEnvios(m);
+      })
+      .catch(() => setUltimosEnvios({}));
+    return () => {
+      vivo = false;
+    };
+  }, [leads.length]);
   const [cuenta, setCuenta] = useState('todas');
   const [colaborador, setColaborador] = useState('todos');
   const [soloVencidos, setSoloVencidos] = useState(false);
@@ -360,6 +511,43 @@ export function ListaContactos({
                 </button>
               )}
             </div>
+            {/* Qué etiquetas se ven en la fila, y en qué orden.
+                No es un filtro —no saca leads de la lista— pero vive acá
+                porque es la misma pregunta: qué de todo esto quiero ver.
+                El orden es el de selección: se tocan en el orden en que se
+                las quiere leer. */}
+            {onPreferidas && (
+              <div className="popover-grupo">
+                <span className="campo-label">Etiquetas en la fila</span>
+                <div className="chips">
+                  {[...new Set(leads.flatMap((l) => (l.expand?.etiquetas ?? []).map((e) => e.nombre)))]
+                    .sort()
+                    .map((e) => {
+                      const i = preferidas.indexOf(e);
+                      return (
+                        <button
+                          key={e}
+                          type="button"
+                          className={`chip ${i >= 0 ? 'chip-on' : ''}`}
+                          title={i >= 0 ? `${i + 1}ª en la fila · tocá para sacarla` : 'Mostrarla primero'}
+                          onClick={() =>
+                            onPreferidas(
+                              i >= 0 ? preferidas.filter((x) => x !== e) : [...preferidas, e],
+                            )
+                          }
+                        >
+                          {e}
+                          {i >= 0 && <span className="tarea-orden-n tabular">{i + 1}</span>}
+                        </button>
+                      );
+                    })}
+                </div>
+                <span className="campo-ayuda">
+                  Entran {ETIQUETAS_EN_LA_FILA}. El resto se ve al pasar por encima.
+                </span>
+              </div>
+            )}
+
             <div className="popover-grupo">
               <span className="campo-label">Próximo contacto</span>
               <div className="chips">
@@ -559,6 +747,14 @@ export function ListaContactos({
             HOY,
           );
           const sinLeer = l.sin_leer_li || l.sin_leer_wa;
+          const env = ultimosEnvios[l.id];
+          const ultimo = env
+            ? { ...env, etiqueta: etiquetaDeUltimoEnvio(env.paso) }
+            : null;
+          const etiquetas = etiquetasDeLaFila(
+            (l.expand?.etiquetas ?? []).map((e) => e.nombre),
+            preferidas,
+          );
           return (
             <div
               key={l.id}
@@ -576,18 +772,60 @@ export function ListaContactos({
                   />
                 )}
                 {sinLeer && <span className="fila-duenio fila-nuevo">nuevo</span>}
-                {l.expand?.asignado && (
-                  <span className="fila-duenio" title={l.expand.asignado.name}>
-                    {iniciales(l.expand.asignado.name)}
-                  </span>
-                )}
+
+                {/* El agente. Tocarlo abre la lista para reasignar sin salir de
+                    la columna: reasignar es una operación de la lista, no de la
+                    ficha, y hasta ahora obligaba a abrir el lead. */}
+                <ChipAgente
+                  lead={l}
+                  usuarios={usuarios}
+                  puedeAsignar={puedeAsignar}
+                  onAsignar={onAsignar}
+                />
               </div>
               <div className="fila-abajo">
                 <span className="fila-cuenta">{l.expand?.cuenta?.abrev}</span>
                 <span className="fila-etapa">{l.etapa}</span>
+
+                {/* El último mensaje: el R si fue de la cadencia, FU si fue
+                    suelto. Es lo que explica por qué el próximo contacto no
+                    cuadra con la etapa. */}
+                {ultimo && (
+                  <span
+                    className={`fila-ultimo ${ultimo.etiqueta === 'FU' ? 'fila-ultimo-fu' : ''}`}
+                    title={`Último mensaje: ${ultimo.paso || 'suelto'} · ${ultimo.enviado_en.slice(0, 10)}`}
+                  >
+                    {ultimo.etiqueta}
+                  </span>
+                )}
+
                 <span className={`fila-contacto ${vence ? 'fila-contacto-vencido' : ''}`}>
                   {etiquetaContacto(l.proximo_contacto || null)}
                 </span>
+
+                {/* Las etiquetas. Entran dos; el resto se ve al pasar por
+                    encima. Cuáles y en qué orden lo elige el usuario. */}
+                {etiquetas.visibles.length > 0 && (
+                  <span
+                    className="fila-etiquetas"
+                    title={
+                      etiquetas.ocultas.length
+                        ? [...etiquetas.visibles, ...etiquetas.ocultas].join(' · ')
+                        : undefined
+                    }
+                  >
+                    {etiquetas.visibles.map((e) => (
+                      <span key={e} className="fila-etiqueta">
+                        {e}
+                      </span>
+                    ))}
+                    {etiquetas.ocultas.length > 0 && (
+                      <span className="fila-etiqueta fila-etiqueta-mas">
+                        +{etiquetas.ocultas.length}
+                      </span>
+                    )}
+                  </span>
+                )}
               </div>
             </div>
           );
