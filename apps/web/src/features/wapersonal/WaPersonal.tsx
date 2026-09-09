@@ -120,6 +120,8 @@ export function WaPersonal({ onIrAlLead }: Props) {
   const recargar = useCallback(async () => {
     try {
       const [c, conTelefono, e] = await Promise.all([
+        // Por el último mensaje, como cualquier lista de chats: arriba el que
+        // escribió recién.
         pb.collection('chat_personal').getFullList<ChatRecord>({ sort: '-updated' }),
         // Los leads que ya existen, sólo para saber qué número YA está en la
         // base. Es lo que hace falta para el filtro «no agendados».
@@ -422,11 +424,14 @@ export function WaPersonal({ onIrAlLead }: Props) {
               {chats.filter((c) => !telefonosEnLaBase.has(ultimosOcho(c.telefono))).length}
             </span>
           </button>
-          <span className="campo-ayuda">
-            {filtros.size === 0
-              ? `${chats.length} chats`
-              : `${visibles.length} de ${chats.length}`}
-          </span>
+          {/* El conteo sólo cuando hay un filtro puesto: sirve para saber
+              cuánto sacó el filtro. Sin filtro es la lista entera y decir
+              «5 chats» arriba de cinco chats no agrega nada. */}
+          {filtros.size > 0 && (
+            <span className="campo-ayuda tabular">
+              {visibles.length} de {chats.length}
+            </span>
+          )}
         </div>
 
         <div className="wap-chats">
@@ -436,25 +441,40 @@ export function WaPersonal({ onIrAlLead }: Props) {
               className={`wap-chat ${activo?.id === c.id ? 'wap-chat-on' : ''}`}
               onClick={() => void elegir(c)}
             >
-              {c.no_leido && <span className="wap-punto" title="Sin leer" />}
+              {/* La marca de sin leer va a la IZQUIERDA, antes del nombre: es
+                  lo primero que se busca al recorrer la lista. Y es el mismo
+                  botón que lo devuelve a sin leer, no dos cosas distintas. */}
+              <button
+                type="button"
+                className={`wap-punto-boton ${c.no_leido ? 'wap-punto-on' : ''}`}
+                title={c.no_leido ? 'Sin leer' : 'Dejarlo sin leer para volver después'}
+                disabled={marcando === c.id}
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  if (!c.no_leido) void marcarSinLeer(c);
+                }}
+              >
+                ●
+              </button>
               <div className="wap-chat-medio">
                 <span className="wap-chat-nombre">{c.nombre}</span>
                 <span className="wap-chat-ultimo">{ultimoTexto(c.mensajes ?? [])}</span>
               </div>
-              {/* Las dos acciones, SIEMPRE visibles y con ancho fijo.
-                  Antes aparecían recién al elegir el chat y empujaban el nombre
-                  fuera de la fila: se veían cuatro botones y no se veía con
-                  quién se estaba hablando. */}
+              {/* Las dos acciones de la derecha, siempre visibles y con ancho
+                  fijo. Cada flecha dice una cosa distinta y no se pueden
+                  confundir: la diagonal SALE de la aplicación —abre el chat
+                  real de WhatsApp— y la horizontal MUEVE de una lista a otra,
+                  dentro del CRM. */}
               <div className="wap-chat-acciones" onClick={(ev) => ev.stopPropagation()}>
-                <button
-                  type="button"
+                <a
                   className="wap-accion"
-                  disabled={marcando === c.id}
-                  title={c.no_leido ? 'Ya está sin leer' : 'Dejarlo sin leer para volver después'}
-                  onClick={() => void marcarSinLeer(c)}
+                  href={`https://wa.me/${String(c.telefono ?? '').replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Abrir la conversación en WhatsApp"
                 >
-                  ●
-                </button>
+                  ↗
+                </a>
                 <button
                   type="button"
                   className="wap-accion wap-accion-fu"
@@ -463,7 +483,7 @@ export function WaPersonal({ onIrAlLead }: Props) {
                     void moverAFollowup(c.telefono, c.nombre, c.cuenta, undefined, c.id);
                   }}
                 >
-                  ↗
+                  →
                 </button>
               </div>
             </div>

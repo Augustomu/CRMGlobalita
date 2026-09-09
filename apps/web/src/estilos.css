@@ -2603,39 +2603,35 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
  * trece elementos por columna que no hacen nada más que estar ahí.
  */
 /*
- * La grilla de horas, con BANDAS ALTERNAS.
+ * La grilla de horas, como la de Google Calendar.
  *
- * Antes eran doce franjas del mismo blanco separadas por una línea de medio
- * píxel: para saber si un bloque caía a las 11 o a las 12 había que contar
- * desde arriba. La banda alterna se lee sin contar, y la línea de la media hora
- * queda como referencia fina adentro de cada una.
+ * DOS INTENTOS ANTES DE ESTE. El primero eran doce franjas del mismo blanco
+ * separadas por medio píxel: había que contar desde arriba para saber la hora.
+ * El segundo agregó una banda alterna con `--bg`… que es EXACTAMENTE el color
+ * que usaban los eventos del calendario, así que el bloque y el fondo eran el
+ * mismo beige y el evento desaparecía. Augusto lo vio de una.
+ *
+ * Google no tiene bandas: tiene una columna clara y una línea por hora. Lo que
+ * hace legible su grilla no es el fondo, es que LOS EVENTOS SON SÓLIDOS. El
+ * contraste lo pone el bloque, no la franja de atrás.
  */
 .agenda-col {
   position: relative;
   height: calc(var(--alto-hora) * var(--horas));
   border-left: .5px solid var(--border);
+  background: var(--surface);
   background-image:
-    /* la línea de la hora en punto, la más marcada */
     repeating-linear-gradient(
       to bottom,
       var(--border) 0 1px,
       transparent 1px var(--alto-hora)
-    ),
-    /* la de la media hora, apenas insinuada */
-    repeating-linear-gradient(
-      to bottom,
-      var(--border) 0 .5px,
-      transparent .5px calc(var(--alto-hora) / 2)
-    ),
-    /* y la banda: una hora sí, una hora no */
-    repeating-linear-gradient(
-      to bottom,
-      var(--bg) 0 var(--alto-hora),
-      transparent var(--alto-hora) calc(var(--alto-hora) * 2)
     );
 }
+/* Hoy y el finde se marcan APENAS: el color fuerte es de los eventos. Teñir la
+   columna entera es volver a pelearle contraste al bloque. */
 .agenda-col-hoy { background: var(--info-light); }
 .agenda-col-finde { background: var(--bg); }
+.agenda-col-hoy, .agenda-col-finde { background-blend-mode: normal; }
 
 /* El hueco que ocuparía la reunión al soltarla: del alto exacto que va a
    tener, que es lo que uno necesita ver antes de soltar. */
@@ -2658,31 +2654,33 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .agenda-bloque-abierto { z-index: 40; }
 
 /*
- * La reunión agendada desde el CRM: verde y con cuerpo.
+ * Los bloques, sólidos. Es lo que hace legible la grilla de Google y es lo que
+ * acá faltaba: el evento tiene que ser una mancha de color contra una columna
+ * clara, no un tono de beige apenas distinto del de atrás.
  *
- * Es la que se puede mover, abrir y confirmar, y la única que el CRM controla.
- * Al lado de un evento del calendario —gris, punteado, que no se toca— la
- * diferencia tiene que leerse sin pasar el mouse por encima. Antes las dos eran
- * casi del mismo claro y la agenda parecía una hoja en blanco con texto.
+ * Dos tipos y se distinguen sin pasar el mouse:
+ *   verde lleno   una reunión del CRM: se mueve, se abre, se confirma
+ *   gris tenue    un evento del calendario: existe para no agendar encima
  */
 .agenda-evento {
   position: absolute;
   inset: 0 2px 1px 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0;
   padding: 2px 6px;
-  border-radius: 8px;
-  border: .5px solid var(--accent-br);
-  border-left: 3px solid var(--accent);
-  background: var(--accent-light);
-  color: var(--text);
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--surface);
   cursor: grab;
   overflow: hidden;
+  box-shadow: 0 1px 2px rgb(0 0 0 / .08);
 }
-.agenda-evento:hover { border-color: var(--accent); background: var(--accent-br); }
-.agenda-evento .agenda-evento-nombre { font-weight: 600; color: var(--text); }
-.agenda-evento .agenda-evento-hora { color: var(--accent-hover); font-weight: 600; }
+.agenda-evento:hover { background: var(--accent-hover); box-shadow: 0 2px 6px rgb(0 0 0 / .16); }
+.agenda-evento .agenda-evento-nombre { font-weight: 600; color: var(--surface); }
+.agenda-evento .agenda-evento-hora { color: var(--surface); opacity: .85; font-weight: 500; }
+.agenda-evento .agenda-evento-dura { color: var(--surface); opacity: .7; }
+
 /*
  * Un bloque de quince minutos no tiene alto para dos líneas, así que ahí la
  * hora y el nombre van en la misma. Se mide el bloque, no la ventana: el alto
@@ -4545,8 +4543,14 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 
 /* El bloque de otro calendario: gris, sin acento, sin cursor de arrastre.
    Tiene que leerse como "acá no puedo", no como una reunion apagada. */
+/* El horario tomado por OTRO administrador: rayado y sin color propio. Ahora
+   que el evento del CRM es verde lleno, este tiene que apagar tambien el
+   relleno y la sombra, o se ve como una reunion que se puede abrir. */
 .agenda-evento-ajeno {
+  border: .5px solid var(--border);
   border-left-color: var(--border);
+  box-shadow: none;
+  cursor: default;
   background: repeating-linear-gradient(
     -45deg,
     var(--bg),
@@ -6075,7 +6079,7 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   padding: 7px 8px;
   border-bottom: .5px solid var(--border);
 }
-.wap-chat-acciones { display: flex; gap: 5px; align-items: center; margin-left: auto; }
+.wap-chat-acciones { display: flex; gap: 4px; align-items: center; margin-left: auto; flex: 0 0 auto; }
 
 /* ------------------------------------------ Administrador de estados */
 .ctrl-leyenda-cabeza { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
@@ -6152,13 +6156,21 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 /* Lo demas del Google Calendar dentro de la grilla. Se distingue de una reunion
    del CRM sin gritar: mismo alto, borde punteado y sin relleno fuerte. Tiene
    que verse que el horario esta tomado y que eso no se toca desde aca. */
+/* El evento del calendario que no es del CRM. Relleno propio —NO `--bg`, que
+   es el color del fondo de la pantalla— y borde marcado a la izquierda, como
+   los eventos «tentativos» de Google. Se ve que el horario está tomado y que
+   eso no se toca desde acá. */
 .agenda-evento-calendario {
-  background: var(--bg);
-  border: .5px dashed var(--border);
+  background: var(--info-light);
+  border: .5px solid var(--info-br);
+  border-left: 3px solid var(--info);
   color: var(--muted);
   cursor: default;
+  box-shadow: none;
 }
-.agenda-evento-calendario .agenda-evento-nombre { font-weight: 400; }
+.agenda-evento-calendario:hover { background: var(--info-light); box-shadow: 0 1px 3px rgb(0 0 0 / .1); }
+.agenda-evento-calendario .agenda-evento-nombre { font-weight: 500; color: var(--text); }
+.agenda-evento-calendario .agenda-evento-hora { color: var(--info); opacity: 1; font-weight: 600; }
 
 /* Los tres pasos de destacar un mensaje: idioma, para quien, cuales. El numero
    no es adorno — el orden es la correccion: antes se elegia el mensaje primero
@@ -6193,3 +6205,42 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   box-shadow: inset 2px 0 0 var(--accent);
 }
 .agenda-lista-fila-on .agenda-lista-nombre { font-weight: 600; color: var(--text); }
+
+
+/* La marca de sin leer, a la izquierda del nombre: es lo primero que se busca
+   al recorrer la lista, y es el mismo boton que lo devuelve a sin leer. */
+.wap-punto-boton {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  flex: 0 0 auto;
+  font-size: var(--txt-xs);
+  line-height: 1;
+  color: transparent;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.wap-chat:hover .wap-punto-boton { color: var(--border); }
+.wap-punto-on, .wap-chat:hover .wap-punto-on { color: var(--accent); }
+.wap-punto-boton:hover { color: var(--accent-hover); }
+
+/* Los dos iconos fijos de cada usuario. El de baja se pone rojo solo al pasar
+   por encima: en reposo es un icono mas, no una alarma. */
+.usuario-icono {
+  height: 22px;
+  min-width: 22px;
+  padding: 0 6px;
+  font-size: var(--txt-md);
+  line-height: 1;
+  color: var(--muted);
+  background: var(--surface);
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.usuario-icono:hover { color: var(--accent); border-color: var(--accent-br); background: var(--accent-light); }
+.usuario-icono:disabled { opacity: .4; cursor: default; }
+.usuario-icono-peligro { color: var(--error); border-color: var(--error); background: var(--error-light); font-size: var(--txt-sm); }
+.usuario-icono-peligro:hover { color: var(--surface); background: var(--error); border-color: var(--error); }

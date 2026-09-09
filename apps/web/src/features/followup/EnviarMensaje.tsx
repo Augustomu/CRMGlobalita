@@ -713,23 +713,28 @@ export function EnviarMensaje({
         </div>
       )}
 
-      {/* §5.2: si no hay texto para ese paso o idioma, se avisa. No se inventa. */}
-      {!resuelto.hay && (
-        <div className="aviso-suave">
-          {resuelto.motivo === 'sin_plantilla'
-            ? `No hay plantilla cargada para ${paso}. Podés escribir el texto a mano.`
-            : `«${resuelto.plantilla?.nombre}» no tiene texto en ${idioma}. Podés escribirlo a mano o cambiar de idioma.`}
-        </div>
-      )}
+      {/*
+        §5.2 sigue valiendo —si no hay texto se avisa, no se inventa— pero el
+        aviso pasó a ser el PLACEHOLDER del cuadro, no un cartel arriba.
 
+        El cartel decía lo que el cuadro vacío ya mostraba, y ocupaba tres
+        renglones para hacerlo. Dentro del cuadro, el mismo aviso está justo
+        donde hay que escribir y desaparece solo al empezar a escribir.
+      */}
       <textarea
+        placeholder={
+          resuelto.hay
+            ? 'El texto que le vas a mandar.'
+            : resuelto.motivo === 'sin_plantilla'
+              ? `No hay plantilla para ${paso}: escribí el mensaje acá.`
+              : `Sin texto en ${idioma.toUpperCase()} para este paso: escribilo acá, o cambiá el idioma arriba.`
+        }
         rows={5}
         value={texto}
         onChange={(e) => {
           setTexto(e.target.value);
           setTocado(true);
         }}
-        placeholder="El texto que le vas a mandar."
       />
 
       {/* §7.2: guardar lo escrito COMO MENSAJE del repositorio, y desde ahí

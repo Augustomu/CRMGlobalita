@@ -357,11 +357,16 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
                   que se hacen sobre otra persona —mandarle un enlace nuevo o
                   darla de baja— sin bajar a la ficha. La baja sigue en dos
                   tiempos: el primer clic pregunta. */}
-              {seleccionado === u.id && u.id !== usuarioActual.id && (
+              {/* Las dos acciones, FIJAS en la fila y como iconos.
+                  Antes aparecían recién al elegir el usuario: había que hacer
+                  clic para descubrir que existían. La baja sigue en dos tiempos
+                  —el primer toque pregunta— porque un icono que borra al primer
+                  clic, al lado de otro que no, se aprieta por inercia. */}
+              {u.id !== usuarioActual.id && (
                 <div className="usuario-rapidos" onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
-                    className="boton-mini"
+                    className="usuario-icono"
                     disabled={enviandoAcceso}
                     title={
                       u.estado === 'pendiente'
@@ -370,40 +375,43 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
                     }
                     onClick={() => void reenviarAcceso()}
                   >
-                    {enviandoAcceso
-                      ? 'mandando…'
-                      : u.estado === 'pendiente'
-                        ? 'Reenviar invitación'
-                        : 'Reiniciar contraseña'}
+                    {enviandoAcceso ? '…' : '✉'}
                   </button>
-                  {confirmarBaja ? (
+                  {seleccionado === u.id && confirmarBaja ? (
                     <>
                       <button
                         type="button"
-                        className="boton-mini-peligro"
+                        className="usuario-icono usuario-icono-peligro"
+                        title="Sí: borrar este usuario"
                         onClick={() => void darDeBaja()}
                       >
                         Sí, borrar
                       </button>
                       <button
                         type="button"
-                        className="boton-mini"
+                        className="usuario-icono"
+                        title="Cancelar"
                         onClick={() => setConfirmarBaja(false)}
                       >
-                        Cancelar
+                        ✕
                       </button>
                     </>
                   ) : (
                     <button
                       type="button"
-                      className="boton-mini"
+                      className="usuario-icono"
                       title="Dar de baja: se borra el usuario y sus leads quedan sin asignar"
-                      onClick={() => setConfirmarBaja(true)}
+                      onClick={() => {
+                        setSeleccionado(u.id);
+                        setConfirmarBaja(true);
+                      }}
                     >
-                      Dar de baja
+                      🗑
                     </button>
                   )}
-                  {avisoAcceso && <span className="pastilla pastilla-ok">{avisoAcceso}</span>}
+                  {avisoAcceso && seleccionado === u.id && (
+                    <span className="pastilla pastilla-ok">{avisoAcceso}</span>
+                  )}
                 </div>
               )}
             </div>
