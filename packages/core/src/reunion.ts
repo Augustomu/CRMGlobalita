@@ -490,5 +490,5 @@ export const NOMBRE_ESTADO_REUNION: Record<EstadoReunion, string> = {
   'no-asistio': 'no asistió',
   cancelada: 'cancelada',
   reagendada: 'reagendada',
-  sin_dato: 'sin dato',
+  sin_dato: 'sin información',
 };

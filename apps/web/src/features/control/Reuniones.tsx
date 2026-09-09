@@ -67,7 +67,7 @@ export function Reuniones({ reuniones }: Props) {
       // ausentismo y en realidad mide lo que nadie anotó.
       detalle:
         t.sin_dato > 0
-          ? `${t.pct_asistieron}% de las ${t.constan} que constan.`
+          ? `${t.pct_asistieron}% de las ${t.constan} con información.`
           : `${t.pct_asistieron}% del total.`,
       color: 'var(--success)',
     },
@@ -78,8 +78,8 @@ export function Reuniones({ reuniones }: Props) {
       ? [
           {
             n: t.sin_dato,
-            label: 'Sin dato',
-            detalle: 'Ocurrieron; nadie registró el resultado.',
+            label: 'Sin información',
+            detalle: 'Ocurrieron; no consta si asistió.',
             color: 'var(--hint)',
           },
         ]

@@ -353,7 +353,10 @@ for (const p of porPersona.values()) {
       google_event_id: r.event_id ?? '',
       sync: 'omitida',
       sync_detalle: 'recuperada del historico de Calendar',
-      notas: r.asistio || r.rechazo ? '' : 'No consta si asistió: el invitado nunca respondió la invitación de Calendar.',
+      notas:
+        r.asistio || r.rechazo
+          ? ''
+          : 'Sin información de asistencia: el invitado nunca respondió la invitación de Calendar.',
     });
     if (r.event_id) yaImportadas.add(r.event_id);
     resumen.reuniones++;
