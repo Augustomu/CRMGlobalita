@@ -4,16 +4,36 @@
 //   node packages/db/dev.mjs           aplica migraciones y arranca
 //   node packages/db/dev.mjs --seed    ademas carga los datos de demo
 //   node packages/db/dev.mjs --reset   borra la base y empieza de cero
+//   node packages/db/dev.mjs --copia   solo hace una copia y sale
+//   node packages/db/dev.mjs --copias  lista las copias que hay
+//
+// EL --reset NO BORRA NADA SIN COPIA, Y SE NIEGA SI HAY DATOS REALES.
+// El por que esta escrito en copias.mjs. Resumido: el 08/09/2026 se perdieron
+// 248 contactos y 298 reuniones importados, porque el --reset de entonces eran
+// cuatro lineas sin red.
 
 import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import {
+  FRASE_PARA_BORRAR,
+  copiar,
+  copiasQueHay,
+  carpetaDeCopias,
+  pesoEnMb,
+  queHayAdentro,
+} from './copias.mjs';
 
 const raiz = path.resolve(import.meta.dirname, '../..');
 const pb = path.join(raiz, '.pb');
 const exe = path.join(pb, os.platform() === 'win32' ? 'pocketbase.exe' : 'pocketbase');
-const datos = path.join(pb, 'pb_data');
+// PB_DATOS deja arrancar una base limpia en otra carpeta SIN borrar la que ya
+// existe. Es la salida sana cuando uno quiere empezar de cero: mover, no
+// destruir.
+const datos = process.env.PB_DATOS
+  ? path.resolve(raiz, process.env.PB_DATOS)
+  : path.join(pb, 'pb_data');
 const migraciones = path.join(raiz, 'packages/db/pb_migrations');
 const semilla = path.join(raiz, 'packages/db/pb_seed');
 const hooks = path.join(raiz, 'packages/db/pb_hooks');
@@ -46,9 +66,66 @@ function migrar(dir) {
   });
 }
 
-if (args.has('--reset') && fs.existsSync(datos)) {
-  fs.rmSync(datos, { recursive: true, force: true });
-  console.log('Base borrada.');
+// --------------------------------------------------------------------------
+// Las copias, y la red que faltaba
+// --------------------------------------------------------------------------
+
+if (args.has('--copias')) {
+  const cs = copiasQueHay(pb);
+  if (!cs.length) {
+    console.log('Todavia no hay ninguna copia.');
+  } else {
+    console.log(`${cs.length} copias en ${carpetaDeCopias(pb)}\n`);
+    for (const c of cs) {
+      console.log('  ', c.padEnd(34), pesoEnMb(path.join(carpetaDeCopias(pb), c)) + ' MB');
+    }
+    console.log('\nPara volver a una:');
+    console.log('   node packages/db/restaurar.mjs <nombre-de-la-copia>');
+  }
+  process.exit(0);
+}
+
+if (args.has('--copia')) {
+  const d = copiar(pb, datos, 'a-mano');
+  console.log(d ? `Copia hecha en ${d}` : 'No hay base que copiar todavia.');
+  process.exit(0);
+}
+
+if (args.has('--reset')) {
+  const hay = queHayAdentro(datos);
+
+  // Sin poder mirar adentro se asume lo peor. Un "no pude leer la base" no es
+  // permiso para borrarla.
+  if (hay === null) {
+    console.error(
+      'No pude leer la base para saber que hay adentro, asi que NO la borro.\n' +
+        'Si estas seguro, movela a mano y volve a correr.',
+    );
+    process.exit(1);
+  }
+
+  if (hay.existe && hay.reales > 0 && !args.has(FRASE_PARA_BORRAR)) {
+    console.error(
+      `\nNO borro nada: esta base tiene ${hay.reales} leads que no son de demo.\n\n` +
+        `  perfiles ${hay.detalle.perfil}   leads ${hay.detalle.lead}   ` +
+        `reuniones ${hay.detalle.reunion}   proyectos ${hay.detalle.proyecto}\n\n` +
+        'Si de verdad los queres borrar:\n\n' +
+        `   node packages/db/dev.mjs --reset ${FRASE_PARA_BORRAR}\n\n` +
+        'Aun asi se hace una copia antes. Para arrancar limpio SIN tocar esto,\n' +
+        'usa otra carpeta: PB_DATOS=.pb/pb_data_limpia node packages/db/dev.mjs\n',
+    );
+    process.exit(1);
+  }
+
+  if (fs.existsSync(datos)) {
+    // La copia va SIEMPRE, incluso si adentro solo hay demo: distinguir "esto
+    // era descartable" de "esto no" es justo lo que salio mal una vez.
+    const copia = copiar(pb, datos, 'antes-del-reset');
+    console.log(`Copia guardada en ${copia}`);
+    console.log('   (volves con: node packages/db/restaurar.mjs ' + path.basename(copia) + ')');
+    fs.rmSync(datos, { recursive: true, force: true });
+    console.log('Base borrada.');
+  }
 }
 
 buscarEjecutable();

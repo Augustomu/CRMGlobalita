@@ -1,5 +1,36 @@
 # Instrucciones para agentes en este repositorio
 
+## No se borran datos. Nunca.
+
+**Esta regla está primera porque ya se rompió una vez.** El 08/09/2026 se
+corrió `dev.mjs --reset` unas diez veces mientras se trabajaba en otra cosa, y
+se perdieron los 248 contactos y las 298 reuniones que Augusto había importado.
+Nadie se dio cuenta hasta que él preguntó, dos días después.
+
+1. **Ningún comando destructivo sin que lo pida Augusto en ese momento.**
+   `--reset`, `DELETE`, `rm -rf`, `git checkout --` sobre trabajo sin
+   commitear, `TRUNCATE`. Que haya dicho «no pares» es permiso para *hacer*,
+   no para *borrar*.
+2. **Ante la duda, copiar.** `node packages/db/dev.mjs --copia` tarda un
+   segundo y ocupa 13 MB. No hay ninguna situación en la que valga la pena
+   saltearlo.
+3. **Para arrancar de cero se usa OTRA carpeta, no se borra la que hay:**
+   `PB_DATOS=.pb/pb_data_limpia node packages/db/dev.mjs --seed`
+4. **Si un dato se perdió, se dice de inmediato.** No se espera a que pregunte.
+
+`dev.mjs --reset` ahora se niega solo cuando hay datos que no son de demo, y
+copia igual antes de tocar nada. Esa red no es una excusa para volver a
+correrlo: es lo que impide que un descuido cueste dos años de contactos.
+
+| Para | Comando |
+|---|---|
+| Copiar ahora | `node packages/db/dev.mjs --copia` |
+| Ver las copias | `node packages/db/dev.mjs --copias` |
+| Volver a una | `node packages/db/restaurar.mjs <nombre>` |
+| Empezar limpio sin borrar | `PB_DATOS=.pb/pb_data_limpia node packages/db/dev.mjs --seed` |
+
+---
+
 ## Antes de escribir código
 
 **La especificación es `docs/MANUAL.md`, y es un solo archivo.** Hasta el

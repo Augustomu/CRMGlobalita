@@ -55,7 +55,7 @@ el navegador esté cerrado— está marcada como requisito, no como sugerencia.
 | 10 | Casos borde y decisiones ya tomadas |
 | 11 | Orden de construcción |
 | 12 | Datos de demo |
-| 13 | Operación: deploy, backups, riesgo |
+| 13 | Operación: deploy, backups, riesgo, la base de desarrollo |
 | 14 | Las decisiones, una por una |
 | 15 | Registro de cambios |
 
@@ -509,7 +509,7 @@ El nombre del paso en Automatizaciones es una etiqueta de ese panel; el texto si
 - El **cupo diario es por cuenta** (default 40, editable). **No hay cupo global.**
 - El script trabaja la lista de **mayor prioridad que todavía tenga páginas**; cuando se agota, pasa a la siguiente automáticamente.
 - El **objetivo semanal por cuenta es 200**. El contador se resetea los **lunes 00:01** (→ D25 para la zona del corte).
-- Una cuenta con sesión caída queda en **cero** y sus envíos **se acumulan, no se pierden**. Hay que avisarlo: chip «sesión caída» más tarea automática sugerida (§13.4).
+- Una cuenta con sesión caída queda en **cero** y sus envíos **se acumulan, no se pierden**. Hay que avisarlo: chip «sesión caída» más tarea automática sugerida (§13.5).
 
 40 por día × 5 días hábiles = los 200 semanales. La coherencia es intencional.
 
@@ -1056,7 +1056,7 @@ Es la integración crítica y la más frágil. **No hay API pública** para invi
 
 Consecuencias que el diseño ya asume:
 
-- Las sesiones **se caen** y hay que mostrarlo (`estado_sesion`), acumular los envíos y avisar (§13.4).
+- Las sesiones **se caen** y hay que mostrarlo (`estado_sesion`), acumular los envíos y avisar (§13.5).
 - Los **cupos diarios** existen para no gatillar límites de la plataforma. Son configurables porque el límite real cambia.
 - La **cancelación a los 90 días** existe para liberar el tope de invitaciones pendientes.
 - **Requisito**: los envíos corren del lado del servidor/worker, no en la pestaña del usuario. La cola tiene que sobrevivir a que el navegador esté cerrado. Si depende de la pestaña abierta, el producto no funciona.
@@ -1264,7 +1264,36 @@ No es una feature: es lo que evita repetir la pérdida de datos de septiembre de
 
 **Un backup que nunca se restauró no es un backup.** Probar una restauración completa **antes** de cargar los 27.000 perfiles reales, y después una vez por trimestre.
 
-### 13.3 El repositorio es público
+### 13.3 La base de desarrollo también se cuida
+
+La base local no es «descartable». Es donde se prueba con los datos reales
+recuperados —los contactos del CSV y el histórico de Calendar— y volver a
+armarla cuesta correr dos imports que dependen de archivos que existen en una
+sola máquina.
+
+**Nada se borra sin una copia antes.** `dev.mjs --reset` copia el directorio
+entero de PocketBase a `.pb/copias/` antes de tocar nada, y **se niega** si la
+base tiene leads que no vienen del seed. Insistir requiere escribir
+`--si-quiero-borrar-datos-reales`, que nadie tipea por inercia.
+
+Para arrancar limpio sin destruir lo que hay: `PB_DATOS=.pb/pb_data_limpia`.
+
+| Para | Comando |
+|---|---|
+| Copiar ahora | `node packages/db/dev.mjs --copia` |
+| Ver las copias, con cuántos leads tiene cada una | `node packages/db/dev.mjs --copias` |
+| Volver a una | `node packages/db/restaurar.mjs <nombre>` |
+
+Restaurar también copia lo que había antes de pisarlo: restaurar la copia
+equivocada no pierde nada.
+
+> **Las copias viven sólo en el disco local**, porque tienen datos reales y el
+> repositorio es público (§13.4). El esquema de tres copias del §13.2 no las
+> cubre: si se rompe el disco, se van. Lo que las reconstruye son los archivos
+> de `packages/db/recuperacion/`, que están en la misma máquina — así que
+> **esos** sí conviene tenerlos en Drive.
+
+### 13.4 El repositorio es público
 
 `github.com/Augustomu/CRMGlobalita` es público. No se commitean: CSV de contactos, exports de calendario, nombres, teléfonos ni emails reales. Los datos de recuperación viven en `packages/db/recuperacion/`, que está en `.gitignore`, y los teléfonos de la demo son inventados.
 
@@ -1278,7 +1307,7 @@ No es una feature: es lo que evita repetir la pérdida de datos de septiembre de
 > los datos enmascarados, y decidir aparte si vale la pena limpiar el
 > historial.
 
-### 13.4 Sesiones caídas
+### 13.5 Sesiones caídas
 
 Cada cuenta tiene dos sesiones independientes: **LinkedIn** (`estado_sesion`) y **WhatsApp** (`sesion_wa`, por QR).
 
@@ -1288,7 +1317,7 @@ Cuando una cae:
 - La interfaz muestra el chip **«sesión caída»** y sugiere una **tarea automática** para revincular.
 - El panel *Cuentas conectadas* ofrece el QR para volver a vincular.
 
-### 13.5 Un solo planificador por cuenta
+### 13.6 Un solo planificador por cuenta
 
 El cupo de invitaciones, el tope de cancelaciones y la cola de seguimiento **comparten la misma sesión de LinkedIn**. Por eso hay un planificador por cuenta y no tres colas independientes (→ D31): los mensajes salen primero, las invitaciones últimas.
 

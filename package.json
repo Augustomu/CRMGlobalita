@@ -10,7 +10,10 @@
     "test": "node --test packages/core/test/*.test.ts",
     "db:dev": "node packages/db/dev.mjs",
     "web:dev": "npm run dev --workspace @crm/web",
-    "web:build": "npm run build --workspace @crm/web"
+    "web:build": "npm run build --workspace @crm/web",
+    "db:copia": "node packages/db/dev.mjs --copia",
+    "db:copias": "node packages/db/dev.mjs --copias",
+    "db:restaurar": "node packages/db/restaurar.mjs"
   },
   "engines": {
     "node": ">=22.6"
