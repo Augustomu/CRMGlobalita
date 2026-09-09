@@ -251,6 +251,28 @@ marca como *«la de más riesgo técnico»* (§8.1).
 Empezado: el cálculo del turno se extrajo a `core/cola.ts` (`turnosDeLote`,
 `queSale`) para que el worker y la pantalla den **el mismo** turno.
 
+### El scan de LinkedIn tiene que unir por NOMBRE
+
+Augusto (08/09): *«esos leads tienen el mismo nombre de cómo están en LinkedIn,
+así que cuando hagamos el scan los vamos a conectar»*.
+
+Son los **175 contactos del CSV de WhatsApp** que hoy viven en la base
+compartida sin lead. No tienen link de LinkedIn —el CSV no lo trae— pero sí el
+nombre exacto con el que figuran ahí.
+
+**Ya está preparado**: los 175 tienen su `huella` calculada sobre el nombre
+limpio, sin el cargo ni la ciudad que el CSV les pega adelante:
+
+    "Márcio Anderson Neves Furtado"  →  marcioandersonnevesfurtado
+
+Cuando el worker lea los perfiles de LinkedIn, el paso 2 de D02 los encuentra
+por esa huella y los marca como posible duplicado. Al fusionarlos, el perfil
+queda con el link Y el teléfono: hoy cada mitad tiene una cosa sola.
+
+**Lo que NO hay que hacer** es fusionarlos automáticamente: dos personas pueden
+llamarse igual, y en esta base ya hay 45 grupos con la misma huella. La fusión
+la aprueba una persona desde la bandeja (D02).
+
 ---
 
 ## 14 · Lo que sigue esperando a Augusto

@@ -359,6 +359,26 @@ Decisión cerrada: las conversaciones de leads **no viven en WA Personal**. Est�
 
 **No es una tabla.** Es la vista de `perfil` (§3.2) con los leads de cada uno: qué cuentas ya invitaron a esa persona. Era la decisión estructural más grande del proyecto y quedó resuelta en D01 — antes repetía casi todos los campos del lead y había que sincronizarla; el campo `duplicado_en[]` desapareció, porque son los `lead` de ese mismo perfil y eso es una consulta.
 
+**Se arma desde `perfil`, no desde `lead`.** No es un detalle de implementación:
+un perfil **sin ningún lead** es el caso normal —alguien que está en la base y a
+quien ninguna cuenta trabajó todavía— y es justamente lo que hay que poder ver
+antes de invitar a alguien. Armándola desde los leads, esa gente no existe en
+ninguna pantalla: pasó con los 175 contactos del CSV de WhatsApp, que quedaron
+invisibles con teléfono y país cargados.
+
+Por eso los grupos del filtro son **cinco** y no cuatro:
+
+| Grupo | Qué es |
+|---|---|
+| En cadencia | Aceptó y está en R1–R4 |
+| Fase 2 | Aceptó y está en R5–R8 |
+| Recontacto | Se canceló y vuelve |
+| **Sin aceptar** | Le escribimos y no contestó — material quemado |
+| **Sin trabajar** | Nadie lo invitó todavía — material nuevo |
+
+Los dos últimos parecen lo mismo y son opuestos. La columna de respuesta los
+distingue igual: «nunca aceptó» contra «sin invitar».
+
 ### 3.13 Proyecto
 
 La capa de arriba del lead: **el trabajo que se abre cuando la prospección ya avanzó**. Una reunión puede terminar en una venta de Fabript/PIV, en una parcería o en un prototipo, y eso no cabe en la etapa del lead.
