@@ -67,13 +67,15 @@ export function duracionAlEstirar(base: number, deltaY: number): number {
  *
  * Formato pedido por Augusto y confirmado contra el histórico del Calendar:
  *
- *     "Marcelo · Francisco · Augusto"
+ *     "Marcelo Carneiro / Francisco / Augusto"
  *      lead      cuenta      vos
  *
- * El separador es un punto medio, no una barra: es lo que dice el prototipo
- * nuevo (FechaReunion.dc.html) y lo que se muestra en la ficha antes de crear
- * el evento. Los eventos historicos del Calendar usan " / ": los viejos quedan
- * como estan, los nuevos salen asi.
+ * El separador es " / ", el mismo de los eventos que ya están en el Calendar
+ * de Augusto ("Jorge / Francisco / Augusto"). El prototipo mostraba un punto
+ * medio y así se hizo primero, pero la barra no es una preferencia: el
+ * importador parte el título por "/" para saber cuál es el lead y cuál la
+ * cuenta, y con el punto medio los eventos que crea el CRM no se podrían
+ * volver a leer con la misma herramienta que leyó los 288 viejos.
  *
  * Del lead va el nombre completo; de la cuenta de origen, solo el primer
  * nombre. Es lo que permitió recuperar 28 personas del histórico: el título
@@ -91,7 +93,7 @@ export function tituloEvento(
     primerNombre(nombrePropio),
   ]
     .filter(Boolean)
-    .join(' · ');
+    .join(' / ');
 }
 
 /**
@@ -475,6 +477,36 @@ export function carriles(franjas: Franja[]): EnCarril[] {
   }
   cerrar();
   return salida;
+}
+
+/**
+ * El orden de la vista Lista (§7.6): la reunión más nueva arriba.
+ *
+ * La clave es la MISMA fecha que muestra la columna «Última», no la de
+ * creación ni la del próximo contacto. Si se ordenara por otra cosa, la
+ * columna de fechas se vería salteada y habría que leer fila por fila para
+ * encontrar a quién se vio la semana pasada.
+ *
+ * **Los que todavía no tuvieron reunión van al final**, no al principio: la
+ * lista es un recorrido por lo que ya pasó, y una fila sin fecha arriba de
+ * todo se lee como si fuera lo más reciente.
+ *
+ * Las fechas son ISO (`2026-09-09`), así que alcanza con compararlas como
+ * texto: no hace falta construir un Date por comparación, que en una lista de
+ * doscientas filas son varios miles de objetos por render.
+ */
+export function porUltimaReunion<T>(
+  filas: readonly T[],
+  ultimaDe: (fila: T) => string | null | undefined,
+): T[] {
+  return [...filas].sort((a, b) => {
+    const ua = ultimaDe(a) || '';
+    const ub = ultimaDe(b) || '';
+    if (ua === ub) return 0;
+    if (!ua) return 1;
+    if (!ub) return -1;
+    return ua < ub ? 1 : -1;
+  });
 }
 
 /**

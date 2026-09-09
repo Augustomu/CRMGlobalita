@@ -245,3 +245,57 @@ export function planDeLeads(
     choques: [...porCuenta].map(([cuenta, v]) => ({ cuenta, ...v })),
   };
 }
+
+/**
+ * Un perfil que junta a dos personas, y qué hacer con eso.
+ *
+ * EL PROBLEMA. La importación del Calendar agrupó por nombre, y el nombre que
+ * trae un evento es el que el invitado tenga puesto en Google: muchas veces
+ * sólo el de pila. Seis eventos distintos que dicen «Jorge» terminaron en un
+ * perfil llamado «Jorge» con leads de cuatro personas diferentes — se ve
+ * porque cada lead trae el correo del evento, y son cuatro correos.
+ *
+ * Fusionar eso con el «Jorge Lara Huerta» del CSV empeoraría el enredo: le
+ * pegaría el teléfono correcto a un perfil que además contiene a otros tres.
+ *
+ * QUÉ HACE ESTA FUNCIÓN. Dado el perfil y los leads que SÍ son de la persona
+ * que se está resolviendo, dice cuáles se quedan y cuáles salen a un perfil
+ * propio. No inventa nombres: el que sale se lleva el mismo nombre —sigue
+ * siendo un «Jorge» de verdad, sólo que otro— y su correo, que es con lo que
+ * después se lo renombra. Inventar «Jdeleonmx» a partir del correo sería
+ * cambiar un dato malo por otro peor.
+ */
+export interface PlanSeparacion {
+  /** Los leads que se quedan: son de la persona que se está resolviendo. */
+  quedan: string[];
+  /** Los que salen, cada uno a un perfil nuevo con este nombre. */
+  salen: { lead: string; nombre: string; email?: string }[];
+  /** true si no hay nada que separar y la fusión es la de siempre. */
+  sinCambios: boolean;
+}
+
+export function planDeSeparacion(
+  nombreDelPerfil: string,
+  leads: LeadDelPerfil[],
+  /** Los ids que el usuario dejó marcados como «sí, es esta persona». */
+  elegidos: string[],
+): PlanSeparacion {
+  const quedan: string[] = [];
+  const salen: PlanSeparacion['salen'] = [];
+  for (const l of leads) {
+    if (elegidos.includes(l.id)) quedan.push(l.id);
+    else salen.push({ lead: l.id, nombre: (nombreDelPerfil || '').trim(), email: l.email });
+  }
+  return { quedan, salen, sinCambios: salen.length === 0 };
+}
+
+/**
+ * Cuántas personas distintas hay adentro de un perfil, mirando los correos.
+ *
+ * Un solo correo repetido en dos cuentas es la misma persona invitada dos
+ * veces. Dos correos distintos son dos personas. Los leads sin correo no
+ * cuentan: no dicen nada, ni a favor ni en contra.
+ */
+export function personasAdentro(leads: LeadDelPerfil[]): number {
+  return new Set(leads.map((l) => (l.email ?? '').trim().toLowerCase()).filter(Boolean)).size;
+}

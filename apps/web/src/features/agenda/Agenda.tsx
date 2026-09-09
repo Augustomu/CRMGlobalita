@@ -6,6 +6,7 @@ import { diaLocal } from '@crm/core/fecha';
 import { useAncho } from '../../lib/useAncho';
 import {
   ALTO_HORA, bloqueDelEvento, carriles, duracionAlEstirar, enMinutos, horaEnLaColumna,
+  porUltimaReunion,
 } from '@crm/core/reunion';
 import type { UsuarioRecord, LeadRecord } from '../../lib/types';
 import { leadsConSeguimiento, useAgenda, type EventoAgenda } from './useAgenda';
@@ -85,11 +86,7 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
     pegarFoto,
     nuevaReunion,
     guardarNotas,
-    calendarios,
-    calendario,
-    setCalendario,
-  } =
-    useAgenda(true, usuario);
+  } = useAgenda(true, usuario);
   const [vista, setVista] = useState<Vista>('Semanal');
   const [offset, setOffset] = useState(0);
   const [arrastrando, setArrastrando] = useState<EventoAgenda | null>(null);
@@ -231,11 +228,30 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
     return bloqueDelEvento(destino.hora, arrastrando.duracion, HORA_DESDE, HORAS);
   }
 
+  /** La última reunión YA OCURRIDA de cada lead: la fecha de la columna «Última». */
+  const ultimaDe = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of eventos) {
+      if (!e.lead || e.fecha > hoy) continue;
+      const previa = m.get(e.lead);
+      if (!previa || e.fecha > previa) m.set(e.lead, e.fecha);
+    }
+    return m;
+  }, [eventos, hoy]);
+
   const filas = useMemo(() => {
     const conSeguimiento = leadsConSeguimiento(leads);
-    if (fCheck === 'todos') return conSeguimiento;
-    return conSeguimiento.filter((l) => (fCheck === 'con' ? chequeados.has(l.id) : !chequeados.has(l.id)));
-  }, [leads, fCheck, chequeados]);
+    const filtradas =
+      fCheck === 'todos'
+        ? conSeguimiento
+        : conSeguimiento.filter((l) =>
+            fCheck === 'con' ? chequeados.has(l.id) : !chequeados.has(l.id),
+          );
+    // §7.6: la reunión más nueva arriba, siempre. Antes salían en el orden en
+    // que los devolvía la base, que es por fecha de creación del lead: la
+    // columna de fechas se veía salteada y no se podía recorrer.
+    return porUltimaReunion(filtradas, (l) => ultimaDe.get(l.id));
+  }, [leads, fCheck, chequeados, ultimaDe]);
 
   return (
     <aside className="agenda" style={anchoAgenda.estilo}>
@@ -271,28 +287,10 @@ export function Agenda({ leads, usuario, onCerrar, onIrAlLead }: Props) {
           ))}
         </div>
 
-        {/* §6.3: un ítem por administrador, más el propio. Solo aparece si
-            hay otro calendario que mirar — con un solo usuario sería un
-            control de una opción. */}
-        {calendarios.length > 1 && (
-          <div className="reunion-segmentado agenda-calendarios">
-            {calendarios.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                className={(calendario ?? usuario?.id) === c.id ? 'reunion-seg-on' : ''}
-                title={
-                  c.propio
-                    ? 'Tus reuniones, con todo el detalle'
-                    : 'Solo los horarios tomados: sin nombre ni empresa'
-                }
-                onClick={() => setCalendario(c.propio ? null : c.id)}
-              >
-                {c.propio ? 'Mío' : c.nombre.replace('Calendario de ', '')}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Acá estaban los chips «Mío / Alberto». Se fueron: el calendario es
+            uno solo y ya trae los horarios de los otros administradores como
+            bloques ocupados. Elegir de a uno era mirar dos veces la misma
+            semana para responder una sola pregunta. */}
 
         {/* §7.6: filtro por cuenta. Con seis cuentas trabajando, la semana es
             una pared de bloques y no se puede leer la de una sola. */}
@@ -703,9 +701,12 @@ function Evento({
   if (e.ajeno) {
     return (
       <div className="agenda-bloque" style={caja}>
-        <div className="agenda-evento agenda-evento-ajeno" title="Ocupado en ese calendario">
+        <div
+          className="agenda-evento agenda-evento-ajeno"
+          title={`${e.nombre} tiene ese horario tomado`}
+        >
           <span className="agenda-evento-hora tabular">{e.hora}</span>
-          <span className="agenda-evento-nombre">Ocupado</span>
+          <span className="agenda-evento-nombre">{e.nombre}</span>
         </div>
       </div>
     );

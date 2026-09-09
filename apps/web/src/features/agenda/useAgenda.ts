@@ -46,13 +46,6 @@ export interface EventoAgenda {
   ajeno?: boolean;
 }
 
-/** Un calendario que se puede mirar: el propio o el de un administrador. */
-export interface Calendario {
-  id: string;
-  nombre: string;
-  /** El propio se ve entero; los demás, solo como bloques ocupados. */
-  propio: boolean;
-}
 
 interface ReunionCruda {
   id: string;
@@ -104,9 +97,6 @@ interface ReunionCruda {
  */
 export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
   const [eventos, setEventos] = useState<EventoAgenda[]>([]);
-  const [calendarios, setCalendarios] = useState<Calendario[]>([]);
-  /** Cuál se está mirando. `null` = el propio. */
-  const [calendario, setCalendario] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -115,9 +105,14 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
   const recargar = useCallback(async () => {
     if (!activo) return;
     try {
-      // Los calendarios que se pueden mirar: el propio y uno por cada
-      // administrador. §8.6 es explícito en que no se asuma uno solo — si
-      // mañana hay dos admins, aparecen los dos sin tocar código.
+      // Un solo calendario, integrado.
+      //
+      // Antes había un chip por administrador y se miraba uno a la vez. Para
+      // agendar no sirve: la pregunta no es «¿cómo está mi semana?» sino «¿en
+      // qué hueco entramos los dos?», y con chips eso obliga a mirar dos veces
+      // y recordar la primera. Ahora las reuniones propias van con detalle y
+      // los horarios de los demás administradores van en la misma grilla como
+      // bloques ocupados, que es todo lo que hace falta para no pisar a nadie.
       const admins = await pb
         .collection('users')
         .getFullList<{ id: string; name: string }>({
@@ -127,16 +122,8 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
         })
         .catch(() => []);
 
-      const propios: Calendario[] = usuario
-        ? [{ id: usuario.id, nombre: 'Mi calendario', propio: true }]
-        : [];
-      const ajenos: Calendario[] = admins
-        .filter((a) => a.id !== usuario?.id)
-        .map((a) => ({ id: a.id, nombre: `Calendario de ${a.name.split(' ')[0]}`, propio: false }));
-      setCalendarios([...propios, ...ajenos]);
-
-      const mirando = calendario ?? usuario?.id ?? null;
-      const esPropio = !mirando || mirando === usuario?.id;
+      const otros = admins.filter((a) => a.id !== usuario?.id);
+      const nombreDe = new Map(otros.map((a) => [a.id, a.name.split(' ')[0]]));
 
       // ------------------------------------------------------ con detalle
       //
@@ -189,11 +176,11 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
       // `ocupado`, que expone el horario y nada más. No es que se oculte el
       // nombre: no viene en la respuesta.
       let bloques: EventoAgenda[] = [];
-      if (!esPropio && mirando) {
+      if (otros.length) {
         const ocupados = await pb
           .collection('ocupado')
-          .getFullList<{ id: string; inicio: string; zona: string; duracion_min: number }>({
-            filter: `calendario = "${mirando}"`,
+          .getFullList<{ id: string; calendario: string; inicio: string; zona: string; duracion_min: number }>({
+            filter: otros.map((a) => `calendario = "${a.id}"`).join(' || '),
             sort: 'inicio',
           })
           .catch(() => []);
@@ -210,7 +197,10 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
               duracion: o.duracion_min || 30,
               estado: 'ocupado',
               notas: '',
-              nombre: 'Ocupado',
+              // De quién es el hueco SÍ se dice: sin eso, en una grilla con
+              // varios calendarios encima no se puede agendar para nadie. Lo
+              // que sigue sin decirse es con quién y de qué (§6.3).
+              nombre: nombreDe.get(o.calendario) ?? 'Ocupado',
               empresa: '',
               cargo: '',
               cuenta: '',
@@ -233,7 +223,7 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
     } finally {
       setCargando(false);
     }
-  }, [activo, usuario?.id, usuario?.rol, calendario, esAdmin]);
+  }, [activo, usuario?.id, usuario?.rol, esAdmin]);
 
   useEffect(() => {
     void recargar();
@@ -352,9 +342,6 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
     pegarFoto,
     nuevaReunion,
     guardarNotas,
-    calendarios,
-    calendario,
-    setCalendario,
   };
 }
 

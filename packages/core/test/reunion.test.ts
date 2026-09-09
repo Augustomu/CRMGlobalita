@@ -3,19 +3,73 @@ import assert from 'node:assert/strict';
 import {
   AVISOS_POR_DEFECTO, descripcionEvento, finDe, momentosDeAviso, primeraReunion,
   tituloEvento, verBloque,  enSuZona, bloqueDelEvento, horaEnLaColumna, carriles,
+  porUltimaReunion,
 } from '../src/reunion.ts';
 
-test('el título del evento es "Lead · Cuenta · Vos", con solo el primer nombre de los dos últimos', () => {
+// ---------------------------------------------- §7.6: el orden de la Lista
+
+test('la vista Lista ordena por última reunión, de la más nueva a la más vieja', () => {
+  const filas = [
+    { id: 'viejo', ultima: '2026-03-01' },
+    { id: 'nuevo', ultima: '2026-09-01' },
+    { id: 'medio', ultima: '2026-06-15' },
+  ];
+  assert.deepEqual(
+    porUltimaReunion(filas, (f) => f.ultima).map((f) => f.id),
+    ['nuevo', 'medio', 'viejo'],
+  );
+});
+
+test('los leads sin ninguna reunión quedan al final, no arriba', () => {
+  // Una fila sin fecha arriba de todo se leería como la más reciente.
+  const filas = [
+    { id: 'sin', ultima: null },
+    { id: 'con', ultima: '2026-01-02' },
+    { id: 'vacio', ultima: '' },
+  ];
+  assert.deepEqual(
+    porUltimaReunion(filas, (f) => f.ultima).map((f) => f.id),
+    ['con', 'sin', 'vacio'],
+  );
+});
+
+test('no toca el arreglo que recibe', () => {
+  // La lista viene de un useMemo de React: mutarla haría que otro render la
+  // encontrara ya ordenada y el orden dependería de cuántas veces se dibujó.
+  const filas = [{ id: 'b', ultima: '2026-01-01' }, { id: 'a', ultima: '2026-02-01' }];
+  porUltimaReunion(filas, (f) => f.ultima);
+  assert.deepEqual(filas.map((f) => f.id), ['b', 'a']);
+});
+
+test('con la misma fecha respeta el orden en que venían', () => {
+  const filas = [
+    { id: 'primero', ultima: '2026-05-05' },
+    { id: 'segundo', ultima: '2026-05-05' },
+  ];
+  assert.deepEqual(
+    porUltimaReunion(filas, (f) => f.ultima).map((f) => f.id),
+    ['primero', 'segundo'],
+  );
+});
+
+test('el título del evento es "Lead / Cuenta / Vos", con solo el primer nombre de los dos últimos', () => {
   assert.equal(
     tituloEvento('Marcelo Carneiro', 'Francisco Herrera', 'Augusto Unzaga'),
-    'Marcelo Carneiro · Francisco · Augusto',
+    'Marcelo Carneiro / Francisco / Augusto',
   );
+});
+
+test('la barra es la misma que usan los eventos viejos, así el importador los puede leer', () => {
+  // El importador parte el summary por "/" para sacar lead y cuenta. Si el CRM
+  // escribiera con otro separador, sus propios eventos no se podrían releer.
+  const t = tituloEvento('Jorge Lara Huerta', 'Francisco', 'Augusto');
+  assert.deepEqual(t.split('/').map((x) => x.trim()), ['Jorge Lara Huerta', 'Francisco', 'Augusto']);
 });
 
 test('el nombre completo del lead se conserva aunque sea largo', () => {
   assert.equal(
     tituloEvento('Maria de los Angeles Fernandez Villagran', 'Edith', 'Augusto'),
-    'Maria de los Angeles Fernandez Villagran · Edith · Augusto',
+    'Maria de los Angeles Fernandez Villagran / Edith / Augusto',
   );
 });
 

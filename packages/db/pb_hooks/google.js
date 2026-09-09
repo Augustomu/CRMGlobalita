@@ -14,14 +14,47 @@
 const GOOGLE_AUTH = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN = 'https://oauth2.googleapis.com/token';
 const GOOGLE_API = 'https://www.googleapis.com/calendar/v3';
-const SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+// QUE PERMISOS SE PIDEN, y por que son dos.
+//
+// - calendar.events: crear y actualizar los eventos de las reuniones. Es el
+//   que hace que el CRM escriba.
+// - calendar.readonly: LEER la disponibilidad de los otros calendarios que la
+//   persona ya tiene en su lista.
+//
+// El segundo no estaba y hacia falta. Se descubrio el 09/09/2026 mirando la
+// lista de calendarios de Augusto: `alejandroc@globalita.io` —la cuenta AL—
+// aparece ahi con accessRole "owner". O sea que la agenda de Alejandro NO hay
+// que pedirla ni raspar ninguna pagina: ya se puede leer con la misma conexion,
+// y lo unico que faltaba era el permiso de lectura.
+//
+// Van juntos en el mismo consentimiento a proposito: agregar un alcance despues
+// obliga a que cada persona vuelva a conectar su cuenta.
+const SCOPE =
+  'https://www.googleapis.com/auth/calendar.events ' +
+  'https://www.googleapis.com/auth/calendar.readonly';
 
-/** Lo que hace falta tener puesto en el VPS. Ver deploy/PASO-A-PASO.md. */
+/**
+ * Lo que hace falta tener puesto. Ver deploy/PASO-A-PASO.md, paso 4.6.
+ *
+ * SON DOS URL, no una, y en produccion son la misma.
+ *
+ * - APP_URL es donde la persona ve la aplicacion. Ahi vuelve el navegador
+ *   despues de dar el permiso.
+ * - PB_URL es donde CONTESTA PocketBase, que es lo unico que le importa a
+ *   Google: el redirect_uri tiene que apuntar a una ruta de este servidor.
+ *
+ * En el VPS PocketBase sirve la app, asi que alcanza con APP_URL y PB_URL se
+ * cae a lo mismo. En desarrollo son distintas —la app la sirve Vite en :5173 y
+ * PocketBase contesta en :8090— y sin separarlas la vuelta de Google aterriza
+ * en un 404: la conexion queda guardada pero parece que fallo.
+ */
 function config() {
+  const app = ($os.getenv('APP_URL') || '').replace(/\/+$/, '');
   return {
     clientId: $os.getenv('GOOGLE_CLIENT_ID'),
     clientSecret: $os.getenv('GOOGLE_CLIENT_SECRET'),
-    appUrl: ($os.getenv('APP_URL') || '').replace(/\/+$/, ''),
+    appUrl: app,
+    pbUrl: ($os.getenv('PB_URL') || '').replace(/\/+$/, '') || app,
   };
 }
 
@@ -30,7 +63,10 @@ function configurado(c) {
 }
 
 function redirectUri(c) {
-  return c.appUrl + '/api/google/callback';
+  // Contra PB_URL: la ruta la sirve PocketBase, no la aplicacion de React.
+  // Este string tiene que coincidir LETRA POR LETRA con el que se cargo en la
+  // consola de Google —barra final incluida— o Google contesta redirect_uri_mismatch.
+  return c.pbUrl + '/api/google/callback';
 }
 
 /** La fila de Google de un usuario, o null si no conecto. */
@@ -110,13 +146,28 @@ function sincronizar(reunion) {
     return { estado: 'sin_conexion', detalle: 'Google no esta configurado en el servidor' };
   }
 
-  // El calendario es el de quien tiene el lead asignado: la reunion tiene que
-  // caer en la agenda de quien la va a tener.
-  let usuarioId = '';
-  try {
-    usuarioId = $app.findRecordById('lead', reunion.get('lead')).get('asignado');
-  } catch (_) {}
-  if (!usuarioId) return { estado: 'sin_conexion', detalle: 'el lead no tiene a nadie asignado' };
+  // De QUIEN es la agenda donde cae la reunion.
+  //
+  // Primero `reunion.calendario`, que es lo que eligio la pantalla al crearla
+  // (FechaReunion guarda ahi el usuario que agenda). Recien si esta vacio se
+  // cae a `lead.asignado`, que es el dueno del seguimiento.
+  //
+  // EL ORDEN IMPORTA, y no es teorico: mirando solo `asignado` esto no
+  // funcionaba nunca. Los 242 leads tienen `asignado` vacio —la asignacion es
+  // opcional y todavia no se uso—, asi que toda reunion nueva terminaba en
+  // "el lead no tiene a nadie asignado" y jamas llegaba a Google. Ademas,
+  // `calendario` es el campo que la agenda usa para saber de quien es cada
+  // bloque: si el evento se escribiera en otra agenda que la que dibuja la
+  // grilla, la pantalla estaria mintiendo.
+  let usuarioId = String(reunion.get('calendario') || '');
+  if (!usuarioId) {
+    try {
+      usuarioId = $app.findRecordById('lead', reunion.get('lead')).get('asignado');
+    } catch (_) {}
+  }
+  if (!usuarioId) {
+    return { estado: 'sin_conexion', detalle: 'la reunion no tiene calendario ni el lead un asignado' };
+  }
 
   const cuenta = cuentaDe(usuarioId);
   if (!cuenta || !cuenta.get('refresh_token')) {
@@ -162,6 +213,8 @@ function sincronizar(reunion) {
     detalle: eventId ? 'evento actualizado' : 'evento creado',
     eventId: (res.json && res.json.id) || eventId,
     calendario: cuenta.get('calendario') || 'primary',
+    // Quien resulto ser el dueno, para dejarlo escrito si venia del asignado.
+    duenio: usuarioId,
   };
 }
 
@@ -186,14 +239,20 @@ module.exports = {
  * tiene esos dos problemas, y son cuatro columnas de estado, nada mas.
  */
 function anotar(id, r) {
+  // `calendario = ''` en el WHERE de SET: solo se completa si estaba vacio.
+  // Pisarlo siempre le sacaria la reunion de la agenda a quien la tenia.
   const sql =
     'UPDATE reunion SET sync = {:s}, sync_detalle = {:d}' +
     (r.eventId ? ', google_event_id = {:e}, google_calendar_id = {:c}' : '') +
+    (r.duenio ? ", calendario = CASE WHEN calendario = '' OR calendario IS NULL THEN {:u} ELSE calendario END" : '') +
     ' WHERE id = {:id}';
 
-  const params = r.eventId
-    ? { s: r.estado, d: r.detalle, e: r.eventId, c: r.calendario, id }
-    : { s: r.estado, d: r.detalle, id };
+  const params = { s: r.estado, d: r.detalle, id };
+  if (r.eventId) {
+    params.e = r.eventId;
+    params.c = r.calendario;
+  }
+  if (r.duenio) params.u = r.duenio;
 
   $app.db().newQuery(sql).bind(params).execute();
 }
@@ -211,3 +270,239 @@ function sincronizarYAnotar(record) {
 
 module.exports.anotar = anotar;
 module.exports.sincronizarYAnotar = sincronizarYAnotar;
+
+// ===========================================================================
+// LA VUELTA: de Google al CRM.
+//
+// La dispara el reloj de google-entrada.pb.js. Ver ahi el porque de cada
+// decision; aca esta el como.
+// ===========================================================================
+
+/**
+ * ESPEJO de `cambioDeGoogle()` de packages/core/src/sincronizar.ts.
+ *
+ * La version buena vive alla, en TypeScript y con nueve tests. Esta existe
+ * porque el motor JS de PocketBase no puede cargar TypeScript y los hooks no
+ * tienen paso de build. SI SE TOCA UNA, SE TOCAN LAS DOS.
+ *
+ * Lo que decide: si hubo cambio de verdad. Equivocarse hacia el lado de "si"
+ * hace que la reunion se reescriba, que el hook de salida la mande a Google, y
+ * que Google le mande un mail al invitado. Cada cinco minutos.
+ */
+function cambioDeGoogle(crm, evento) {
+  const sinCambio = (motivo) => ({ hay: false, campos: {}, motivo });
+  const instante = (x) => new Date(String(x).replace(' ', 'T')).getTime();
+
+  if (evento.cancelado) {
+    if (crm.estado === 'cancelada') return sinCambio('ya estaba cancelada');
+    return { hay: true, campos: { estado: 'cancelada' }, motivo: 'cancelada en Google Calendar' };
+  }
+
+  if (!evento.inicio || !evento.fin) return sinCambio('el evento no tiene horario');
+
+  const desde = instante(evento.inicio);
+  const hasta = instante(evento.fin);
+  if (!isFinite(desde) || !isFinite(hasta)) return sinCambio('el evento vino con una fecha ilegible');
+
+  const duracion = Math.round((hasta - desde) / 60000);
+  if (duracion <= 0) return sinCambio('el evento termina antes de empezar');
+
+  const campos = {};
+  // Por INSTANTE, no por texto: "2026-09-15 16:00:00.000Z" y
+  // "2026-09-15T10:00:00-06:00" son la misma hora.
+  if (instante(crm.inicio) !== desde) campos.inicio = new Date(desde).toISOString().replace('T', ' ');
+  if (Number(crm.duracion_min) !== duracion) campos.duracion_min = duracion;
+
+  if (!campos.inicio && campos.duracion_min === undefined) return sinCambio('sin cambios');
+
+  const partes = [];
+  if (campos.inicio) partes.push('movida');
+  if (campos.duracion_min !== undefined) partes.push(duracion + ' min');
+  return { hay: true, campos, motivo: partes.join(', ') + ' desde Google Calendar' };
+}
+
+/**
+ * Escribe el cambio en la reunion. Devuelve true si toco algo.
+ *
+ * CON SQL PLANO, A PROPOSITO. `$app.save()` dispararia el hook de salida, que
+ * mandaria la reunion de vuelta a Google, que en la vuelta siguiente la traeria
+ * como un cambio: eco infinito, con un mail al lead en cada rebote. Una
+ * consulta directa no dispara hooks. Es el mismo motivo por el que `anotar()`
+ * escribe asi.
+ */
+function aplicarEvento(ev) {
+  const id = String((ev && ev.id) || '');
+  if (!id) return false;
+
+  let reunion;
+  try {
+    reunion = $app.findFirstRecordByFilter('reunion', 'google_event_id = {:g}', { g: id });
+  } catch (_) {
+    // Un evento del calendario que no es una reunion del CRM. Es la mayoria:
+    // el calendario tiene la vida entera de la persona, no solo prospeccion.
+    return false;
+  }
+
+  const crm = {
+    inicio: String(reunion.get('inicio') || ''),
+    duracion_min: Number(reunion.get('duracion_min') || 0),
+    estado: String(reunion.get('estado') || ''),
+  };
+
+  const cambio = cambioDeGoogle(crm, {
+    cancelado: String((ev && ev.status) || '') === 'cancelled',
+    inicio: ev.start && ev.start.dateTime,
+    fin: ev.end && ev.end.dateTime,
+  });
+
+  if (!cambio.hay) return false;
+
+  // Cancelar es una decision del CRM y hoy NO borra el evento de Google, asi
+  // que el reloj lo va a encontrar vivo cada vuelta. Si eso la reactivara,
+  // cancelar seria imposible: se descancelaria sola a los cinco minutos.
+  if (crm.estado === 'cancelada') return false;
+
+  const sets = [];
+  const params = { id: reunion.id, d: cambio.motivo, u: new Date().toISOString().replace('T', ' ') };
+  if (cambio.campos.inicio) {
+    sets.push('inicio = {:i}');
+    params.i = cambio.campos.inicio;
+  }
+  if (cambio.campos.duracion_min !== undefined) {
+    sets.push('duracion_min = {:m}');
+    params.m = cambio.campos.duracion_min;
+  }
+  if (cambio.campos.estado) {
+    sets.push('estado = {:e}');
+    params.e = cambio.campos.estado;
+  }
+  sets.push('sync_detalle = {:d}');
+  // `updated` a mano: con SQL plano el autodate no corre, y sin esto la agenda
+  // no tiene como saber que la fila cambio.
+  sets.push('updated = {:u}');
+
+  $app
+    .db()
+    .newQuery('UPDATE reunion SET ' + sets.join(', ') + ' WHERE id = {:id}')
+    .bind(params)
+    .execute();
+
+  $app.logger().info('google-entrada', 'reunion', reunion.id, 'detalle', cambio.motivo);
+  return true;
+}
+
+/**
+ * Pide a Google lo que cambio desde la ultima vuelta y lo aplica.
+ *
+ * Incremental con `syncToken`: Google contesta SOLO lo que se movio, se creo o
+ * se borro. Sin token no habria forma de enterarse de un evento BORRADO —un
+ * evento borrado no aparece en un listado normal—; con token viene explicito,
+ * con `status: "cancelled"`.
+ */
+function traerCambios(cuenta) {
+  const c = config();
+  const token = accessToken(c, cuenta.get('refresh_token'));
+  const calendario = encodeURIComponent(cuenta.get('calendario') || 'primary');
+  const base = GOOGLE_API + '/calendars/' + calendario + '/events';
+
+  const sync = String(cuenta.get('sync_token') || '');
+  let pageToken = '';
+  let nuevoSync = '';
+  let vistos = 0;
+  let tocados = 0;
+
+  const anotarLectura = (texto) => {
+    cuenta.set('ultima_lectura', new Date().toISOString() + ' - ' + texto);
+    $app.save(cuenta);
+  };
+
+  // El tope de vueltas es una red, no una expectativa: sin el, una respuesta
+  // con nextPageToken siempre presente colgaria el reloj para siempre.
+  for (let vuelta = 0; vuelta < 20; vuelta++) {
+    const params = { showDeleted: 'true', singleEvents: 'true', maxResults: '250' };
+    if (sync) {
+      params.syncToken = sync;
+    } else {
+      // Primera vez: una ventana ACOTADA DE LOS DOS LADOS.
+      //
+      // El techo no es una preferencia, es obligatorio. Con singleEvents=true
+      // Google expande cada evento repetitivo en instancias, y una repeticion
+      // SIN FECHA DE FIN genera instancias para siempre: la respuesta trae
+      // nextPageToken indefinidamente y nunca llega el nextSyncToken.
+      //
+      // Paso de verdad en la primera corrida real (09/09/2026): 5000 eventos
+      // revisados —el tope de 20 vueltas por 250— y sync_token vacio. Y como
+      // el token es lo que hace incremental a la sincronizacion, sin el
+      // volvia a listar los mismos 5000 cada cinco minutos, para siempre.
+      //
+      // 60 dias para atras y 180 para adelante: alcanza de sobra para
+      // prospeccion —nadie agenda una reunion a un ano— y deja la expansion
+      // de los repetitivos en un numero finito.
+      params.timeMin = new Date(Date.now() - 60 * 24 * 3600 * 1000).toISOString();
+      params.timeMax = new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString();
+    }
+    if (pageToken) params.pageToken = pageToken;
+
+    const res = $http.send({
+      url: base + '?' + form(params),
+      headers: { Authorization: 'Bearer ' + token },
+      timeout: 25,
+    });
+
+    // 410: el token caduco. Se vacia y la proxima vuelta lista de cero. Es la
+    // forma que tiene Google de decir "perdiste el hilo", y reintentar con el
+    // mismo token daria 410 para siempre.
+    if (res.statusCode === 410) {
+      cuenta.set('sync_token', '');
+      anotarLectura('el token caduco, se vuelve a listar en la proxima vuelta');
+      return;
+    }
+    if (res.statusCode < 200 || res.statusCode > 299) {
+      const d = (res.json && res.json.error && res.json.error.message) || 'HTTP ' + res.statusCode;
+      throw new Error(d);
+    }
+
+    const cuerpo = res.json || {};
+    const items = cuerpo.items || [];
+    for (let i = 0; i < items.length; i++) {
+      vistos++;
+      if (aplicarEvento(items[i])) tocados++;
+    }
+
+    pageToken = cuerpo.nextPageToken || '';
+    nuevoSync = cuerpo.nextSyncToken || nuevoSync;
+    if (!pageToken) break;
+  }
+
+  cuenta.set('sync_token', nuevoSync || sync);
+  anotarLectura(vistos + ' revisados, ' + tocados + ' actualizados');
+
+  // Con que cuenta de Google quedo conectada, si todavia no se sabe.
+  //
+  // El callback lo intenta con /oauth2/v2/userinfo y ahi FALLA, porque ese
+  // endpoint necesita el alcance "email" y nosotros pedimos solo los dos de
+  // calendario. Se veia como una pantalla que dice "conectada" sin decir a
+  // cual, que es justo el dato que sirve para darse cuenta de que uno conecto
+  // la cuenta equivocada.
+  //
+  // El id de un calendario ES la direccion de correo, asi que se saca de aca
+  // sin pedir ningun permiso mas. Agregar el alcance "email" obligaria a que
+  // todos vuelvan a dar el consentimiento.
+  if (!String(cuenta.get('email') || '')) {
+    try {
+      const quien = $http.send({
+        url: GOOGLE_API + '/calendars/' + calendario,
+        headers: { Authorization: 'Bearer ' + token },
+        timeout: 15,
+      });
+      if (quien.statusCode === 200 && quien.json && quien.json.id) {
+        cuenta.set('email', String(quien.json.id));
+        $app.save(cuenta);
+      }
+    } catch (_) {
+      // Es un dato para mostrar, no algo de lo que dependa la sincronizacion.
+    }
+  }
+}
+
+module.exports.traerCambios = traerCambios;

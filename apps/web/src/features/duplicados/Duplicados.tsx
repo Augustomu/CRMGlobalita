@@ -3,6 +3,7 @@ import { normalizar } from '@crm/core/cruce';
 import {
   planDeFusion,
   planDeLeads,
+  planDeSeparacion,
   NOMBRE_CAMPO,
   type PerfilFusionable,
 } from '@crm/core/fusion';
@@ -67,6 +68,15 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
   const { grupos, cargando, error, recargar } = duplicados;
   const [indice, setIndice] = useState(0);
   const [excluidos, setExcluidos] = useState<string[]>([]);
+  /**
+   * Los leads que NO son de la persona que se está resolviendo.
+   *
+   * Un perfil que salió del calendario puede tener leads de varias personas
+   * —el nombre del invitado era sólo el de pila— y eso se ve en los correos.
+   * Destildar un correo lo saca de la fusión y le da un perfil propio, que es
+   * la única forma de pegarle el teléfono correcto a la persona correcta.
+   */
+  const [leadsFuera, setLeadsFuera] = useState<string[]>([]);
   const [trabajando, setTrabajando] = useState(false);
   const [fallo, setFallo] = useState<string | null>(null);
   const [fusionados, setFusionados] = useState(0);
@@ -92,6 +102,7 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
   // se está mirando, no del siguiente.
   useEffect(() => {
     setExcluidos([]);
+    setLeadsFuera([]);
     setFallo(null);
   }, [grupo?.id]);
 
@@ -107,13 +118,29 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
     [elegidos],
   );
 
+  /** Los leads que entran en la fusión: los que no se sacaron a mano. */
+  const leadsEnJuego = useMemo(
+    () => (grupo?.leads ?? []).filter((l) => !leadsFuera.includes(l.id)),
+    [grupo, leadsFuera],
+  );
+
   const planLeads = useMemo(
     () =>
       plan && grupo
-        ? planDeLeads(plan.sobrevive, plan.absorbidos, grupo.leads)
+        ? planDeLeads(plan.sobrevive, plan.absorbidos, leadsEnJuego)
         : null,
-    [plan, grupo],
+    [plan, grupo, leadsEnJuego],
   );
+
+  /** Los que salen a un perfil propio, con el nombre del perfil del que salen. */
+  const separaciones = useMemo(() => {
+    if (!grupo) return [];
+    return (grupo.perfiles ?? []).flatMap((perfil) => {
+      const suyos = (grupo.leads ?? []).filter((l) => l.perfil === perfil.id);
+      const elegidos = suyos.filter((l) => !leadsFuera.includes(l.id)).map((l) => l.id);
+      return planDeSeparacion(perfil.nombre ?? '', suyos, elegidos).salen;
+    });
+  }, [grupo, leadsFuera]);
 
   const hayChoques = Boolean(planLeads?.choques.length);
 
@@ -154,12 +181,21 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
         });
       }
 
-      // 2. Los leads pasan al sobreviviente con su historial de envíos colgado.
+      // 2. Antes de mover nada: los leads que el usuario marcó como de OTRA
+      //    persona salen a un perfil propio. Si esto se hiciera después, ya
+      //    estarían colgando del sobreviviente y habría que desarmarlo.
+      for (const sale of separaciones) {
+        const nuevo = await pb.collection('perfil').create({ nombre: sale.nombre });
+        await pb.collection('lead').update(sale.lead, { perfil: nuevo.id });
+      }
+
+      // 3. Los leads que sí son de esta persona pasan al sobreviviente, con su
+      //    historial de envíos colgado.
       for (const id of planLeads.mover) {
         await pb.collection('lead').update(id, { perfil: plan.sobrevive });
       }
 
-      // 3. Recién ahora el sobreviviente toma los datos combinados.
+      // 4. Recién ahora el sobreviviente toma los datos combinados.
       await pb.collection('perfil').update(plan.sobrevive, plan.resultado);
 
       const quedan = [
@@ -425,7 +461,13 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
               {grupo.perfiles.map((p) => {
                 const fuera = excluidos.includes(p.id);
                 const queda = plan?.sobrevive === p.id;
-                const nLeads = leadsDe(p.id).length;
+                const susLeads = leadsDe(p.id);
+                const nLeads = susLeads.length;
+                // Dos correos distintos colgando del MISMO perfil no es un
+                // duplicado: es un perfil que junta a dos personas. Pasa con
+                // los que salieron del calendario, donde el invitado se llama
+                // «Jorge» y nada más.
+                const correos = [...new Set(susLeads.map((l) => l.email).filter(Boolean))];
                 return (
                   <div
                     key={p.id}
@@ -470,6 +512,57 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
                       })}
                     </dl>
 
+                    {/*
+                      El correo, que es el dato que de verdad decide.
+
+                      Los perfiles que salieron del calendario traen el nombre
+                      que el invitado tenga puesto en Google —muchas veces sólo
+                      el nombre de pila— y nada más. El correo del evento sí
+                      identifica a la persona, vive en el lead (§3.2) y hasta
+                      ahora esta pantalla no lo mostraba: se aprobaba a ciegas.
+                    */}
+                    <div className="dup-correos">
+                      <span className="dup-campo-label">Correo del evento</span>
+                      {susLeads.length === 0 && <span className="dup-campo-vacio">sin lead</span>}
+                      {/*
+                        La cuenta ADELANTE y el correo después, cada uno en su
+                        renglón. Con la abreviatura al final se pegaba al dominio
+                        —«…yahoo.com.mxAL»— y se leía como parte del correo.
+                      */}
+                      {susLeads.map((l) => {
+                        const fueraDeAca = leadsFuera.includes(l.id);
+                        return (
+                          <button
+                            key={l.id}
+                            type="button"
+                            className={`dup-correo ${fueraDeAca ? 'dup-correo-fuera' : ''}`}
+                            title={
+                              fueraDeAca
+                                ? 'Es otra persona: sale a un perfil propio, con su reunión. Tocá para volver a incluirlo.'
+                                : 'Es esta persona. Tocá si es otra y querés separarlo.'
+                            }
+                            onClick={() =>
+                              setLeadsFuera((v) =>
+                                v.includes(l.id) ? v.filter((x) => x !== l.id) : [...v, l.id],
+                              )
+                            }
+                          >
+                            <b className="dup-correo-cuenta">{l.cuenta_abrev ?? '?'}</b>
+                            {l.email || <span className="dup-campo-vacio">sin correo</span>}
+                            {fueraDeAca && <span className="dup-correo-marca">se separa</span>}
+                          </button>
+                        );
+                      })}
+                      {correos.length > 1 && (
+                        <span
+                          className="pastilla pastilla-error"
+                          title="Este perfil tiene leads con correos distintos: son personas distintas que la importación juntó bajo el mismo nombre de pila. Tocá el correo que NO sea de esta persona para separarlo."
+                        >
+                          ⚠ {correos.length} personas distintas acá adentro
+                        </span>
+                      )}
+                    </div>
+
                     <div className="dup-tarjeta-pie">
                       <span className="campo-ayuda tabular">{p.created.slice(0, 10)}</span>
                       <span className={`pastilla ${nLeads ? 'pastilla-suave' : ''}`}>
@@ -497,6 +590,18 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
                     );
                   })}
                 </div>
+                {separaciones.length > 0 && (
+                  <span className="dup-separa">
+                    <b>
+                      {separaciones.length === 1
+                        ? 'Un lead se separa'
+                        : `${separaciones.length} leads se separan`}
+                    </b>{' '}
+                    a un perfil propio, con su reunión y su correo. Queda con el mismo
+                    nombre ({separaciones.map((x) => x.email || 'sin correo').join(', ')}):
+                    renombralo desde su ficha cuando sepas quién es.
+                  </span>
+                )}
                 {planLeads && planLeads.mover.length > 0 && (
                   <span className="campo-ayuda">
                     {planLeads.mover.length === 1

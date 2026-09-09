@@ -4525,7 +4525,6 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 }
 .agenda-evento-ajeno .agenda-evento-hora,
 .agenda-evento-ajeno .agenda-evento-nombre { color: var(--hint); font-weight: 500; }
-.agenda-calendarios { margin-left: 4px; }
 
 /* ---------- mensajes destacados en Enviar mensaje (§7.2) ---------- */
 /* Fila de acceso rapido: chips que se tocan, NO un colapsable ni una lista. */
@@ -5724,4 +5723,150 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   border-color: transparent;
   font-weight: 600;
   cursor: help;
+}
+
+/* ---------- la secuencia de la cadencia en Enviar mensaje (§7.2) ---------- */
+/*
+ * Reemplaza al desplegable «Paso: R2 (toca)». El desplegable decía cuál tocaba
+ * pero escondía el resto: para saber si el R1 había salido —y en qué idioma—
+ * había que abrir el historial.
+ */
+.enviar-secuencia {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+}
+.paso-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  background: var(--surface);
+  color: var(--hint);
+  font-size: var(--txt-sm);
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background 150ms ease-out, border-color 150ms ease-out;
+}
+.paso-chip:hover { border-color: var(--accent-br); color: var(--accent); }
+/* Enviado: el tilde y el color hacen el trabajo; el chip queda «apagado» a
+   propósito, porque lo que importa mirar es lo que falta. */
+.paso-chip-enviado { color: var(--accent); background: var(--accent-light); border-color: transparent; }
+.paso-chip-tilde { font-size: var(--txt-xs); }
+.paso-chip-idioma {
+  font-size: var(--txt-xs);
+  opacity: .75;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+/* El que toca: borde lleno, para encontrarlo sin leer. */
+.paso-chip-toca { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.paso-chip-elegido { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.paso-chip-elegido .paso-chip-idioma { opacity: .9; }
+/* Los que no son de la cadencia van separados y en cursiva: no tienen orden. */
+.paso-chip-aparte { font-style: italic; margin-left: 4px; }
+.enviar-idioma { display: flex; align-items: center; gap: 5px; margin-left: auto; }
+.enviar-idioma select { height: 22px; }
+
+/* ---------- alta manual de un lead (§7.2) ---------- */
+/* Una caja más ancha que la de importar: son doce campos, y apilarlos en una
+   columna obliga a scrollear un formulario que tiene que entrar de una. */
+.alta { width: calc(680px * var(--escala-texto)); }
+.alta-cuerpo { gap: 10px; }
+/* Los campos van en filas de dos o tres. `flex: 1` con `min-width: 0` es lo
+   que evita que un input largo empuje al de al lado fuera de la caja. */
+.alta-fila { display: flex; gap: 10px; align-items: flex-end; }
+.alta-ancho { flex: 1; min-width: 0; }
+.alta-corto { width: 150px; flex: 0 0 auto; }
+/* Lo que el CRM deduce solo —el idioma— se ve distinto de lo que se escribe:
+   si tuviera borde de input, se intentaría editarlo. */
+.alta-derivado {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--txt-base);
+  color: var(--text);
+}
+.campo-mal { border-color: var(--error); }
+.alta-aviso {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  background: var(--bg);
+  font-size: var(--txt-md);
+  color: var(--muted);
+}
+/* «Ya está cargada» no es lo mismo que «hay alguien parecido»: el primero
+   cambia lo que va a pasar al guardar, y por eso se ve. */
+.alta-aviso-fuerte { border-color: var(--accent-br); background: var(--accent-light); color: var(--text); }
+.alta-parecidos { display: flex; flex-direction: column; gap: 2px; }
+.alta-parecido { font-size: var(--txt-sm); color: var(--muted); }
+.alta-parecido b { color: var(--text); font-weight: 500; }
+
+/* El único botón de Usuarios que borra. Rojo sólo cuando ya se confirmó una
+   vez: en la fila de botones normales tiene que verse distinto del resto. */
+.boton-mini-peligro { border-color: var(--error); color: var(--error); }
+.boton-mini-peligro:hover { background: var(--error-light); color: var(--error); }
+
+/* El correo en la tarjeta de Duplicados. Va aparte de los campos del perfil
+   porque no es del perfil: es del lead, y puede haber más de uno. */
+.dup-correos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  padding: 6px 0 0;
+  border-top: .5px solid var(--border);
+}
+.dup-correo { font-size: var(--txt-md); color: var(--text); word-break: break-all; }
+.dup-correo-cuenta {
+  font-size: var(--txt-xs);
+  font-weight: 600;
+  color: var(--hint);
+  margin-left: 3px;
+}
+
+/* Cada correo es un botón: destildarlo lo saca de la fusión y le da un perfil
+   propio. Es lo que permite pegarle el teléfono a la persona correcta cuando
+   el perfil junta a varias. */
+.dup-correo {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 2px 6px;
+  border: .5px solid transparent;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  font-size: var(--txt-md);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  word-break: break-all;
+}
+.dup-correo:hover { border-color: var(--border); }
+.dup-correo-fuera { opacity: .55; text-decoration: line-through; border-color: var(--error); }
+.dup-correo-marca {
+  font-size: var(--txt-xs);
+  font-weight: 600;
+  color: var(--error);
+  text-decoration: none;
+}
+.dup-separa { font-size: var(--txt-md); color: var(--muted); line-height: 1.5; }
+
+/* El renglón de resultado de Google, debajo de su fila. No es una fila más de
+   la tabla: no tiene estado ni botón, así que no lleva las columnas. */
+.cc-nota {
+  grid-template-columns: 1fr;
+  padding-top: 0;
 }

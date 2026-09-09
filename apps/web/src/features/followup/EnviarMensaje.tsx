@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CADENCIA_POR_DEFECTO, canalDe, siguientePaso } from '@crm/core/cadencia';
+import { CADENCIA_POR_DEFECTO, canalDe, secuenciaDe, siguientePaso } from '@crm/core/cadencia';
 import { planDeEnvio } from '@crm/core/envio';
 import { idiomaEfectivo } from '@crm/core/idioma';
 import {
@@ -105,6 +105,9 @@ export function EnviarMensaje({
    * alguien los chips de la otra.
    */
   const casa = casaDeLinea(lead.expand?.cuenta?.linea_negocio);
+  /** `R0 ✓ · R1 ✓ · R2 …`: qué se mandó, en qué idioma, y cuál toca. */
+  const secuencia = useMemo(() => secuenciaDe(envios), [envios]);
+
   const destacados = useMemo(
     () =>
       plantillas
@@ -294,25 +297,82 @@ export function EnviarMensaje({
         <span className={`pastilla ${canal === 'whatsapp' ? 'pastilla-wa' : 'pastilla-li'}`}>
           {canal}
         </span>
+        {/* «Ir al chat» al lado del titulo (§7.2): es lo primero que se
+            hace antes de escribir, no una accion del final. */}
+        {urlChat && (
+          <a
+            className="boton-mini"
+            href={urlChat}
+            target="_blank"
+            rel="noreferrer"
+            title="Abrir la conversación real (H)"
+          >
+            ↗ Ir al chat
+          </a>
+        )}
         <span className="enviar-conteo tabular">{envios.length} enviados</span>
       </div>
 
-      <div className="enviar-fila">
-        <label className="campo campo-chico">
-          <span className="campo-label">Paso</span>
-          <select value={paso} onChange={(e) => setPaso(e.target.value as Paso)}>
-            {(['R0', 'R0-recontacto', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'agradecimiento'] as const).map(
-              (p) => (
-                <option key={p} value={p}>
-                  {p}
-                  {p === sugerido ? ' (toca)' : ''}
-                </option>
-              ),
-            )}
-          </select>
-        </label>
+      {/*
+        La secuencia, en vez del desplegable «Paso».
 
-        <label className="campo campo-chico">
+        El desplegable decía cuál tocaba pero escondía el resto: para saber si
+        el R1 había salido —y en qué idioma— había que abrir el historial. La
+        fila muestra las dos cosas de un vistazo, que es lo que uno mira antes
+        de escribir.
+
+        Se puede tocar cualquiera: a veces hay que repetir un paso, o saltear.
+        Lo que la fila NO hace es esconder que se salteó.
+      */}
+      <div className="enviar-secuencia">
+        {secuencia.map((x) => (
+          <button
+            key={x.paso}
+            type="button"
+            className={[
+              'paso-chip',
+              x.enviado ? 'paso-chip-enviado' : '',
+              x.toca ? 'paso-chip-toca' : '',
+              paso === x.paso ? 'paso-chip-elegido' : '',
+            ].join(' ')}
+            title={
+              x.enviado
+                ? `Ya se mandó${x.idioma ? ` en ${x.idioma}` : ''}. Tocá para volver a escribirlo.`
+                : x.toca
+                  ? 'Es el que toca'
+                  : 'Todavía no se mandó'
+            }
+            onClick={() => setPaso(x.paso)}
+          >
+            {x.enviado && <span className="paso-chip-tilde">✓</span>}
+            <span>{x.paso}</span>
+            {/* El idioma va sólo en los enviados: en los que faltan sería una
+                promesa, no un dato. */}
+            {x.enviado && x.idioma && <span className="paso-chip-idioma">{x.idioma}</span>}
+          </button>
+        ))}
+
+        {/* Los dos pasos que no son de la cadencia y que a veces hacen falta. */}
+        {(['R0-recontacto', 'agradecimiento'] as const).map((extra) => (
+          <button
+            key={extra}
+            type="button"
+            className={`paso-chip paso-chip-aparte ${paso === extra ? 'paso-chip-elegido' : ''}`}
+            title={
+              extra === 'agradecimiento'
+                ? 'Después de la reunión. No mueve la etapa (§5.10)'
+                : 'La reinvitación, cuando el lead vuelve del recontacto (D24)'
+            }
+            onClick={() => setPaso(extra)}
+          >
+            {extra === 'agradecimiento' ? 'gracias' : 'reinvitar'}
+          </button>
+        ))}
+
+        {/* El idioma se queda: decide con qué texto sale. El canal NO — ya está
+            al lado del título, y cargarlo dos veces es la misma información
+            ocupando el doble. */}
+        <label className="enviar-idioma">
           <span className="campo-label">Idioma</span>
           <select value={idioma} onChange={(e) => setIdioma(e.target.value as Idioma)}>
             {IDIOMAS.map((i) => (
@@ -322,13 +382,6 @@ export function EnviarMensaje({
             ))}
           </select>
         </label>
-
-        <div className="campo campo-chico">
-          <span className="campo-label">Canal</span>
-          <span className={`pastilla ${canal === 'whatsapp' ? 'pastilla-wa' : 'pastilla-li'}`}>
-            {canal}
-          </span>
-        </div>
       </div>
 
       {delPaso.length > 1 && (
@@ -642,42 +695,35 @@ export function EnviarMensaje({
         </div>
       )}
 
+      {/*
+        Sin «Copiar»: «Ir al chat» abre la conversación y el texto se copia solo
+        al registrar. Un botón más en la fila que se usa cuarenta veces por día
+        es un botón que hay que saltear cuarenta veces.
+      */}
       <div className="enviar-acciones">
-        {urlChat && (
-          <a className="boton-secundario" href={urlChat} target="_blank" rel="noreferrer">
-            ↗ Ir al chat
-          </a>
-        )}
-        <button
-          type="button"
-          className="boton-secundario"
-          onClick={() => void navigator.clipboard?.writeText(texto)}
-          disabled={!texto}
-        >
-          Copiar
-        </button>
-
         <button
           type="button"
           className="boton-principal enviar-registrar"
           disabled={!texto || guardando}
           onClick={() => void registrar()}
-          title="Registrar que mandaste este mensaje (S)"
+          title={
+            plan.etiquetas_a_agregar.length
+              ? `Registrar que mandaste este mensaje (S). Se agregan: ${plan.etiquetas_a_agregar.join(', ')}`
+              : 'Registrar que mandaste este mensaje (S)'
+          }
         >
           {guardando ? 'Registrando…' : 'Registrar envío'}
         </button>
       </div>
 
-      {plan.etiquetas_a_agregar.length > 0 && (
-        <p className="campo-ayuda">
-          Al registrar se agregan: {plan.etiquetas_a_agregar.join(', ')}.
-        </p>
-      )}
+      {/*
+        Acá iban tres textos de ayuda —qué etiquetas se agregan, que el CRM no
+        manda el mensaje, que el envío automático llega con el worker—. Se leen
+        una vez y después son ruido en el lugar donde se trabaja todo el día.
 
-      <p className="nota-tecnica">
-        El CRM <strong>no manda el mensaje</strong>: lo mandás vos desde el chat real y acá
-        queda registrado. El envío automático llega con el worker (Etapa 5).
-      </p>
+        Lo que decían no se perdió: las etiquetas que se agregan están en el
+        title del botón, y lo del worker está en el manual.
+      */}
 
       {/* Lo ya mandado, al pie de donde se escribe lo próximo: es el único
           lugar donde mirarlo sirve de algo. */}

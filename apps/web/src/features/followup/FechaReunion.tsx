@@ -89,16 +89,17 @@ export function FechaReunion({
 }: Props) {
   const [reuniones, setReuniones] = useState<ReunionRecord[]>([]);
   /**
-   * Los calendarios que se pueden mirar y cuál se está mirando (§6.3).
+   * Los horarios tomados en los calendarios de los demás administradores.
    *
-   * Sirve para agendar contra la agenda de otro: si la reunión la va a tomar
-   * el administrador, los huecos que importan son los suyos. Lo ajeno se suma
-   * a lo propio en vez de reemplazarlo — la reunión tiene que entrar en las
-   * dos agendas, no en una.
+   * No hay selector: se suman siempre. La reunión tiene que entrar en las dos
+   * agendas, así que el hueco que sirve es el que está libre en las dos —
+   * elegir «mirar el calendario de Alberto» era responder la pregunta a medias.
    */
-  const [calendarios, setCalendarios] = useState<{ id: string; nombre: string }[]>([]);
-  const [calendario, setCalendario] = useState<string | null>(null);
-  const [ajenas, setAjenas] = useState<{ id: string; inicio: string; zona: string; duracion_min: number }[]>([]);
+  const [ajenas, setAjenas] = useState<
+    { id: string; calendario: string; inicio: string; zona: string; duracion_min: number }[]
+  >([]);
+  /** id de administrador → nombre de pila, para decir de quién es el hueco. */
+  const [duenios, setDuenios] = useState<Map<string, string>>(new Map());
   /** Las que quien mira tiene permitido ver con nombre. */
   const [conNombre, setConNombre] = useState<
     { id: string; inicio: string; zona: string; duracion_min: number; nombre: string }[]
@@ -174,8 +175,8 @@ export function FechaReunion({
           })
           .catch(() => [] as ConNombre[]),
       ]);
-      // Un calendario por administrador, más el propio. §8.6 pide no asumir
-      // que hay uno solo.
+      // Quiénes son los otros administradores. §8.6 pide no asumir que hay uno
+      // solo: si mañana son tres, los tres se suman sin tocar código.
       const admins = await pb
         .collection('users')
         .getFullList<{ id: string; name: string }>({
@@ -184,12 +185,9 @@ export function FechaReunion({
           sort: 'name',
         })
         .catch(() => []);
-      setCalendarios([
-        ...(usuario ? [{ id: usuario.id, nombre: 'Mi calendario' }] : []),
-        ...admins
-          .filter((x) => x.id !== usuario?.id)
-          .map((x) => ({ id: x.id, nombre: `Calendario de ${x.name.split(' ')[0]}` })),
-      ]);
+      setDuenios(
+        new Map(admins.filter((x) => x.id !== usuario?.id).map((x) => [x.id, x.name.split(' ')[0]])),
+      );
 
       setReuniones(mias);
       setConNombre(
@@ -217,13 +215,14 @@ export function FechaReunion({
    */
   useEffect(() => {
     let vivo = true;
-    if (!calendario || calendario === usuario?.id) {
+    const ids = [...duenios.keys()];
+    if (!ids.length) {
       setAjenas([]);
       return;
     }
     pb.collection('ocupado')
-      .getFullList<{ id: string; inicio: string; zona: string; duracion_min: number }>({
-        filter: `calendario = "${calendario}"`,
+      .getFullList<{ id: string; calendario: string; inicio: string; zona: string; duracion_min: number }>({
+        filter: ids.map((id) => `calendario = "${id}"`).join(' || '),
         sort: 'inicio',
       })
       .then((r) => vivo && setAjenas(r))
@@ -231,7 +230,7 @@ export function FechaReunion({
     return () => {
       vivo = false;
     };
-  }, [calendario, usuario?.id]);
+  }, [duenios]);
 
   useEffect(() => {
     void recargar();
@@ -265,15 +264,22 @@ export function FechaReunion({
   const agenda = useMemo(() => {
     const m = new Map<string, EventoDelDia[]>();
     const nombres = new Map(conNombre.map((r) => [r.id, r.nombre]));
-    const poner = (r: { id: string; inicio: string; zona?: string; duracion_min: number }) => {
+    const poner = (r: {
+      id: string;
+      inicio: string;
+      zona?: string;
+      duracion_min: number;
+      calendario?: string;
+    }) => {
       const local = enSuZona(r.inicio, r.zona || ZONA);
       const dia = local.slice(0, 10);
       const a = enMinutos(local.slice(11, 16));
-      const quien = nombres.get(r.id);
+      // Con nombre si se puede verlo; si no, de quién es la agenda. Saber que
+      // el hueco es «de Alberto» es lo que hace falta para agendarle algo; con
+      // quién se reúne él sigue sin decirse (§6.3).
+      const quien = nombres.get(r.id) ?? (r.calendario ? duenios.get(r.calendario) : '');
       m.set(dia, [
         ...(m.get(dia) ?? []),
-        // Sin nombre no se inventa uno: «Ocupado» es exactamente lo que se
-        // sabe de la reunión de otro (§6.3).
         { a, b: a + (r.duracion_min || DURACION_DEFECTO), titulo: quien || 'Ocupado' },
       ]);
     };
@@ -285,7 +291,7 @@ export function FechaReunion({
     for (const r of ajenas) if (!suyas.has(r.id) && !conNombre.some((c) => c.id === r.id)) poner(r);
     for (const [, evs] of m) evs.sort((x, y) => x.a - y.a);
     return m;
-  }, [reuniones, conNombre, ajenas]);
+  }, [reuniones, conNombre, ajenas, duenios]);
 
   const hoy = diaLocal();
   const celdas = celdasDelMes(cal.anio, cal.mes);
@@ -717,8 +723,9 @@ export function FechaReunion({
               </span>
             )}
             <span className="reunion-evento-ayuda">
-              Nombre completo del lead · primer nombre de la cuenta de origen · tu nombre. El link
-              es el del perfil, no el de Sales Navigator.
+              Nombre completo del lead / primer nombre de la cuenta de origen / tu nombre — el
+              mismo formato que tienen tus eventos viejos, así el importador los puede leer. El
+              link es el del perfil, no el de Sales Navigator.
             </span>
           </div>
 
@@ -788,33 +795,9 @@ export function FechaReunion({
             </div>
 
             <div className="reunion-derecha">
-              {calendarios.length > 1 && (
-                <div className="reunion-fila-control">
-                  <span className="campo-label">Calendario</span>
-                  <div className="reunion-segmentado">
-                    {calendarios.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        className={(calendario ?? usuario?.id) === c.id ? 'reunion-seg-on' : ''}
-                        title={
-                          c.id === usuario?.id
-                            ? 'Sólo tus horarios'
-                            : 'Suma los horarios de ese calendario, sin decir de qué son'
-                        }
-                        onClick={() => {
-                          setCalendario(c.id);
-                          setHora(null);
-                          setHoraAbierta(null);
-                        }}
-                      >
-                        {c.nombre}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
+              {/* Acá estaba el selector de calendario. Ya no hace falta: los
+                  horarios de los otros administradores se suman siempre, que
+                  es lo que uno quiere cuando busca un hueco para dos. */}
               <div className="reunion-fila-control">
                 <span className="campo-label">Duración (min)</span>
                 <div className="reunion-segmentado">
@@ -913,9 +896,9 @@ export function FechaReunion({
               )}
 
               <span className="reunion-evento-ayuda">
-                Los bloques ocupados salen de las reuniones ya cargadas; las de otros calendarios
-                se ven como «Ocupado», sin de quién son (§6.3). La disponibilidad real de Google
-                Calendar llega cuando se conecte la cuenta.
+                Los bloques ocupados son las reuniones ya cargadas, las tuyas y las de los otros
+                administradores — de esas se ve de quién es el horario, no con quién (§6.3). La
+                disponibilidad real de Google Calendar llega cuando se conecte la cuenta.
               </span>
               {error && <span className="login-error">{error}</span>}
             </div>

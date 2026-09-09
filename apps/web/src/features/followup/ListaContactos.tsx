@@ -75,6 +75,8 @@ interface Props {
   veCola: boolean;
   /** Sin permiso de importar no se pasa la función y el botón no existe. */
   onImportar?: () => void;
+  /** Cargar un lead a mano. Mismo permiso que importar: es meter gente a la base. */
+  onNuevo?: () => void;
   /**
    * Los usuarios a los que se puede asignar, para el chip de agente.
    *
@@ -209,6 +211,7 @@ export function ListaContactos({
   veTelefono,
   veCola,
   onImportar,
+  onNuevo,
 }: Props) {
   const [busqueda, setBusqueda] = useState('');
   /**
@@ -510,8 +513,17 @@ export function ListaContactos({
           </button>
         )}
 
-        {/* §7.2: importar CSV vive acá, al lado del buscador, y solo con
-            permiso. Es donde entra la base. */}
+        {/* §7.2: las dos formas de meter gente a la base viven acá, al lado
+            del buscador. El «+» primero porque es el de todos los días: el
+            import es de una tanda, el alta a mano es de un contacto suelto. */}
+        {onNuevo && (
+          <button type="button" title="Cargar un lead a mano" className="boton-icono" onClick={onNuevo}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+        )}
+
         {onImportar && (
           <button type="button" title="Importar leads desde CSV" className="boton-icono" onClick={onImportar}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">

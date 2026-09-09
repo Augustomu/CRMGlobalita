@@ -27,6 +27,7 @@ import { Automatizaciones } from './features/automatizaciones/Automatizaciones';
 import { WaPersonal } from './features/wapersonal/WaPersonal';
 import { BaseCompartida } from './features/compartida/BaseCompartida';
 import { ImportarCsv } from './features/importar/ImportarCsv';
+import { NuevoLead } from './features/alta/NuevoLead';
 import { Reglas } from './features/reglas/Reglas';
 
 const TEMAS = ['tema-claro', 'tema-oscuro', 'tema-noche'] as const;
@@ -126,9 +127,34 @@ export function App() {
   const [masAbierto, setMasAbierto] = useState(false);
   const [atajosAbiertos, setAtajosAbiertos] = useState(false);
   const [cuentasAbiertas, setCuentasAbiertas] = useState(false);
+  /** El resultado de la vuelta de Google, tal como lo mandó el servidor. */
+  const [avisoGoogle, setAvisoGoogle] = useState<string | null>(null);
   const [notifAbiertas, setNotifAbiertas] = useState(false);
   const [usuarioAbierto, setUsuarioAbierto] = useState(false);
   const [agendaAbierta, setAgendaAbiertaBruto] = useState(false);
+
+  /**
+   * La vuelta de Google (§8.3).
+   *
+   * El callback del servidor no puede devolver una pantalla: acá llega el
+   * navegador redirigido desde Google. Así que deja el resultado en la URL
+   * (`/?google=conectado`) y la aplicación lo levanta al arrancar, abre la
+   * pantalla donde se ve el estado y lo muestra ahí.
+   *
+   * El parámetro se saca de la URL apenas se lee. Si quedara, recargar la
+   * página volvería a mostrar «conectado» sin que nadie se haya conectado, que
+   * es peor que no avisar nada.
+   */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const msg = params.get('google');
+    if (!msg) return;
+    setAvisoGoogle(msg);
+    setCuentasAbiertas(true);
+    params.delete('google');
+    const resto = params.toString();
+    window.history.replaceState({}, '', window.location.pathname + (resto ? `?${resto}` : ''));
+  }, []);
 
   // §7.2: «Sidebars (una a la vez)». En una laptop de 14" las dos al mismo
   // tiempo dejan la ficha en 300 px, que es no poder trabajar con ninguna.
@@ -149,6 +175,7 @@ export function App() {
   const [tareasAbierto, setTareasAbierto] = useState(false);
   const [compartidaAbierta, setCompartidaAbierta] = useState(false);
   const [importarAbierto, setImportarAbierto] = useState(false);
+  const [nuevoAbierto, setNuevoAbierto] = useState(false);
   const [reglasAbiertas, setReglasAbiertas] = useState(false);
   /**
    * Qué canal de conversación está abierto, o ninguno. Vive en el header
@@ -700,8 +727,15 @@ export function App() {
           />
         )}
 
-        {!cargando && !error && seccion === 'usuarios' && usuario && (
-          <Usuarios usuarioActual={usuario} leads={leads} onCambio={recargar} />
+        {/* Acá va el usuario REAL, no el que se está «viendo como».
+            Los tres chequeos de identidad de esta pantalla —no editarte los
+            permisos, no reiniciarte la clave, no darte de baja— existen porque
+            el servidor los va a rechazar, y el servidor mira quién está
+            autenticado, no a quién se está mirando. Con el impersonado, el
+            botón de baja aparecía sobre el usuario con el que uno estaba
+            conectado y PocketBase devolvía un 404 sin explicar nada. */}
+        {!cargando && !error && seccion === 'usuarios' && usuario && usuarioReal && (
+          <Usuarios usuarioActual={usuarioReal} leads={leads} onCambio={recargar} />
         )}
 
         {!cargando && !error && seccion === 'followup' && (
@@ -733,6 +767,11 @@ export function App() {
               onImportar={
                 puedeUsuario(usuario, 'importarLeads')
                   ? () => irA(() => setImportarAbierto(true))
+                  : undefined
+              }
+              onNuevo={
+                puedeUsuario(usuario, 'importarLeads')
+                  ? () => irA(() => setNuevoAbierto(true))
                   : undefined
               }
             />
@@ -787,7 +826,15 @@ export function App() {
       </main>
 
 
-      {cuentasAbiertas && <CuentasConectadas onCerrar={() => setCuentasAbiertas(false)} />}
+      {cuentasAbiertas && (
+        <CuentasConectadas
+          avisoGoogle={avisoGoogle}
+          onCerrar={() => {
+            setCuentasAbiertas(false);
+            setAvisoGoogle(null);
+          }}
+        />
+      )}
 
       {dupAbierto && (
         <Duplicados
@@ -821,6 +868,23 @@ export function App() {
       {compartidaAbierta && <BaseCompartida onCerrar={() => setCompartidaAbierta(false)} />}
 
       {reglasAbiertas && <Reglas onCerrar={() => setReglasAbiertas(false)} />}
+
+      {/* §7.2: el alta a mano. La cuenta que propone es la del lead abierto
+          —lo más probable es que el contacto nuevo venga de la misma tanda— y
+          queda asignado a quien lo carga. */}
+      {nuevoAbierto && (
+        <NuevoLead
+          cuenta={lead?.cuenta ?? leads[0]?.cuenta ?? ''}
+          asignado={usuarioReal?.id ?? ''}
+          onCerrar={() => setNuevoAbierto(false)}
+          onCreado={(id) => {
+            // Primero la recarga y DESPUÉS la selección: el efecto que evita
+            // fichas fantasma tira la selección a la primera fila si el id no
+            // está en la lista, y recién está cuando la recarga terminó.
+            void recargar().then(() => setSeleccionado(id));
+          }}
+        />
+      )}
 
       {importarAbierto && (
         <ImportarCsv

@@ -26,6 +26,23 @@ import {
 } from './copias.mjs';
 
 const raiz = path.resolve(import.meta.dirname, '../..');
+
+/*
+ * El .env de la raiz, si esta.
+ *
+ * Ahi van las credenciales de Google (paso 4.6 de deploy/PASO-A-PASO.md). NO
+ * pueden ir en un archivo del repo: es publico, y un client_secret commiteado
+ * hay que rotarlo aunque se borre despues, porque queda en el historial.
+ *
+ * `loadEnvFile` es de Node, no una dependencia. Tira si el archivo no existe,
+ * que es el caso normal: sin Google configurado el CRM funciona igual y la
+ * pantalla de Cuentas conectadas dice "sin configurar".
+ */
+try {
+  process.loadEnvFile(path.join(raiz, '.env'));
+} catch {
+  // No hay .env. Es lo esperado hasta que alguien conecte Google.
+}
 const pb = path.join(raiz, '.pb');
 const exe = path.join(pb, os.platform() === 'win32' ? 'pocketbase.exe' : 'pocketbase');
 // PB_DATOS deja arrancar una base limpia en otra carpeta SIN borrar la que ya
@@ -147,6 +164,14 @@ spawn(exe, ['serve', '--dir', datos, '--migrationsDir', migraciones, '--hooksDir
   env: {
     ...process.env,
     APP_URL: process.env.APP_URL || 'http://localhost:5173',
+    /*
+     * Donde CONTESTA PocketBase, que en desarrollo NO es donde vive la app:
+     * Vite sirve en :5173 y PocketBase en :8090. Google redirige al
+     * redirect_uri, que tiene que ser una ruta de este servidor; la vuelta
+     * final al navegador va a APP_URL. En produccion son la misma cosa y
+     * PB_URL ni se define.
+     */
+    PB_URL: process.env.PB_URL || 'http://127.0.0.1:8090',
     MAIL_DESDE: process.env.MAIL_DESDE || 'crm@globalita.test',
   },
 });

@@ -658,6 +658,19 @@ Los tres avisos viven en **Reglas y acciones rápidas**, no en Automatizaciones:
 - Confirmación 24 h antes y aviso 1 h 30 antes (activables).
 - Agradecimiento post reunión cuando el estado pasa a **asistió**.
 
+**El título del evento que escribe el CRM**:
+
+    Jorge Lara Huerta / Francisco / Augusto
+    nombre completo      cuenta      vos
+
+Del lead va el **nombre completo**; de la cuenta de origen y de uno mismo, sólo
+el primer nombre. El separador es ` / `, el mismo que tienen los 288 eventos
+que ya estaban en el Calendar — y no es una preferencia: el importador parte el
+título por `/` para saber cuál es el lead y cuál la cuenta, así que un evento
+escrito con otro separador no se podría volver a leer con la misma herramienta
+que leyó los viejos. La descripción lleva el link del **perfil** de LinkedIn, no
+el de Sales Navigator, y el id del lead (§8.3).
+
 **Zona horaria**: la base guarda en UTC, así que una reunión de las 18:00 en México vuelve como las 00:00 del día siguiente. Si se lee el texto crudo, la agenda miente por un día y una reunión que ya pasó figura como futura. Todo pasa por `enSuZona()` (→ D23).
 
 ### 5.12 De lead a proyecto
@@ -760,7 +773,7 @@ Ve: Follow-up, WA Personal, tareas, agenda, y **sólo los leads en los que figur
 
 No ve: automatizaciones, Control, base compartida, vencimientos, repositorio y mensajes destacados, cuentas conectadas/QR, cola de envíos, importar CSV, enviar mensajes.
 
-**Agenda del colaborador**: sus reuniones, más las de cada administrador como bloques **Ocupado** sin nombre ni detalle (→ D18). Un switch elige qué calendario mira: *Mi calendario* o *Calendario de {admin}* — un ítem por administrador. Al agendar, elige a qué calendario va la reunión, y la disponibilidad suma los días tomados de ese calendario.
+**Agenda del colaborador**: sus reuniones con detalle, más las de **todos** los administradores encima, en la misma grilla, como bloques ocupados con el nombre de pila del dueño de la agenda y nada más (→ D18). Sin selector: el chip que elegía un calendario a la vez se sacó el 09/09/2026 (§7.6). Al agendar, la disponibilidad ya suma los horarios de las dos agendas, que es la única forma de que la reunión entre en las dos.
 
 ### 6.3.1 El Observador, y el alcance de Control
 
@@ -906,7 +919,8 @@ Tres columnas, las dos últimas opcionales.
 **Columna 1 — lista de contactos** (ancho arrastrable 260–520 px, doble clic alterna 260/340, persistido):
 
 - Buscador por nombre, empresa, teléfono, ciudad.
-- Importar CSV (con permiso).
+- **Nuevo lead** y **Importar CSV**, los dos con el permiso `importarLeads`: son
+  las dos formas de meter gente a la base, y quien puede una puede la otra.
 - Filtros en popover: próximo contacto (todos / sólo vencidos) y orden, WhatsApp (con/sin), reunión (con / sin / asistió / no asistió), rol, país, ciudad, etiquetas. El botón muestra cuántos filtros hay activos y cuántos leads quedan.
 - Chips de cuenta (`todas`, `AL`, `DL`, …).
 - Chips de colaborador (**sólo para el administrador**).
@@ -919,7 +933,15 @@ Tres columnas, las dos últimas opcionales.
 
 **Columna 2 — ficha del lead** (mínimo 440 px):
 
-- **Encabezado**: nombre, cuenta, etapa, links (perfil, chat), botón verde de WhatsApp si hay teléfono, chip «Asignado a» (reasignable, con opción *sin asignar*), deshacer, acciones rápidas, y los **iconos de Etiquetas y de Log de ediciones**.
+- **Encabezado**: nombre, cuenta, links (perfil, chat), botón verde de WhatsApp si hay teléfono, chip «Asignado a» (reasignable, con opción *sin asignar*), deshacer, acciones rápidas, y los **iconos de Etiquetas y de Log de ediciones**.
+
+  > **Lo que NO va en el encabezado** (09/09/2026): ni la etapa, ni la
+  > situación, ni el idioma. Las tres estaban ahí como pastillas al lado de las
+  > etiquetas —que sí se sacan con una ×—, así que parecían etiquetas que no se
+  > podían borrar. Y las tres se leen donde se usan: la cadencia en la
+  > secuencia de Enviar mensaje, y el idioma en el desplegable de esa misma
+  > fila, que además deja cambiarlo. Arriba eran la misma información a diez
+  > centímetros del lugar donde sirve.
 
   > Etiquetas y Log **son iconos, no bloques colapsables** (08/09/2026). Los dos
   > se consultan de refilón mientras se trabaja el lead —qué etiquetas tiene,
@@ -939,6 +961,40 @@ Tres columnas, las dos últimas opcionales.
   - Sin botón «Copiar» y sin los textos de ayuda al pie: se leen una vez y después son ruido en el lugar donde se trabaja todo el día.
 - **Acciones rápidas** (rayo): todas las acciones del lead agrupadas — ficha (guardar, deshacer), contacto (enviar, cambiar canal, abrir el chat real, ver perfil), seguimiento (próximo contacto, reunión, análisis), asignación, Control de proyectos. Cada una con su atajo.
 - **Edición**: los campos se ven en vivo mientras se editan, no se ocultan hasta guardar. Toda edición apila su estado anterior; guardar limpia la pila.
+
+**Alta manual de un lead** (el «+» al lado del buscador):
+
+Hasta el 09/09/2026 a la base sólo se entraba por un CSV o por un WhatsApp
+entrante. Falta el caso de todos los días —te pasan un contacto, lo conocés en
+una feria, te lo recomienda un cliente— y armar un CSV de una fila para eso
+termina en que el contacto se queda en un papel.
+
+- **Obligatorios: nombre y cuenta. Nada más.** Un formulario que pide diez
+  cosas para guardar una es un formulario que no se usa. El nombre, porque sin
+  él no se lo puede buscar después; la cuenta, porque de ella cuelga la casa
+  (§3.13) y el perfil desde el que se le escribe.
+- **Opcionales**: LinkedIn, teléfono, email, cargo, empresa, industria, país,
+  ciudad, próximo contacto y una nota. Lo que falte se completa después: la
+  mitad la trae el scan de LinkedIn.
+- **Lo que el CRM deduce solo y muestra**: la casa (de la línea de la cuenta),
+  el idioma en que se le va a escribir (del país, §5.6) y el teléfono
+  normalizado a E.164 (§5.7). Un teléfono que no da un número válido **no
+  bloquea**: el lead entra con `telefono_valido: false` y el aviso explica por
+  qué el botón de WhatsApp va a estar apagado (D29).
+- **Antes de guardar pregunta si esa persona ya está** (D02). Si coincide el
+  slug de LinkedIn o el URN, **no se duplica**: se le completa a la ficha lo
+  que le falte y se le agrega el lead de esa cuenta. Si coincide sólo la
+  huella, entra igual marcado como posible duplicado, para la bandeja de
+  Duplicados.
+- El lead nace en **R0 / en curso**, con `lista: "Carga manual"` —que es lo que
+  después permite separarlo en las métricas de una tanda de Sales Navigator— y
+  asignado a quien lo cargó. Al guardar, la ficha se abre en él.
+- Sin próximo contacto avisa que no va a aparecer en Vencimientos, y propone
+  **mañana**: el alta suele hacerse justo después de haber hablado.
+
+La regla vive en `core/alta-lead.ts` (`problemasDelAlta`, `planDeAlta`,
+`proximoSugerido`) y la decisión de duplicado la toma `decidirAlta` de
+`core/dedupe.ts`, la misma que usa el import.
 
 **Sidebars** (una a la vez): Agenda (340–900) y Repositorio (300–620). Las dos arrastrables, con doble clic para volver al ancho normal, persistido.
 
@@ -986,9 +1042,25 @@ Tres vistas. La **semanal** y la **diaria** son la misma grilla con distinta can
 
 **Vista Lista**: una fila por lead con seguimiento — check de control, última reunión, próximo contacto editable, foto (se pega del portapapeles), cuenta y nombre, nueva reunión, notas, links, etiquetas. El filtro de check es una caja sin texto en **tres estados**: vacía (todos), con check, con cruz (sin check).
 
+**El orden es por última reunión, de la más nueva a la más vieja** (`porUltimaReunion`). La clave es la misma fecha que muestra la columna «Última»: si se ordenara por otra cosa, esa columna se vería salteada y habría que leer fila por fila para encontrar a quién se vio la semana pasada. Los que todavía no tuvieron ninguna reunión van **al final**, no al principio: una fila sin fecha arriba de todo se lee como si fuera la más reciente. Antes salían en el orden en que los devolvía la base, que es por fecha de creación del lead.
+
 **Hover del evento**: nombre, empresa, cuenta, hora y duración, estado, asistió / no asistió, pegar foto, notas, links, y dos campos para cambiar hora y fecha. **No hay popup del evento**: clic en el evento abre la ficha del lead.
 
-**Los bloques de otro calendario** dicen CUÁNDO y nada más: se muestran como «Ocupado», sin nombre ni detalle (→ D18). No se arrastran —no son tuyos—, no abren ficha y no tienen tarjeta.
+**Un solo calendario, integrado. Sin chips** (09/09/2026).
+
+Había un chip por administrador —«Mío», «Alberto»— y se miraba uno a la vez.
+Para agendar no sirve: la pregunta no es «¿cómo está mi semana?» sino «¿en qué
+hueco entramos los dos?», y con chips eso obliga a mirar dos veces la misma
+semana y a recordar la primera. Ahora es una grilla sola: **las reuniones
+propias con todo el detalle y los horarios de los demás administradores encima,
+como bloques ocupados**. Lo mismo en el panel de Fecha de reunión, donde el
+hueco que sirve es el que está libre en las dos agendas.
+
+**Los bloques de otro calendario** dicen CUÁNDO y **de quién es la agenda**, y
+nada más (→ D18). De quién es hace falta para poder agendarle algo; con quién
+se reúne, no: eso sigue sin viajar al navegador, porque sale de la colección de
+vista `ocupado` (§6.3). No se arrastran —no son tuyos—, no abren ficha y no
+tienen tarjeta.
 
 ### 7.7 Vencimientos de mensajes
 
@@ -1014,6 +1086,31 @@ Sidebar. Lista de plantillas con nombre, texto por idioma (ES/PT/EN), estrella d
 - **Notificaciones**: total sin leer entre Follow-up y WA Personal; al abrirlo lista cada uno con su canal (LI/WA) y salta a la ficha o a la pestaña.
 - **Importar CSV**: reconoce países como código de 2 letras además del nombre completo; previsualiza y deja elegir qué filas entran.
 - **Administrador de estados de proyecto**: nombre y significado de cada estado (§3.13.2). Accesible desde Control y desde la ficha del lead.
+- **Duplicados**: los perfiles marcados por D02, enfrentados campo por campo, con
+  dos modos —de a uno y en lista, para los que no tienen nada que decidir—.
+
+  **El correo manda.** Cada tarjeta muestra el correo de sus leads con la
+  cuenta de la que salió. Es el dato que decide: los perfiles que entraron del
+  calendario traen el nombre que el invitado tenga puesto en Google —muchas
+  veces sólo el nombre de pila— y con eso no alcanza para saber si dos «Jorge»
+  son el mismo. El correo del evento sí, y vive en el lead (§3.2).
+
+  Y avisa cuando **un mismo perfil tiene leads con correos distintos**: eso no
+  es un duplicado, es un perfil que junta a dos personas porque la importación
+  las agrupó por un nombre de pila compartido.
+
+  **Se arregla en el mismo lugar donde se ve.** Cada correo es un botón: al
+  tocarlo, ese lead queda marcado como de otra persona y, al fusionar, **sale a
+  un perfil propio** con su reunión y su correo. Así el teléfono del CSV le
+  llega a la persona correcta y las demás no se lo llevan puesto.
+
+  El que sale **se queda con el mismo nombre**. No se le inventa uno a partir
+  del correo: sigue siendo un «Jorge» de verdad, sólo que otro, y sacar
+  «Jdeleonmx» de `jdeleonmx@yahoo.com.mx` sería cambiar un dato malo por uno
+  peor. Se renombra desde su ficha cuando se sepa quién es.
+
+  Nada se borra: los perfiles absorbidos quedan marcados con `fusionado_en`, y
+  los separados son perfiles nuevos.
 
 ### 7.11 Control de proyectos
 
@@ -1104,10 +1201,60 @@ Vinculación por **QR por cuenta** (sesión de WhatsApp Web). Se necesita:
 ### 8.3 Google Calendar
 
 - Las reuniones creadas en el CRM se escriben en el calendario del usuario elegido.
+- **De quién es ese calendario**: primero `reunion.calendario` —lo que eligió la pantalla al agendar, que es el usuario que estaba agendando— y sólo si está vacío, `lead.asignado`. El orden importa y no es teórico: mirando únicamente el asignado, esto **no funcionaba nunca**, porque la asignación es opcional y los 242 leads la tienen vacía; toda reunión nueva moría con «el lead no tiene a nadie asignado» y jamás llegaba a Google. Además `calendario` es el campo del que sale la vista `ocupado`: si el evento se escribiera en una agenda distinta de la que dibuja la grilla, la pantalla estaría mintiendo. Cuando la reunión se sincroniza y `calendario` estaba vacío, se completa con el dueño que se usó — y nunca se pisa uno que ya estaba.
 - Los eventos existentes se leen como **bloqueos** para calcular disponibilidad. Lo que se muestra de un calendario ajeno es «Ocupado», sin nombre (→ D18).
-- Cambiar hora, fecha o duración desde la agenda **actualiza** el evento; la interfaz confirma con «Calendar actualizado». Toda escritura es un upsert por `google_event_id` (→ D10).
+- Cambiar hora, fecha o duración desde la agenda **actualiza** el evento; la interfaz confirma con «Calendar actualizado». Toda escritura es un upsert por `google_event_id` (→ D10). **Y le avisa al invitado**: todas las escrituras salen con `sendUpdates=all`, así que Google le manda el correo de actualización al lead.
+- **La sincronización es de ida y de vuelta.** Lo que cambia en Google Calendar cambia en el CRM: si la reunión se mueve, se estira o se borra desde el celular —que es donde uno la mueve cuando el cliente pide correrla—, la agenda del CRM se entera. Sin esto la agenda mentía y no había forma de notarlo desde adentro: mostraba el horario viejo para siempre.
+
+  **Cómo entra**: un reloj cada cinco minutos (`cronAdd`) pide a Google **sólo lo que cambió**, con `syncToken`. El token importa: sin él habría que pedir la ventana entera cada vuelta y, sobre todo, **no habría forma de enterarse de un evento borrado** — un evento borrado simplemente no aparece en un listado. Con token viene explícito, con `status: "cancelled"`. Cuando el token caduca Google contesta 410, y entonces se vacía y se vuelve a listar de cero.
+
+  **Por qué un reloj y no un aviso empujado.** Google sabe empujar los cambios (`events.watch`), pero necesita una URL pública con HTTPS y hay que renovarle el canal cada siete días. El CRM todavía no está publicado, así que un aviso empujado ni se podría probar. El día que convenga empujar, lo que cambia es quién dispara: el pedido incremental y la escritura quedan iguales.
+
+  **Las dos trampas de esto**, que explican todo el cuidado del código:
+  1. **Eco infinito.** Escribir la reunión con `$app.save()` dispara el hook de salida, que la manda a Google, que en la vuelta siguiente vuelve como un cambio. Por eso la vuelta escribe con **SQL plano**, que no dispara hooks — el mismo motivo por el que `anotar()` escribe así.
+  2. **Mails al lead.** Como cada escritura hacia Google sale con `sendUpdates=all`, un falso «cambió» no es ruido en un log: es un correo de más en la casilla de un cliente, cada cinco minutos. Por eso la comparación es **por instante, no por texto**: `2026-09-15 16:00:00.000Z` y `2026-09-15T10:00:00-06:00` son la misma hora, y compararlas como strings las haría distintas siempre.
+
+  **Lo que la vuelta NO hace**: no resucita una reunión cancelada en el CRM. Cancelar es una decisión que se toma acá y hoy no borra el evento de Google, así que el reloj lo va a encontrar vivo en cada vuelta; si eso la reactivara, cancelar sería imposible. Y no crea reuniones nuevas a partir de eventos que el CRM no conoce: el calendario tiene la vida entera de la persona, no sólo prospección.
+
+  La regla —qué significa que un evento haya cambiado— vive en `core/sincronizar.ts` con sus tests. **Está escrita dos veces**: el motor JS de PocketBase no puede cargar TypeScript y los hooks no tienen paso de build, así que `pb_hooks/google.js` lleva un espejo en JavaScript plano. Lo que impide que se separen es un test que **carga el archivo del hook de verdad** y le exige la misma respuesta que a la de core en diez casos (`espejo-del-hook.test.ts`).
 - Reenviar la invitación del evento al lead es una **acción explícita**.
-- **El `refresh_token` no sale nunca por la API.** La colección que guarda la cuenta de Google tiene todas las reglas en `null`: sólo el servidor la lee.
+- **La disponibilidad de alguien que no es usuario del CRM** (el caso de
+  Alberto) entra por el mismo lugar que la de un administrador con cuenta
+  conectada: como filas que `ocupado` pueda devolver. Hoy `ocupado` es una
+  vista sobre `reunion`, así que un calendario externo necesita una tabla
+  propia y que la vista sea la unión de las dos. La agenda ya las dibuja sin
+  tocar una línea: el punto de encastre está hecho (§7.6).
+
+  **Un link de `calendar.app.google` no sirve para esto.** Redirige a
+  `/calendar/appointments/schedules/…`: es una **página de reserva** de Google,
+  la que se le manda a alguien para que elija un hueco. Muestra lo LIBRE, no lo
+  ocupado; se arma con JavaScript y no tiene API. Es útil para mandársela a un
+  lead, no para que el CRM calcule disponibilidad.
+
+  **Para la cuenta AL el problema no existe, y se descubrió tarde.** El
+  09/09/2026, mirando la lista de calendarios de la cuenta de Google de Augusto,
+  aparece `alejandroc@globalita.io` con `accessRole: "owner"`. No hay que
+  pedirle nada ni raspar ninguna página: el calendario de Alejandro **ya se lee
+  con la misma conexión OAuth de Augusto**, y lo único que faltaba era pedir el
+  alcance `calendar.readonly` junto con `calendar.events` — que ahora se piden
+  juntos, porque agregar un alcance después obliga a reconectar a todo el mundo.
+
+  Antes de eso se habían planteado tres caminos —que compartiera el calendario,
+  su dirección privada `…/basic.ics`, o raspar la página de reserva— y se llegó a
+  decidir el tercero. **Ninguno hacía falta.** Queda anotado porque el error fue
+  de método: se discutió tres veces cómo conseguir un acceso que ya estaba, sin
+  haber mirado la lista de calendarios una sola vez.
+
+  **Lo que sí queda pendiente** es una agenda de alguien que NO esté en la lista
+  de calendarios de la cuenta conectada. Para ese caso siguen valiendo las dos
+  formas limpias —compartir el calendario, o la dirección `…/basic.ics`— y sigue
+  siendo cierto que un link de `calendar.app.google` no sirve. Raspar la página
+  de reserva es el último recurso: Google la cambia cuando quiere y se rompe sin
+  avisar, y la falla se ve como «no hay huecos» en vez de como un error.
+- **Se conecta desde Cuentas conectadas**, en una tercera sección aparte de LinkedIn y WhatsApp. No es lo mismo: esas dos son una sesión **por cuenta de prospección**, y Google es una cuenta **por persona del CRM**. La pantalla muestra el estado (sin configurar / sin conectar / conectada, con el correo), y de consecuencia dice cuántas reuniones futuras todavía no llegaron al calendario.
+- **Son dos URL de configuración, y en producción son la misma.** `APP_URL` es donde la persona ve la aplicación —ahí vuelve el navegador después de dar el permiso— y `PB_URL` es donde contesta PocketBase, que es lo único que le importa a Google: el `redirect_uri` tiene que apuntar a una ruta de este servidor. En el VPS PocketBase sirve la app, así que alcanza con `APP_URL`. En desarrollo son distintas (Vite en `:5173`, PocketBase en `:8090`) y sin separarlas la vuelta de Google aterriza en un 404: la conexión queda guardada pero parece que falló.
+- **El resultado vuelve por la URL.** El callback no puede devolver una pantalla —ahí llega el navegador redirigido desde Google—, así que deja `/?google=…` y la aplicación lo levanta al arrancar, abre Cuentas conectadas y lo muestra. El parámetro se saca de la URL apenas se lee: si quedara, recargar la página volvería a decir «conectado» sin que nadie se haya conectado.
+- **El `refresh_token` no sale nunca por la API.** La colección que guarda la cuenta de Google tiene todas las reglas en `null`: sólo el servidor la lee. Y el `client_secret` no vive en ningún archivo del repo: en desarrollo va en `.env` (ignorado por git) y en el VPS en `/etc/crm-globalita.env` con `chmod 600`, que el servicio levanta con `EnvironmentFile`. El repo es público y un secreto que estuvo en un commit hay que rotarlo aunque después se borre.
 
 ### 8.4 CSV
 
@@ -1119,7 +1266,15 @@ Decisión cerrada: queda como **estado de interfaz simple** (un toggle en WA Per
 
 ### 8.6 Nota sobre múltiples administradores
 
-Nada en el modelo de calendarios debe asumir un solo administrador: la lista de calendarios se arma con un ítem por cada usuario con rol `Administrador`, y los bloques «Ocupado» que ve un colaborador se calculan **por administrador elegido** (las reuniones propias de ese admin, no las de terceros). Si se suma un segundo administrador, aparece solo.
+Nada en el modelo de calendarios debe asumir un solo administrador: los bloques
+«Ocupado» se arman con **todos** los usuarios con rol `Administrador` activos
+menos el que mira, y se suman a la grilla propia. Si se suma un tercero,
+aparece solo, sin tocar código.
+
+Antes se elegía **uno** con un chip. Se sacó el 09/09/2026: elegir de a uno era
+responder a medias la única pregunta que se le hace a la agenda cuando se va a
+agendar —dónde entra la reunión en las dos agendas—, y obligaba a mirar la
+misma semana dos veces.
 
 ---
 
@@ -1366,7 +1521,7 @@ Cada una tiene su problema y su resolución. Las **cerradas** no se rediscuten: 
 | D15 | Fase 2: ¿+28 o +90 días? | cerrada | 90 desde el envío de R4; los 90 **reemplazan** la espera de 28 |
 | D16 | ¿Una plantilla por paso? | cerrada | Campo `paso` independiente del nombre; varias por paso, una por defecto |
 | D17 | `etapa` no alcanzaba para el estado real | cerrada | Dos ejes: `etapa` (dónde está) y `situacion` (qué hacer con él) |
-| D18 | ¿El colaborador ve el nombre del evento del admin? | abierta | Nombre sólo en el calendario propio; el ajeno dice «Ocupado» |
+| D18 | ¿El colaborador ve el nombre del evento del admin? | abierta | El nombre del evento, sólo en el calendario propio. Del ajeno se dice de QUIÉN es la agenda (nombre de pila) y el horario: hace falta para agendarle, y con quién se reúne sigue sin viajar al navegador (09/09/2026) |
 | D19 | WA Personal no tenía permiso propio | cerrada | El chat personal pertenece a la cuenta de WhatsApp que lo recibió |
 | D20 | Un colaborador con `usuarios` se da todo | abierta | No se editan los permisos propios; sólo un admin otorga `usuarios` |
 | D21 | ¿Deshacer un envío deshace el mensaje? | abierta | Revierte los campos, no el mensaje — y lo dice |

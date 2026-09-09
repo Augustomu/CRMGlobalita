@@ -158,6 +158,127 @@ desde otro navegador y no aporta nada en un equipo de cuatro.
 
 ---
 
+## Paso 4.6 · Google Calendar
+
+Esto es lo único de toda la integración que no puede hacer el CRM por vos: hay
+que crear una **aplicación de Google** con tu cuenta. Son diez minutos y se hace
+una sola vez. Después, cada persona del equipo conecta su propio calendario
+apretando un botón.
+
+**Se puede hacer HOY, sin deploy.** Google acepta `localhost` como destino, así
+que sirve para probarlo contra la base local antes de publicar nada.
+
+### 1. Crear el proyecto
+
+1. Entrá a <https://console.cloud.google.com/> con la cuenta de Google cuyo
+   calendario querés usar.
+2. Arriba a la izquierda, el selector de proyectos → **Proyecto nuevo**.
+   Nombre: `CRM Globalita`. Crear.
+3. Asegurate de que quede seleccionado ese proyecto (se ve arriba).
+
+### 2. Prender la API
+
+**APIs y servicios → Biblioteca** → buscá **Google Calendar API** → **Habilitar**.
+
+Si esto queda sin hacer, todo lo demás funciona y el primer evento falla con
+un mensaje de API deshabilitada. Es el olvido más común.
+
+### 3. La pantalla de consentimiento
+
+**APIs y servicios → Pantalla de consentimiento de OAuth**:
+
+| Campo | Valor |
+|---|---|
+| Tipo de usuario | **Externo** |
+| Nombre de la aplicación | `CRM Globalita` |
+| Correo de asistencia | el tuyo |
+| Datos de contacto del desarrollador | el tuyo |
+
+En **Público** dejala en **Modo de prueba** y agregate a vos —y a cada persona
+del equipo que vaya a conectar su calendario— en **Usuarios de prueba**.
+
+> **Por qué modo de prueba y no publicada.** Publicada, Google exige un proceso
+> de verificación con video y revisión que tarda semanas, y es para apps que usa
+> gente de afuera. Ésta la usan cuatro personas conocidas. El único límite del
+> modo de prueba es 100 usuarios, y el permiso caduca a los 7 días — pero eso
+> aplica a los alcances *sensibles*, y el que pedimos (`calendar.events`) no lo
+> es: alcanza con reconectar si algún día deja de andar.
+
+### 4. Las credenciales
+
+**APIs y servicios → Credenciales → Crear credenciales → ID de cliente de OAuth**:
+
+- Tipo de aplicación: **Aplicación web**
+- Nombre: `CRM Globalita`
+- En **URI de redireccionamiento autorizados**, agregá **las dos**:
+
+  ```
+  http://127.0.0.1:8090/api/google/callback
+  https://crm.globalita.tech/api/google/callback
+  ```
+
+Se cargan las dos desde el principio: una credencial acepta varias, y así la
+misma sirve para probar en tu máquina y para producción sin tocar nada después.
+
+> **Tienen que coincidir letra por letra**, sin barra al final. Si no, Google
+> contesta `redirect_uri_mismatch` y no dice cuál de las dos partes está mal.
+
+Guardá y copiá el **ID de cliente** y el **Secreto de cliente**.
+
+### 5. Ponerlas donde van
+
+**En tu máquina**, creá el archivo `.env` en la raíz del proyecto:
+
+```
+GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=...
+```
+
+`.env` está en `.gitignore` desde siempre. **El secreto no se commitea nunca**:
+el repo es público, y un secreto que estuvo en un commit hay que rotarlo aunque
+después se borre, porque queda en el historial.
+
+Reiniciá `npm run db:dev` para que lo tome.
+
+**En el VPS**, van en un archivo aparte del servicio, por lo mismo:
+
+```bash
+ssh -i ~/.ssh/bitacora_vps root@45.90.108.64
+cat > /etc/crm-globalita.env <<'FIN'
+GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=...
+FIN
+chmod 600 /etc/crm-globalita.env
+```
+
+Y en `/etc/systemd/system/crm-globalita.service`, dentro de `[Service]`:
+
+```
+EnvironmentFile=/etc/crm-globalita.env
+```
+
+Después: `systemctl daemon-reload && systemctl restart crm-globalita`.
+
+`PB_URL` no hace falta en el VPS: ahí PocketBase sirve la app, así que la app y
+el servidor están en la misma URL y se cae a `APP_URL` solo.
+
+### 6. Conectar
+
+En el CRM, el icono de **Cuentas conectadas** → sección **Google Calendar** →
+**Conectar**. Te lleva a Google, das el permiso, y volvés a la misma pantalla con
+tu correo al lado. Si algo faltó, ahí mismo dice qué.
+
+### Qué hace una vez conectado
+
+- Las reuniones que agendes desde el CRM **se escriben en tu calendario**, con
+  el título `Nombre Completo / Cuenta / Vos` y el invitado agregado.
+- Mover o estirar una reunión en la agenda **actualiza el mismo evento**, no
+  crea otro (D10).
+- Las 288 reuniones históricas **no se vuelven a crear**: ya están en tu
+  calendario, de ahí salieron. El código las saltea por fecha.
+
+---
+
 ## Paso 5 · Crear los usuarios
 
 ```bash

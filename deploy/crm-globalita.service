@@ -17,6 +17,14 @@ WorkingDirectory=/opt/crm-globalita
 Environment=APP_URL=https://crm.globalita.tech
 Environment=MAIL_DESDE=crm@globalita.tech
 
+# Las credenciales de Google (paso 4.6). NO van aca: este archivo esta en el
+# repo, que es publico, y un client_secret que estuvo en un commit hay que
+# rotarlo aunque despues se borre. Van en /etc/crm-globalita.env con chmod 600.
+#
+# El guion adelante hace que systemd NO falle si el archivo no existe: sin
+# Google configurado el CRM arranca igual y la pantalla dice "sin configurar".
+EnvironmentFile=-/etc/crm-globalita.env
+
 # --hooksDir NO estaba y sin el los hooks no cargan: ni el alta por correo, ni
 # la sincronizacion con Calendar, ni el barrido de retencion. En desarrollo se
 # pasaba a mano y en produccion faltaba, asi que era una diferencia silenciosa

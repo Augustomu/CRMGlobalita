@@ -65,6 +65,8 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
   const [vista, setVista] = useState<'usuarios' | 'actividad'>('usuarios');
   const [loteAbierto, setLoteAbierto] = useState(false);
   const [altaAbierta, setAltaAbierta] = useState(false);
+  /** La baja pide confirmar aparte: es el único botón que borra. */
+  const [confirmarBaja, setConfirmarBaja] = useState(false);
 
   async function recargar() {
     try {
@@ -79,6 +81,12 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
   useEffect(() => {
     void recargar();
   }, []);
+
+  // Cambiar de usuario desarma la baja: la confirmación es de ESE usuario, y
+  // dejarla armada al pasar al siguiente es cómo se borra a quien no era.
+  useEffect(() => {
+    setConfirmarBaja(false);
+  }, [seleccionado]);
 
   const usuario = usuarios.find((u) => u.id === seleccionado) ?? null;
 
@@ -206,6 +214,45 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setEnviandoAcceso(false);
+    }
+  }
+
+  /**
+   * La baja del usuario (§7.5).
+   *
+   * Es el único botón de la pantalla que borra algo, así que pide confirmar
+   * aparte y dice ANTES qué queda huérfano: los leads que tenía asignados
+   * quedan sin agente y sus tareas sin dueño. No se pierde ningún lead —la
+   * relación `asignado` no arrastra— pero conviene saberlo antes, no después.
+   *
+   * Nadie se borra a sí mismo: lo impide la regla de PocketBase, no sólo el
+   * botón. Si el último administrador pudiera borrarse, el CRM quedaría sin
+   * quien administre.
+   */
+  async function darDeBaja() {
+    if (!usuario || usuario.id === usuarioActual.id) return;
+    setGuardando(true);
+    setError(null);
+    try {
+      await pb.collection('users').delete(usuario.id);
+      setUsuarios((us) => us.filter((u) => u.id !== usuario.id));
+      setSeleccionado(null);
+      setConfirmarBaja(false);
+      onCambio();
+    } catch (e) {
+      // PocketBase contesta 404 cuando la regla no deja: para él, el registro
+      // «no existe». Traducirlo importa — «The requested resource wasn't
+      // found» no le dice a nadie que el problema es con qué usuario entró.
+      const status = (e as { status?: number }).status;
+      setError(
+        status === 404
+          ? 'No se pudo borrar. Casi siempre es porque es el usuario con el que estás conectado: sólo se puede dar de baja a otro. Salí y volvé a entrar con tu usuario.'
+          : e instanceof Error
+            ? e.message
+            : String(e),
+      );
+    } finally {
+      setGuardando(false);
     }
   }
 
@@ -375,8 +422,59 @@ export function Usuarios({ usuarioActual, leads, onCambio }: Props) {
                 </button>
                 {avisoAcceso && <span className="pastilla pastilla-ok">{avisoAcceso}</span>}
 
+                {/*
+                  La baja (§7.5). En dos tiempos: el primer clic no borra, abre
+                  la pregunta con las consecuencias escritas. Un botón que borra
+                  a la primera, al lado de otros que no, se aprieta por inercia.
+                */}
+                {usuario.id !== usuarioActual.id &&
+                  (confirmarBaja ? (
+                    <>
+                      <span className="pastilla pastilla-alerta">
+                        ¿Borrar a {usuario.name || usuario.email}?
+                        {susLeads.length > 0 &&
+                          ` Sus ${susLeads.length} ${susLeads.length === 1 ? 'lead queda' : 'leads quedan'} sin asignar.`}
+                      </span>
+                      <button
+                        type="button"
+                        className="boton-mini boton-mini-peligro"
+                        disabled={guardando}
+                        onClick={() => void darDeBaja()}
+                      >
+                        {guardando ? 'Borrando…' : 'Sí, borrar'}
+                      </button>
+                      <button
+                        type="button"
+                        className="boton-mini"
+                        onClick={() => setConfirmarBaja(false)}
+                      >
+                        Cancelar
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="boton-mini"
+                      title="Borrar el usuario. Sus leads quedan sin asignar; no se borra ninguno."
+                      onClick={() => setConfirmarBaja(true)}
+                    >
+                      Dar de baja
+                    </button>
+                  ))}
+
+                {/* El reparto de sus leads por cuenta (§6.5). Iba como
+                    pastillas sueltas —«FR 2»— al lado del correo y de los
+                    botones, así que parecía una etiqueta más y no se entendía
+                    qué era. Ahora lo dice, y cada una explica su número. */}
+                {repartoPorCuenta.length > 0 && (
+                  <span className="campo-ayuda">Leads por cuenta:</span>
+                )}
                 {repartoPorCuenta.map(([abrev, n]) => (
-                  <span key={abrev} className="pastilla">
+                  <span
+                    key={abrev}
+                    className="pastilla"
+                    title={`${n} ${n === 1 ? 'lead asignado' : 'leads asignados'} de la cuenta ${abrev}`}
+                  >
                     {abrev} {n}
                   </span>
                 ))}

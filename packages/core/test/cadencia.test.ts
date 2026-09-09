@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  CADENCIA_POR_DEFECTO, alEnviar, alResponder, canalDe, empujaAFase2, esFase2,
+  CADENCIA_POR_DEFECTO, SECUENCIA, secuenciaDe, alEnviar, alResponder, canalDe, empujaAFase2, esFase2,
   esperaDespuesDe, siguientePaso, sumarDias, tocaHoy,
 } from '../src/cadencia.ts';
 import type { ConfigCadencia } from '../src/tipos.ts';
@@ -94,3 +94,54 @@ test('sumarDias no se corre por husos horarios ni por cambios de mes', () => {
   assert.equal(sumarDias('2028-02-28', 1), '2028-02-29');
 });
 
+
+/* --------------------------------------------------------------------------
+ * La secuencia de Enviar mensaje (§7.2)
+ * ----------------------------------------------------------------------- */
+
+test('§7.2 · sin envíos, el que toca es R0 y no hay ninguno tildado', () => {
+  const s = secuenciaDe([]);
+  assert.equal(s.length, 9);
+  assert.equal(s.filter((x) => x.enviado).length, 0);
+  assert.equal(s.find((x) => x.toca)?.paso, 'R0');
+});
+
+test('§7.2 · los enviados quedan tildados, con el idioma en que salieron', () => {
+  const s = secuenciaDe([
+    { paso: 'R0', idioma: 'pt' },
+    { paso: 'R1', idioma: 'es' },
+  ]);
+  assert.equal(s[0]!.enviado, true);
+  assert.equal(s[0]!.idioma, 'pt');
+  assert.equal(s[1]!.idioma, 'es');
+  assert.equal(s[2]!.enviado, false);
+  assert.equal(s.find((x) => x.toca)?.paso, 'R2');
+});
+
+test('§7.2 · el que toca es el primero SIN enviar, no el que sigue al último', () => {
+  // Alguien mandó el R3 salteándose el R2. Lo que falta sigue siendo el R2, y
+  // la fila tiene que decirlo en vez de proponer el R4.
+  const s = secuenciaDe([{ paso: 'R0' }, { paso: 'R1' }, { paso: 'R3' }]);
+  assert.equal(s.find((x) => x.toca)?.paso, 'R2');
+  assert.equal(s[3]!.enviado, true);
+});
+
+test('§7.2 · si un paso salió dos veces, manda el idioma del más reciente', () => {
+  const s = secuenciaDe([
+    { paso: 'R1', idioma: 'es', enviado_en: '2026-08-01' },
+    { paso: 'R1', idioma: 'pt', enviado_en: '2026-09-01' },
+  ]);
+  assert.equal(s[1]!.idioma, 'pt');
+});
+
+test('§7.2 · con toda la cadencia enviada, ninguno toca', () => {
+  const s = secuenciaDe(SECUENCIA.map((paso) => ({ paso })));
+  assert.equal(s.every((x) => x.enviado), true);
+  assert.equal(s.some((x) => x.toca), false);
+});
+
+test('§7.2 · el agradecimiento no entra en la secuencia', () => {
+  // No es un paso de la cadencia (§5.10): no mueve la etapa.
+  const s = secuenciaDe([{ paso: 'agradecimiento' }]);
+  assert.equal(s.filter((x) => x.enviado).length, 0);
+});

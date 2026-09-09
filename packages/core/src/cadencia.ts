@@ -141,3 +141,55 @@ export function alResponder(situacion: Situacion): Situacion {
   return situacion === 'descartado' ? 'descartado' : 'contesto';
 }
 
+
+/* ---------------------------------------------------------------------------
+ * La secuencia de la ficha (§7.2)
+ * ------------------------------------------------------------------------ */
+
+/** Los nueve pasos, en orden. La reinvitación no entra: es otra vuelta. */
+export const SECUENCIA: Paso[] = ['R0', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8'];
+
+export interface PasoDeLaSecuencia {
+  paso: Paso;
+  /** Ya se mandó. */
+  enviado: boolean;
+  /** El idioma en que salió, si se mandó. */
+  idioma?: string;
+  /** Es el que toca ahora: el primero sin enviar. */
+  toca: boolean;
+}
+
+/**
+ * La secuencia `R0 ✓ · R1 ✓ · R2 · R3 …` de Enviar mensaje.
+ *
+ * Reemplaza al desplegable «Paso: R2 (toca)». La diferencia no es de estilo: el
+ * desplegable dice cuál toca pero esconde el resto, así que para saber si el R1
+ * salió —y en qué idioma— había que abrir el historial. La secuencia muestra
+ * las dos cosas de un vistazo, que es lo que uno mira antes de escribir.
+ *
+ * El que TOCA es el primero sin enviar, no el siguiente al último enviado: si
+ * alguien mandó el R3 salteándose el R2, el que falta sigue siendo el R2 y la
+ * fila tiene que decirlo.
+ */
+export function secuenciaDe(
+  envios: { paso: string; idioma?: string; enviado_en?: string }[],
+): PasoDeLaSecuencia[] {
+  const porPaso = new Map<string, { idioma?: string; enviado_en?: string }>();
+  for (const e of envios) {
+    const previo = porPaso.get(e.paso);
+    // Si el mismo paso salió dos veces, manda el más reciente: es el idioma
+    // con el que la conversación quedó.
+    if (!previo || String(e.enviado_en ?? '') >= String(previo.enviado_en ?? '')) {
+      porPaso.set(e.paso, { idioma: e.idioma, enviado_en: e.enviado_en });
+    }
+  }
+
+  let yaTocó = false;
+  return SECUENCIA.map((paso) => {
+    const e = porPaso.get(paso);
+    const enviado = Boolean(e);
+    const toca = !enviado && !yaTocó;
+    if (toca) yaTocó = true;
+    return { paso, enviado, idioma: e?.idioma, toca };
+  });
+}

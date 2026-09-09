@@ -14,6 +14,12 @@ import { useEscape } from '../../lib/useEscape';
  * renglón de abajo dice cuántos envíos quedaron frenados, porque una sesión
  * caída no avisa sola — la cola se acumula en silencio y el lead no recibe
  * nada.
+ *
+ * Google Calendar va en una TERCERA sección y no como columna de las otras dos,
+ * porque no es lo mismo: LinkedIn y WhatsApp son una sesión por cuenta de
+ * prospección, y Google es una cuenta por persona del CRM. Ponerlo en la misma
+ * tabla obligaría a dejar celdas vacías en las filas que no aplican, que es
+ * exactamente cómo se lee mal una pantalla de estado.
  */
 interface CuentaRecord {
   id: string;
@@ -29,13 +35,41 @@ interface EnCola {
   estado: string;
 }
 
-export function CuentasConectadas({ onCerrar }: { onCerrar: () => void }) {
+/**
+ * Lo que contesta `/api/google/estado`.
+ *
+ * El `refresh_token` NO está acá y no puede estar: es una llave permanente al
+ * calendario de la persona y vive en una colección con todas las reglas en
+ * `null` (§8.3). El servidor contesta sí o no.
+ */
+interface EstadoGoogle {
+  servidor_listo: boolean;
+  conectado: boolean;
+  email: string;
+  calendario: string;
+}
+
+export function CuentasConectadas({
+  onCerrar,
+  avisoGoogle,
+}: {
+  onCerrar: () => void;
+  /** El resultado de la vuelta de Google, si se acaba de volver de ahí. */
+  avisoGoogle?: string | null;
+}) {
   useEscape(onCerrar);
   const [cuentas, setCuentas] = useState<CuentaRecord[]>([]);
   const [cola, setCola] = useState<EnCola[]>([]);
   const [cargando, setCargando] = useState(true);
   /** Qué cuenta tiene el QR abierto. `nueva` es vincular otro número. */
   const [qr, setQr] = useState<string | null>(null);
+
+  const [google, setGoogle] = useState<EstadoGoogle | null>(null);
+  const [googleFallo, setGoogleFallo] = useState<string | null>(null);
+  const [yendoAGoogle, setYendoAGoogle] = useState(false);
+  const [confirmarCorte, setConfirmarCorte] = useState(false);
+  /** Reuniones futuras que todavía no llegaron al calendario. La consecuencia. */
+  const [sinSincronizar, setSinSincronizar] = useState(0);
 
   useEffect(() => {
     let vivo = true;
@@ -45,11 +79,24 @@ export function CuentasConectadas({ onCerrar }: { onCerrar: () => void }) {
         .collection('cola')
         .getFullList<EnCola>({ filter: 'estado = "pendiente"', fields: 'cuenta,estado' })
         .catch(() => [] as EnCola[]),
+      pb.send<EstadoGoogle>('/api/google/estado', {}).catch(() => null),
+      // Las que ya pasaron no cuentan: nadie las va a escribir en el calendario
+      // y no hay nada que hacer al respecto.
+      pb
+        .collection('reunion')
+        .getList(1, 1, {
+          filter: `inicio > "${new Date().toISOString().slice(0, 19).replace('T', ' ')}" && sync != "ok"`,
+          fields: 'id',
+        })
+        .then((r) => r.totalItems)
+        .catch(() => 0),
     ])
-      .then(([cs, q]) => {
+      .then(([cs, q, g, pendientesDeCalendar]) => {
         if (!vivo) return;
         setCuentas(cs);
         setCola(q);
+        setGoogle(g);
+        setSinSincronizar(pendientesDeCalendar);
         setCargando(false);
       })
       .catch(() => vivo && setCargando(false));
@@ -57,6 +104,42 @@ export function CuentasConectadas({ onCerrar }: { onCerrar: () => void }) {
       vivo = false;
     };
   }, []);
+
+  /**
+   * Empezar la vuelta de OAuth.
+   *
+   * El servidor arma la URL —él tiene el client_id— y acá solo se navega. La
+   * pantalla no conoce ningún dato de la aplicación de Google.
+   */
+  async function conectarGoogle() {
+    setYendoAGoogle(true);
+    setGoogleFallo(null);
+    try {
+      const r = await pb.send<{ listo: boolean; url?: string; motivo?: string }>(
+        '/api/google/inicio',
+        {},
+      );
+      if (r.listo && r.url) {
+        window.location.href = r.url;
+        return;
+      }
+      setGoogleFallo(r.motivo ?? 'El servidor no pudo empezar la conexión.');
+    } catch (err) {
+      setGoogleFallo(err instanceof Error ? err.message : 'No se pudo hablar con el servidor.');
+    }
+    setYendoAGoogle(false);
+  }
+
+  async function desconectarGoogle() {
+    setGoogleFallo(null);
+    try {
+      await pb.send('/api/google/desconectar', { method: 'POST' });
+      setGoogle((g) => (g ? { ...g, conectado: false, email: '' } : g));
+      setConfirmarCorte(false);
+    } catch (err) {
+      setGoogleFallo(err instanceof Error ? err.message : 'No se pudo desconectar.');
+    }
+  }
 
   /** Cuántos envíos espera cada cuenta. */
   const pendientes = useMemo(() => {
@@ -157,6 +240,97 @@ export function CuentasConectadas({ onCerrar }: { onCerrar: () => void }) {
             );
           })}
 
+          {/* --------------------------------------------------- Google */}
+          <div className="cc-seccion">
+            <span className="campo-label">Google Calendar</span>
+            <span className="campo-ayuda">una cuenta por persona, no por slot</span>
+          </div>
+
+          <div className="cc-fila">
+            <span className="pastilla">cal</span>
+            <span className="cc-perfil">
+              {google?.conectado
+                ? google.email || 'conectada'
+                : google?.servidor_listo === false
+                  ? 'el servidor todavía no tiene las credenciales'
+                  : 'tu calendario'}
+            </span>
+            <span className={google?.conectado ? 'cc-estado cc-ok' : 'cc-estado cc-mal'}>
+              <span className={google?.conectado ? 'cc-punto cc-punto-ok' : 'cc-punto cc-punto-mal'} />
+              {!google
+                ? cargando
+                  ? 'leyendo…'
+                  : 'sin respuesta'
+                : google.conectado
+                  ? 'conectada'
+                  : google.servidor_listo
+                    ? 'sin conectar'
+                    : 'sin configurar'}
+            </span>
+            <span className="cc-detalle">
+              {google?.conectado
+                ? google.calendario && google.calendario !== 'primary'
+                  ? google.calendario
+                  : ''
+                : sinSincronizar
+                  ? `${sinSincronizar} ${sinSincronizar === 1 ? 'reunión futura' : 'reuniones futuras'} sin escribir`
+                  : ''}
+            </span>
+
+            {/* Sin credenciales en el servidor el botón no puede hacer nada:
+                en vez de uno que falla, se dice qué falta. */}
+            {google && !google.servidor_listo && (
+              <span className="campo-ayuda">falta configurarlo en el servidor</span>
+            )}
+            {google?.servidor_listo && !google.conectado && (
+              <button
+                type="button"
+                className="boton-principal"
+                disabled={yendoAGoogle}
+                title="Te lleva a Google a dar el permiso y volvés acá"
+                onClick={() => void conectarGoogle()}
+              >
+                {yendoAGoogle ? 'yendo…' : 'Conectar'}
+              </button>
+            )}
+            {google?.conectado &&
+              (confirmarCorte ? (
+                <>
+                  <button
+                    type="button"
+                    className="boton-mini-peligro"
+                    onClick={() => void desconectarGoogle()}
+                  >
+                    Sí, desconectar
+                  </button>
+                  <button
+                    type="button"
+                    className="boton-mini"
+                    onClick={() => setConfirmarCorte(false)}
+                  >
+                    Cancelar
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="boton-mini"
+                  title="Deja de escribir en tu calendario. Los eventos ya creados quedan donde están."
+                  onClick={() => setConfirmarCorte(true)}
+                >
+                  Desconectar
+                </button>
+              ))}
+          </div>
+
+          {(googleFallo || avisoGoogle) && (
+            <div className="cc-fila cc-nota">
+              <span className={googleFallo ? 'cc-estado cc-mal' : 'cc-estado cc-ok'}>
+                {googleFallo ?? (avisoGoogle === 'conectado' ? 'Calendario conectado.' : avisoGoogle)}
+              </span>
+            </div>
+          )}
+
           {qr && (
             <div className="cc-qr-panel">
               <span className="campo-label">Vincular {qr}</span>
@@ -189,7 +363,9 @@ export function CuentasConectadas({ onCerrar }: { onCerrar: () => void }) {
               ? ''
               : frenados
                 ? `${frenados} envíos frenados por sesiones caídas. Mientras la sesión no vuelva, la cola se acumula sin avisar al lead.`
-                : 'Todas las sesiones activas: la cola sale según lo programado.'}
+                : google && !google.conectado
+                  ? 'Sin Google conectado, las reuniones que agendes quedan sólo en el CRM: no llega invitación ni aparecen en tu calendario.'
+                  : 'Todas las sesiones activas: la cola sale según lo programado.'}
           </span>
         </footer>
       </div>
