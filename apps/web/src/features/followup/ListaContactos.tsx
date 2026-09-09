@@ -11,6 +11,7 @@ import { tocaHoy } from '@crm/core/cadencia';
 import { diaLocal } from '@crm/core/fecha';
 import type { LeadRecord, UsuarioRecord } from '../../lib/types';
 import { BurbujaWhatsApp } from './IconosCanal';
+import { tonoDeUltimaReunion } from '@crm/core/reunion';
 import { IconoWhatsApp } from '../../ui/iconos';
 import { pb } from '../../lib/pocketbase';
 import { ColaEnvios } from './ColaEnvios';
@@ -42,8 +43,15 @@ export function iniciales(nombre: string): string {
  * "hace 3 días" / "en 5 días", como el `contactoLabel` del prototipo.
  * El manual pide lenguaje natural sobre timestamps crudos (§3.2).
  */
+/**
+ * 3.2 · Sin próximo contacto no se escribe nada.
+ *
+ * Antes decía «sin próximo contacto», que en una columna de doscientas filas
+ * son doscientas repeticiones de una ausencia. El vacío ya dice eso, y deja
+ * que el ojo encuentre las filas que SÍ tienen fecha.
+ */
 function etiquetaContacto(fecha: string | null): string {
-  if (!fecha) return 'sin próximo contacto';
+  if (!fecha) return '';
   const dias = Math.round(
     (Date.parse(fecha.slice(0, 10)) - Date.parse(HOY)) / 86_400_000,
   );
@@ -793,6 +801,25 @@ export function ListaContactos({
             (l.expand?.etiquetas ?? []).map((e) => e.nombre),
             preferidas,
           );
+
+          // La última reunión de este lead, si la hubo. Día y mes: el año en
+          // una columna de 200 px es ruido, y la fecha completa está en el
+          // título.
+          const r = reunionDe(l.id);
+          const ultimaReunion = r
+            ? {
+                tono: tonoDeUltimaReunion(r.estado),
+                texto: `${r.inicio.slice(8, 10)}/${r.inicio.slice(5, 7)}`,
+                detalle:
+                  r.estado === 'asistio'
+                    ? `Última reunión ${r.inicio.slice(0, 10)}: asistió`
+                    : r.estado === 'no-asistio'
+                      ? `Última reunión ${r.inicio.slice(0, 10)}: no asistió`
+                      : r.inicio.slice(0, 10) > HOY
+                        ? `Reunión el ${r.inicio.slice(0, 10)}: todavía no pasó`
+                        : `Última reunión ${r.inicio.slice(0, 10)}: sin confirmar si asistió`,
+              }
+            : null;
           return (
             <div
               key={l.id}
@@ -803,10 +830,13 @@ export function ListaContactos({
                 <div className="fila-nombre" title={p?.nombre}>
                   {p?.nombre ? nombreDePersona(p.nombre) : '(sin perfil)'}
                 </div>
-                {veTelefono && (
+                {/* 3.1 · El icono SÓLO si hay número. Antes se dibujaba
+                    siempre, apagado, y una columna llena de iconos grises no
+                    informa de nada: lo que se busca es quién tiene WhatsApp. */}
+                {veTelefono && p?.telefono && (
                   <BurbujaWhatsApp
-                    activa={Boolean(p?.telefono_valido)}
-                    motivo={p?.telefono ? 'Teléfono a revisar' : 'Sin teléfono cargado'}
+                    activa={Boolean(p.telefono_valido)}
+                    motivo="Teléfono a revisar"
                   />
                 )}
                 {sinLeer && <span className="fila-duenio fila-nuevo">nuevo</span>}
@@ -837,9 +867,22 @@ export function ListaContactos({
                   </span>
                 )}
 
-                <span className={`fila-contacto ${vence ? 'fila-contacto-vencido' : ''}`}>
-                  {etiquetaContacto(l.proximo_contacto || null)}
-                </span>
+                {/* 3.3 · La última reunión, con color: verde si asistió, rojo
+                    si no, gris si todavía no pasó o nadie registró qué pasó. */}
+                {ultimaReunion && (
+                  <span
+                    className={`fila-reunion fila-reunion-${ultimaReunion.tono}`}
+                    title={ultimaReunion.detalle}
+                  >
+                    {ultimaReunion.texto}
+                  </span>
+                )}
+
+                {l.proximo_contacto && (
+                  <span className={`fila-contacto ${vence ? 'fila-contacto-vencido' : ''}`}>
+                    {etiquetaContacto(l.proximo_contacto)}
+                  </span>
+                )}
 
                 {/* Las etiquetas. Entran dos; el resto se ve al pasar por
                     encima. Cuáles y en qué orden lo elige el usuario. */}

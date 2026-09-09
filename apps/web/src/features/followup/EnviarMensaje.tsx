@@ -78,6 +78,22 @@ export function EnviarMensaje({
   const [error, setError] = useState<string | null>(null);
   /** El modal «Destacar mensajes». */
   const [listaAbierta, setListaAbierta] = useState(false);
+  /**
+   * 2.1 · Dónde va a valer lo que se destaque.
+   *
+   * Antes no se preguntaba: todo quedaba en la cuenta actual y punto. Pero un
+   * mensaje que sirve para las diez cuentas había que destacarlo diez veces, y
+   * uno que sirve sólo para SENG terminaba apareciendo en las de Globalita.
+   */
+  const [alcanceNuevo, setAlcanceNuevo] = useState<'cuenta' | 'casa' | 'todas'>('cuenta');
+  /**
+   * 2.2 · Si se muestran sólo los del idioma del chat.
+   *
+   * Prendido por defecto: destacar un mensaje que no existe en portugués para
+   * un lead brasileño es cargar un chip que al tocarlo va a poner el texto en
+   * español. El error se descubre después de mandarlo.
+   */
+  const [soloEsteIdioma, setSoloEsteIdioma] = useState(true);
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   /** Qué chip se está arrastrando, para reordenar. */
   const [arrastrando, setArrastrando] = useState<string | null>(null);
@@ -88,7 +104,8 @@ export function EnviarMensaje({
   const [abrevs, setAbrevs] = useState<string[]>([]);
 
   const catalogo = useMemo(() => plantillas.map(aPlantilla), [plantillas]);
-  const delPaso = useMemo(() => plantillasDe(catalogo, paso), [catalogo, paso]);
+  /** El canal elegido a mano, o null si vale el de la cadencia. */
+  const [canalManual, setCanalManual] = useState<Canal | null>(null);
 
   /**
    * Los destacados que valen para la cuenta de este lead.
@@ -200,16 +217,31 @@ export function EnviarMensaje({
     setIdioma(idiomaEfectivo({ pais: perfil?.pais ?? '' }));
     setTocado(false);
     setPlantillaId(undefined);
+    // El canal vuelve al de la cadencia al cambiar de lead: elegir a mano vale
+    // para ese mensaje, no se hereda a la persona siguiente.
+    setCanalManual(null);
     setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lead.id]);
 
-  const canal: Canal =
+  /**
+   * 0.2 · El canal ahora SE ELIGE, no se informa.
+   *
+   * La cadencia sugiere uno —eso no cambió— pero el switch manda. Antes la
+   * pastilla mostraba el resultado de `canalDe()` y no había forma de mandar
+   * por el otro lado: si el lead contestaba por WhatsApp y la cadencia decía
+   * LinkedIn, había que salir del CRM.
+   *
+   * `null` significa «lo que diga la cadencia», y es lo que vale al abrir un
+   * lead. Elegir a mano es para este mensaje, no para siempre.
+   */
+  const canalSugerido: Canal =
     paso === 'agradecimiento'
       ? perfil?.telefono_valido
         ? 'whatsapp'
         : 'linkedin'
       : canalDe(cfg, paso, Boolean(perfil?.telefono_valido));
+  const canal: Canal = canalManual ?? canalSugerido;
 
   const plan = planDeEnvio(
     cfg,
@@ -294,22 +326,63 @@ export function EnviarMensaje({
     <div className="enviar">
       <div className="enviar-cabecera">
         <span className="colapsable-titulo">Enviar mensaje</span>
-        <span className={`pastilla ${canal === 'whatsapp' ? 'pastilla-wa' : 'pastilla-li'}`}>
-          {canal}
-        </span>
-        {/* «Ir al chat» al lado del titulo (§7.2): es lo primero que se
-            hace antes de escribir, no una accion del final. */}
+
+        {/* 1.5 · El idioma en dos letras, acá y en ningún otro lado. Antes
+            decía «Idioma: PT» abajo, en la fila de la secuencia, y el mismo
+            dato aparecía otra vez al final de los destacados. */}
+        <select
+          className="enviar-idioma-corto"
+          value={idioma}
+          onChange={(e) => setIdioma(e.target.value as Idioma)}
+          title="El idioma con el que sale el mensaje. Sale del país del lead; se puede cambiar."
+        >
+          {IDIOMAS.map((i) => (
+            <option key={i} value={i}>
+              {i.toUpperCase()}
+            </option>
+          ))}
+        </select>
+
+        {/* 1.2 · El switch de canal. Lo que se elige acá es POR DÓNDE SALE:
+            decide el mensaje que se registra y a dónde lleva la flecha. */}
+        <div className="enviar-switch" role="group" aria-label="Canal">
+          {(['linkedin', 'whatsapp'] as const).map((c) => {
+            const sinTelefono = c === 'whatsapp' && !perfil?.telefono;
+            return (
+              <button
+                key={c}
+                type="button"
+                disabled={sinTelefono}
+                className={`enviar-switch-boton ${canal === c ? `enviar-switch-on enviar-switch-${c}` : ''}`}
+                title={
+                  sinTelefono
+                    ? 'Este lead no tiene teléfono cargado'
+                    : canalSugerido === c
+                      ? `${c === 'linkedin' ? 'LinkedIn' : 'WhatsApp'} — es el que sugiere la cadencia`
+                      : `Mandar por ${c === 'linkedin' ? 'LinkedIn' : 'WhatsApp'} en vez del que sugiere la cadencia`
+                }
+                onClick={() => setCanalManual(c === canalSugerido ? null : c)}
+              >
+                {c === 'linkedin' ? 'in' : 'wa'}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 1.2 · La flecha va al chat DEL CANAL ELEGIDO. Sin texto: al lado del
+            switch, la diagonal ya dice «salir a la conversación». */}
         {urlChat && (
           <a
-            className="boton-mini"
+            className="enviar-ir"
             href={urlChat}
             target="_blank"
             rel="noreferrer"
-            title="Abrir la conversación real (H)"
+            title={`Abrir la conversación en ${canal === 'whatsapp' ? 'WhatsApp' : 'LinkedIn'} (H)`}
           >
-            ↗ Ir al chat
+            ↗
           </a>
         )}
+
         <span className="enviar-conteo tabular">{envios.length} enviados</span>
       </div>
 
@@ -336,13 +409,37 @@ export function EnviarMensaje({
               paso === x.paso ? 'paso-chip-elegido' : '',
             ].join(' ')}
             title={
-              x.enviado
-                ? `Ya se mandó${x.idioma ? ` en ${x.idioma}` : ''}. Tocá para volver a escribirlo.`
-                : x.toca
-                  ? 'Es el que toca'
-                  : 'Todavía no se mandó'
+              [
+                x.enviado
+                  ? `Ya se mandó${x.idioma ? ` en ${x.idioma}` : ''}. Tocá para volver a escribirlo.`
+                  : x.toca
+                    ? 'Es el que toca'
+                    : 'Todavía no se mandó',
+                plantillasDe(catalogo, x.paso).length > 1 && paso === x.paso
+                  ? 'Tocá de nuevo para pasar a la otra versión de este paso.'
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')
             }
-            onClick={() => setPaso(x.paso)}
+            onClick={() => {
+              // Tocar el que YA está elegido cicla entre las variantes de ese
+              // paso, cuando hay más de una. Es lo que reemplaza a la fila de
+              // abajo que mostraba los nombres completos: R3 tiene dos textos y
+              // sin esto el segundo quedaba inalcanzable.
+              if (paso === x.paso) {
+                const variantes = plantillasDe(catalogo, x.paso);
+                if (variantes.length > 1) {
+                  const i = variantes.findIndex(
+                    (v) => v.id === (plantillaId ?? variantes[0]!.id),
+                  );
+                  setPlantillaId(variantes[(i + 1) % variantes.length]!.id);
+                  setTocado(false);
+                }
+                return;
+              }
+              setPaso(x.paso);
+            }}
           >
             {x.enviado && <span className="paso-chip-tilde">✓</span>}
             <span>{x.paso}</span>
@@ -369,47 +466,11 @@ export function EnviarMensaje({
           </button>
         ))}
 
-        {/* El idioma se queda: decide con qué texto sale. El canal NO — ya está
-            al lado del título, y cargarlo dos veces es la misma información
-            ocupando el doble. */}
-        <label className="enviar-idioma">
-          <span className="campo-label">Idioma</span>
-          <select value={idioma} onChange={(e) => setIdioma(e.target.value as Idioma)}>
-            {IDIOMAS.map((i) => (
-              <option key={i} value={i}>
-                {i}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+        {/* 1.3 · Los destacados viven en ESTA fila, después de una separación.
+            Son lo mismo que un paso —un texto que se pone en el cuadro— así que
+            tenerlos en dos renglones distintos era partir una sola decisión. */}
+        <span className="enviar-corte" aria-hidden="true" />
 
-      {delPaso.length > 1 && (
-        <div className="chips">
-          {delPaso.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={`chip ${(plantillaId ?? delPaso[0]!.id) === p.id ? 'chip-on' : ''}`}
-              onClick={() => {
-                setPlantillaId(p.id);
-                setTocado(false);
-              }}
-              title={p.por_defecto ? 'Por defecto' : 'Variante'}
-            >
-              {p.nombre}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* §7.2: la fila de acceso rápido. NO es un colapsable ni una lista con
-          rótulo: son chips que se tocan y reemplazan el texto.
-
-          El alcance importa: AL trabaja directores financieros y ED maquinaria,
-          y un chip que aparece en la cuenta equivocada se usa una vez, sale
-          mal, y después nadie usa los chips. */}
-      <div className="dest-fila">
         {destacados.map((p) => {
           const alcance = leerAlcance(p.destacado);
           return (
@@ -442,10 +503,6 @@ export function EnviarMensaje({
               >
                 {p.nombre}
               </button>
-              {/* El idioma del chip: dice qué texto va a entrar antes de tocarlo. */}
-              <span className="dest-chip-idioma">
-                {p.textos?.[idioma] ? idioma.toUpperCase() : 'ES'}
-              </span>
               <button
                 type="button"
                 className="dest-chip-x"
@@ -458,26 +515,26 @@ export function EnviarMensaje({
           );
         })}
 
+        {/* El hueco para sumar otro. */}
         <button
           type="button"
           className="dest-mas"
           title="Elegir y destacar mensajes del repositorio"
           onClick={() => {
             setMarcados(new Set(destacados.map((d) => d.id)));
+            // El alcance arranca en «esta cuenta» cada vez: es lo más común y
+            // lo menos destructivo. Elegir «todas» sin querer le pone el chip
+            // a todo el equipo.
+            setAlcanceNuevo('cuenta');
+            setSoloEsteIdioma(true);
             setListaAbierta(true);
           }}
         >
-          + destacados
+          +
         </button>
-
-        {destacados.length > 0 && (
-          <span className="campo-ayuda">arrastrá para ordenar · clic reemplaza el mensaje</span>
-        )}
-
-        <span className="dest-idioma al-final" title="Idioma sugerido según el país del lead">
-          {idioma.toUpperCase()}
-        </span>
       </div>
+
+
 
       {listaAbierta && (
         <div className="overlay-fondo" onClick={() => setListaAbierta(false)}>
@@ -499,7 +556,32 @@ export function EnviarMensaje({
                 <b>{cuenta || 'esta cuenta'}</b>.
               </span>
 
-              {plantillas.map((m) => {
+              {/* 2.2 · Por defecto, sólo los que existen en el idioma del chat. */}
+              <div className="dest-filtro">
+                <button
+                  type="button"
+                  className={`chip ${soloEsteIdioma ? 'chip-on' : ''}`}
+                  onClick={() => setSoloEsteIdioma(true)}
+                  title="Sólo los mensajes que tienen texto en el idioma de este chat"
+                >
+                  sólo {idioma.toUpperCase()}
+                </button>
+                <button
+                  type="button"
+                  className={`chip ${soloEsteIdioma ? '' : 'chip-on'}`}
+                  onClick={() => setSoloEsteIdioma(false)}
+                  title="Todos los mensajes del repositorio, tengan o no texto en este idioma"
+                >
+                  todos
+                </button>
+                <span className="campo-ayuda">
+                  el idioma sale del chat — cambialo arriba y esta lista cambia sola
+                </span>
+              </div>
+
+              {plantillas
+                .filter((m) => !soloEsteIdioma || Boolean(m.textos?.[idioma]))
+                .map((m) => {
                 const marcado = marcados.has(m.id);
                 const alcance = leerAlcance(m.destacado);
                 return (
@@ -538,6 +620,37 @@ export function EnviarMensaje({
               {!plantillas.length && (
                 <span className="campo-ayuda">Todavía no hay mensajes en el repositorio.</span>
               )}
+              {plantillas.length > 0 &&
+                soloEsteIdioma &&
+                !plantillas.some((m) => m.textos?.[idioma]) && (
+                  <span className="campo-ayuda">
+                    Ninguno de los {plantillas.length} mensajes tiene texto en{' '}
+                    {idioma.toUpperCase()}. Cambiá el idioma arriba, o mirá «todos».
+                  </span>
+                )}
+
+              {/* 2.1 · Dónde vale. Se elige ANTES de guardar y se aplica a los
+                  que se acaban de marcar; los que ya estaban no se tocan. */}
+              <div className="dest-alcance">
+                <span className="campo-label">Destacar en</span>
+                {(
+                  [
+                    ['cuenta', cuenta || 'esta cuenta', `Sólo la cuenta ${cuenta || 'actual'}`],
+                    ['casa', casa ? `toda ${casa}` : 'esta casa', 'Todas las cuentas de esta línea de negocio'],
+                    ['todas', 'todas las cuentas', 'Las diez cuentas, de las dos casas'],
+                  ] as const
+                ).map(([valor, texto, ayuda]) => (
+                  <button
+                    key={valor}
+                    type="button"
+                    className={`chip ${alcanceNuevo === valor ? 'chip-on' : ''}`}
+                    title={ayuda}
+                    onClick={() => setAlcanceNuevo(valor)}
+                  >
+                    {texto}
+                  </button>
+                ))}
+              </div>
 
               <div className="dest-modal-pie">
                 <span className="campo-ayuda tabular">{marcados.size} elegidos</span>
@@ -552,8 +665,16 @@ export function EnviarMensaje({
                       const estaba = estaDestacadaPara(m.destacado, cuenta, casa);
                       const quiere = marcados.has(m.id);
                       if (estaba === quiere) continue;
+                      // Al agregar se aplica el alcance elegido; al sacar, se
+                      // saca sólo de esta cuenta. No es simétrico a propósito:
+                      // destildar un chip no puede apagárselo a todo el equipo
+                      // sin avisar.
                       const despues = quiere
-                        ? conCuenta(antes, cuenta)
+                        ? alcanceNuevo === 'todas'
+                          ? { tipo: 'todas' as const }
+                          : alcanceNuevo === 'casa' && casa
+                            ? { tipo: 'casa' as const, casa }
+                            : conCuenta(antes, cuenta)
                         : sinCuenta(antes, cuenta, abrevs);
                       await pb
                         .collection('plantilla')

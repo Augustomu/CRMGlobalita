@@ -3,8 +3,23 @@ import assert from 'node:assert/strict';
 import {
   AVISOS_POR_DEFECTO, descripcionEvento, finDe, momentosDeAviso, primeraReunion,
   tituloEvento, verBloque,  enSuZona, bloqueDelEvento, horaEnLaColumna, carriles,
-  porUltimaReunion,
+  porUltimaReunion, tonoDeUltimaReunion,
 } from '../src/reunion.ts';
+
+// ------------------------------- §7.2: el color de la última reunión
+
+test('asistió es verde y no asistió es rojo', () => {
+  assert.equal(tonoDeUltimaReunion('asistio'), 'asistio');
+  assert.equal(tonoDeUltimaReunion('no-asistio'), 'no-asistio');
+});
+
+test('lo que no se sabe queda neutro, no verde', () => {
+  // Pintar de verde una reunión sin confirmar inventaría 173 asistencias.
+  assert.equal(tonoDeUltimaReunion('sin_dato'), 'neutro');
+  assert.equal(tonoDeUltimaReunion('pendiente'), 'neutro');
+  assert.equal(tonoDeUltimaReunion('cancelada'), 'neutro');
+  assert.equal(tonoDeUltimaReunion(''), 'neutro');
+});
 
 // ---------------------------------------------- §7.6: el orden de la Lista
 

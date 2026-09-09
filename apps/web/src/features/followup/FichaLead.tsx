@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { tocaHoy } from '@crm/core/cadencia';
 import { linkWhatsApp } from '@crm/core/telefono';
-import { IconoWhatsApp } from '../../ui/iconos';
 import { recientes, sePuedeSacar } from '@crm/core/etiqueta';
 import { diaLocal } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
@@ -500,28 +499,11 @@ export function FichaLead({
             </div>
           )}
 
-          {/* §9.7: sin teléfono, apagado con el motivo en el title — nunca
-              oculto. Es un icono de 26px y no un botón con texto: en la fila
-              del prototipo todo mide lo mismo, y una pastilla verde de 100px
-              la partía en dos renglones. */}
-          {veTelefono && wa ? (
-            <a
-              className="boton-icono-26 boton-wa-on"
-              href={wa}
-              target="_blank"
-              rel="noreferrer"
-              title="Abrir el chat de WhatsApp"
-            >
-              <IconoWhatsApp />
-            </a>
-          ) : (
-            <span
-              className="boton-icono-26 boton-off"
-              title={p?.telefono ? `Teléfono a revisar: ${p.telefono_raw || p.telefono}` : 'Sin teléfono cargado'}
-            >
-              <IconoWhatsApp />
-            </span>
-          )}
+          {/* 1.1 · Acá NO va el botón de WhatsApp (09/09/2026).
+              Ir al chat es una sola acción y vive abajo, en Enviar mensaje,
+              donde el switch decide por qué canal se abre. Tenerlo también acá
+              arriba obligaba a mantener dos caminos al mismo lugar, y el de
+              arriba ignoraba el canal elegido: llevaba siempre a WhatsApp. */}
         </div>
 
         {/* Las aplicadas, cada una con su × (cambio 9), y detrás las seis

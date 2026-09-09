@@ -480,6 +480,29 @@ export function carriles(franjas: Franja[]): EnCarril[] {
 }
 
 /**
+ * Cómo se lee la última reunión en la lista de contactos (§7.2).
+ *
+ * Tres tonos, y cada uno responde una pregunta distinta que se hace de un
+ * vistazo mientras se recorre la columna:
+ *
+ *   verde  la reunión pasó y la persona vino
+ *   rojo   la reunión pasó y la persona NO vino
+ *   gris   todavía no pasó, o pasó y nadie registró qué ocurrió
+ *
+ * El gris junta dos cosas a propósito. «Todavía no sé» y «todavía no pasó» se
+ * parecen en lo único que importa acá: no hay nada que celebrar ni que
+ * lamentar. Pintar de verde una reunión sin confirmar sería inventar 173
+ * asistencias, que es exactamente lo que `sin_dato` existe para no hacer.
+ */
+export type TonoDeReunion = 'asistio' | 'no-asistio' | 'neutro';
+
+export function tonoDeUltimaReunion(estado: string): TonoDeReunion {
+  if (estado === 'asistio') return 'asistio';
+  if (estado === 'no-asistio') return 'no-asistio';
+  return 'neutro';
+}
+
+/**
  * El orden de la vista Lista (§7.6): la reunión más nueva arriba.
  *
  * La clave es la MISMA fecha que muestra la columna «Última», no la de

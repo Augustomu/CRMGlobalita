@@ -194,7 +194,19 @@ export function Tareas({ usuario, onCerrar, onIrAlLead, leads, plantillas, onCam
 
   const recargar = useCallback(async () => {
     try {
+      // Cada uno ve LAS SUYAS. Antes se pedía la colección entera sin filtrar,
+      // así que un colaborador veía —y podía borrar— las tareas del
+      // administrador: una lista de pendientes ajena, con nombres de leads que
+      // quizá no tiene asignados.
+      //
+      // El administrador sigue viendo todas, igual que en la agenda (§6.3):
+      // es el mismo criterio de siempre y además es lo que deja limpiar las
+      // que quedaron sin dueño cuando se dio de baja a alguien.
+      const filtroDeDuenio =
+        usuario?.rol === 'administrador' ? '' : `usuario = "${usuario?.id ?? ''}"`;
+
       const r = await pb.collection('tarea').getFullList<TareaRecord>({
+        ...(filtroDeDuenio ? { filter: filtroDeDuenio } : {}),
         // El perfil entero, no sólo el nombre: una tarea sobre un lead tiene
         // que traer con qué escribirle. Ir a buscar el teléfono a la ficha
         // convierte «llamar a Wellington» en tres pantallas.
@@ -207,7 +219,7 @@ export function Tareas({ usuario, onCerrar, onIrAlLead, leads, plantillas, onCam
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
-  }, []);
+  }, [usuario?.id, usuario?.rol]);
 
   useEffect(() => {
     void recargar();

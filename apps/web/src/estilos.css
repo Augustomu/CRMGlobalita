@@ -5771,8 +5771,6 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 .paso-chip-elegido .paso-chip-idioma { opacity: .9; }
 /* Los que no son de la cadencia van separados y en cursiva: no tienen orden. */
 .paso-chip-aparte { font-style: italic; margin-left: 4px; }
-.enviar-idioma { display: flex; align-items: center; gap: 5px; margin-left: auto; }
-.enviar-idioma select { height: 22px; }
 
 /* ---------- alta manual de un lead (§7.2) ---------- */
 /* Una caja más ancha que la de importar: son doce campos, y apilarlos en una
@@ -5870,3 +5868,112 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   grid-template-columns: 1fr;
   padding-top: 0;
 }
+
+/* El porqué de que ninguna sesión esté viva. Va una sola vez arriba de las dos
+   listas: siete filas diciendo «sin vincular» se leen como siete cosas rotas
+   que hay que ir a arreglar de a una, y la causa es una sola. */
+.cc-aviso {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: .5px solid var(--info-br);
+  border-radius: 3px;
+  background: var(--info-light);
+  color: var(--muted);
+  font-size: var(--txt-sm);
+  line-height: 1.45;
+}
+
+/* 3.3 · La última reunión en la fila de la lista. El color responde de un
+   vistazo la única pregunta que se hace recorriendo la columna: ¿esta persona
+   vino o no vino? El gris junta «todavía no pasó» y «nadie lo registró»: en
+   los dos casos no hay nada que celebrar ni que lamentar. */
+.fila-reunion {
+  font-size: var(--txt-sm);
+  font-variant-numeric: tabular-nums;
+  padding: 0 4px;
+  border-radius: 2px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.fila-reunion-asistio { color: var(--success); background: var(--success-light); }
+.fila-reunion-no-asistio { color: var(--error); background: var(--error-light); }
+.fila-reunion-neutro { color: var(--hint); }
+
+/* ---------------------------------------------------------------------------
+   Enviar mensaje: el encabezado que decide POR DÓNDE SALE (bloque 1).
+   El idioma en dos letras, el switch de canal y la flecha al chat, en la misma
+   línea del título. Antes eran una pastilla que sólo informaba, un botón con
+   texto y el idioma repetido en dos lugares distintos.
+   ------------------------------------------------------------------------- */
+.enviar-idioma-corto {
+  height: 20px;
+  padding: 0 2px 0 4px;
+  font-size: var(--txt-sm);
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--muted);
+  background: var(--bg);
+  border: .5px solid var(--border);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+/* El switch. Los dos lados siempre visibles: cuál está apagado es parte de la
+   información — se ve que existe la otra opción sin tener que abrir nada. */
+.enviar-switch { display: inline-flex; border: .5px solid var(--border); border-radius: 3px; overflow: hidden; }
+.enviar-switch-boton {
+  height: 20px;
+  min-width: 26px;
+  padding: 0 6px;
+  font-size: var(--txt-sm);
+  font-weight: 600;
+  color: var(--hint);
+  background: var(--surface);
+  border: 0;
+  cursor: pointer;
+}
+.enviar-switch-boton + .enviar-switch-boton { border-left: .5px solid var(--border); }
+.enviar-switch-boton:hover:not(:disabled) { color: var(--text); background: var(--bg); }
+.enviar-switch-boton:disabled { opacity: .38; cursor: not-allowed; }
+.enviar-switch-on { color: var(--surface); }
+.enviar-switch-linkedin.enviar-switch-on { background: var(--brand-linkedin); }
+.enviar-switch-whatsapp.enviar-switch-on { background: var(--brand-whatsapp); }
+
+/* La flecha al chat. Sin texto: al lado del switch, la diagonal ya dice a
+   dónde va, y el switch dice a cuál de los dos. */
+.enviar-ir {
+  display: grid;
+  place-content: center;
+  width: 20px;
+  height: 20px;
+  font-size: var(--txt-md);
+  color: var(--muted);
+  text-decoration: none;
+  border: .5px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+}
+.enviar-ir:hover { color: var(--accent); border-color: var(--accent-br); background: var(--accent-light); }
+
+/* La separación entre los pasos de la cadencia y los destacados. Es la misma
+   fila —las dos cosas ponen un texto en el cuadro— pero no son lo mismo. */
+.enviar-corte {
+  width: .5px;
+  height: 16px;
+  margin: 0 3px;
+  background: var(--border);
+  flex: 0 0 auto;
+}
+
+/* El alcance de un destacado y el filtro por idioma, en el modal (bloque 2).
+   Van en su propia línea y no mezclados con la lista: son decisiones sobre
+   TODO lo que se marque, no sobre un mensaje. */
+.dest-alcance, .dest-filtro {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+}
+.dest-alcance { border-top: .5px solid var(--border); margin-top: 6px; }
+.dest-filtro { border-bottom: .5px solid var(--border); margin-bottom: 4px; }

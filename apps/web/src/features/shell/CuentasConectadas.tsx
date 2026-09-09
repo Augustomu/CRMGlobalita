@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { pb } from '../../lib/pocketbase';
 import { useEscape } from '../../lib/useEscape';
+import {
+  estadoDeSesion,
+  NOMBRE_ESTADO_SESION,
+  porQueNingunaSesion,
+} from '@crm/core/sesion';
 
 /**
  * Cuentas conectadas (§7.10, §8.2). Portada de
@@ -28,7 +33,19 @@ interface CuentaRecord {
   slot: number;
   estado_sesion: string;
   sesion_wa: string;
+  /** Cuándo respondió la sesión por última vez. Lo escribe el worker. */
+  ultima_senal_li: string;
+  ultima_senal_wa: string;
 }
+
+/**
+ * Si el proceso que sostiene las sesiones existe.
+ *
+ * Hoy no: `apps/worker/` está vacío. Está acá y no escondido en un `if` para
+ * que el día que exista se cambie en un solo lugar — y para que se vea que la
+ * pantalla no lo está adivinando.
+ */
+const HAY_WORKER = false;
 
 interface EnCola {
   cuenta: string;
@@ -148,8 +165,22 @@ export function CuentasConectadas({
     return m;
   }, [cola]);
 
-  const activasLi = cuentas.filter((c) => c.estado_sesion === 'activa').length;
-  const activasWa = cuentas.filter((c) => c.sesion_wa === 'activa').length;
+  // El estado sale de la SEÑAL, no del campo que alguien escribió una vez. Los
+  // valores del seed decían «activa» en cinco cuentas sin que hubiera una sola
+  // sesión detrás; con la señal vacía, todas dicen «sin vincular», que es la
+  // verdad hasta que el worker exista.
+  const estadoLi = useMemo(
+    () => new Map(cuentas.map((c) => [c.id, estadoDeSesion(c.ultima_senal_li)])),
+    [cuentas],
+  );
+  const estadoWa = useMemo(
+    () => new Map(cuentas.map((c) => [c.id, estadoDeSesion(c.ultima_senal_wa)])),
+    [cuentas],
+  );
+
+  const activasLi = [...estadoLi.values()].filter((e) => e === 'activa').length;
+  const activasWa = [...estadoWa.values()].filter((e) => e === 'activa').length;
+  const explicacion = porQueNingunaSesion(HAY_WORKER, cuentas.length);
 
   /**
    * Los envíos que están esperando a que vuelva una sesión.
@@ -158,7 +189,7 @@ export function CuentasConectadas({
    * frenada, está esperando su turno, que es otra cosa.
    */
   const frenados = cuentas
-    .filter((c) => c.sesion_wa !== 'activa' || c.estado_sesion !== 'activa')
+    .filter((c) => estadoLi.get(c.id) !== 'activa' || estadoWa.get(c.id) !== 'activa')
     .reduce((a, c) => a + (pendientes.get(c.id) ?? 0), 0);
 
   return (
@@ -180,18 +211,21 @@ export function CuentasConectadas({
         </header>
 
         <div className="cc-cuerpo">
+          {explicacion && <div className="cc-aviso">{explicacion}</div>}
+
           <div className="cc-seccion">
             <span className="campo-label">LinkedIn</span>
           </div>
           {cuentas.map((c) => {
-            const viva = c.estado_sesion === 'activa';
+            const estado = estadoLi.get(c.id) ?? 'sin_vincular';
+            const viva = estado === 'activa';
             return (
               <div key={`li-${c.id}`} className="cc-fila">
                 <span className="pastilla">{c.abrev}</span>
                 <span className="cc-perfil">{c.nombre_perfil || 'sin nombre cargado'}</span>
                 <span className={viva ? 'cc-estado cc-ok' : 'cc-estado cc-mal'}>
                   <span className={viva ? 'cc-punto cc-punto-ok' : 'cc-punto cc-punto-mal'} />
-                  {viva ? 'activa' : c.estado_sesion === 'caida' ? 'caída' : 'sin vincular'}
+                  {NOMBRE_ESTADO_SESION[estado]}
                 </span>
                 {/* La sesión de LinkedIn no se recupera con un QR: hay que
                     volver a loguearla desde el worker. Por eso acá no hay
@@ -215,7 +249,8 @@ export function CuentasConectadas({
             </button>
           </div>
           {cuentas.map((c) => {
-            const viva = c.sesion_wa === 'activa';
+            const estado = estadoWa.get(c.id) ?? 'sin_vincular';
+            const viva = estado === 'activa';
             const espera = pendientes.get(c.id) ?? 0;
             return (
               <div key={`wa-${c.id}`} className="cc-fila">
@@ -223,7 +258,7 @@ export function CuentasConectadas({
                 <span className="cc-perfil">{c.nombre_perfil || 'sin nombre cargado'}</span>
                 <span className={viva ? 'cc-estado cc-ok' : 'cc-estado cc-mal'}>
                   <span className={viva ? 'cc-punto cc-punto-ok' : 'cc-punto cc-punto-mal'} />
-                  {viva ? 'conectada' : 'pide QR'}
+                  {viva ? 'conectada' : NOMBRE_ESTADO_SESION[estado]}
                 </span>
                 <span className="cc-detalle">
                   {viva ? '' : `${espera} ${espera === 1 ? 'frenado' : 'frenados'}`}
