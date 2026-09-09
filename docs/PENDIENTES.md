@@ -70,6 +70,15 @@ página de revisión.
       Hoy hay **0 archivadas de 173 en `sin_dato`**: está puesto y sin usar.
 - [ ] **Vista Lista: cambiar la fecha sin abrir la ficha.** Es lo único que
       quedó abierto de este punto.
+- [x] **Las tres ideas del mockup del 09/09 que valían la pena.** Los ratos
+      libres («2 h 30 libre») entre bloque y bloque, el contador de reuniones
+      en la cabecera del día, y la línea roja de la hora actual con su reloj.
+      La regla de los huecos está en `core/huecos.ts` con 17 tests que citan
+      §7.6 — funde los ocupados que se pisan, recorta lo que asoma fuera de la
+      franja y no anuncia nada por debajo de media hora.
+      **Del mockup NO se tomó la paleta**: sus eventos son más pálidos que los
+      nuestros, y adoptarla habría deshecho justo lo que Augusto venía pidiendo.
+      Tampoco el popup al hacer clic — §7.6 ya decidió al revés.
 - [ ] **Editar o crear un mensaje desde «Destacar mensajes».** Hoy hay que ir
       al Repositorio, y el momento en que uno se da cuenta de que falta un
       texto es justo cuando lo está buscando para destacarlo.

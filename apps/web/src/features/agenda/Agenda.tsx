@@ -12,6 +12,7 @@ import {
 import type { UsuarioRecord, LeadRecord } from '../../lib/types';
 import { leadsConSeguimiento, useAgenda, type EventoAgenda } from './useAgenda';
 import { personasSinLead, type PersonaDelCalendario } from '@crm/core/vincular';
+import { comoSeDiceElHueco, huecosDelDia } from '@crm/core/huecos';
 import { ConectarEvento } from './ConectarEvento';
 
 /**
@@ -177,6 +178,27 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
     return () => clearTimeout(t);
   }, [aviso]);
   const [chequeados, setChequeados] = useState<Set<string>>(new Set());
+
+  /**
+   * La hora de ahora, para la línea roja de la grilla (§7.6).
+   *
+   * Se actualiza cada minuto y no cada segundo: la línea se corre un píxel
+   * cada tres minutos, así que un tick por segundo serían 59 renders de más
+   * por cada uno que cambia algo.
+   */
+  const [ahora, setAhora] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setAhora(new Date()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const relojDeAhora =
+    String(ahora.getHours()).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0');
+  /** Dónde cae en la columna, en %. Fuera de la franja de trabajo no se dibuja. */
+  const dondeEstaAhora = (() => {
+    const m = ahora.getHours() * 60 + ahora.getMinutes();
+    if (m < HORA_DESDE * 60 || m > (HORA_DESDE + HORAS) * 60) return null;
+    return ((m - HORA_DESDE * 60) / (HORAS * 60)) * 100;
+  })();
 
   const hoy = diaLocal();
   // §9.4: 340–900, doble clic vuelve a 560, persistido.
@@ -455,6 +477,27 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
                     : DIAS[(new Date(`${iso}T12:00:00Z`).getUTCDay() + 6) % 7]}
                 </span>
                 <span className="agenda-cabeza-n tabular">{Number(iso.slice(8, 10))}</span>
+                {/*
+                  Cuántas REUNIONES hay ese día (§7.6). No cuenta el almuerzo
+                  ni los bloques ajenos: la pregunta que contesta el número es
+                  «¿cuánta gente veo el jueves?», y para eso un bloqueo de
+                  Google no es una respuesta. Las canceladas tampoco: siguen
+                  dibujadas, pero no son una reunión que va a pasar.
+                */}
+                {(() => {
+                  const n = (porDia.get(iso) ?? []).filter(
+                    (e) => (e.delCrm || e.vinculado) && e.estado !== 'cancelada',
+                  ).length;
+                  if (!n) return null;
+                  return (
+                    <span
+                      className="agenda-cabeza-cuantas tabular"
+                      title={n === 1 ? '1 reunión' : `${n} reuniones`}
+                    >
+                      {n}
+                    </span>
+                  );
+                })()}
               </span>
             ))}
           </div>
@@ -485,6 +528,18 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
                 delDia.map((e) => ({ a: enMinutos(e.hora), b: enMinutos(e.hora) + e.duracion })),
               );
               const hueco = huecoDestino(iso);
+              // Todo tapa: las reuniones, el almuerzo y los bloques de los
+              // otros administradores. El manual ya lo dice para el panel de
+              // fecha —el hueco que sirve es el que está libre en las dos
+              // agendas—, y un hueco con el almuerzo encima no es un hueco.
+              const libres = huecosDelDia(
+                delDia.map((e) => ({
+                  desde: enMinutos(e.hora),
+                  hasta: enMinutos(e.hora) + e.duracion,
+                })),
+                HORA_DESDE * 60,
+                (HORA_DESDE + HORAS) * 60,
+              );
               return (
                 <div
                   key={iso}
@@ -505,6 +560,35 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
                       className="agenda-hueco"
                       style={{ top: `${hueco.arriba}%`, height: `${hueco.alto}%` }}
                     />
+                  )}
+
+                  {/*
+                    Los ratos libres (§7.6). La agenda de prospección no se
+                    mira para saber qué se hizo: se mira para saber DÓNDE ENTRA
+                    la próxima. A ojo, un hueco de 40 minutos y uno de 25 se ven
+                    igual, y en uno entra una reunión y en el otro no.
+
+                    Van debajo de los bloques y sin recibir el mouse, para no
+                    robarle el clic a nada ni estorbar el arrastre.
+                  */}
+                  {libres.map((l) => (
+                    <div
+                      key={l.desde}
+                      className="agenda-libre"
+                      style={{
+                        top: `${((l.desde - HORA_DESDE * 60) / (HORAS * 60)) * 100}%`,
+                        height: `${(l.minutos / (HORAS * 60)) * 100}%`,
+                      }}
+                    >
+                      <span>{comoSeDiceElHueco(l.minutos)}</span>
+                    </div>
+                  ))}
+
+                  {/* La línea de ahora, sólo en la columna de hoy (§7.6). */}
+                  {iso === hoy && dondeEstaAhora !== null && (
+                    <div className="agenda-ahora" style={{ top: `${dondeEstaAhora}%` }}>
+                      <span className="agenda-ahora-reloj tabular">{relojDeAhora}</span>
+                    </div>
                   )}
                   {delDia.map((e, i) => {
                     const dur = estirando?.id === e.id ? estirando.dur : e.duracion;

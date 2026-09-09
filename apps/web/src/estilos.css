@@ -2567,6 +2567,7 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   border-bottom: .5px solid var(--border);
 }
 .agenda-cabeza {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2653,6 +2654,83 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .agenda-col-hoy { background: var(--accent-light); }
 .agenda-col-finde { background: var(--bg); }
 .agenda-cabeza-hoy { color: var(--accent); font-weight: 700; }
+
+/* CUÁNTAS REUNIONES TIENE EL DÍA.
+ *
+ * Va absoluto y no en el flujo a proposito: en el flujo seria un tercer
+ * renglon y la cabecera creceria para todos los dias, incluidos los vacios.
+ * Absoluto no mueve nada y no aparece cuando el numero es cero. */
+.agenda-cabeza-cuantas {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--accent);
+  color: var(--surface);
+  font-size: var(--txt-xs);
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
+.agenda-cabeza-finde .agenda-cabeza-cuantas { background: var(--hint); }
+
+/* LOS RATOS LIBRES.
+ *
+ * La agenda de prospeccion se mira para saber DONDE ENTRA la proxima reunion,
+ * y a ojo un hueco de 40 minutos y uno de 25 se ven igual. El cartel lo dice.
+ *
+ * Sin z-index —o sea 0— para quedar DEBAJO de los bloques, que estan en 1; y
+ * sin recibir el mouse, para no robarle el clic a nada ni cortar el arrastre.
+ * El texto no se parte ni se estira: en un hueco de media hora entra apenas
+ * una linea, y en uno de seis horas se lee igual de bien en el medio. */
+.agenda-libre {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+}
+.agenda-libre span {
+  font-size: var(--txt-xs);
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* LA LINEA DE AHORA.
+ *
+ * Encima de todo —z-index 41, arriba del bloque abierto— porque la hora actual
+ * es la referencia con la que uno lee la columna: tapada por un evento deja de
+ * servir. Es la unica cosa roja de la grilla que no es un estado, y por eso
+ * lleva reloj: sin el numero, una linea roja sobre un evento se lee como si el
+ * evento estuviera mal. */
+.agenda-ahora {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1.5px solid var(--error);
+  pointer-events: none;
+  z-index: 41;
+}
+.agenda-ahora-reloj {
+  position: absolute;
+  top: -7px;
+  left: 2px;
+  padding: 0 4px;
+  border-radius: 7px;
+  background: var(--error);
+  color: var(--surface);
+  font-size: var(--txt-xs);
+  font-weight: 700;
+  line-height: 14px;
+}
 
 /* El hueco que ocuparía la reunión al soltarla: del alto exacto que va a
    tener, que es lo que uno necesita ver antes de soltar. */
