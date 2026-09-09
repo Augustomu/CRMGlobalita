@@ -31,9 +31,9 @@ de memoria.
 | 6 · WA Personal | **3 de 3** |
 | 7 · Agenda y Calendar | **7 de 7** |
 | 8 · Integraciones y worker | 1 de 7 |
-| 9 · Producción | 1 de 7 |
+| 9 · Producción | 1 de 8 |
 | 10 · Los datos | **7 de 10** |
-| 11 · Las copias | 1 de 3 |
+| 11 · Las copias | **3 de 4** |
 
 **Los bloques 0 a 7 están cerrados.** Lo que queda no es de programar: el
 worker (8) es la otra mitad del producto y tres de sus cuatro items esperan
@@ -486,6 +486,20 @@ página de revisión.
       borrarlo del todo hay que pedírselo a su soporte. Y lo que estuvo
       público, estuvo público: esto corta hacia adelante, no borra lo que
       alguien ya haya clonado.
+- [ ] ⚠️ **9.1 bis · Hay un token de GitHub escrito en claro dentro de
+      `globalita-automation/.git/config`.** Encontrado el 09/09 al mirar los
+      remotes: el `origin` de ese repositorio es una URL con un
+      `github_pat_…` adentro, o sea **una credencial viva guardada en texto
+      plano en el disco**. El repositorio es privado, así que no está publicado
+      — pero cualquier copia de esa carpeta se lleva el token, y con él se
+      entra a **todos** los repos a los que ese token alcance.
+      **Qué hacer**: revocarlo en GitHub (Settings → Developer settings →
+      Personal access tokens) y dejar el remote sin credencial:
+      `git remote set-url origin https://github.com/Augustomu/globalita-automation.git`.
+      La autenticación ya la resuelve `gh`, que está instalado y logueado.
+      **Es la misma familia que 9.1**: un secreto que quedó escrito donde no
+      correspondía. Aquel era público y éste no, pero el arreglo es igual de
+      barato mientras nadie lo copió.
 - [ ] **9.2 · SMTP de Hostinger** (`deploy/PASO-A-PASO.md`, paso 4.5). Sin eso,
       dar de alta a alguien falla.
 - [ ] **9.2 bis · Testear el envío de mail de verdad.** Pedido el 09/09. No
@@ -578,6 +592,45 @@ Contado contra la base, no de memoria.
 Esto no salió de la UI: salió de mirar los logs de PocketBase y las tareas
 programadas de Windows.
 
+> **09/09/2026 · Cambió el destino.** Augusto: *«la copia de los datos quiero
+> que se haga en GitHub solamente; local no quiero nada, no sirve de nada, si
+> se rompe la computadora perdí todo»*. Tiene razón y ya le pasó: el formateo
+> de septiembre se llevó 5042 contactos. **GitHub es ahora el destino que
+> decide si la copia salió bien.**
+
+- [x] ✅ **La copia va a GitHub, al repo PRIVADO `Augustomu/globalita-data`.**
+      Creado el 09/09 para esto y **no puede dejar de ser privado**: adentro hay
+      242 leads con nombre, teléfono y correo de personas reales, más los CSV de
+      la importación.
+      ⚠️ **No va al repo del CRM**, que es **público**. Lo que se publica no se
+      despublica: alcanza con que alguien lo clone antes de que uno se dé cuenta.
+      Esa parte no es negociable y no la decide un script.
+      **Qué sube y cada cuánto**:
+      `json/` crudo **cada hora** —es texto, así que git guarda la diferencia
+      entre una hora y la siguiente en unos KB en vez de un archivo entero— y
+      `sqlite/data-AAAA-MM-DD.db.gz` **una por día**: 1,5 MB comprimidos a
+      **316 KB**. La base es binaria, así que cada versión es un archivo
+      completo; por hora el repo crecería 2,8 GB al año y por día, 117 MB.
+      **No sube `auxiliary.db`**, los logs de PocketBase: 15 de los 18 MB de
+      cada copia, y no sirven para restaurar nada.
+      `.gitattributes` con `* -text`, porque **una copia tiene que volver byte
+      por byte** y un CSV que vuelve con CRLF no es el mismo archivo.
+      Guarda: si los perfiles cayeron más del 20%, no sube y avisa
+      (`CRM_FORZAR=1` para forzar cuando la caída es real).
+- [x] ✅ **Probado restaurando, no sólo subiendo.** Se clonó el repo privado en
+      una carpeta limpia, se descomprimió la base y se abrió:
+      `integrity_check = ok` y los conteos dan **242 leads, 489 perfiles, 288
+      reuniones, 1.769 eventos externos**. Una copia que no se restauró nunca
+      es una copia que no se sabe si sirve.
+- [x] ⚠️ **Y de paso apareció algo grave: Drive desmontado cortaba TODO.**
+      `snapshot-crm.js` hacía `fail()` si la carpeta de Google Drive no
+      existía —que es exactamente lo que pasa cuando la máquina arranca y Drive
+      todavía no sincronizó— **antes de hacer ninguna otra copia**. O sea que
+      con Drive caído no se guardaba nada en ningún lado. Ahora avisa y sigue.
+      Verificado el 09/09: la carpeta `G:\Mi unidad\Globalita-Backup` **no
+      existe en este momento**, así que esto estaba pasando de verdad, no en
+      teoría.
+
 - [x] **La copia local por hora funciona.** `Globalita-SnapshotCRM` corre cada
       hora y deja una copia fechada en `~/globalita-backups/crm/`. Están las
       de las 17, 18, 19, 20 y 21 UTC, completas (sqlite + json + manifiesto),
@@ -602,9 +655,11 @@ programadas de Windows.
       **Mientras tanto se hizo una copia que no pisa nada**:
       `crm-snapshot-2026-09-09T21-05-48` en la misma carpeta de Drive, con la
       base de hoy (489 perfiles, 242 leads, 288 reuniones). La vieja sigue ahí.
-      ❓ **Falta que Augusto decida** si se pisa `crm-snapshot` con la buena
-      (`CRM_FORZAR=1`) o si se deja la vieja. Hasta que se decida, la tarea
-      va a seguir devolviendo error cada hora.
+      ✅ **La pregunta se cerró sola al mover la copia a GitHub.** Drive dejó de
+      ser la copia que importa y **ya no decide el código de salida**: la tarea
+      horaria deja de devolver error. La carpeta vieja de Drive **no se toca** —
+      no se borra nada— y queda como acompañante, si algún día Drive vuelve a
+      montarse.
 
 ---
 
