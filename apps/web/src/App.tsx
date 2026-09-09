@@ -499,6 +499,7 @@ export function App() {
                   }
                   onIrAWaPersonal={() => irA(() => setSeccion('wapersonal'))}
                   onCerrar={() => setNotifAbiertas(false)}
+                  onCambio={recargar}
                 />
               )}
             </div>

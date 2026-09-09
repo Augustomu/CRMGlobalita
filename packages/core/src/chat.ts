@@ -85,3 +85,39 @@ export function ultimoTexto(mensajes: MensajeChat[]): string {
   // El prefijo dice de un vistazo si la pelota está de tu lado.
   return m.quien === 'out' ? `vos: ${m.texto}` : m.texto;
 }
+
+/**
+ * En qué está una conversación (§7.10).
+ *
+ * Tres estados, no dos, porque «leído» solo no dice nada útil: lo que hay que
+ * poder ver es **si falta contestar**. Un hilo leído sin responder es trabajo
+ * pendiente; uno respondido está esperando al otro, y no hay nada que hacer.
+ *
+ * Se mira el último mensaje y no un campo aparte a propósito: un booleano
+ * `respondido` se desincroniza el día que alguien conteste desde el chat real
+ * y el CRM no se entere. El último mensaje siempre dice la verdad.
+ */
+export type EstadoConversacion = 'sin_leer' | 'sin_responder' | 'respondido' | 'sin_mensajes';
+
+export function estadoDeConversacion(
+  sinLeer: boolean,
+  mensajes: Pick<MensajeChat, 'quien' | 'en'>[],
+): EstadoConversacion {
+  if (sinLeer) return 'sin_leer';
+  if (!mensajes.length) return 'sin_mensajes';
+  // Por fecha, no por posición: los mensajes pueden llegar desordenados de dos
+  // fuentes (lo que registramos y lo que se lee del chat real).
+  let ultimo = mensajes[0]!;
+  for (const m of mensajes) {
+    if (String(m.en ?? '') >= String(ultimo.en ?? '')) ultimo = m;
+  }
+  return ultimo.quien === 'in' ? 'sin_responder' : 'respondido';
+}
+
+/** Cómo se lee cada estado en pantalla. */
+export const TEXTO_ESTADO: Record<EstadoConversacion, string> = {
+  sin_leer: 'sin leer',
+  sin_responder: 'leído, sin responder',
+  respondido: 'respondido',
+  sin_mensajes: 'sin mensajes',
+};

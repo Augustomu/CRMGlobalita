@@ -99,6 +99,52 @@ migrate(
       if (ack) r.set('ack', ack);
       app.save(r);
     }
+
+    // ------------------------------------------------------------------------
+    // Un "sin leer" sin ningun mensaje es un dato imposible.
+    //
+    // Los flags `sin_leer_li` y `sin_leer_wa` los pone el relleno de demo sobre
+    // leads que no tienen hilo sembrado: quedaban 15 de 18 asi. En pantalla eso
+    // se ve como una notificacion que al abrirla dice "sin mensajes", que no es
+    // un estado que pueda existir — si hay algo sin abrir, hay un entrante.
+    //
+    // Se siembra ese entrante. El texto es generico a proposito: lo que importa
+    // del caso es que el hilo exista y termine del lado del lead.
+    const DIA = 86400000;
+    const HOY = new Date().toISOString().slice(0, 10);
+    const diaAtras = (n) => new Date(Date.parse(HOY) - n * DIA).toISOString().slice(0, 10);
+
+    const ENTRANTES = [
+      'Buenas, recien veo tu mensaje. Contame un poco mas.',
+      'Hola, gracias por escribir. De que se trata exactamente?',
+      'Buen dia. Estoy con poco tiempo esta semana, pero me interesa.',
+      'Recibido. Lo veo con el equipo y te confirmo.',
+      'Hola! Si, estamos evaluando algo asi. Mandame informacion.',
+    ];
+
+    const conHilo = {};
+    for (const m of app.findAllRecords('mensaje')) {
+      conHilo[String(m.get('lead')) + '-' + String(m.get('canal'))] = true;
+    }
+
+    let i = 0;
+    for (const l of app.findAllRecords('lead')) {
+      const canales = [];
+      if (l.get('sin_leer_li')) canales.push('linkedin');
+      if (l.get('sin_leer_wa')) canales.push('whatsapp');
+      for (const canal of canales) {
+        if (conHilo[l.id + '-' + canal]) continue;
+        const r = new Record(app.findCollectionByNameOrId('mensaje'));
+        r.set('lead', l.id);
+        r.set('canal', canal);
+        r.set('quien', 'in');
+        r.set('texto', ENTRANTES[i % ENTRANTES.length]);
+        // Escalonados hacia atras para que no compartan el mismo minuto.
+        r.set('enviado_en', diaAtras((i % 9) + 1) + ' ' + String(9 + (i % 8)).padStart(2, '0') + ':' + String((i * 7) % 60).padStart(2, '0') + ':00.000Z');
+        app.save(r);
+        i++;
+      }
+    }
   },
 
   (app) => {

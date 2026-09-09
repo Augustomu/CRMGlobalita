@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { CADENCIA_POR_DEFECTO, esFase2, siguientePaso, tocaHoy } from '@crm/core/cadencia';
 import { planDeEnvio } from '@crm/core/envio';
 import { idiomaEfectivo } from '@crm/core/idioma';
-import { plantillasDe, resolverParaPaso, type Plantilla } from '@crm/core/plantilla';
+import {
+  estaDestacadaPara,
+  plantillasDe,
+  resolverParaPaso,
+  type Plantilla,
+} from '@crm/core/plantilla';
+import { casaDeLinea } from '@crm/core/proyecto';
 import { canalDe } from '@crm/core/cadencia';
 import type { Idioma, Paso } from '@crm/core/tipos';
 import { diaLocal } from '@crm/core/fecha';
@@ -21,6 +27,17 @@ function aPlantilla(r: PlantillaRecord): Plantilla {
     textos: r.textos ?? {},
     orden: r.orden ?? 0,
   };
+}
+
+/**
+ * El nombre sin el paso adelante.
+ *
+ * Los destacados se llaman «R2 · Seguimiento corto» y la pastilla ya dice R2.
+ * En un chip chico, repetirlo se come el nombre — que es lo único que
+ * distingue un destacado de otro.
+ */
+function nombreCorto(nombre: string): string {
+  return nombre.replace(/^\s*R\d[\w-]*\s*[·:.-]\s*/i, '').trim() || nombre;
 }
 
 /** "hace 3 días" / "en 5 días", igual que en la lista. */
@@ -81,6 +98,14 @@ export function Vencimientos({ leads, plantillas, onCerrar, onCambio, comoPanel 
   const [plantillaId, setPlantillaId] = useState<string | undefined>();
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * La fecha elegida a mano, cuando la propuesta no sirve.
+   *
+   * `null` = vale la de la cadencia. Se limpia al pasar de lead: elegir una
+   * fecha para uno y que se arrastre al siguiente sería peor que no poder
+   * elegirla.
+   */
+  const [fechaAMano, setFechaAMano] = useState<string | null>(null);
 
   const lead = pendientes[indice];
   const perfil = lead?.expand?.perfil;
@@ -90,7 +115,29 @@ export function Vencimientos({ leads, plantillas, onCerrar, onCambio, comoPanel 
   /** El idioma que sale del pais, contra el que se compara el elegido. */
   const sugerido = idiomaEfectivo({ pais: perfil?.pais ?? '' });
   const paso = (lead ? siguientePaso(cfg, lead.etapa) ?? lead.etapa : 'R1') as Paso;
-  const destacados = useMemo(() => plantillasDe(catalogo, paso), [catalogo, paso]);
+  /** Las variantes del paso que toca: elegir cuál de las dos mandar. */
+  const variantes = useMemo(() => plantillasDe(catalogo, paso), [catalogo, paso]);
+
+  /**
+   * Los mensajes destacados de la cuenta del lead (§7.7).
+   *
+   * No son lo mismo que las variantes del paso: un destacado puede ser de
+   * cualquier paso. Sirven para el caso que rompe la cadencia — el lead
+   * contestó algo puntual y hay que mandarle otra cosa, no el R que tocaba.
+   *
+   * Falta la casa y por eso se pasa: sin saber de qué empresa es la cuenta no
+   * se puede resolver un destacado con alcance `casa:`, y adivinar sería
+   * mostrarle a alguien los mensajes de la otra.
+   */
+  const casa = casaDeLinea(lead?.expand?.cuenta?.linea_negocio);
+  const cuentaAbrev = lead?.expand?.cuenta?.abrev ?? '';
+  const destacados = useMemo(
+    () =>
+      catalogo
+        .filter((p) => estaDestacadaPara(plantillas.find((x) => x.id === p.id)?.destacado, cuentaAbrev, casa))
+        .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0)),
+    [catalogo, plantillas, cuentaAbrev, casa],
+  );
 
   const resuelto = useMemo(() => {
     if (!lead) return null;
@@ -126,6 +173,9 @@ export function Vencimientos({ leads, plantillas, onCerrar, onCambio, comoPanel 
   function siguiente() {
     setIndice((i) => i + 1);
     setTocado(false);
+    // La fecha elegida es de ESE lead. Arrastrarla al siguiente sería peor
+    // que no poder elegirla.
+    setFechaAMano(null);
   }
 
   async function aprobar() {
@@ -164,7 +214,9 @@ export function Vencimientos({ leads, plantillas, onCerrar, onCambio, comoPanel 
         situacion: plan.lead.situacion,
         f_ultimo_contacto: plan.lead.f_ultimo_contacto,
         etiquetas: [...ids],
-        ...(plan.proximo_contacto_propuesto ? { proximo_contacto: plan.proximo_contacto_propuesto } : {}),
+        // La elegida a mano gana sobre la de la cadencia: §5.10 dice que la
+        // fecha se PROPONE, y proponer sin poder cambiarla es fijarla.
+        ...(fecha ? { proximo_contacto: fecha } : {}),
       });
 
       setAprobados((n) => n + 1);
@@ -186,6 +238,8 @@ export function Vencimientos({ leads, plantillas, onCerrar, onCambio, comoPanel 
         HOY,
       ).proximo_contacto_propuesto
     : null;
+  /** La que se va a guardar: la de la cadencia, salvo que se haya elegido otra. */
+  const fecha = fechaAMano ?? proximo;
 
   // El contenido va en una variable y no en un componente envoltorio: uno
   // definido acá adentro se remonta en cada render, y el textarea del mensaje
@@ -250,9 +304,31 @@ export function Vencimientos({ leads, plantillas, onCerrar, onCambio, comoPanel 
               </div>
               <div className="venc-tarjeta venc-tarjeta-acento">
                 <span className="campo-label">Próximo contacto</span>
-                <span className="venc-fecha">{proximo ?? 'termina la cadencia'}</span>
+                {/* Editable: la cadencia propone, la persona decide (§5.10).
+                    El input nativo abre el calendario del sistema, que es el
+                    mismo que se usa en la ficha y en la agenda. */}
+                <input
+                  type="date"
+                  className="venc-fecha-input"
+                  value={fecha ?? ''}
+                  onChange={(e) => setFechaAMano(e.target.value || null)}
+                  title="Cambiar la fecha del próximo contacto"
+                />
                 <span className="campo-ayuda">
-                  {paso} · {proximo ? `${cuanto(proximo)}` : 'sin próximo paso'}
+                  {paso} · {fecha ? cuanto(fecha) : 'sin próximo paso'}
+                  {fechaAMano && fechaAMano !== proximo && (
+                    <>
+                      {' · '}
+                      <button
+                        type="button"
+                        className="venc-volver"
+                        title={proximo ? `Volver a ${proximo}` : 'Volver a lo que propone la cadencia'}
+                        onClick={() => setFechaAMano(null)}
+                      >
+                        a mano
+                      </button>
+                    </>
+                  )}
                 </span>
               </div>
             </div>
@@ -272,21 +348,49 @@ export function Vencimientos({ leads, plantillas, onCerrar, onCambio, comoPanel 
                 ))}
             </div>
 
-            {destacados.length > 1 && (
+            {variantes.length > 1 && (
               <div className="campo">
-                <span className="campo-label">Mensajes destacados</span>
+                <span className="campo-label">Variantes de {paso}</span>
                 <div className="chips">
-                  {destacados.map((p) => (
+                  {variantes.map((p) => (
                     <button
                       key={p.id}
                       type="button"
-                      className={`chip ${(plantillaId ?? destacados[0]!.id) === p.id ? 'chip-on' : ''}`}
+                      className={`chip ${(plantillaId ?? variantes[0]!.id) === p.id ? 'chip-on' : ''}`}
                       onClick={() => {
                         setPlantillaId(p.id);
                         setTocado(false);
                       }}
                     >
                       {p.nombre}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Los destacados de la cuenta (§7.7), como pastillas chicas
+                «R + nombre corto». Son para el caso que rompe la cadencia: el
+                lead contestó algo puntual y hay que mandarle otra cosa, no el
+                R que tocaba. Antes esta sección mostraba las variantes del
+                paso con el título «Mensajes destacados», que es otra cosa. */}
+            {destacados.length > 0 && (
+              <div className="campo">
+                <span className="campo-label">Destacados de {cuentaAbrev || 'la cuenta'}</span>
+                <div className="chips">
+                  {destacados.map((d) => (
+                    <button
+                      key={d.id}
+                      type="button"
+                      className={`venc-destacado ${plantillaId === d.id ? 'venc-destacado-on' : ''}`}
+                      title={`Usar «${d.nombre}» en vez del mensaje que toca`}
+                      onClick={() => {
+                        setPlantillaId(d.id);
+                        setTocado(false);
+                      }}
+                    >
+                      {d.paso && <span className="venc-destacado-paso">{d.paso}</span>}
+                      <span>{nombreCorto(d.nombre)}</span>
                     </button>
                   ))}
                 </div>

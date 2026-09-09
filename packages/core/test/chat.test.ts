@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { conDias, etiquetaDeDia, ultimoTexto, type MensajeChat } from '../src/chat.ts';
+import { estadoDeConversacion, conDias, etiquetaDeDia, ultimoTexto, type MensajeChat } from '../src/chat.ts';
 
 const HOY = '2026-09-08';
 
@@ -79,4 +79,52 @@ test('el ack viaja con el mensaje, y vacío significa «no se sabe»', () => {
   assert.equal(mensajes[1]?.tipo === 'mensaje' && mensajes[1].ack, 'leido');
   // Los entrantes nunca tienen: el ack es de lo que mandamos nosotros.
   assert.equal(mensajes[2]?.tipo === 'mensaje' && mensajes[2].ack, null);
+});
+
+/* --------------------------------------------------------------------------
+ * El estado de la conversación (§7.10)
+ * ----------------------------------------------------------------------- */
+
+test('§7.10 · con un entrante sin abrir, el estado es sin leer', () => {
+  assert.equal(
+    estadoDeConversacion(true, [{ quien: 'out', en: '2026-09-08T10:00:00Z' }]),
+    'sin_leer',
+  );
+});
+
+test('§7.10 · leído y con el último mensaje del lead: falta contestar', () => {
+  assert.equal(
+    estadoDeConversacion(false, [
+      { quien: 'out', en: '2026-09-07T10:00:00Z' },
+      { quien: 'in', en: '2026-09-08T10:00:00Z' },
+    ]),
+    'sin_responder',
+  );
+});
+
+test('§7.10 · leído y con el último mensaje nuestro: respondido', () => {
+  assert.equal(
+    estadoDeConversacion(false, [
+      { quien: 'in', en: '2026-09-07T10:00:00Z' },
+      { quien: 'out', en: '2026-09-08T10:00:00Z' },
+    ]),
+    'respondido',
+  );
+});
+
+test('§7.10 · el orden del array no manda: manda la fecha', () => {
+  // Llegan desordenados porque vienen de dos fuentes (lo registrado y lo leído
+  // del chat real). Si mandara la posición, este hilo diría «respondido».
+  assert.equal(
+    estadoDeConversacion(false, [
+      { quien: 'out', en: '2026-09-01T10:00:00Z' },
+      { quien: 'in', en: '2026-09-08T10:00:00Z' },
+      { quien: 'out', en: '2026-09-02T10:00:00Z' },
+    ]),
+    'sin_responder',
+  );
+});
+
+test('§7.10 · sin mensajes no es ni respondido ni pendiente', () => {
+  assert.equal(estadoDeConversacion(false, []), 'sin_mensajes');
 });
