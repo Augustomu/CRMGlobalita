@@ -5903,87 +5903,90 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 .fila-reunion-no-asistio { color: var(--error); background: var(--error-light); }
 .fila-reunion-neutro { color: var(--hint); }
 
-/* ---------------------------------------------------------------------------
-   Enviar mensaje: el encabezado que decide POR DÓNDE SALE (bloque 1).
-   El idioma en dos letras, el switch de canal y la flecha al chat, en la misma
-   línea del título. Antes eran una pastilla que sólo informaba, un botón con
-   texto y el idioma repetido en dos lugares distintos.
-   ------------------------------------------------------------------------- */
-.enviar-idioma-corto {
-  height: 20px;
-  padding: 0 2px 0 4px;
-  font-size: var(--txt-sm);
-  font-weight: 600;
-  letter-spacing: .04em;
-  color: var(--muted);
-  background: var(--bg);
-  border: .5px solid var(--border);
-  border-radius: 3px;
-  cursor: pointer;
-}
+/* ===========================================================================
+   Lo agregado el 09/09/2026. Todo pasa por los tokens y por los controles que
+   ya existen: radio 8px como el resto, verde --accent para lo activo, bordes
+   de .5px y los tamaños de texto del manual. La primera version de este bloque
+   invento controles propios —un switch cuadrado, un checkbox azul del
+   navegador— y desentonaba con el producto entero.
+   ========================================================================= */
 
-/* El switch. Los dos lados siempre visibles: cuál está apagado es parte de la
-   información — se ve que existe la otra opción sin tener que abrir nada. */
-.enviar-switch { display: inline-flex; border: .5px solid var(--border); border-radius: 3px; overflow: hidden; }
-.enviar-switch-boton {
-  height: 20px;
-  min-width: 26px;
-  padding: 0 6px;
-  font-size: var(--txt-sm);
-  font-weight: 600;
-  color: var(--hint);
-  background: var(--surface);
-  border: 0;
-  cursor: pointer;
-}
-.enviar-switch-boton + .enviar-switch-boton { border-left: .5px solid var(--border); }
-.enviar-switch-boton:hover:not(:disabled) { color: var(--text); background: var(--bg); }
-.enviar-switch-boton:disabled { opacity: .38; cursor: not-allowed; }
-.enviar-switch-on { color: var(--surface); }
-.enviar-switch-linkedin.enviar-switch-on { background: var(--brand-linkedin); }
-.enviar-switch-whatsapp.enviar-switch-on { background: var(--brand-whatsapp); }
+/* --------------------------------------------- Enviar mensaje: el encabezado */
 
-/* La flecha al chat. Sin texto: al lado del switch, la diagonal ya dice a
-   dónde va, y el switch dice a cuál de los dos. */
+/* El idioma y el canal usan .selector-idioma, el control segmentado del CRM.
+   Aca solo se ajusta el alto: en la fila del titulo, 24px lo empujan todo. */
+.enviar-idiomas button,
+.enviar-canal button { height: 20px; padding: 0 8px; font-size: var(--txt-sm); font-weight: 600; }
+.enviar-idiomas, .enviar-canal { margin-left: 0; }
+.enviar-canal button:disabled { opacity: .4; cursor: not-allowed; }
+.enviar-canal button:disabled:hover { background: var(--surface); color: var(--muted); }
+
+/* La flecha al chat. Sin texto: al lado del switch, la diagonal ya dice a donde
+   va y el switch dice a cual de los dos. */
 .enviar-ir {
   display: grid;
   place-content: center;
-  width: 20px;
+  width: 22px;
   height: 20px;
   font-size: var(--txt-md);
   color: var(--muted);
   text-decoration: none;
   border: .5px solid var(--border);
-  border-radius: 3px;
+  border-radius: 8px;
   background: var(--surface);
 }
 .enviar-ir:hover { color: var(--accent); border-color: var(--accent-br); background: var(--accent-light); }
 
-/* La separación entre los pasos de la cadencia y los destacados. Es la misma
-   fila —las dos cosas ponen un texto en el cuadro— pero no son lo mismo. */
-.enviar-corte {
-  width: .5px;
-  height: 16px;
-  margin: 0 3px;
-  background: var(--border);
+/* La separacion entre los pasos de la cadencia y los destacados: la misma fila
+   —las dos cosas ponen un texto en el cuadro— pero no son lo mismo. */
+.enviar-corte { width: .5px; height: 16px; margin: 0 3px; background: var(--border); flex: 0 0 auto; }
+
+/* ------------------------------------------------- Cuentas conectadas */
+
+/* El porque de que ninguna sesion este viva. Va una sola vez arriba de las dos
+   listas: siete filas diciendo «sin vincular» se leen como siete cosas rotas,
+   y la causa es una sola. */
+.cc-aviso {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: .5px solid var(--info-br);
+  border-radius: 8px;
+  background: var(--info-light);
+  color: var(--muted);
+  font-size: var(--txt-sm);
+  line-height: 1.45;
+}
+.cc-nota { grid-template-columns: 1fr; padding-top: 0; }
+
+/* -------------------------------------------- Lista de contactos: la reunion */
+
+/* La ultima reunion en la fila. El color contesta de un vistazo la unica
+   pregunta que se hace recorriendo la columna: ¿vino o no vino? El gris junta
+   «todavia no paso» y «nadie lo registro»: en los dos casos no hay nada que
+   celebrar ni que lamentar. */
+.fila-reunion {
+  font-size: var(--txt-sm);
+  font-variant-numeric: tabular-nums;
+  padding: 0 6px;
+  border-radius: 8px;
+  white-space: nowrap;
   flex: 0 0 auto;
 }
+.fila-reunion-asistio { color: var(--success); background: var(--success-light); }
+.fila-reunion-no-asistio { color: var(--error); background: var(--error-light); }
+.fila-reunion-neutro { color: var(--hint); }
 
-/* El alcance de un destacado y el filtro por idioma, en el modal (bloque 2).
-   Van en su propia línea y no mezclados con la lista: son decisiones sobre
-   TODO lo que se marque, no sobre un mensaje. */
-.dest-alcance, .dest-filtro {
+/* --------------------------------------------------- Destacados: el flujo */
+.dest-filtro {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
   padding: 6px 0;
 }
-.dest-alcance { border-top: .5px solid var(--border); margin-top: 6px; }
 .dest-filtro { border-bottom: .5px solid var(--border); margin-bottom: 4px; }
 
-/* Usuarios: el correo debajo del nombre y los accesos rapidos en la fila
-   elegida (5.2, 5.3), y la tabla de permisos del alta (5.1). */
+/* ------------------------------------------------------------- Usuarios */
 .usuario-identidad { display: flex; flex-direction: column; gap: 0; min-width: 0; }
 .usuario-correo {
   font-size: var(--txt-sm);
@@ -6002,20 +6005,29 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   border-top: .5px solid var(--border);
 }
 
+/* El checklist de permisos del alta. Es la misma fila que .dest-opcion del
+   repositorio: mismo tilde, mismo radio, mismo verde. */
 .alta-permisos-cabeza { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
-.alta-permisos-grupo { display: flex; flex-direction: column; gap: 1px; padding: 5px 0; }
+.alta-permisos-grupo { display: flex; flex-direction: column; gap: 2px; padding: 6px 0; }
 .alta-permisos-grupo + .alta-permisos-grupo { border-top: .5px solid var(--border); }
 .alta-permiso {
   display: grid;
-  grid-template-columns: 14px minmax(110px, auto) 1fr auto;
-  align-items: baseline;
-  gap: 7px;
-  padding: 2px 0;
+  grid-template-columns: 16px minmax(110px, auto) 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 8px;
+  text-align: left;
+  border: .5px solid transparent;
+  border-radius: 8px;
+  background: transparent;
   cursor: pointer;
+  font-family: inherit;
 }
-.alta-permiso:hover { background: var(--bg); }
-.alta-permiso input { margin: 0; cursor: pointer; }
+.alta-permiso:hover { background: var(--bg); border-color: var(--border); }
+.alta-permiso-on .dest-check { background: var(--accent); border-color: var(--accent); color: var(--surface); }
 .alta-permiso-que { font-size: var(--txt-md); font-weight: 500; color: var(--text); }
+
 /* Un permiso que no viene del rol se marca: dentro de un mes, la unica forma de
    saber por que esta persona puede algo raro es que lo diga la pantalla. */
 .pastilla-especial {
@@ -6025,63 +6037,36 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   font-weight: 600;
 }
 
-/* El administrador de estados de proyecto (bloque 4). Una fila por estado: el
-   nombre editable arriba con su clave al lado, y el significado abajo. La clave
-   se ve y no se toca — es lo que hace que las reglas y los proyectos ya
-   cargados sigan encontrandose. */
-.ctrl-leyenda-cabeza { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
-.estado-fila { padding: 8px 0; border-bottom: .5px solid var(--border); }
-.estado-fila-arriba { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
-.estado-nombre {
-  font-size: var(--txt-md);
-  font-weight: 600;
-  min-width: 150px;
-  height: 24px;
+/* --------------------------------------------------------- WA Personal */
+.wap-filtros {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 7px 8px;
+  border-bottom: .5px solid var(--border);
 }
+.wap-chat-acciones { display: flex; gap: 5px; align-items: center; margin-left: auto; }
+
+/* ------------------------------------------ Administrador de estados */
+.ctrl-leyenda-cabeza { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.estado-fila { padding: 9px 0; border-bottom: .5px solid var(--border); }
+.estado-fila-arriba { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+.estado-nombre { font-size: var(--txt-md); font-weight: 600; min-width: 160px; height: 24px; }
 .estado-clave {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: var(--txt-sm);
   color: var(--hint);
   background: var(--bg);
-  padding: 1px 5px;
-  border-radius: 2px;
+  padding: 1px 6px;
+  border-radius: 8px;
 }
 .estado-significado { width: 100%; font-size: var(--txt-md); resize: vertical; }
 
-/* WA Personal: los filtros rapidos y la etiqueta personal/trabajo (bloque 6).
-   "No agendados" contesta la pregunta con la que se abre esta pantalla: con
-   quien estoy hablando que el CRM no conoce. */
-.wap-filtros {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  padding: 6px 8px;
-  border-bottom: .5px solid var(--border);
-}
-.wap-tipo {
-  font-size: var(--txt-xs);
-  padding: 0 4px;
-  border-radius: 2px;
-  white-space: nowrap;
-}
-.wap-tipo-personal { color: var(--info); background: var(--info-light); }
-.wap-tipo-trabajo { color: var(--accent); background: var(--accent-light); }
-.wap-chat-acciones {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  align-items: center;
-  width: 100%;
-  padding-top: 5px;
-}
-
-/* 7.6 · Confirmar asistencia desde la vista Lista. Dos botones chicos y solo
-   cuando falta el dato: una reunion ya confirmada no necesita que le pidan que
-   se la confirme. El ancho fijo aunque esten vacios mantiene las columnas
-   alineadas cuando algunas filas los tienen y otras no. */
-.agenda-lista-confirmar { display: inline-flex; gap: 2px; width: 34px; flex: 0 0 34px; }
+/* -------------------------------------------- Agenda: confirmar asistencia */
+.agenda-lista-confirmar { display: inline-flex; gap: 3px; width: 34px; flex: 0 0 34px; }
 .agenda-lista-confirmar button {
-  width: 16px;
+  width: 15px;
   height: 16px;
   padding: 0;
   font-size: var(--txt-xs);
@@ -6089,16 +6074,55 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   color: var(--hint);
   background: var(--surface);
   border: .5px solid var(--border);
-  border-radius: 2px;
+  border-radius: 5px;
   cursor: pointer;
 }
-.agenda-lista-confirmar button:first-child:hover { color: var(--success); border-color: var(--success); }
-.agenda-lista-confirmar button:last-child:hover { color: var(--error); border-color: var(--error); }
+.agenda-lista-confirmar button:first-child:hover { color: var(--success); border-color: var(--success); background: var(--success-light); }
+.agenda-lista-confirmar button:last-child:hover { color: var(--error); border-color: var(--error); background: var(--error-light); }
 
-/* 7.3 · Lo demas del Google Calendar propio dentro de la grilla. Se distingue
-   de una reunion del CRM sin gritar: mismo alto, borde punteado y sin relleno
-   fuerte. Tiene que verse que el horario esta tomado y que eso no se toca
-   desde aca. */
+/* Los dos interruptores de WA Personal y las dos acciones de cada chat.
+   Todo con el radio y el verde del producto. Las acciones tienen ancho fijo y
+   estan siempre: cuando aparecian recien al elegir el chat, empujaban el
+   nombre fuera de la fila y se veian cuatro botones sin saber con quien se
+   estaba hablando. */
+.wap-filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 9px;
+  font-size: var(--txt-sm);
+  color: var(--muted);
+  background: var(--bg);
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.wap-filtro:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent-br); }
+.wap-filtro-on { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 600; }
+
+.wap-accion {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font-size: var(--txt-sm);
+  line-height: 1;
+  color: var(--hint);
+  background: transparent;
+  border: .5px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.wap-chat:hover .wap-accion { border-color: var(--border); background: var(--surface); }
+.wap-accion:hover { color: var(--accent); border-color: var(--accent-br); background: var(--accent-light); }
+.wap-accion-fu:hover { color: var(--accent); }
+.wap-accion:disabled { opacity: .35; cursor: default; }
+
+/* Lo demas del Google Calendar dentro de la grilla. Se distingue de una reunion
+   del CRM sin gritar: mismo alto, borde punteado y sin relleno fuerte. Tiene
+   que verse que el horario esta tomado y que eso no se toca desde aca. */
 .agenda-evento-calendario {
   background: var(--bg);
   border: .5px dashed var(--border);
@@ -6106,3 +6130,27 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   cursor: default;
 }
 .agenda-evento-calendario .agenda-evento-nombre { font-weight: 400; }
+
+/* Los tres pasos de destacar un mensaje: idioma, para quien, cuales. El numero
+   no es adorno — el orden es la correccion: antes se elegia el mensaje primero
+   y el alcance al final, o sea a ciegas. */
+.dest-paso {
+  display: grid;
+  grid-template-columns: 18px 74px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+.dest-paso + .dest-paso { border-top: .5px solid var(--border); }
+.dest-paso-n {
+  display: grid;
+  place-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: var(--txt-xs);
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-light);
+  border-radius: 8px;
+}
+.dest-paso-control { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-left: 0; }

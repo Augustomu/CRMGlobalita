@@ -120,7 +120,26 @@ routerAdd('GET', '/api/google/callback', (e) => {
   if (!fila.get('calendario')) fila.set('calendario', 'primary');
   $app.save(fila);
 
-  return volver('conectado');
+  // Y se trae el historico ACA MISMO, sin que nadie apriete nada.
+  //
+  // Estuvo como boton y estaba mal pensado: conectar un calendario y ver la
+  // agenda vacia hasta acordarse de apretar otra cosa es pedirle a la persona
+  // que sepa como funciona esto por dentro. Conectar el calendario ES pedir
+  // que se vea el calendario.
+  //
+  // Un ano para atras. Si falla —Google lento, demasiados eventos— la conexion
+  // ya quedo guardada y el reloj de cada cinco minutos sigue andando: el
+  // historico se puede volver a pedir, la conexion no se pierde por esto.
+  try {
+    const desde = new Date(Date.now() - 365 * 24 * 3600 * 1000).toISOString();
+    const hasta = new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString();
+    const vistos = g.traerHistorico(fila, desde, hasta);
+    $app.logger().info('google-callback', 'historico', vistos);
+    return volver('conectado, ' + vistos + ' eventos traidos');
+  } catch (err) {
+    $app.logger().error('google-callback', 'historico', String(err));
+    return volver('conectado, pero el historico no se pudo traer todavia');
+  }
 });
 
 routerAdd(

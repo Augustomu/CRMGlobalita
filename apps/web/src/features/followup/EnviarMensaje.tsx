@@ -85,15 +85,17 @@ export function EnviarMensaje({
    * mensaje que sirve para las diez cuentas había que destacarlo diez veces, y
    * uno que sirve sólo para SENG terminaba apareciendo en las de Globalita.
    */
-  const [alcanceNuevo, setAlcanceNuevo] = useState<'cuenta' | 'casa' | 'todas'>('cuenta');
+  const [alcanceNuevo, setAlcanceNuevo] = useState<'cuenta' | 'globalita' | 'seng' | 'todas'>(
+    'cuenta',
+  );
   /**
-   * 2.2 · Si se muestran sólo los del idioma del chat.
+   * El idioma que se está mirando DENTRO del modal.
    *
-   * Prendido por defecto: destacar un mensaje que no existe en portugués para
-   * un lead brasileño es cargar un chip que al tocarlo va a poner el texto en
-   * español. El error se descubre después de mandarlo.
+   * Es propio y no el del mensaje: elegir «ver los de portugués» para destacar
+   * uno no tiene por qué cambiar el idioma con el que sale el mensaje que se
+   * está escribiendo. Arranca en el del chat, que es lo más probable.
    */
-  const [soloEsteIdioma, setSoloEsteIdioma] = useState(true);
+  const [idiomaModal, setIdiomaModal] = useState<Idioma>(idioma);
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   /** Qué chip se está arrastrando, para reordenar. */
   const [arrastrando, setArrastrando] = useState<string | null>(null);
@@ -327,25 +329,29 @@ export function EnviarMensaje({
       <div className="enviar-cabecera">
         <span className="colapsable-titulo">Enviar mensaje</span>
 
-        {/* 1.5 · El idioma en dos letras, acá y en ningún otro lado. Antes
-            decía «Idioma: PT» abajo, en la fila de la secuencia, y el mismo
-            dato aparecía otra vez al final de los destacados. */}
-        <select
-          className="enviar-idioma-corto"
-          value={idioma}
-          onChange={(e) => setIdioma(e.target.value as Idioma)}
-          title="El idioma con el que sale el mensaje. Sale del país del lead; se puede cambiar."
-        >
+        {/* 1.5 · El idioma en dos letras, acá y en ningún otro lado.
+            Es el MISMO control segmentado que usa el resto del CRM
+            (`selector-idioma`, radio 8px, verde de acento). La primera versión
+            era un desplegable cuadrado y desentonaba: cada cosa nueva usa los
+            controles que ya existen, no unos parecidos. */}
+        <div className="selector-idioma enviar-idiomas" role="group" aria-label="Idioma">
           {IDIOMAS.map((i) => (
-            <option key={i} value={i}>
+            <button
+              key={i}
+              type="button"
+              className={idioma === i ? 'idioma-on' : 'idioma-off'}
+              title={`Mandar en ${i.toUpperCase()}`}
+              onClick={() => setIdioma(i)}
+            >
               {i.toUpperCase()}
-            </option>
+            </button>
           ))}
-        </select>
+        </div>
 
         {/* 1.2 · El switch de canal. Lo que se elige acá es POR DÓNDE SALE:
-            decide el mensaje que se registra y a dónde lleva la flecha. */}
-        <div className="enviar-switch" role="group" aria-label="Canal">
+            decide el mensaje que se registra y a dónde lleva la flecha.
+            Mismo control segmentado que el idioma y que el resto del CRM. */}
+        <div className="selector-idioma enviar-canal" role="group" aria-label="Canal">
           {(['linkedin', 'whatsapp'] as const).map((c) => {
             const sinTelefono = c === 'whatsapp' && !perfil?.telefono;
             return (
@@ -353,7 +359,7 @@ export function EnviarMensaje({
                 key={c}
                 type="button"
                 disabled={sinTelefono}
-                className={`enviar-switch-boton ${canal === c ? `enviar-switch-on enviar-switch-${c}` : ''}`}
+                className={canal === c ? 'idioma-on' : 'idioma-off'}
                 title={
                   sinTelefono
                     ? 'Este lead no tiene teléfono cargado'
@@ -526,7 +532,7 @@ export function EnviarMensaje({
             // lo menos destructivo. Elegir «todas» sin querer le pone el chip
             // a todo el equipo.
             setAlcanceNuevo('cuenta');
-            setSoloEsteIdioma(true);
+            setIdiomaModal(idioma);
             setListaAbierta(true);
           }}
         >
@@ -551,36 +557,69 @@ export function EnviarMensaje({
               </button>
             </div>
             <div className="overlay-cuerpo dest-modal-cuerpo">
-              <span className="campo-ayuda">
-                Marcá los que querés tener a mano. Quedan como chips arriba, y solo para{' '}
-                <b>{cuenta || 'esta cuenta'}</b>.
-              </span>
+              {/*
+                EL ORDEN IMPORTA, Y ANTES ESTABA AL REVÉS.
 
-              {/* 2.2 · Por defecto, sólo los que existen en el idioma del chat. */}
-              <div className="dest-filtro">
-                <button
-                  type="button"
-                  className={`chip ${soloEsteIdioma ? 'chip-on' : ''}`}
-                  onClick={() => setSoloEsteIdioma(true)}
-                  title="Sólo los mensajes que tienen texto en el idioma de este chat"
-                >
-                  sólo {idioma.toUpperCase()}
-                </button>
-                <button
-                  type="button"
-                  className={`chip ${soloEsteIdioma ? '' : 'chip-on'}`}
-                  onClick={() => setSoloEsteIdioma(false)}
-                  title="Todos los mensajes del repositorio, tengan o no texto en este idioma"
-                >
-                  todos
-                </button>
-                <span className="campo-ayuda">
-                  el idioma sale del chat — cambialo arriba y esta lista cambia sola
+                La primera versión mostraba la lista de mensajes primero, el
+                alcance abajo del todo, y en el medio un filtro de idioma de dos
+                botones —«sólo EN» / «todos»— que no decía qué iba a pasar. Se
+                elegía a ciegas y la pregunta importante aparecía al final.
+
+                Ahora son tres pasos, en el orden en que se piensan: en qué
+                idioma, para quién, y recién entonces cuál.
+              */}
+              <div className="dest-paso">
+                <span className="dest-paso-n">1</span>
+                <span className="campo-label">Idioma</span>
+                <div className="selector-idioma dest-paso-control">
+                  {IDIOMAS.map((i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className={idiomaModal === i ? 'idioma-on' : 'idioma-off'}
+                      onClick={() => setIdiomaModal(i)}
+                    >
+                      {i.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="dest-paso">
+                <span className="dest-paso-n">2</span>
+                <span className="campo-label">Dónde vale</span>
+                <div className="dest-paso-control chips">
+                  {(
+                    [
+                      ['cuenta', cuenta || 'esta cuenta', `Sólo la cuenta ${cuenta || 'actual'}`],
+                      ['globalita', 'Globalita', 'Todas las cuentas de la línea de IA'],
+                      ['seng', 'SENG', 'Todas las cuentas de inversiones'],
+                      ['todas', 'todas', 'Las diez cuentas, de las dos casas'],
+                    ] as const
+                  ).map(([valor, texto, ayuda]) => (
+                    <button
+                      key={valor}
+                      type="button"
+                      className={`chip ${alcanceNuevo === valor ? 'chip-on' : ''}`}
+                      title={ayuda}
+                      onClick={() => setAlcanceNuevo(valor)}
+                    >
+                      {texto}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="dest-paso">
+                <span className="dest-paso-n">3</span>
+                <span className="campo-label">Cuáles</span>
+                <span className="campo-ayuda dest-paso-control">
+                  sólo los que tienen texto en {idiomaModal.toUpperCase()}
                 </span>
               </div>
 
               {plantillas
-                .filter((m) => !soloEsteIdioma || Boolean(m.textos?.[idioma]))
+                .filter((m) => Boolean(m.textos?.[idiomaModal]))
                 .map((m) => {
                 const marcado = marcados.has(m.id);
                 const alcance = leerAlcance(m.destacado);
@@ -610,7 +649,7 @@ export function EnviarMensaje({
                         )}
                       </span>
                       <span className="campo-ayuda dest-preview">
-                        {(m.textos?.[idioma] ?? m.textos?.es ?? '').slice(0, 90) || 'sin texto'}
+                        {(m.textos?.[idiomaModal] ?? '').slice(0, 90) || 'sin texto'}
                       </span>
                     </span>
                   </button>
@@ -620,37 +659,13 @@ export function EnviarMensaje({
               {!plantillas.length && (
                 <span className="campo-ayuda">Todavía no hay mensajes en el repositorio.</span>
               )}
-              {plantillas.length > 0 &&
-                soloEsteIdioma &&
-                !plantillas.some((m) => m.textos?.[idioma]) && (
-                  <span className="campo-ayuda">
-                    Ninguno de los {plantillas.length} mensajes tiene texto en{' '}
-                    {idioma.toUpperCase()}. Cambiá el idioma arriba, o mirá «todos».
-                  </span>
-                )}
-
-              {/* 2.1 · Dónde vale. Se elige ANTES de guardar y se aplica a los
-                  que se acaban de marcar; los que ya estaban no se tocan. */}
-              <div className="dest-alcance">
-                <span className="campo-label">Destacar en</span>
-                {(
-                  [
-                    ['cuenta', cuenta || 'esta cuenta', `Sólo la cuenta ${cuenta || 'actual'}`],
-                    ['casa', casa ? `toda ${casa}` : 'esta casa', 'Todas las cuentas de esta línea de negocio'],
-                    ['todas', 'todas las cuentas', 'Las diez cuentas, de las dos casas'],
-                  ] as const
-                ).map(([valor, texto, ayuda]) => (
-                  <button
-                    key={valor}
-                    type="button"
-                    className={`chip ${alcanceNuevo === valor ? 'chip-on' : ''}`}
-                    title={ayuda}
-                    onClick={() => setAlcanceNuevo(valor)}
-                  >
-                    {texto}
-                  </button>
-                ))}
-              </div>
+              {plantillas.length > 0 && !plantillas.some((m) => m.textos?.[idiomaModal]) && (
+                <span className="campo-ayuda">
+                  Ninguno de los {plantillas.length} mensajes del repositorio tiene texto en{' '}
+                  {idiomaModal.toUpperCase()}. Elegí otro idioma arriba, o cargalo desde el
+                  Repositorio de mensajes.
+                </span>
+              )}
 
               <div className="dest-modal-pie">
                 <span className="campo-ayuda tabular">{marcados.size} elegidos</span>
@@ -672,9 +687,11 @@ export function EnviarMensaje({
                       const despues = quiere
                         ? alcanceNuevo === 'todas'
                           ? { tipo: 'todas' as const }
-                          : alcanceNuevo === 'casa' && casa
-                            ? { tipo: 'casa' as const, casa }
-                            : conCuenta(antes, cuenta)
+                          : alcanceNuevo === 'globalita'
+                            ? { tipo: 'casa' as const, casa: 'globalita' as const }
+                            : alcanceNuevo === 'seng'
+                              ? { tipo: 'casa' as const, casa: 'seng' as const }
+                              : conCuenta(antes, cuenta)
                         : sinCuenta(antes, cuenta, abrevs);
                       await pb
                         .collection('plantilla')

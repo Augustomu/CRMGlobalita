@@ -12,20 +12,19 @@ interface ChatRecord {
   telefono: string;
   no_leido: boolean;
   mensajes: MensajeChat[] | null;
-  /** Personal o de trabajo. Vacío = todavía no se clasificó (§7.9). */
-  tipo: 'personal' | 'trabajo' | '';
 }
 
-/** Los filtros rápidos de la columna de chats. */
-type FiltroChat = 'todos' | 'sin_leer' | 'no_agendados' | 'personal' | 'trabajo';
-
-const NOMBRE_FILTRO: Record<FiltroChat, string> = {
-  todos: 'todos',
-  sin_leer: 'sin leer',
-  no_agendados: 'no agendados',
-  personal: 'personal',
-  trabajo: 'trabajo',
-};
+/**
+ * Los dos filtros de la columna de chats.
+ *
+ * Son dos y son interruptores, no una lista de opciones: apagarlos ES «todos»,
+ * así que un botón «todos» sería un tercero para decir lo mismo.
+ *
+ * «Personal» y «trabajo» estuvieron y se sacaron el 09/09: los de trabajo se
+ * mueven a Follow-up, o sea que lo que queda acá ya es lo personal. Clasificar
+ * a mano lo que la estructura ya separa es trabajo que no cambia nada.
+ */
+type FiltroChat = 'sin_leer' | 'no_agendados';
 
 interface EntranteRecord {
   id: string;
@@ -98,7 +97,7 @@ export function WaPersonal({ onIrAlLead }: Props) {
     }
   });
   const [chats, setChats] = useState<ChatRecord[]>([]);
-  const [filtro, setFiltro] = useState<FiltroChat>('todos');
+  const [filtros, setFiltros] = useState<Set<FiltroChat>>(new Set());
   const [marcando, setMarcando] = useState<string | null>(null);
   /**
    * Los teléfonos que YA existen como lead.
@@ -157,25 +156,23 @@ export function WaPersonal({ onIrAlLead }: Props) {
 
   // Los que YA se rutearon solos: se avisa, no se pide nada.
   const visibles = useMemo(() => {
-    if (filtro === 'todos') return chats;
-    if (filtro === 'sin_leer') return chats.filter((c) => c.no_leido);
-    if (filtro === 'personal') return chats.filter((c) => c.tipo === 'personal');
-    if (filtro === 'trabajo') return chats.filter((c) => c.tipo === 'trabajo');
-    return chats.filter((c) => !telefonosEnLaBase.has(ultimosOcho(c.telefono)));
-  }, [chats, filtro, telefonosEnLaBase]);
-
-  /** 6.2 · Marca el chat como personal o de trabajo; vacío lo deja sin clasificar. */
-  async function marcarTipo(c: ChatRecord, tipo: 'personal' | 'trabajo' | '') {
-    setMarcando(c.id);
-    try {
-      await pb.collection('chat_personal').update(c.id, { tipo });
-      setChats((v) => v.map((x) => (x.id === c.id ? { ...x, tipo } : x)));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setMarcando(null);
+    // Los filtros se acumulan: sin leer Y no agendados es una pregunta legítima
+    // —«¿a quién le debo respuesta que además no tengo cargado?»—.
+    let v = chats;
+    if (filtros.has('sin_leer')) v = v.filter((c) => c.no_leido);
+    if (filtros.has('no_agendados')) {
+      v = v.filter((c) => !telefonosEnLaBase.has(ultimosOcho(c.telefono)));
     }
-  }
+    return v;
+  }, [chats, filtros, telefonosEnLaBase]);
+
+  const alternar = (f: FiltroChat) =>
+    setFiltros((s) => {
+      const n = new Set(s);
+      if (n.has(f)) n.delete(f);
+      else n.add(f);
+      return n;
+    });
 
   /** 6.3 · Devolverlo a «sin leer» para retomarlo más tarde. */
   async function marcarSinLeer(c: ChatRecord) {
@@ -279,6 +276,11 @@ export function WaPersonal({ onIrAlLead }: Props) {
           <span className="campo-ayuda tabular al-final">{chats.length} chats</span>
         </div>
 
+        {/* El triage de números desconocidos SÓLO bajo «no agendados».
+            Antes estaba siempre arriba, empujando la lista de chats hacia
+            abajo con una sección que la mayoría de los días está vacía. Es
+            justo lo que ese filtro pregunta, así que vive ahí. */}
+        {filtros.has('no_agendados') && (
         <div className="wap-triage">
           {rutedos.length > 0 && (
             <div className="wap-auto">
@@ -395,36 +397,36 @@ export function WaPersonal({ onIrAlLead }: Props) {
             <div className="wap-vacio">sin números nuevos por identificar</div>
           )}
         </div>
+        )}
 
-        {/* 6.1, 6.2, 6.3 · Los filtros rápidos. «No agendados» es el que
-            contesta la pregunta con la que se abre esta pantalla: con quién
-            estoy hablando que el CRM no conoce. */}
+        {/* Los dos interruptores. Apagados es «todos», así que no hay un botón
+            «todos»: sería un tercero para decir lo mismo. */}
         <div className="wap-filtros">
-          {(['todos', 'sin_leer', 'no_agendados', 'personal', 'trabajo'] as const).map((f) => {
-            const cuantos =
-              f === 'todos'
-                ? chats.length
-                : f === 'sin_leer'
-                  ? chats.filter((c) => c.no_leido).length
-                  : f === 'no_agendados'
-                    ? chats.filter((c) => !telefonosEnLaBase.has(ultimosOcho(c.telefono))).length
-                    : chats.filter((c) => c.tipo === f).length;
-            return (
-              <button
-                key={f}
-                type="button"
-                className={`chip ${filtro === f ? 'chip-on' : ''}`}
-                onClick={() => setFiltro(f)}
-                title={
-                  f === 'no_agendados'
-                    ? 'Números con los que hablás y que no existen como lead en el CRM'
-                    : undefined
-                }
-              >
-                {NOMBRE_FILTRO[f]} <span className="tabular">{cuantos}</span>
-              </button>
-            );
-          })}
+          <button
+            type="button"
+            className={`wap-filtro ${filtros.has('sin_leer') ? 'wap-filtro-on' : ''}`}
+            title="Sólo los que no leíste"
+            onClick={() => alternar('sin_leer')}
+          >
+            <span aria-hidden="true">●</span>
+            <span className="tabular">{chats.filter((c) => c.no_leido).length}</span>
+          </button>
+          <button
+            type="button"
+            className={`wap-filtro ${filtros.has('no_agendados') ? 'wap-filtro-on' : ''}`}
+            title="Sólo los números que no existen como lead en el CRM"
+            onClick={() => alternar('no_agendados')}
+          >
+            <span aria-hidden="true">👤</span>
+            <span className="tabular">
+              {chats.filter((c) => !telefonosEnLaBase.has(ultimosOcho(c.telefono))).length}
+            </span>
+          </button>
+          <span className="campo-ayuda">
+            {filtros.size === 0
+              ? `${chats.length} chats`
+              : `${visibles.length} de ${chats.length}`}
+          </span>
         </div>
 
         <div className="wap-chats">
@@ -439,50 +441,31 @@ export function WaPersonal({ onIrAlLead }: Props) {
                 <span className="wap-chat-nombre">{c.nombre}</span>
                 <span className="wap-chat-ultimo">{ultimoTexto(c.mensajes ?? [])}</span>
               </div>
-              {/* 6.2 · Personal o trabajo. Es una etiqueta, no un estado: no
-                  mueve nada ni dispara nada, sólo sirve para filtrar. Mover a
-                  Follow-up sigue siendo otra cosa —crea un lead y entra en la
-                  cadencia— y hay gente de trabajo a la que uno no prospecta. */}
-              {c.tipo && <span className={`wap-tipo wap-tipo-${c.tipo}`}>{c.tipo}</span>}
-
-              {activo?.id === c.id && (
-                <div className="wap-chat-acciones" onClick={(ev) => ev.stopPropagation()}>
-                  {(['personal', 'trabajo'] as const).map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      className={`boton-mini ${c.tipo === t ? 'chip-on' : ''}`}
-                      disabled={marcando === c.id}
-                      title={`Marcar este chat como ${t}`}
-                      onClick={() => void marcarTipo(c, c.tipo === t ? '' : t)}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                  {/* 6.3 · Volver a dejarlo sin leer, para retomarlo después. */}
-                  {!c.no_leido && (
-                    <button
-                      type="button"
-                      className="boton-mini"
-                      disabled={marcando === c.id}
-                      title="Dejarlo sin leer para volver más tarde"
-                      onClick={() => void marcarSinLeer(c)}
-                    >
-                      sin leer
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className="wap-mover-mini"
-                    title="Es de trabajo: mover a follow-up"
-                    onClick={() => {
-                      void moverAFollowup(c.telefono, c.nombre, c.cuenta, undefined, c.id);
-                    }}
-                  >
-                    Mover a FU
-                  </button>
-                </div>
-              )}
+              {/* Las dos acciones, SIEMPRE visibles y con ancho fijo.
+                  Antes aparecían recién al elegir el chat y empujaban el nombre
+                  fuera de la fila: se veían cuatro botones y no se veía con
+                  quién se estaba hablando. */}
+              <div className="wap-chat-acciones" onClick={(ev) => ev.stopPropagation()}>
+                <button
+                  type="button"
+                  className="wap-accion"
+                  disabled={marcando === c.id}
+                  title={c.no_leido ? 'Ya está sin leer' : 'Dejarlo sin leer para volver después'}
+                  onClick={() => void marcarSinLeer(c)}
+                >
+                  ●
+                </button>
+                <button
+                  type="button"
+                  className="wap-accion wap-accion-fu"
+                  title="Mover a Follow-up: le crea un lead y entra en la cadencia"
+                  onClick={() => {
+                    void moverAFollowup(c.telefono, c.nombre, c.cuenta, undefined, c.id);
+                  }}
+                >
+                  ↗
+                </button>
+              </div>
             </div>
           ))}
           {visibles.length === 0 && chats.length > 0 && (

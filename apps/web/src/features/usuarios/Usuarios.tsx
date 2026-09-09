@@ -907,27 +907,31 @@ function AltaUsuario({ onCerrar, onCreado }: { onCerrar: () => void; onCreado: (
                       const activo = efectivos[clave];
                       const especial = clave in ajustes;
                       return (
-                        <label key={clave} className="alta-permiso">
-                          <input
-                            type="checkbox"
-                            checked={activo}
-                            onChange={() =>
-                              setAjustes((a) => {
-                                const preset = permisosEfectivos({ rol, permisos: {} })[clave];
-                                const siguiente = { ...a };
-                                // Si el valor nuevo coincide con el del preset,
-                                // deja de ser un ajuste: se saca del objeto en
-                                // vez de guardarlo igual al preset.
-                                if (!activo === preset) delete siguiente[clave];
-                                else siguiente[clave] = !activo;
-                                return siguiente;
-                              })
-                            }
-                          />
+                        <button
+                          key={clave}
+                          type="button"
+                          className={`alta-permiso ${activo ? 'alta-permiso-on' : ''}`}
+                          onClick={() =>
+                            setAjustes((a) => {
+                              const preset = permisosEfectivos({ rol, permisos: {} })[clave];
+                              const siguiente = { ...a };
+                              // Si el valor nuevo coincide con el del preset,
+                              // deja de ser un ajuste: se saca del objeto en vez
+                              // de guardarlo igual al preset.
+                              if (!activo === preset) delete siguiente[clave];
+                              else siguiente[clave] = !activo;
+                              return siguiente;
+                            })
+                          }
+                        >
+                          {/* El mismo tilde que el repositorio de mensajes. La
+                              primera versión usaba un checkbox del navegador,
+                              que en Windows sale AZUL: el CRM es verde. */}
+                          <span className="dest-check">{activo ? '✓' : ''}</span>
                           <span className="alta-permiso-que">{EXPLICACION[clave].que}</span>
                           <span className="campo-ayuda">{EXPLICACION[clave].detalle}</span>
                           {especial && <span className="pastilla pastilla-especial">especial</span>}
-                        </label>
+                        </button>
                       );
                     })}
                   </div>
