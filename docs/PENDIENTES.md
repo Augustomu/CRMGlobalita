@@ -26,7 +26,7 @@ no de memoria.
 | 6 · WA Personal | 0 de 3 |
 | 7 · Agenda y Calendar | 2 de 7 |
 | 8 · Integraciones y worker | 1 de 5 |
-| 9 · Producción | 0 de 4 |
+| 9 · Producción | 1 de 4 |
 | 10 · Los datos | 5 de 10 |
 
 **El orden que conviene**: bloque 0 (lo que hoy miente en pantalla), después 1 y
@@ -183,9 +183,20 @@ mitad de camino), y recién ahí el worker (bloque 8), del que cuelga el resto.
 
 ## 9 · Producción
 
-- [ ] ⚠️ **9.1 · Hay datos reales dentro del bundle, y el repo es público.**
-      `docs/_bundle/CRM de prospeccion.html` trae teléfonos y un correo de
-      personas reales. Hay que re-exportarlo enmascarado.
+- [x] **9.1 · Los datos reales salieron del bundle y del historial.** Eran 6
+      teléfonos, 2 nombres y 1 correo de contactos de verdad, usados como
+      datos de ejemplo en las maquetas. Se reemplazaron por inventados y el
+      historial de git se reescribió: el bundle viejo ya no está en ningún
+      commit del remoto, verificado después del push.
+      `docs/enmascarar.mjs` lo deja resuelto para la próxima exportación —
+      va a volver a pasar, porque las maquetas salen con lo que haya en
+      pantalla—: compara contra la base en vez de adivinar, y sin base se
+      niega a correr antes que dar un falso «está limpio».
+      ⚠️ **Dos cosas siguen siendo ciertas.** GitHub puede conservar el
+      objeto viejo un tiempo aunque ya no lo alcance ninguna rama; para
+      borrarlo del todo hay que pedírselo a su soporte. Y lo que estuvo
+      público, estuvo público: esto corta hacia adelante, no borra lo que
+      alguien ya haya clonado.
 - [ ] **9.2 · SMTP de Hostinger** (`deploy/PASO-A-PASO.md`, paso 4.5). Sin eso,
       dar de alta a alguien falla.
 - [ ] **9.3 · El deploy no se hizo.** `deploy/publicar.sh 45.90.108.64` necesita
