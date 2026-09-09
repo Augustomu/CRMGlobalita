@@ -2731,12 +2731,100 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.agenda-evento-asistio { border-left-color: var(--success); background: var(--success-light); }
-.agenda-evento-asistio .agenda-evento-hora { color: var(--success); }
-.agenda-evento-no-asistio { border-left-color: var(--error); background: var(--error-light); }
-.agenda-evento-no-asistio .agenda-evento-hora { color: var(--error); }
-.agenda-evento-cancelada { border-left-color: var(--warning); background: var(--warning-light); }
-.agenda-evento-cancelada .agenda-evento-hora { color: var(--warning); }
+/* LOS CUATRO ESTADOS DE UNA REUNION DEL CRM.
+ *
+ * ACA ESTABA EL PROBLEMA que Augusto marco tres veces como «colores muy
+ * tenues», y no era cuestion de gusto: el nombre era INVISIBLE.
+ *
+ *   .agenda-evento .agenda-evento-nombre  ->  color: var(--surface)   #FAF7F1
+ *   .agenda-evento-asistio                ->  background: --success-light  #E8F5EB
+ *
+ * Texto casi blanco sobre fondo casi blanco: contraste 1.1:1, cuando lo
+ * minimo legible es 4.5:1. Lo mismo en «no asistio» (#FAF7F1 sobre #FEE2E2) y
+ * en «cancelada» (#FAF7F1 sobre #FEF6E3). De los cuatro estados, el UNICO que
+ * se leia era «programada», que es el solido verde.
+ *
+ * Los dos intentos anteriores de arreglar el contraste tocaron el fondo de la
+ * columna y el bloque del calendario. Nunca esto, que es donde estaba.
+ *
+ * LA SALIDA: los cuatro solidos, cada uno con su color, texto blanco. Es lo
+ * mas fuerte que pidio y ademas es coherente — «programada» ya era solido, y
+ * tener uno solido y tres tenues era la incoherencia de origen. */
+.agenda-evento-asistio {
+  background: var(--success);
+  border-left: 4px solid var(--accent-br);
+}
+.agenda-evento-no-asistio {
+  background: var(--error);
+  border-left: 4px solid var(--error-light);
+}
+.agenda-evento-cancelada {
+  background: var(--warning);
+  border-left: 4px solid var(--warning-light);
+}
+/* El texto de los tres: blanco sobre color, como en «programada». */
+.agenda-evento-asistio .agenda-evento-hora,
+.agenda-evento-no-asistio .agenda-evento-hora,
+.agenda-evento-cancelada .agenda-evento-hora { color: var(--surface); opacity: .85; }
+.agenda-evento-asistio .agenda-evento-nombre,
+.agenda-evento-no-asistio .agenda-evento-nombre,
+.agenda-evento-cancelada .agenda-evento-nombre { color: var(--surface); }
+
+/* LA LEYENDA DE LA GRILLA.
+ *
+ * La grilla dibuja seis clases de bloque y hasta hoy nada en pantalla decia
+ * cual era cual: habia que deducirlo. Es la unica idea del mockup del 09/09
+ * que se tomo tal cual, porque es la que resolvia un problema real — el resto
+ * de ese mockup bajaba el contraste, que es justo lo contrario de lo pedido.
+ *
+ * Va abajo y en 9px: es una referencia para mirar una vez, no un control. */
+.agenda-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 6px 8px 2px;
+  border-top: .5px solid var(--border);
+}
+.agenda-leyenda-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--txt-xs);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.agenda-leyenda-muestra {
+  width: 14px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.agenda-leyenda-programada { background: var(--accent); }
+.agenda-leyenda-asistio { background: var(--success); }
+.agenda-leyenda-no-asistio { background: var(--error); }
+.agenda-leyenda-cancelada { background: var(--warning); }
+.agenda-leyenda-vinculado { background: var(--accent); border-left: 3px solid var(--accent-br); }
+.agenda-leyenda-conectable { background: var(--info); border-left: 3px dashed var(--accent-br); }
+.agenda-leyenda-google {
+  border: .5px solid var(--info-br);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--info-light),
+    var(--info-light) 3px,
+    var(--surface) 3px,
+    var(--surface) 6px
+  );
+}
+.agenda-leyenda-ajeno {
+  border: .5px solid var(--border);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--bg),
+    var(--bg) 3px,
+    var(--surface) 3px,
+    var(--surface) 6px
+  );
+}
 
 /* Todo vive en el hover: no hay popup. Uno más obligaría a cerrarlo para
    seguir mirando la semana. */
@@ -6187,17 +6275,31 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
    Relleno solido y oscuro, como el del CRM pero en el gris azulado de «esto no
    se toca desde aca». Antes era un tono claro y a media pantalla de distancia
    no se distinguia del fondo. */
+/* EL ALMUERZO, EL FOCUS TIME, LA CLASE.
+ *
+ * Estos bloques estaban SOLIDOS y en el gris mas oscuro de la paleta, o sea
+ * eran lo mas fuerte de la pantalla despues del verde. Peleaban atencion con
+ * las reuniones, que son el trabajo. Ahi tambien estaba la sensacion de que
+ * «no se distingue nada»: no era que las reuniones fueran tenues, era que
+ * todo gritaba igual.
+ *
+ * Rayado, como el bloque ajeno: dice «este horario esta tomado» sin gastar
+ * color. El color queda entero para lo que se puede hacer algo. */
 .agenda-evento-calendario {
-  background: var(--info);
-  border: none;
+  border: .5px solid var(--info-br);
   border-left: 4px solid var(--info-br);
-  color: var(--surface);
   cursor: default;
-  box-shadow: 0 1px 3px rgb(0 0 0 / .18);
+  box-shadow: none;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--info-light),
+    var(--info-light) 5px,
+    var(--surface) 5px,
+    var(--surface) 10px
+  );
 }
-.agenda-evento-calendario:hover { background: var(--info); box-shadow: 0 2px 6px rgb(0 0 0 / .22); }
-.agenda-evento-calendario .agenda-evento-nombre { font-weight: 500; color: var(--surface); }
-.agenda-evento-calendario .agenda-evento-hora { color: var(--surface); opacity: .8; font-weight: 600; }
+.agenda-evento-calendario .agenda-evento-nombre { font-weight: 500; color: var(--muted); }
+.agenda-evento-calendario .agenda-evento-hora { color: var(--hint); opacity: 1; font-weight: 600; }
 
 /* §7.6 · UN EVENTO DE GOOGLE QUE YA TIENE LEAD.
    Deja de ser un bloque de horario: es una reunion con alguien, y se pinta con
@@ -6224,8 +6326,15 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
    error del boton de conectar telefono, que estaba y nadie encontro. */
 .agenda-evento-conectable {
   cursor: pointer;
+  /* Vuelve a ser solido: entre los bloques de Google es el unico donde hay
+     algo que hacer, y el rayado lo esconderia junto con el almuerzo. */
+  background: var(--info);
+  border: none;
   border-left: 4px dashed var(--accent-br);
+  box-shadow: 0 1px 3px rgb(0 0 0 / .18);
 }
+.agenda-evento-conectable .agenda-evento-nombre { color: var(--surface); font-weight: 500; }
+.agenda-evento-conectable .agenda-evento-hora { color: var(--surface); opacity: .8; }
 .agenda-evento-conectable:hover { box-shadow: 0 2px 6px rgb(0 0 0 / .26); }
 .agenda-evento-conectar {
   position: absolute;

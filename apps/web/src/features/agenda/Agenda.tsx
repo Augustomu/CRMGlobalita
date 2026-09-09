@@ -541,6 +541,34 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
               );
             })}
           </div>
+
+          {/*
+            La leyenda de la grilla (§7.6).
+
+            La grilla dibuja seis clases de bloque y hasta hoy nada decía cuál
+            era cuál: había que deducirlo del color. Es la única idea que se
+            tomó del mockup del 09/09 —el resto bajaba el contraste, que es lo
+            contrario de lo que hacía falta—.
+          */}
+          <div className="agenda-leyenda">
+            {(
+              [
+                ['programada', 'Programada'],
+                ['asistio', 'Asistió'],
+                ['no-asistio', 'No asistió'],
+                ['cancelada', 'Canceló'],
+                ['vinculado', 'De Google, con lead'],
+                ['conectable', 'De Google, sin lead'],
+                ['google', 'Bloqueo de Google'],
+                ['ajeno', 'Ocupado (otra agenda)'],
+              ] as const
+            ).map(([clave, texto]) => (
+              <span key={clave} className="agenda-leyenda-item">
+                <span className={`agenda-leyenda-muestra agenda-leyenda-${clave}`} />
+                {texto}
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
