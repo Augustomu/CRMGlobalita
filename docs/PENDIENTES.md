@@ -30,10 +30,10 @@ de memoria.
 | 5 · Usuarios | **3 de 3** |
 | 6 · WA Personal | **3 de 3** |
 | 7 · Agenda y Calendar | **7 de 7** |
-| 8 · Integraciones y worker | 1 de 5 |
-| 9 · Producción | 1 de 4 |
+| 8 · Integraciones y worker | 1 de 7 |
+| 9 · Producción | 1 de 7 |
 | 10 · Los datos | **7 de 10** |
-| 11 · Las copias | 1 de 2 |
+| 11 · Las copias | 1 de 3 |
 
 **Los bloques 0 a 7 están cerrados.** Lo que queda no es de programar: el
 worker (8) es la otra mitad del producto y tres de sus cuatro items esperan
@@ -187,9 +187,21 @@ agenda se inventó un idioma propio. Por eso podía estar aprobada por el cheque
       «Conectar un teléfono que ya está en la base». Si el número **no está en la
       base** no hay salida. Va el segundo camino **adentro del mismo modal**, no
       como un botón al lado: dos botones para lo mismo es la familia 7.
-- [ ] **Chats: filtrar los que no tengo agendados.** ❓ WA Personal **ya tiene**
-      ese filtro (`no_agendados`, `WaPersonal.tsx:289`). Necesito que me digas
-      si el que falta es en otra pantalla, o si el que hay no hace lo que esperás.
+- [x] ✅ **Chats: filtrar los que no tengo agendados — RESUELTO, y no era lo
+      que parecía.** Confirmó que es la pestaña de WhatsApp personal y pidió
+      «cargá chats demo sin agendar para testear el botón».
+      **El botón ya existía y funcionaba bien.** Lo que pasaba es que los cinco
+      chats de demo tenían teléfonos inventados (`5493415550001..05`) que no son
+      de ningún lead: o sea que **los cinco ya eran «no agendados»**. Apretar el
+      filtro dejaba 5 de 5 y parecía muerto.
+      Así que lo que faltaba era **lo contrario de lo pedido**: chats que SÍ
+      estén agendados, para que el filtro tenga algo que sacar. Se cargaron
+      cuatro con el teléfono de un lead real y dos más sin agendar.
+      **Ahora el filtro pasa de 11 a 7 chats**, y se ve trabajar.
+      🧹 **Para borrar cuando no hagan falta** (los borrados los hace Augusto):
+      `9u1wrqb9co5u34b` `ehuyv6wbqx2ziep` `4jaia8b9svjw5la`
+      `wvtipapkbrikpz9` `uro37cimtmkdp6x` `fg6lbce0cq4t7h5`.
+      Todos tienen «(demo)» en el nombre.
 - [ ] ❓ **Las flechas y la fecha de contacto, intercambiadas.** No encuentro
       flechas junto a una fecha de contacto en ninguna de las dos listas.
       Necesito saber qué pantalla es.
@@ -200,9 +212,20 @@ agenda se inventó un idioma propio. Por eso podía estar aprobada por el cheque
       La hipótesis: la vista Lista **sólo lista leads con seguimiento**, así que
       al elegir un perfil que no está en esa lista no se pinta nada y queda el
       anterior. Hay que reproducirlo antes de tocar.
-- [ ] ❓ **El texto raro de la columna 2, en la parte de reunión.** Dijiste que lo
-      ibas a pegar y quedó sin pegar. El chip de esa columna arma la fecha como
-      `DD/MM` y no debería salir raro, así que **pegámelo tal cual lo ves**.
+- [ ] ✅ **El texto raro de la columna 2 — CONTESTADO, y ubicado.** Lo pegó:
+      es el bloque `.reunion-evento` de `FechaReunion.tsx:711-729`, el que
+      aparece al abrir «Fecha de reunión». Son cuatro cosas apiladas: el título
+      que se va a crear («Jorge / Alejandro / Augusto»), el aviso de que falta el
+      link de LinkedIn, y **tres renglones explicando el formato del título** y
+      que el link es el del perfil y no el de Sales Navigator.
+      **El diagnóstico**: los tres renglones son material de enseñanza puesto
+      para siempre en la columna más apretada del CRM. Explican un formato que
+      **Augusto inventó**: después de la primera vez no informan, ocupan.
+      **La propuesta**: se quedan las dos cosas que sí dicen algo —el título de
+      muestra, que deja ver qué se va a crear antes de crearlo, y el aviso del
+      link faltante, que es accionable— y la explicación se va al `title` de la
+      etiqueta «Evento que se crea en Google Calendar». Sigue estando para quien
+      la necesite y deja de estar para quien no.
 - [ ] ❓ **Jorge, Marcelo y Fabio como últimos editores en el demo.** Busqué los
       tres nombres en las 26 tablas de la base: aparecen sólo como leads y
       perfiles reales, en ningún campo de «editor». No están en el código de la
@@ -414,8 +437,36 @@ página de revisión.
 - [ ] 🔒 **8.3 · LinkedIn.** Augusto tiene que pasar **las URLs de los perfiles**
       y **cuál es el Chrome que tiene conectado**. Sin eso no se puede empezar.
       Es donde está el 90% de la operación y lo que completa empresa e industria.
+      **Dijo el 09/09 que ya tiene las sesiones de Chrome abiertas.** Lo que hace
+      falta es el **mapa perfil de Chrome → cuenta**: cuál de los perfiles
+      («Default», «Profile 1», «Profile 2»…) tiene abierta cada una de las nueve
+      cuentas (AL, DL, FR, ED, AU, AMU, BR, AC, DP). Hoy la configuración
+      `navegador` tiene un solo valor, `{"lista":"Default"}`, así que **el CRM
+      cree que hay un solo Chrome**.
+      ⚠️ **Lo que NO hay que mandar por chat**: contraseñas, cookies de sesión,
+      tokens ni códigos de verificación. Con el nombre del perfil alcanza; la
+      sesión se usa desde el Chrome que ya está abierto en su máquina.
 - [ ] 🔒 **8.4 · Las listas de prospección.** Las tiene que pasar Augusto.
 - [ ] 🔒 **8.5 · WhatsApp con Baileys.** Una sola cuenta, según Augusto.
+      Pedido el 09/09: *«desarrollar la Baileys para conectar WhatsApp»*.
+      Lo que implica, en orden: `apps/worker/` desde cero (hoy está vacío) →
+      Baileys con la sesión en disco y el QR servido por una ruta del CRM →
+      la cola de envíos (`cola`, 0 filas) → el tope diario por cuenta (hoy 30,
+      configurable) → y el enganche con los chats entrantes, que ya tienen tabla
+      (`entrante`, 4 filas) y pantalla.
+      ⚠️ **Baileys no es una API oficial de WhatsApp.** Una cuenta que manda de
+      más se bloquea, y el tope diario existe por eso. Antes de conectar el
+      número de verdad hay que decidir **con qué número se prueba**.
+- [ ] **8.6 · Testear la integración con Calendar de punta a punta.** Pedido el
+      09/09. Hoy 8.1 está marcado hecho porque el código está y sincroniza —hay
+      1.769 eventos traídos y 3 ya vinculados a un lead— pero **nunca se probó
+      el circuito completo con una reunión de verdad**. La lista:
+      crear una reunión desde el CRM y ver que aparezca en Google con el título
+      «Nombre / Cuenta / Augusto» · que le llegue la invitación al invitado ·
+      moverla desde la agenda y ver que avise · **moverla desde Google y ver que
+      el CRM la traiga** (es el camino de vuelta, el que puede hacer eco) ·
+      cancelarla de los dos lados · y que el `syncToken` sobreviva a todo eso
+      sin volver a pedir los 5.000 eventos.
 
 ---
 
@@ -437,11 +488,54 @@ página de revisión.
       alguien ya haya clonado.
 - [ ] **9.2 · SMTP de Hostinger** (`deploy/PASO-A-PASO.md`, paso 4.5). Sin eso,
       dar de alta a alguien falla.
-- [ ] **9.3 · El deploy no se hizo.** `deploy/publicar.sh 45.90.108.64` necesita
-      el visto bueno de Augusto. Las credenciales de Google van en
-      `/etc/crm-globalita.env` con `chmod 600`, nunca en el repo.
+- [ ] **9.2 bis · Testear el envío de mail de verdad.** Pedido el 09/09. No
+      alcanza con configurar el SMTP: hay que **dar de alta a un usuario y ver
+      llegar la invitación**. Es el único camino de alta que existe —nunca se
+      fija una contraseña por nosotros, se manda el link— así que si el mail no
+      sale, **no se puede sumar a nadie al CRM**. Hoy hay 2 usuarios: Augusto y
+      uno de demo en estado «pendiente», que es justamente una invitación que
+      nunca se pudo mandar.
+      Se prueba contra una casilla propia antes que contra la de un colaborador.
+- [ ] ⚠️ **9.3 · Esto estaba desactualizado: el CRM YA ESTÁ EN PRODUCCIÓN.**
+      Verificado el 09/09: `https://crm.globalita.tech/api/health` devuelve
+      **200** y la raíz también. O sea que hay un PocketBase vivo en el VPS con
+      **su propia base**, separada de la de la PC.
+      Lo que falta ahora no es publicar: es **saber en qué estado está**.
+- [ ] **9.5 · Revisar que PocketBase de producción funcione bien.** Pedido el
+      09/09. Qué mirar: que el servicio arranque solo después de un reboot
+      (`crm-globalita.service`) · que la versión desplegada sea la de ahora y no
+      una de hace semanas · que las migraciones estén todas aplicadas —incluida
+      `1788604000_evento_con_lead`, la del vínculo evento↔lead— · que las reglas
+      de API sean las mismas que en local, sobre todo que `google_cuenta` siga
+      con **todas las reglas en `null`** para que el `refresh_token` no salga
+      nunca por la API · y **cuántos registros tiene**, que hoy no lo sabe nadie.
+- [ ] **9.6 · Revisar que el guardado de base de datos funcione.** Pedido el
+      09/09. `deploy/backup.sh` existe y está bien escrito —usa
+      `VACUUM INTO`, que copia sin parar el servicio ni arriesgar una copia a
+      medio escribir, y retiene 14 días— pero **nadie verificó que el cron esté
+      instalado y corriendo en el VPS**. Un script de backup que no corre es
+      peor que ninguno, porque uno cree que está cubierto.
+      Va con `deploy/traer-backup.sh`: bajar una copia y **abrirla**. Una copia
+      que no se restauró nunca es una copia que no se sabe si sirve.
 - [ ] **9.4 · Backups del VPS.** Un snapshot del proveedor cubre lo que las tres
       copias no cubren: que se rompa el servidor, no la PC.
+      **09/09 · Hostinger ofreció crear un snapshot manual del VPS 1961198.**
+      Tres cosas que definen la respuesta:
+      1. **Se conserva uno solo**: crear el nuevo **pisa el anterior**. Antes de
+         confirmar hay que saber si ya hay uno y de cuándo.
+      2. **Expira en 1 día.** No es un backup: es un botón de deshacer para algo
+         que uno está por hacer. Y sí hay algo por hacer —9.5 y 9.6—, así que
+         el momento es bueno.
+      3. ⚠️ **No cubre el CRM de la PC.** Los 242 leads, las 288 reuniones y los
+         1.769 eventos están en `.pb/pb_data` de la máquina de Augusto. De eso
+         se ocupan las copias por hora y Drive. **El snapshot protege el
+         servidor, no los contactos** — conviene tenerlo claro para no quedarse
+         tranquilo con la cobertura equivocada.
+      Lo que **sí** protege y no está en ningún otro lado: la base de producción,
+      la configuración de nginx y **`/etc/crm-globalita.env`, que tiene las
+      credenciales de Google**. Ese archivo ya se perdió una vez con el formateo.
+      → **La copia automática semanal es la que hay que dejar activa.** Es la de
+      largo plazo; el snapshot es puntual.
 
 ---
 
@@ -488,6 +582,10 @@ programadas de Windows.
       hora y deja una copia fechada en `~/globalita-backups/crm/`. Están las
       de las 17, 18, 19, 20 y 21 UTC, completas (sqlite + json + manifiesto),
       con `integrity=ok` y sin errores de claves foráneas.
+- [ ] **La copia del VPS no se verificó nunca.** Va con 9.6: el script está,
+      falta confirmar que el cron corra y que una copia bajada se abra. Las tres
+      copias que hoy funcionan —local por hora, GitHub y Drive— son todas **de la
+      base de la PC**. La base de producción no tiene ninguna verificada.
 - [ ] ⚠️ **La copia de Drive está congelada desde esta mañana.** `crm-snapshot`
       en `G:\Mi unidad\Globalita-Backup` es del **09/09 a las 14:42 UTC** y
       tiene **692 perfiles**; la base de ahora tiene 489. El script no la pisa
