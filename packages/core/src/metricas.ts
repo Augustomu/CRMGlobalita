@@ -8,7 +8,10 @@
 import type { LineaNegocio } from './permisos.ts';
 import { enSuZona } from './reunion.ts';
 
-export type EstadoReunion = 'pendiente' | 'asistio' | 'no-asistio' | 'cancelada' | 'reagendada';
+// El estado de la reunión se define UNA vez, en `reunion.ts`. Se reexporta
+// para no romper a quien ya lo importaba desde acá.
+export type { EstadoReunion } from './reunion.ts';
+import { NOMBRE_ESTADO_REUNION, type EstadoReunion } from './reunion.ts';
 
 export interface ReunionMedida {
   id: string;
@@ -97,12 +100,20 @@ export function delPeriodo(reuniones: ReunionMedida[], rango: Rango, hoy: string
 export interface Tarjetas {
   total: number;
   asistieron: number;
-  /** % sobre el total, entero. */
+  /** % sobre las que CONSTAN, no sobre el total. Ver `constan`. */
   pct_asistieron: number;
   no_asistio: number;
+  /**
+   * Ocurrieron pero nadie registró el resultado (el histórico recuperado).
+   *
+   * No se suman ni a asistieron ni a no_asistio: son las que no sabemos.
+   */
+  sin_dato: number;
+  /** Las que sí tienen resultado registrado: asistió + no asistió. */
+  constan: number;
   reagendadas: number;
   con_proyecto: number;
-  /** % de reuniones que terminaron en proyecto. */
+  /** % de reuniones que terminaron en proyecto, sobre el total. */
   conversion: number;
   empresas: number;
   /** Promedio por semana, con un decimal. */
@@ -113,18 +124,33 @@ function pct(parte: number, total: number): number {
   return total ? Math.round((parte / total) * 100) : 0;
 }
 
-/** Las ocho tarjetas de §7.11.2. */
+/** Las tarjetas de §7.11.2. */
 export function tarjetas(reuniones: ReunionMedida[], rango: Rango): Tarjetas {
   const total = reuniones.length;
   const asistieron = reuniones.filter((r) => r.estado === 'asistio').length;
+  const no_asistio = reuniones.filter((r) => r.estado === 'no-asistio').length;
+  const sin_dato = reuniones.filter((r) => r.estado === 'sin_dato').length;
   const con_proyecto = reuniones.filter((r) => r.proyecto).length;
   const semanas = (MESES_DE[rango] * 30.44) / 7;
+
+  /*
+   * El porcentaje de asistencia va sobre las que CONSTAN, no sobre el total.
+   *
+   * Con el histórico recuperado, la mayoría de las reuniones no tiene
+   * resultado registrado. Dividir por el total daría «41% asistieron» cuando
+   * lo que pasa es que del 59% restante no sabemos nada — un número que hace
+   * pensar que la mitad de la gente falta, y que llevaría a decidir sobre algo
+   * que nadie midió.
+   */
+  const constan = asistieron + no_asistio;
 
   return {
     total,
     asistieron,
-    pct_asistieron: pct(asistieron, total),
-    no_asistio: reuniones.filter((r) => r.estado === 'no-asistio').length,
+    pct_asistieron: pct(asistieron, constan),
+    no_asistio,
+    sin_dato,
+    constan,
     reagendadas: reuniones.filter((r) => r.estado === 'reagendada').length,
     con_proyecto,
     conversion: pct(con_proyecto, total),
@@ -216,6 +242,10 @@ function valorDe(r: ReunionMedida, por: Agrupador): string {
     return DIAS[d.getUTCDay()] ?? 'sin fecha';
   }
   if (por === 'franja') return franjaDe(local(r));
+  // El estado se agrupa por su nombre legible: con el valor crudo la barra
+  // decía «sin_dato», que es el nombre interno asomándose en una tabla que lee
+  // gente que no escribió el código.
+  if (por === 'estado') return NOMBRE_ESTADO_REUNION[r.estado] ?? r.estado;
   return (r[por] || '').trim();
 }
 

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { NOMBRE_ESTADO_REUNION } from '@crm/core/reunion';
 import {
   NOMBRE_AGRUPADOR,
   NOMBRE_RANGO,
@@ -60,10 +61,29 @@ export function Reuniones({ reuniones }: Props) {
     {
       n: t.asistieron,
       label: 'Asistieron',
-      detalle: `${t.pct_asistieron}% del total.`,
+      // Sobre las que CONSTAN, no sobre el total, y se dice cuál es el
+      // denominador. Con el histórico recuperado la mayoría no tiene resultado
+      // registrado: dividir por el total daría un porcentaje que parece medir
+      // ausentismo y en realidad mide lo que nadie anotó.
+      detalle:
+        t.sin_dato > 0
+          ? `${t.pct_asistieron}% de las ${t.constan} que constan.`
+          : `${t.pct_asistieron}% del total.`,
       color: 'var(--success)',
     },
     { n: t.no_asistio, label: 'No asistió', detalle: 'Agendadas y no ocurridas.', color: 'var(--error)' },
+    // La tarjeta sólo aparece cuando hay alguna: en una base sin histórico
+    // recuperado sería una tarjeta en cero contando algo que no existe.
+    ...(t.sin_dato > 0
+      ? [
+          {
+            n: t.sin_dato,
+            label: 'Sin dato',
+            detalle: 'Ocurrieron; nadie registró el resultado.',
+            color: 'var(--hint)',
+          },
+        ]
+      : []),
     { n: t.reagendadas, label: 'Reagendadas', detalle: 'Se movieron de fecha.', color: 'var(--warning)' },
     { n: t.con_proyecto, label: 'Con proyecto', detalle: 'Derivaron en un trabajo.', color: 'var(--info)' },
     {
@@ -216,7 +236,7 @@ export function Reuniones({ reuniones }: Props) {
               </div>
               <span className="ctrl-doble-2">{r.industria || '—'}</span>
               <span className="ctrl-doble-2">{r.genero || '—'}</span>
-              <span className={`ctrl-pastilla ctrl-reunion-${r.estado}`}>{r.estado}</span>
+              <span className={`ctrl-pastilla ctrl-reunion-${r.estado}`}>{NOMBRE_ESTADO_REUNION[r.estado] ?? r.estado}</span>
               <span className="ctrl-paso">{r.nota || '—'}</span>
             </div>
           ))}

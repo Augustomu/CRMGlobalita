@@ -47,12 +47,53 @@ test('§7.11.2 · las ocho tarjetas', () => {
 
   assert.equal(t.total, 4);
   assert.equal(t.asistieron, 2);
-  assert.equal(t.pct_asistieron, 50);
+  // Sobre las que CONSTAN (2 asistió + 1 no asistió), no sobre las 4: la
+  // reagendada se movió de fecha, no es una reunión que ocurrió con un
+  // resultado. Metida en el denominador bajaba la asistencia a 50%.
+  assert.equal(t.constan, 3);
+  assert.equal(t.pct_asistieron, 67);
   assert.equal(t.no_asistio, 1);
+  assert.equal(t.sin_dato, 0);
   assert.equal(t.reagendadas, 1);
   assert.equal(t.con_proyecto, 1);
+  // La conversión sí va sobre el total: la pregunta es cuántas de las que se
+  // agendaron terminaron en trabajo.
   assert.equal(t.conversion, 25);
   assert.equal(t.empresas, 3); // Vale cuenta una vez
+});
+
+test('§7.11.2 · «sin dato» no se suma ni a asistió ni a no asistió', () => {
+  // El caso del histórico recuperado: la reunión ocurrió y nadie registró el
+  // resultado. Contarla de un lado o del otro es inventar.
+  const rs = [
+    r({ inicio: '2026-08-10T10:00:00-03:00', estado: 'asistio', empresa: 'Vale' }),
+    r({ inicio: '2026-08-11T10:00:00-03:00', estado: 'sin_dato', empresa: 'Klume' }),
+    r({ inicio: '2026-08-12T10:00:00-03:00', estado: 'sin_dato', empresa: 'Ambar' }),
+    r({ inicio: '2026-08-13T10:00:00-03:00', estado: 'sin_dato', empresa: 'Ambar' }),
+  ];
+  const t = tarjetas(rs, '1m');
+
+  assert.equal(t.total, 4);
+  assert.equal(t.asistieron, 1);
+  assert.equal(t.no_asistio, 0);
+  assert.equal(t.sin_dato, 3);
+  assert.equal(t.constan, 1);
+  // 100% de la única que consta. Sobre el total daría 25%, que se leería como
+  // «tres de cada cuatro faltaron» cuando de esas tres no se sabe nada.
+  assert.equal(t.pct_asistieron, 100);
+});
+
+test('§7.11.2 · con todo sin dato, el porcentaje no inventa un cero', () => {
+  const rs = [
+    r({ inicio: '2026-08-10T10:00:00-03:00', estado: 'sin_dato', empresa: 'Vale' }),
+    r({ inicio: '2026-08-11T10:00:00-03:00', estado: 'sin_dato', empresa: 'Klume' }),
+  ];
+  const t = tarjetas(rs, '1m');
+  assert.equal(t.constan, 0);
+  // Sin nada que medir el porcentaje es 0, y la pantalla lo dice mostrando
+  // «0 de 0 que constan» en vez de un 0% suelto que parecería que nadie fue.
+  assert.equal(t.pct_asistieron, 0);
+  assert.equal(t.sin_dato, 2);
 });
 
 test('sin reuniones nada explota ni divide por cero', () => {

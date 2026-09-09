@@ -5,6 +5,8 @@
 // funciones se usan para MOSTRAR; lo único que escribe es abrir un proyecto
 // desde la ficha del lead.
 
+import type { EstadoReunion } from './reunion.ts';
+
 import { enSuZona } from './reunion.ts';
 
 export type TipoProyecto = 'fabript_piv' | 'parceria' | 'prototipo' | 'inversion';
@@ -114,7 +116,7 @@ export interface ReunionDelProyecto {
   /** Instante UTC, como lo guarda la base. Se lee siempre por fechaDe (D23). */
   inicio: string;
   zona: string;
-  estado: 'pendiente' | 'asistio' | 'no-asistio' | 'cancelada' | 'reagendada';
+  estado: EstadoReunion;
 }
 
 export interface Proyecto {

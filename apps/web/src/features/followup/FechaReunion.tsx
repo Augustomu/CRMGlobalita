@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type RefObject } from 'react';
-import {
+import { NOMBRE_ESTADO_REUNION,
   DURACION_DEFECTO, descripcionEvento, enMinutos, enSuZona, filasPorHora, finDe, hhmm,
   mensajeDeHorarios, tituloEvento, tramoDeLaHora, tramosDelDia,
   type EstadoReunion, type EventoDelDia,
@@ -531,7 +531,7 @@ export function FechaReunion({
                                 : ''
                           }`}
                         >
-                          {r.estado}
+                          {NOMBRE_ESTADO_REUNION[r.estado] ?? r.estado}
                         </span>
                       </div>
                     );

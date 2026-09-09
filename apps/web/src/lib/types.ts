@@ -1,3 +1,4 @@
+import type { EstadoReunion } from '@crm/core/reunion';
 // Tipos que reflejan el esquema de packages/db/pb_migrations/1788600000_crm_etapa1.js.
 // Si el esquema cambia, este archivo es el primero que hay que tocar.
 
@@ -157,7 +158,7 @@ export interface ReunionRecord {
   inicio: string;
   zona: string;
   duracion_min: number;
-  estado: 'pendiente' | 'asistio' | 'no-asistio' | 'cancelada' | 'reagendada';
+  estado: EstadoReunion;
   calendario: string;
   notas: string;
   /** D10: para actualizar el evento en vez de duplicarlo. */

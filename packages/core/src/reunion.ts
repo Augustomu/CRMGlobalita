@@ -1,7 +1,25 @@
 // Reunión. Implementa §5.11 del manual (§3.2, §5.11, §8.3)
 // y las decisiones D10 (identidad del evento), D11 (demora) y D23 (zona horaria).
 
-export type EstadoReunion = 'pendiente' | 'asistio' | 'no-asistio' | 'cancelada' | 'reagendada';
+/**
+ * En qué terminó una reunión.
+ *
+ * **Esta es la única definición.** Estaba escrita cuatro veces —acá, en
+ * `metricas.ts`, en `proyecto.ts` y en los tipos de la web— y agregar un valor
+ * obligaba a encontrar las cuatro. La primera vez que se agregó uno, tres
+ * quedaron atrás y el typecheck lo encontró; la próxima podría no encontrarlo.
+ *
+ * `sin_dato` es del histórico recuperado: la reunión ocurrió y nadie registró
+ * el resultado. No es `pendiente` —eso es una reunión futura— y sobre todo no
+ * es inventar que la persona fue o no fue.
+ */
+export type EstadoReunion =
+  | 'pendiente'
+  | 'asistio'
+  | 'no-asistio'
+  | 'cancelada'
+  | 'reagendada'
+  | 'sin_dato';
 
 export interface Reunion {
   id?: string;
@@ -458,3 +476,19 @@ export function carriles(franjas: Franja[]): EnCarril[] {
   cerrar();
   return salida;
 }
+
+/**
+ * Cómo se lee cada estado en pantalla.
+ *
+ * `sin_dato` con el guión bajo a la vista es el nombre interno asomándose: en
+ * una tabla que lee gente que no escribió el código, hay que decirlo en
+ * castellano.
+ */
+export const NOMBRE_ESTADO_REUNION: Record<EstadoReunion, string> = {
+  pendiente: 'pendiente',
+  asistio: 'asistió',
+  'no-asistio': 'no asistió',
+  cancelada: 'cancelada',
+  reagendada: 'reagendada',
+  sin_dato: 'sin dato',
+};
