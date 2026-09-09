@@ -195,8 +195,22 @@ function sincronizar(reunion) {
   const eventId = String(reunion.get('google_event_id') || '');
   const base = GOOGLE_API + '/calendars/' + calendario + '/events';
 
+  // A QUIEN SE LE AVISA, y por que no siempre.
+  //
+  // Mover una reunion que todavia no paso es reagendarla: el invitado tiene
+  // que enterarse, y para eso esta `sendUpdates=all` (§8.3).
+  //
+  // Corregir la fecha de una que YA PASO es otra cosa: es arreglar un dato.
+  // Mandarle a alguien «tu reunion se movio» por una reunion de hace ocho
+  // meses no es avisarle nada, es ruido — y encima en el CRM eso pasa
+  // justamente cuando uno esta ordenando el historico, o sea de a muchas.
+  const yaPaso = new Date(String(inicio).replace(' ', 'T')).getTime() < Date.now();
+  const aviso = yaPaso ? 'none' : 'all';
+
   const res = $http.send({
-    url: eventId ? base + '/' + encodeURIComponent(eventId) + '?sendUpdates=all' : base + '?sendUpdates=all',
+    url: eventId
+      ? base + '/' + encodeURIComponent(eventId) + '?sendUpdates=' + aviso
+      : base + '?sendUpdates=' + aviso,
     method: eventId ? 'PATCH' : 'POST',
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
     body: JSON.stringify(evento),

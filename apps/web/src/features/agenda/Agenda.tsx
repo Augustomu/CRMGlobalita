@@ -159,6 +159,15 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
 
   /** Qué fila tiene abiertas las notas, en la vista Lista. */
   const [notasDe, setNotasDe] = useState<string | null>(null);
+  /**
+   * Qué reunión tiene la fecha abierta para corregir, en la vista Lista.
+   *
+   * Es CORREGIR y no reagendar: la que muestra la columna «Última» ya pasó.
+   * Por eso el hook de Google no le avisa a nadie cuando la fecha que se
+   * cambia es de una reunión pasada — «tu reunión se movió» por algo de hace
+   * ocho meses no es un aviso, es ruido.
+   */
+  const [fechaDe, setFechaDe] = useState<string | null>(null);
   /** Lo escrito sin guardar todavía, para no pedir un PATCH por tecla. */
   const [borradorNota, setBorradorNota] = useState('');
   const [avisoLista, setAvisoLista] = useState<string | null>(null);
@@ -728,20 +737,49 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
                     en «sin dato»: la reunión consta y el resultado no. Se
                     confirma acá, sin abrir nada, porque es lo que uno recuerda
                     mientras recorre la lista. */}
-                <span
-                  className={`agenda-lista-fecha tabular ${ultima?.estado === 'no-asistio' ? 'agenda-no-asistio' : ultima?.estado === 'asistio' ? 'agenda-asistio' : ''}`}
-                  title={
-                    ultima
-                      ? ultima.estado === 'asistio'
-                        ? `Reunión del ${ultima.fecha}: asistió`
-                        : ultima.estado === 'no-asistio'
-                          ? `Reunión del ${ultima.fecha}: no asistió`
-                          : `Reunión del ${ultima.fecha}: falta confirmar si asistió`
-                      : 'Todavía no hubo ninguna reunión'
-                  }
-                >
-                  {ultima ? `${ultima.fecha.slice(8, 10)}/${ultima.fecha.slice(5, 7)}` : '—'}
-                </span>
+                {ultima && fechaDe === ultima.id ? (
+                  // Abierta para corregir. El input se va solo al perder el
+                  // foco: no hace falta un botón de cancelar para un campo.
+                  <input
+                    type="date"
+                    className="agenda-lista-fecha-editar tabular"
+                    defaultValue={ultima.fecha}
+                    autoFocus
+                    onBlur={() => setFechaDe(null)}
+                    onKeyDown={(ev) => {
+                      if (ev.key === 'Escape') setFechaDe(null);
+                    }}
+                    onChange={(ev) => {
+                      const nueva = ev.target.value;
+                      if (!nueva || nueva === ultima.fecha) return setFechaDe(null);
+                      setFechaDe(null);
+                      void mover(ultima.id, nueva, ultima.hora).then(
+                        () => setAvisoLista(`La reunión pasó al ${nueva}.`),
+                        (e: unknown) =>
+                          setAvisoLista(e instanceof Error ? e.message : String(e)),
+                      );
+                    }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className={`agenda-lista-fecha tabular ${ultima?.estado === 'no-asistio' ? 'agenda-no-asistio' : ultima?.estado === 'asistio' ? 'agenda-asistio' : ''}`}
+                    disabled={!ultima}
+                    title={
+                      ultima
+                        ? (ultima.estado === 'asistio'
+                            ? `Reunión del ${ultima.fecha}: asistió`
+                            : ultima.estado === 'no-asistio'
+                              ? `Reunión del ${ultima.fecha}: no asistió`
+                              : `Reunión del ${ultima.fecha}: falta confirmar si asistió`) +
+                          ' · tocá para corregir la fecha. Ya pasó, así que no se le avisa a nadie.'
+                        : 'Todavía no hubo ninguna reunión'
+                    }
+                    onClick={() => ultima && setFechaDe(ultima.id)}
+                  >
+                    {ultima ? `${ultima.fecha.slice(8, 10)}/${ultima.fecha.slice(5, 7)}` : '—'}
+                  </button>
+                )}
 
                 {/* 7.6 · Confirmar si fue o no fue, sin abrir nada. Sólo
                     aparece cuando falta el dato: una reunión ya confirmada no

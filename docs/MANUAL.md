@@ -998,6 +998,26 @@ La regla vive en `core/alta-lead.ts` (`problemasDelAlta`, `planDeAlta`,
 
 **Sidebars** (una a la vez): Agenda (340–900) y Repositorio (300–620). Las dos arrastrables, con doble clic para volver al ancho normal, persistido.
 
+**Escribir un mensaje sin salir de «Destacar mensajes»** (09/09/2026).
+
+El momento en que uno se da cuenta de que a un mensaje le falta el texto en
+portugués es justo cuando lo está buscando para destacarlo. Antes había que
+cerrar el modal, ir al Repositorio, escribirlo, volver y empezar de nuevo — y
+en el camino se perdían el idioma y el alcance ya elegidos.
+
+- **Los que NO tienen texto en el idioma elegido ahora aparecen**, abajo y
+  marcados. Antes se los filtraba y desaparecían: uno veía tres mensajes en
+  portugués sin enterarse de que había nueve esperando traducción.
+- El **lápiz** de cada fila corrige el texto de ese idioma. **Completa, no
+  pisa**: se escribe una sola clave de `textos` y las demás quedan como
+  estaban.
+- **«Escribir un mensaje nuevo»** crea uno ahí mismo. Sin paso: no todo mensaje
+  pertenece a un escalón de la cadencia, y el Repositorio ya deja asignárselo
+  después.
+- Es **el mismo cuadro** para las tres cosas, porque son la misma acción con
+  distinto punto de partida. Tres formularios parecidos era la forma segura de
+  que terminaran viéndose distinto.
+
 ### 7.3 Automatizaciones
 
 Columna izquierda con tres pestañas; columna derecha fija. Arriba de todo, un botón global **en marcha / todo en pausa**.
@@ -1049,6 +1069,10 @@ Tres vistas. La **semanal** y la **diaria** son la misma grilla con distinta can
 **El orden es por última reunión, de la más nueva a la más vieja** (`porUltimaReunion`). La clave es la misma fecha que muestra la columna «Última»: si se ordenara por otra cosa, esa columna se vería salteada y habría que leer fila por fila para encontrar a quién se vio la semana pasada. Los que todavía no tuvieron ninguna reunión van **al final**, no al principio: una fila sin fecha arriba de todo se lee como si fuera la más reciente. Antes salían en el orden en que los devolvía la base, que es por fecha de creación del lead.
 
 **Hover del evento**: nombre, empresa, cuenta, hora y duración, estado, asistió / no asistió, pegar foto, notas, links, y dos campos para cambiar hora y fecha. **No hay popup del evento**: clic en el evento abre la ficha del lead.
+
+**La fecha de «Última» se corrige tocándola**, sin abrir la ficha. Se ve como texto —es un dato antes que un control— y se delata con un subrayado punteado al pasar por encima; una fila de diez columnas no aguanta un botón más.
+
+**Y a esa corrección no se le avisa a nadie.** Mover una reunión que todavía no pasó es reagendarla y el invitado tiene que enterarse (`sendUpdates=all`, §8.3); corregir la fecha de una que **ya pasó** es arreglar un dato. Mandar «tu reunión se movió» por algo de hace ocho meses no es avisar, es ruido — y en el CRM eso pasa justo cuando alguien está ordenando el histórico, o sea de a muchas. La regla es del horario, no de la pantalla: **si el inicio ya pasó, Google no notifica**.
 
 **Un solo calendario, integrado. Sin chips** (09/09/2026).
 

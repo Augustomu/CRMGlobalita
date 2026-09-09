@@ -72,8 +72,15 @@ página de revisión.
       la fecha sigue en la columna «Última» y la reunión sigue en el histórico.
       Campo `reunion.confirmacion_archivada` (migración 1788603900).
       Hoy hay **0 archivadas de 173 en `sin_dato`**: está puesto y sin usar.
-- [ ] **Vista Lista: cambiar la fecha sin abrir la ficha.** Es lo único que
-      quedó abierto de este punto.
+- [x] **Vista Lista: cambiar la fecha sin abrir la ficha.** Se toca la fecha de
+      la columna «Última» y se corrige ahí. Se ve como texto y se delata con un
+      subrayado punteado al pasar por encima: la fila ya tiene diez columnas y
+      no aguantaba un botón más.
+      ⚠️ **Y de paso se arregló algo que estaba mal desde antes**: cambiar el
+      horario de una reunión mandaba `sendUpdates=all` **siempre**, así que
+      corregir la fecha de una reunión de hace ocho meses le habría mandado al
+      lead «tu reunión se movió». Ahora la regla es del horario y no de la
+      pantalla: **si el inicio ya pasó, Google no notifica**.
 - [x] **Las tres ideas del mockup del 09/09 que valían la pena.** Los ratos
       libres («2 h 30 libre») entre bloque y bloque, el contador de reuniones
       en la cabecera del día, y la línea roja de la hora actual con su reloj.
@@ -83,9 +90,12 @@ página de revisión.
       **Del mockup NO se tomó la paleta**: sus eventos son más pálidos que los
       nuestros, y adoptarla habría deshecho justo lo que Augusto venía pidiendo.
       Tampoco el popup al hacer clic — §7.6 ya decidió al revés.
-- [ ] **Editar o crear un mensaje desde «Destacar mensajes».** Hoy hay que ir
-      al Repositorio, y el momento en que uno se da cuenta de que falta un
-      texto es justo cuando lo está buscando para destacarlo.
+- [x] **Editar o crear un mensaje desde «Destacar mensajes».** Tres cosas, el
+      mismo cuadro: el **lápiz** de cada fila corrige el texto de ese idioma
+      —completa, no pisa: las otras claves de `textos` quedan como estaban—;
+      los que **no tienen texto en ese idioma ahora aparecen** abajo y marcados,
+      en vez de desaparecer del filtro; y **«Escribir un mensaje nuevo»** crea
+      uno sin salir. Se fue el cartel que mandaba al Repositorio.
 - [ ] **El diseño de los chips destacados.** Augusto: «no me gusta cómo
       queda». Falta que diga qué le molesta —el alto, el borde, el tilde—.
 - [x] **«Conectar un teléfono de la base» ya no es un botón aparte.** Es el

@@ -80,6 +80,22 @@ export function EnviarMensaje({
   /** El modal «Destacar mensajes». */
   const [listaAbierta, setListaAbierta] = useState(false);
   /**
+   * Escribir el texto de un mensaje sin salir de «Destacar mensajes».
+   *
+   * EL MOMENTO en que uno se da cuenta de que un mensaje no tiene texto en
+   * portugués es justo cuando lo está buscando para destacarlo. Hasta ahora
+   * había que cerrar el modal, ir al Repositorio, escribirlo, volver y
+   * empezar de nuevo — y en el camino se perdía el idioma y el alcance que ya
+   * se habían elegido.
+   *
+   * `'nuevo'` es el mensaje que todavía no existe; cualquier otro valor es el
+   * id de una plantilla a la que se le está escribiendo ESE idioma.
+   */
+  const [escribiendo, setEscribiendo] = useState<string | null>(null);
+  const [borradorMsg, setBorradorMsg] = useState('');
+  const [nombreMsg, setNombreMsg] = useState('');
+  const [guardandoMsg, setGuardandoMsg] = useState(false);
+  /**
    * 2.1 · Dónde va a valer lo que se destaque.
    *
    * Antes no se preguntaba: todo quedaba en la cuenta actual y punto. Pero un
@@ -155,6 +171,50 @@ export function EnviarMensaje({
   async function guardarAlcance(id: string, alcance: ReturnType<typeof leerAlcance>) {
     await pb.collection('plantilla').update(id, { destacado: escribirAlcance(alcance) });
     onPlantillasCambiadas?.();
+  }
+
+  /**
+   * Escribe el texto de un mensaje en el idioma que se está mirando.
+   *
+   * COMPLETA, NO PISA: se escribe una sola clave de `textos` y las demás
+   * quedan como estaban. Un mensaje que ya tenía español y al que se le suma
+   * portugués tiene que seguir teniendo español.
+   */
+  async function guardarTextoDelModal() {
+    const t = borradorMsg.trim();
+    if (!t || !escribiendo) return;
+    setGuardandoMsg(true);
+    setError(null);
+    try {
+      if (escribiendo === 'nuevo') {
+        const nombre = nombreMsg.trim() || t.slice(0, 40).replace(/\s+/g, ' ').trim() + '…';
+        const orden = Math.max(0, ...plantillas.map((x) => x.orden ?? 0)) + 1;
+        await pb.collection('plantilla').create({
+          nombre,
+          // Sin paso: no todo mensaje pertenece a un escalón de la cadencia,
+          // y el Repositorio ya deja asignárselo después. Es lo mismo que hace
+          // «guardar como mensaje» desde el cuadro de texto.
+          paso: '',
+          textos: { [idiomaModal]: t },
+          destacado: '',
+          orden,
+          por_defecto: false,
+        });
+      } else {
+        const antes = plantillas.find((x) => x.id === escribiendo);
+        await pb.collection('plantilla').update(escribiendo, {
+          textos: { ...(antes?.textos ?? {}), [idiomaModal]: t },
+        });
+      }
+      setEscribiendo(null);
+      setBorradorMsg('');
+      setNombreMsg('');
+      onPlantillasCambiadas?.();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setGuardandoMsg(false);
+    }
   }
 
   /** Guarda el texto escrito como mensaje nuevo del repositorio. */
@@ -567,9 +627,26 @@ export function EnviarMensaje({
                 .map((m) => {
                 const marcado = marcados.has(m.id);
                 const alcance = leerAlcance(m.destacado);
+                if (escribiendo === m.id) {
+                  return (
+                    <EscribirTexto
+                      key={m.id}
+                      titulo={m.nombre}
+                      idioma={idiomaModal}
+                      valor={borradorMsg}
+                      guardando={guardandoMsg}
+                      onCambiar={setBorradorMsg}
+                      onGuardar={() => void guardarTextoDelModal()}
+                      onCancelar={() => {
+                        setEscribiendo(null);
+                        setBorradorMsg('');
+                      }}
+                    />
+                  );
+                }
                 return (
+                  <div key={m.id} className="dest-fila">
                   <button
-                    key={m.id}
                     type="button"
                     className={marcado ? 'dest-opcion dest-opcion-on' : 'dest-opcion'}
                     onClick={() =>
@@ -598,19 +675,114 @@ export function EnviarMensaje({
                       </span>
                     </span>
                   </button>
+                  {/* El lápiz va afuera del botón de la fila: un botón dentro
+                      de otro botón no es HTML válido, y además tocar el texto
+                      no puede ser lo mismo que elegirlo. */}
+                  <button
+                    type="button"
+                    className="boton-icono-22 dest-lapiz"
+                    title={`Corregir el texto en ${idiomaModal.toUpperCase()}`}
+                    onClick={() => {
+                      setEscribiendo(m.id);
+                      setBorradorMsg(m.textos?.[idiomaModal] ?? '');
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path d="M4 20h4L20 8l-4-4L4 16v4z" />
+                    </svg>
+                  </button>
+                  </div>
                 );
               })}
+
+              {/*
+                LOS QUE NO TIENEN TEXTO EN ESTE IDIOMA.
+
+                Antes simplemente no aparecían, y eso es lo que mandaba a
+                Augusto al Repositorio: veía tres mensajes en portugués sin
+                saber que había nueve más esperando que alguien los tradujera.
+                Ahora están, dicen que les falta, y se escriben acá mismo.
+              */}
+              {(() => {
+                const sinTexto = plantillas.filter((m) => !m.textos?.[idiomaModal]);
+                if (!sinTexto.length) return null;
+                return (
+                  <div className="dest-faltantes">
+                    <span className="campo-ayuda">
+                      {sinTexto.length === 1
+                        ? `1 mensaje del repositorio no tiene texto en ${idiomaModal.toUpperCase()}`
+                        : `${sinTexto.length} mensajes del repositorio no tienen texto en ${idiomaModal.toUpperCase()}`}
+                    </span>
+                    {sinTexto.map((m) =>
+                      escribiendo === m.id ? (
+                        <EscribirTexto
+                          key={m.id}
+                          titulo={m.nombre}
+                          idioma={idiomaModal}
+                          valor={borradorMsg}
+                          guardando={guardandoMsg}
+                          onCambiar={setBorradorMsg}
+                          onGuardar={() => void guardarTextoDelModal()}
+                          onCancelar={() => {
+                            setEscribiendo(null);
+                            setBorradorMsg('');
+                          }}
+                        />
+                      ) : (
+                        <button
+                          key={m.id}
+                          type="button"
+                          className="dest-falta"
+                          onClick={() => {
+                            setEscribiendo(m.id);
+                            setBorradorMsg('');
+                          }}
+                        >
+                          <span>{m.nombre}</span>
+                          <span className="campo-ayuda">escribirlo</span>
+                        </button>
+                      ),
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Y uno que todavía no existe. */}
+              {escribiendo === 'nuevo' ? (
+                <EscribirTexto
+                  nuevo
+                  titulo={nombreMsg}
+                  idioma={idiomaModal}
+                  valor={borradorMsg}
+                  guardando={guardandoMsg}
+                  onNombre={setNombreMsg}
+                  onCambiar={setBorradorMsg}
+                  onGuardar={() => void guardarTextoDelModal()}
+                  onCancelar={() => {
+                    setEscribiendo(null);
+                    setBorradorMsg('');
+                    setNombreMsg('');
+                  }}
+                />
+              ) : (
+                <button
+                  type="button"
+                  className="boton-mini dest-nuevo"
+                  onClick={() => {
+                    setEscribiendo('nuevo');
+                    setBorradorMsg('');
+                    setNombreMsg('');
+                  }}
+                >
+                  Escribir un mensaje nuevo en {idiomaModal.toUpperCase()}
+                </button>
+              )}
 
               {!plantillas.length && (
                 <span className="campo-ayuda">Todavía no hay mensajes en el repositorio.</span>
               )}
-              {plantillas.length > 0 && !plantillas.some((m) => m.textos?.[idiomaModal]) && (
-                <span className="campo-ayuda">
-                  Ninguno de los {plantillas.length} mensajes del repositorio tiene texto en{' '}
-                  {idiomaModal.toUpperCase()}. Elegí otro idioma arriba, o cargalo desde el
-                  Repositorio de mensajes.
-                </span>
-              )}
+              {/* El cartel que mandaba al Repositorio se fue: ahora la lista de
+                  los que faltan está acá arriba y se escriben sin salir. */}
 
               <div className="dest-modal-pie">
                 <span className="campo-ayuda tabular">{marcados.size} elegidos</span>
@@ -834,6 +1006,85 @@ export function EnviarMensaje({
       )}
 
       {error && <div className="login-error">{error}</div>}
+    </div>
+  );
+}
+
+/**
+ * Escribir el texto de un mensaje sin salir de «Destacar mensajes» (§7.2).
+ *
+ * Es el mismo cuadro para las tres cosas que se pueden hacer acá —corregir un
+ * texto, escribir el que falta en otro idioma, o crear un mensaje nuevo—
+ * porque son la misma acción con distinto punto de partida. Tener tres
+ * formularios parecidos era la forma segura de que se vieran distinto.
+ *
+ * El nombre sólo se pide cuando el mensaje no existe todavía: renombrar uno
+ * que ya está es cosa del Repositorio, que es donde se lo administra.
+ */
+function EscribirTexto({
+  titulo,
+  idioma,
+  valor,
+  guardando,
+  nuevo,
+  onNombre,
+  onCambiar,
+  onGuardar,
+  onCancelar,
+}: {
+  titulo: string;
+  idioma: string;
+  valor: string;
+  guardando: boolean;
+  nuevo?: boolean;
+  onNombre?: (v: string) => void;
+  onCambiar: (v: string) => void;
+  onGuardar: () => void;
+  onCancelar: () => void;
+}) {
+  return (
+    <div className="dest-escribir">
+      {nuevo ? (
+        <input
+          autoFocus
+          className="dest-escribir-nombre"
+          value={titulo}
+          placeholder="Cómo se va a llamar"
+          onChange={(e) => onNombre?.(e.target.value)}
+        />
+      ) : (
+        <span className="dest-escribir-titulo">
+          <b>{titulo}</b>
+          <span className="campo-ayuda">en {idioma.toUpperCase()}</span>
+        </span>
+      )}
+      <textarea
+        autoFocus={!nuevo}
+        rows={4}
+        value={valor}
+        placeholder={`El texto en ${idioma.toUpperCase()}…`}
+        onChange={(e) => onCambiar(e.target.value)}
+        onKeyDown={(e) => {
+          // Escape cancela y Ctrl+Enter guarda: es un cuadro chico dentro de un
+          // modal, y llegar al botón con el mouse para dos líneas es de más.
+          if (e.key === 'Escape') onCancelar();
+          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) onGuardar();
+        }}
+      />
+      <div className="dest-escribir-pie">
+        <span className="campo-ayuda">Ctrl+Enter guarda · Esc cancela</span>
+        <button type="button" className="boton-mini al-final" onClick={onCancelar}>
+          Cancelar
+        </button>
+        <button
+          type="button"
+          className="boton-principal"
+          disabled={guardando || !valor.trim()}
+          onClick={onGuardar}
+        >
+          {guardando ? 'guardando…' : 'Guardar'}
+        </button>
+      </div>
     </div>
   );
 }

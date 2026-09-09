@@ -2980,7 +2980,38 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 }
 .agenda-lista-fila { border-bottom: .5px solid var(--border); }
 .agenda-lista-fila:hover { background: var(--bg); }
-.agenda-lista-fecha { font-size: var(--txt-sm); color: var(--muted); }
+/* La fecha de la ultima reunion. Es un BOTON: se toca y se corrige, sin abrir
+   la ficha. Se sigue viendo como texto —no tiene borde ni fondo— porque es un
+   dato antes que un control; lo unico que lo delata es el subrayado punteado
+   al pasar por encima, que es como se dice «esto se puede editar» sin sumar
+   un boton mas a una fila que ya tiene diez columnas. */
+.agenda-lista-fecha {
+  font-size: var(--txt-sm);
+  color: var(--muted);
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.agenda-lista-fecha:disabled { cursor: default; color: var(--hint); }
+.agenda-lista-fecha:not(:disabled):hover {
+  color: var(--accent);
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+.agenda-lista-fecha-editar {
+  font-size: var(--txt-xs);
+  padding: 1px 2px;
+  border: .5px solid var(--accent-br);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  width: 100%;
+  min-width: 0;
+}
 .agenda-asistio { color: var(--success); font-weight: 600; }
 .agenda-no-asistio { color: var(--error); font-weight: 600; }
 .agenda-lista-lead {
@@ -4758,8 +4789,10 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .agenda-evento-ajeno .agenda-evento-nombre { color: var(--hint); font-weight: 500; }
 
 /* ---------- mensajes destacados en Enviar mensaje (§7.2) ---------- */
-/* Fila de acceso rapido: chips que se tocan, NO un colapsable ni una lista. */
-.dest-fila { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+/* Aca vivia un `.dest-fila` para la fila de chips. Estaba muerto desde que la
+   fila paso a ser `.enviar-secuencia`, y el nombre quedo libre — lo usa ahora
+   la fila del modal. Lo encontro `revisar-aprendizajes.mjs` al chocar los dos,
+   que es exactamente para lo que existe. */
 .dest-chip {
   display: inline-flex;
   align-items: center;
@@ -4843,6 +4876,73 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   transition: background 150ms ease-out;
 }
 .dest-opcion:hover { background: var(--accent-light); border-color: var(--accent-br); }
+
+/* LA FILA DEL MODAL: el mensaje y, aparte, el lapiz.
+   El lapiz va afuera del boton de la fila porque un boton adentro de otro no
+   es HTML valido —y porque tocar el texto no puede ser lo mismo que elegirlo. */
+.dest-fila { display: flex; align-items: stretch; gap: 4px; }
+.dest-fila .dest-opcion { flex: 1; min-width: 0; }
+.dest-lapiz { flex: 0 0 auto; align-self: center; color: var(--hint); }
+.dest-fila:hover .dest-lapiz { color: var(--accent); }
+
+/* LOS QUE NO TIENEN TEXTO EN ESTE IDIOMA.
+   Antes no aparecian, y eso era lo que mandaba al Repositorio: uno veia tres
+   mensajes en portugues sin saber que habia nueve esperando traduccion. */
+.dest-faltantes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: .5px solid var(--border);
+}
+.dest-falta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: .5px dashed var(--border);
+  background: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: var(--txt-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.dest-falta span:last-child { margin-left: auto; }
+.dest-falta:hover { border-color: var(--accent-br); background: var(--accent-light); color: var(--text); }
+.dest-nuevo { align-self: flex-start; margin-top: 4px; }
+
+/* EL CUADRO PARA ESCRIBIR, el mismo para las tres cosas: corregir un texto,
+   escribir el que falta en otro idioma, o crear un mensaje nuevo. Son la misma
+   accion con distinto punto de partida, y tres formularios parecidos era la
+   forma segura de que terminaran viendose distinto. */
+.dest-escribir {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  border: .5px solid var(--accent-br);
+  background: var(--accent-light);
+}
+.dest-escribir-titulo { display: flex; align-items: baseline; gap: 7px; font-size: var(--txt-sm); }
+.dest-escribir-nombre,
+.dest-escribir textarea {
+  font-family: inherit;
+  font-size: var(--txt-sm);
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: .5px solid var(--border);
+  background: var(--surface);
+  width: 100%;
+  resize: vertical;
+}
+.dest-escribir-nombre:focus,
+.dest-escribir textarea:focus { outline: none; border-color: var(--accent); }
+.dest-escribir-pie { display: flex; align-items: center; gap: 6px; }
 .dest-opcion-on { border-color: var(--accent-br); background: var(--accent-light); }
 .dest-check {
   width: 16px;
