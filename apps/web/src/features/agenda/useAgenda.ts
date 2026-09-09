@@ -44,6 +44,15 @@ export interface EventoAgenda {
    * cargado se comporte como si fuera ajeno.
    */
   ajeno?: boolean;
+  /**
+   * De dónde salió el bloque.
+   *
+   * «crm» es una reunión con un lead; «calendario» es cualquier otra cosa del
+   * Google Calendar propio —el almuerzo, la clase, la reunión interna— que se
+   * dibuja para que la agenda no muestre huecos que no existen, pero que no se
+   * puede mover ni editar desde acá.
+   */
+  origen?: 'crm' | 'calendario';
 }
 
 
@@ -170,6 +179,49 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
         };
       });
 
+      // ------------------------------------- lo demás del calendario propio
+      //
+      // 7.3 · La agenda dibujaba sólo las reuniones con leads, así que el
+      // jueves parecía libre a las 12 cuando en realidad había un almuerzo. La
+      // regla de `evento_externo` ya filtra por dueño: sólo vuelven los
+      // propios, con título; los de los demás llegan por `ocupado`, sin él.
+      const propiosDelCalendario = await pb
+        .collection('evento_externo')
+        .getFullList<{
+          id: string;
+          titulo: string;
+          inicio: string;
+          duracion_min: number;
+          zona: string;
+          dia_entero: boolean;
+        }>({ filter: 'dia_entero = false', sort: 'inicio' })
+        .catch(() => []);
+
+      const delCalendario: EventoAgenda[] = propiosDelCalendario.map((x) => {
+        const local = enSuZona(x.inicio, x.zona || ZONA);
+        return {
+          id: x.id,
+          lead: '',
+          fecha: local.slice(0, 10),
+          hora: local.slice(11, 16),
+          duracion: x.duracion_min || 30,
+          estado: 'calendario',
+          notas: '',
+          nombre: x.titulo || '(sin título)',
+          empresa: '',
+          cargo: '',
+          cuenta: '',
+          telefono: '',
+          slug: '',
+          ciudad: '',
+          perfil: '',
+          foto: '',
+          delCrm: false,
+          duenio: '',
+          origen: 'calendario',
+        };
+      });
+
       // ------------------------------------------------------ solo ocupado
       //
       // Cuando se mira el calendario de otro, sus horarios salen de la vista
@@ -184,7 +236,12 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
             sort: 'inicio',
           })
           .catch(() => []);
-        const yaLasTengo = new Set(conDetalle.map((e) => e.id));
+        // Los eventos del propio calendario ya están arriba con su título: no
+      // hay que volver a dibujarlos como bloques anónimos.
+      const yaLasTengo = new Set([
+        ...conDetalle.map((e) => e.id),
+        ...delCalendario.map((e) => e.id),
+      ]);
         bloques = ocupados
           .filter((o) => !yaLasTengo.has(o.id))
           .map((o) => {
@@ -216,7 +273,7 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
           });
       }
 
-      setEventos([...conDetalle, ...bloques]);
+      setEventos([...conDetalle, ...delCalendario, ...bloques]);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

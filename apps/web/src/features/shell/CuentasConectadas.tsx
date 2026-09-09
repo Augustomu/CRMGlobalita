@@ -85,6 +85,9 @@ export function CuentasConectadas({
   const [googleFallo, setGoogleFallo] = useState<string | null>(null);
   const [yendoAGoogle, setYendoAGoogle] = useState(false);
   const [confirmarCorte, setConfirmarCorte] = useState(false);
+  /** 7.4 · El traído del histórico: puede tardar, así que se avisa mientras. */
+  const [trayendo, setTrayendo] = useState(false);
+  const [historico, setHistorico] = useState<string | null>(null);
   /** Reuniones futuras que todavía no llegaron al calendario. La consecuencia. */
   const [sinSincronizar, setSinSincronizar] = useState(0);
 
@@ -145,6 +148,38 @@ export function CuentasConectadas({
       setGoogleFallo(err instanceof Error ? err.message : 'No se pudo hablar con el servidor.');
     }
     setYendoAGoogle(false);
+  }
+
+  /**
+   * 7.3 y 7.4 · Trae el calendario hacia atrás, una sola vez.
+   *
+   * La agenda dibujaba sólo las reuniones con leads, así que un jueves con un
+   * almuerzo a las 12 se veía libre. Esto trae todo lo demás —unos 400 días
+   * para atrás— y a partir de ahí el reloj de cada cinco minutos lo mantiene.
+   *
+   * Es un botón y no algo automático porque son hasta 15000 eventos paginados:
+   * conviene que alguien lo dispare sabiendo que va a tardar, y no que pase
+   * solo al abrir una pantalla.
+   */
+  async function traerHistorico() {
+    setTrayendo(true);
+    setHistorico(null);
+    setGoogleFallo(null);
+    try {
+      const r = await pb.send<{ ok?: boolean; vistos?: number; error?: string }>(
+        '/api/google/historico',
+        { method: 'POST', body: {} },
+      );
+      setHistorico(
+        r?.ok
+          ? `Listo: ${r.vistos ?? 0} eventos revisados. Ya se ven en la agenda.`
+          : (r?.error ?? 'No se pudo traer el histórico.'),
+      );
+    } catch (err) {
+      setGoogleFallo(err instanceof Error ? err.message : 'No se pudo traer el histórico.');
+    } finally {
+      setTrayendo(false);
+    }
   }
 
   async function desconectarGoogle() {
@@ -328,6 +363,20 @@ export function CuentasConectadas({
                 {yendoAGoogle ? 'yendo…' : 'Conectar'}
               </button>
             )}
+            {/* 7.4 · El histórico. Sólo cuando está conectada: sin cuenta no
+                hay de dónde traerlo. */}
+            {google?.conectado && !confirmarCorte && (
+              <button
+                type="button"
+                className="boton-mini"
+                disabled={trayendo}
+                title="Traer los eventos del calendario de los últimos ~400 días, para que la agenda muestre el día completo y no sólo las reuniones del CRM"
+                onClick={() => void traerHistorico()}
+              >
+                {trayendo ? 'trayendo…' : 'Traer el histórico'}
+              </button>
+            )}
+
             {google?.conectado &&
               (confirmarCorte ? (
                 <>
@@ -358,10 +407,12 @@ export function CuentasConectadas({
               ))}
           </div>
 
-          {(googleFallo || avisoGoogle) && (
+          {(googleFallo || avisoGoogle || historico) && (
             <div className="cc-fila cc-nota">
               <span className={googleFallo ? 'cc-estado cc-mal' : 'cc-estado cc-ok'}>
-                {googleFallo ?? (avisoGoogle === 'conectado' ? 'Calendario conectado.' : avisoGoogle)}
+                {googleFallo ??
+                  historico ??
+                  (avisoGoogle === 'conectado' ? 'Calendario conectado.' : avisoGoogle)}
               </span>
             </div>
           )}

@@ -6094,3 +6094,15 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 }
 .agenda-lista-confirmar button:first-child:hover { color: var(--success); border-color: var(--success); }
 .agenda-lista-confirmar button:last-child:hover { color: var(--error); border-color: var(--error); }
+
+/* 7.3 · Lo demas del Google Calendar propio dentro de la grilla. Se distingue
+   de una reunion del CRM sin gritar: mismo alto, borde punteado y sin relleno
+   fuerte. Tiene que verse que el horario esta tomado y que eso no se toca
+   desde aca. */
+.agenda-evento-calendario {
+  background: var(--bg);
+  border: .5px dashed var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+.agenda-evento-calendario .agenda-evento-nombre { font-weight: 400; }

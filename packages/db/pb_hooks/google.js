@@ -330,7 +330,7 @@ function cambioDeGoogle(crm, evento) {
  * consulta directa no dispara hooks. Es el mismo motivo por el que `anotar()`
  * escribe asi.
  */
-function aplicarEvento(ev) {
+function aplicarEvento(ev, duenioDelCalendario) {
   const id = String((ev && ev.id) || '');
   if (!id) return false;
 
@@ -338,8 +338,13 @@ function aplicarEvento(ev) {
   try {
     reunion = $app.findFirstRecordByFilter('reunion', 'google_event_id = {:g}', { g: id });
   } catch (_) {
-    // Un evento del calendario que no es una reunion del CRM. Es la mayoria:
-    // el calendario tiene la vida entera de la persona, no solo prospeccion.
+    // No es una reunion del CRM. Es la MAYORIA de lo que hay en el calendario:
+    // el almuerzo, la clase, la reunion interna, el turno medico.
+    //
+    // Antes se ignoraban, y por eso la agenda del CRM mostraba el jueves libre
+    // a las 12 cuando no lo estaba. Ahora se guardan como evento externo: la
+    // grilla los dibuja y dejan de aparecer huecos que no existen.
+    guardarEventoExterno(ev, duenioDelCalendario);
     return false;
   }
 
@@ -466,7 +471,7 @@ function traerCambios(cuenta) {
     const items = cuerpo.items || [];
     for (let i = 0; i < items.length; i++) {
       vistos++;
-      if (aplicarEvento(items[i])) tocados++;
+      if (aplicarEvento(items[i], String(cuenta.get('usuario') || ''))) tocados++;
     }
 
     pageToken = cuerpo.nextPageToken || '';
@@ -506,3 +511,133 @@ function traerCambios(cuenta) {
 }
 
 module.exports.traerCambios = traerCambios;
+
+/**
+ * Guarda —o actualiza, o borra— un evento del calendario que NO es del CRM.
+ *
+ * Es upsert por (calendario, google_event_id): el mismo evento movido dos veces
+ * tiene que quedar una sola fila. Y `status: "cancelled"` BORRA la fila, no la
+ * marca: un evento cancelado no ocupa el horario, y dejarlo con una bandera
+ * obligaria a filtrarlo en cada consulta.
+ *
+ * Nunca lanza. Esto corre adentro del reloj de sincronizacion y un evento raro
+ * —una fecha imposible, un titulo de 10 KB— no puede frenar a los otros mil.
+ */
+function guardarEventoExterno(ev, duenioDelCalendario) {
+  if (!duenioDelCalendario) return;
+  const id = String((ev && ev.id) || '');
+  if (!id) return;
+
+  try {
+    let fila = null;
+    try {
+      fila = $app.findFirstRecordByFilter(
+        'evento_externo',
+        'calendario = {:u} && google_event_id = {:g}',
+        { u: duenioDelCalendario, g: id },
+      );
+    } catch (_) {
+      fila = null;
+    }
+
+    if (String((ev && ev.status) || '') === 'cancelled') {
+      if (fila) $app.delete(fila);
+      return;
+    }
+
+    const arranca = (ev.start && (ev.start.dateTime || ev.start.date)) || '';
+    const termina = (ev.end && (ev.end.dateTime || ev.end.date)) || '';
+    if (!arranca) return;
+
+    const diaEntero = Boolean(ev.start && !ev.start.dateTime && ev.start.date);
+
+    let duracion = 0;
+    if (!diaEntero && termina) {
+      const a = new Date(String(arranca).replace(' ', 'T')).getTime();
+      const b = new Date(String(termina).replace(' ', 'T')).getTime();
+      duracion = Math.round((b - a) / 60000);
+    }
+    // Una duracion imposible se guarda como media hora antes que dibujar un
+    // bloque invertido o uno que tape el dia entero.
+    if (!diaEntero && (!isFinite(duracion) || duracion <= 0 || duracion > 24 * 60)) duracion = 30;
+
+    const cuando = diaEntero
+      ? String(arranca)
+      : new Date(String(arranca).replace(' ', 'T')).toISOString().replace('T', ' ');
+
+    if (!fila) {
+      fila = new Record($app.findCollectionByNameOrId('evento_externo'));
+      fila.set('google_event_id', id);
+      fila.set('calendario', duenioDelCalendario);
+    }
+    fila.set('titulo', String((ev && ev.summary) || '(sin titulo)').slice(0, 300));
+    fila.set('inicio', cuando);
+    fila.set('duracion_min', duracion);
+    fila.set('zona', String((ev.start && ev.start.timeZone) || ''));
+    fila.set('dia_entero', diaEntero);
+    $app.save(fila);
+  } catch (err) {
+    $app.logger().error('google-entrada', 'evento_externo', id, 'err', String(err));
+  }
+}
+
+/**
+ * Trae el HISTORICO del calendario en un rango, sin tocar el syncToken.
+ *
+ * Es otra cosa que `traerCambios`, y por eso es otra funcion. Aquel mantiene al
+ * dia lo que se mueve —una ventana chica, incremental, cada cinco minutos—;
+ * este llena la agenda hacia atras una sola vez. Mezclarlos romperia el token:
+ * el scope de un syncToken queda atado a la ventana con la que se pidio, y
+ * pedir dos anos para despues sincronizar dos meses lo deja inservible.
+ *
+ * Devuelve cuantos eventos miro.
+ */
+function traerHistorico(cuenta, desdeIso, hastaIso) {
+  const c = config();
+  const token = accessToken(c, cuenta.get('refresh_token'));
+  const calendario = encodeURIComponent(cuenta.get('calendario') || 'primary');
+  const base = GOOGLE_API + '/calendars/' + calendario + '/events';
+  const duenio = String(cuenta.get('usuario') || '');
+
+  let pageToken = '';
+  let vistos = 0;
+
+  // 60 vueltas por 250 = 15000 eventos. Mas que eso no es un calendario, es un
+  // problema distinto, y el tope evita que un repetitivo sin fin cuelgue esto.
+  for (let vuelta = 0; vuelta < 60; vuelta++) {
+    const params = {
+      singleEvents: 'true',
+      maxResults: '250',
+      timeMin: desdeIso,
+      timeMax: hastaIso,
+      orderBy: 'startTime',
+    };
+    if (pageToken) params.pageToken = pageToken;
+
+    const res = $http.send({
+      url: base + '?' + form(params),
+      headers: { Authorization: 'Bearer ' + token },
+      timeout: 30,
+    });
+    if (res.statusCode < 200 || res.statusCode > 299) {
+      const d = (res.json && res.json.error && res.json.error.message) || 'HTTP ' + res.statusCode;
+      throw new Error(d);
+    }
+
+    const cuerpo = res.json || {};
+    const items = cuerpo.items || [];
+    for (let i = 0; i < items.length; i++) {
+      vistos++;
+      // Si el evento ES una reunion del CRM, aplicarEvento la actualiza y no
+      // la duplica como externa. Si no lo es, la guarda como externa.
+      aplicarEvento(items[i], duenio);
+    }
+
+    pageToken = cuerpo.nextPageToken || '';
+    if (!pageToken) break;
+  }
+
+  return vistos;
+}
+
+module.exports.traerHistorico = traerHistorico;

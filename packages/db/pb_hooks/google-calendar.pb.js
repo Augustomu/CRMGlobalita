@@ -140,6 +140,48 @@ routerAdd(
   $apis.requireAuth(),
 );
 
+// Traer el HISTORICO del calendario, una vez.
+//
+// Es un pedido aparte y no parte del reloj, a proposito: el reloj mantiene al
+// dia una ventana chica, y el scope de un syncToken queda atado a la ventana
+// con la que se pidio. Meter dos anos ahi lo dejaria inservible.
+//
+// Puede tardar: son hasta 15000 eventos paginados de a 250. Por eso lo dispara
+// una persona apretando un boton, y no un reloj cada cinco minutos.
+routerAdd(
+  'POST',
+  '/api/google/historico',
+  (e) => {
+    const g = require(`${__hooks}/google.js`);
+    const c = g.config();
+    if (!g.configurado(c)) return e.json(400, { error: 'Google no esta configurado en el servidor.' });
+
+    const fila = g.cuentaDe(e.auth.id);
+    if (!fila || !fila.get('refresh_token')) {
+      return e.json(400, { error: 'Todavia no conectaste tu Google Calendar.' });
+    }
+
+    const cuerpo = new DynamicModel({ desde: '' });
+    e.bindBody(cuerpo);
+
+    // Por defecto, unos 400 dias para atras: cubre «desde septiembre del ano
+    // pasado», que es donde arranca el historico que ya esta importado.
+    const pedido = String(cuerpo.desde || '');
+    const atras = new Date(Date.now() - 400 * 24 * 3600 * 1000).toISOString();
+    const adelante = new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString();
+    const desde = pedido || atras;
+
+    try {
+      const vistos = g.traerHistorico(fila, desde, adelante);
+      return e.json(200, { ok: true, vistos, desde, hasta: adelante });
+    } catch (err) {
+      $app.logger().error('google-historico', 'err', String(err));
+      return e.json(500, { error: String(err) });
+    }
+  },
+  $apis.requireAuth(),
+);
+
 routerAdd(
   'POST',
   '/api/google/desconectar',

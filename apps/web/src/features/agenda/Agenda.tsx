@@ -782,6 +782,24 @@ function Evento({
   // §6.3: el bloque de otro calendario dice CUÁNDO y nada más. No se arrastra
   // —no es tuyo—, no abre ficha —no hay lead que abrir— y no tiene tarjeta de
   // hover, porque no hay nada que mostrar ahí.
+  // 7.3 · Lo demás del propio Google Calendar: el almuerzo, la clase, la
+  // reunión interna. Se dibuja con su título —es de uno— pero no se arrastra
+  // ni se abre: acá no hay lead, y moverlo desde el CRM daría a entender que
+  // el CRM lo controla, cuando el dueño de ese evento es Google.
+  if (e.origen === 'calendario') {
+    return (
+      <div className="agenda-bloque" style={caja}>
+        <div
+          className="agenda-evento agenda-evento-calendario"
+          title={`${e.nombre} · de tu Google Calendar, no del CRM`}
+        >
+          <span className="agenda-evento-hora tabular">{e.hora}</span>
+          <span className="agenda-evento-nombre">{e.nombre}</span>
+        </div>
+      </div>
+    );
+  }
+
   if (e.ajeno) {
     return (
       <div className="agenda-bloque" style={caja}>
