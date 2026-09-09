@@ -7,6 +7,10 @@ entera en `docs/MANUAL.md`. Acá va sólo el control de qué falta.
 base y contra los logs de PocketBase. Los números de acá salen de consultas, no
 de memoria.
 
+> **El registro de errores** está en `docs/APRENDIZAJES.md`: los 35 que
+> salieron mal, de dónde vinieron y cuántas veces volvieron. Lo que se puede
+> volver a buscar solo, lo busca `node docs/revisar-aprendizajes.mjs`.
+
 > **Cómo leer esto.**
 > `[x]` hecho y verificado · `[ ]` falta · `[~]` a medias
 > ⚠️ está mal hoy (no es una ausencia) · ❓ necesita una decisión de Augusto

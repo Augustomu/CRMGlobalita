@@ -2836,17 +2836,23 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   background: var(--error);
   border-left: 4px solid var(--error-light);
 }
+/* CANCELADA es la unica de las cuatro donde la reunion NO paso, y por eso es
+   la unica que no va solida: no tiene por que gritar como las tres que si
+   ocurrieron. Ademas el ambar no da: --warning con texto blanco queda en
+   4.38:1 y hace falta 4.5. Al reves —fondo claro, texto oscuro— da 12.83:1 y
+   es la mas legible de las cuatro. El borde ambar la sigue marcando. */
 .agenda-evento-cancelada {
-  background: var(--warning);
-  border-left: 4px solid var(--warning-light);
+  background: var(--warning-light);
+  border-left: 4px solid var(--warning);
 }
 /* El texto de los tres: blanco sobre color, como en «programada». */
 .agenda-evento-asistio .agenda-evento-hora,
-.agenda-evento-no-asistio .agenda-evento-hora,
-.agenda-evento-cancelada .agenda-evento-hora { color: var(--surface); opacity: .85; }
+.agenda-evento-no-asistio .agenda-evento-hora { color: var(--surface); opacity: .85; }
 .agenda-evento-asistio .agenda-evento-nombre,
-.agenda-evento-no-asistio .agenda-evento-nombre,
-.agenda-evento-cancelada .agenda-evento-nombre { color: var(--surface); }
+.agenda-evento-no-asistio .agenda-evento-nombre { color: var(--surface); }
+/* La cancelada va al reves: fondo claro y texto oscuro. */
+.agenda-evento-cancelada .agenda-evento-hora { color: var(--warning); opacity: 1; }
+.agenda-evento-cancelada .agenda-evento-nombre { color: var(--text); }
 
 /* LA LEYENDA DE LA GRILLA.
  *
@@ -2880,7 +2886,7 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .agenda-leyenda-programada { background: var(--accent); }
 .agenda-leyenda-asistio { background: var(--success); }
 .agenda-leyenda-no-asistio { background: var(--error); }
-.agenda-leyenda-cancelada { background: var(--warning); }
+.agenda-leyenda-cancelada { background: var(--warning-light); border-left: 3px solid var(--warning); }
 .agenda-leyenda-vinculado { background: var(--accent); border-left: 3px solid var(--accent-br); }
 .agenda-leyenda-conectable { background: var(--info); border-left: 3px dashed var(--accent-br); }
 .agenda-leyenda-google {

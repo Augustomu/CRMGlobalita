@@ -124,6 +124,28 @@ docs/         MANUAL.md (la especificación entera), PENDIENTES.md (lo que falta
    depende de datos que no existen), se omite y se anota — no se reemplaza por
    una versión inventada.
 
+## Los errores que ya cometimos
+
+`docs/APRENDIZAJES.md` tiene los 35 que salieron mal, con de dónde vinieron y
+**cuántas veces volvieron**. No es historia: cuatro de esas familias se
+repitieron entre 2 y 6 veces cada una, y por eso existen los chequeos.
+
+```
+node docs/revisar-aprendizajes.mjs     # sale 1 si alguno volvió
+```
+
+**Corrélo después de cada tanda de cambios de diseño.** Busca contraste
+ilegible, reglas de CSS que otra pisa más abajo, tamaños fuera de la escala,
+colores fuera de los tokens y handlers de PocketBase que usan el scope del
+archivo. Los cuatro son errores que ya se cometieron acá.
+
+Lo que el script NO puede ver son los tres más repetidos: programar contra el
+modelo imaginado en vez de contra los datos, pedir la misma cosa en dos
+lugares, y contestar una pregunta que le toca al usuario. Ésos son 14 de los
+35 y sólo los evita leer el registro.
+
+---
+
 ## Definición de terminado
 
 Una regla está hecha cuando tiene las cuatro: sección en el manual, función en `core/`,
