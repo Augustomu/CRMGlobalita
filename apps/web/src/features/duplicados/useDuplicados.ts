@@ -97,7 +97,7 @@ export function useDuplicados(usuario: UsuarioRecord | null) {
         const r = await pb.collection('lead').getFullList({
           filter: tanda.map((id) => `perfil = "${id}"`).join(' || '),
           expand: 'cuenta',
-          fields: 'id,perfil,cuenta,expand.cuenta.abrev',
+          fields: 'id,perfil,cuenta,email,expand.cuenta.abrev',
         });
         leads.push(...r);
       }
@@ -107,6 +107,7 @@ export function useDuplicados(usuario: UsuarioRecord | null) {
         id: string;
         perfil: string;
         cuenta: string;
+        email?: string;
         expand?: { cuenta?: { abrev?: string } };
       }>) {
         const item: LeadDelPerfil = {
@@ -114,6 +115,7 @@ export function useDuplicados(usuario: UsuarioRecord | null) {
           perfil: l.perfil,
           cuenta: l.cuenta,
           cuenta_abrev: l.expand?.cuenta?.abrev,
+          email: l.email,
         };
         porPerfil.set(l.perfil, [...(porPerfil.get(l.perfil) ?? []), item]);
       }

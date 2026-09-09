@@ -171,6 +171,15 @@ export interface LeadDelPerfil {
   cuenta: string;
   /** Para poder decir cuál es, si hay choque. */
   cuenta_abrev?: string;
+  /**
+   * El email, para poder decidir la fusión.
+   *
+   * Vive en el lead y no en el perfil (§3.2: es propio de la relación con una
+   * cuenta), pero es el dato que más ayuda a resolver un duplicado: dos «Sergio
+   * Chávez» con el mismo correo son la misma persona; con correos de empresas
+   * distintas, casi seguro que no.
+   */
+  email?: string;
 }
 
 export interface PlanLeads {

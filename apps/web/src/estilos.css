@@ -5634,3 +5634,76 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   word-break: break-all;
 }
 .inv-listo { font-size: var(--txt-base); color: var(--text); line-height: 1.5; }
+
+/* ---------- filtro rápido de WhatsApp en la lista (§7.2) ---------- */
+/*
+ * Tres estados en un botón: un toque filtra los que tienen, dos los excluye,
+ * tres vuelve a todos. El color solo no alcanza para distinguir el segundo del
+ * tercero —de reojo, verde y verde tachado se parecen— así que el estado
+ * «sin» lleva una barra encima.
+ */
+.boton-wa-filtro { position: relative; }
+.boton-wa-si { color: var(--brand-whatsapp); background: var(--success-light); border-color: var(--success-light); }
+.boton-wa-no { color: var(--error); background: var(--error-light); border-color: var(--error-light); }
+.boton-wa-barra {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  height: 1.5px;
+  border-radius: 1px;
+  background: currentColor;
+  transform: rotate(-35deg);
+  pointer-events: none;
+}
+
+/* ---------- duplicados: el modo lista (D02) ---------- */
+/*
+ * Para aprobar de a muchos lo que no tiene nada que decidir: el nombre completo
+ * coincide y ninguno de los dos perfiles tiene otro candidato. Los que sí
+ * requieren mirar van de a uno, en la otra vista.
+ */
+.dup-lista { display: flex; flex-direction: column; gap: 1px; }
+.dup-lista-fila {
+  display: grid;
+  grid-template-columns: 18px 26px minmax(0, 1.4fr) minmax(0, 1.3fr) minmax(0, 130px) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  border: .5px solid transparent;
+  cursor: pointer;
+  transition: background 150ms ease-out;
+}
+.dup-lista-fila:hover { background: var(--bg); }
+/* Destildado se apaga pero NO se saca: hay que poder volver a tildarlo. */
+.dup-lista-off { opacity: .45; }
+.dup-lista-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  color: var(--accent);
+  font-size: var(--txt-xs);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dup-lista-quien { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.dup-lista-nombre {
+  font-size: var(--txt-base);
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dup-lista-dato {
+  font-size: var(--txt-md);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dup-lista-cuentas { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }

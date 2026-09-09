@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
+import { normalizar } from '@crm/core/cruce';
 import {
   planDeFusion,
   planDeLeads,
   NOMBRE_CAMPO,
   type PerfilFusionable,
 } from '@crm/core/fusion';
+import { iniciales } from '../followup/ListaContactos';
 import { pb } from '../../lib/pocketbase';
 import { useEscape } from '../../lib/useEscape';
 import type { PerfilMarcado, useDuplicados } from './useDuplicados';
@@ -69,6 +71,19 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
   const [fallo, setFallo] = useState<string | null>(null);
   const [fusionados, setFusionados] = useState(0);
   const [separados, setSeparados] = useState(0);
+  /**
+   * Dos formas de mirar lo mismo.
+   *
+   * De a uno se ven los dos perfiles enfrentados campo por campo: es lo que
+   * hace falta cuando hay que decidir de verdad. En lista entran los que no
+   * tienen nada que decidir —el nombre completo coincide y ninguno de los dos
+   * tiene otro candidato— y se aprueban de a muchos.
+   *
+   * Sin la lista, aprobar 28 cruces obvios son 28 vueltas de la misma pantalla.
+   */
+  const [modo, setModo] = useState<'uno' | 'lista'>('uno');
+  const [tildados, setTildados] = useState<string[]>([]);
+  const [enLote, setEnLote] = useState<{ hechos: number; total: number } | null>(null);
 
   const grupo = grupos[indice] ?? null;
   const terminado = !cargando && (grupos.length === 0 || indice >= grupos.length);
@@ -165,6 +180,68 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
     }
   }
 
+  /**
+   * Fusiona un grupo cualquiera, no el que se está mirando.
+   *
+   * Es la misma secuencia de tres pasos de `fusionar`, y el orden importa por
+   * lo mismo: slug y urn tienen índice único, así que los absorbidos los sueltan
+   * antes de que el sobreviviente los reclame.
+   */
+  async function fusionarGrupo(g: (typeof grupos)[number]) {
+    const pl = planDeFusion(g.perfiles.map(aFusionable));
+    const pLeads = planDeLeads(pl.sobrevive, pl.absorbidos, g.leads);
+    if (pl.conflictos.length || pLeads.choques.length) return false;
+
+    for (const id of pl.absorbidos) {
+      await pb.collection('perfil').update(id, {
+        slug: '',
+        urn: '',
+        posible_duplicado_de: [],
+        fusionado_en: pl.sobrevive,
+      });
+    }
+    for (const id of pLeads.mover) {
+      await pb.collection('lead').update(id, { perfil: pl.sobrevive });
+    }
+    await pb.collection('perfil').update(pl.sobrevive, pl.resultado);
+    await pb.collection('perfil').update(pl.sobrevive, { posible_duplicado_de: [] });
+    return true;
+  }
+
+  /**
+   * Aprueba de a muchos.
+   *
+   * Va de a uno por dentro y muestra el avance: son consultas a la base, no una
+   * transacción, y si falla la número 12 hace falta saber que las 11 anteriores
+   * sí se hicieron.
+   */
+  async function aprobarLote() {
+    if (trabajando) return;
+    const elegidos = paraLote.filter((x) => tildados.includes(x.grupo.id));
+    if (!elegidos.length) return;
+
+    setTrabajando(true);
+    setFallo(null);
+    setEnLote({ hechos: 0, total: elegidos.length });
+    try {
+      let n = 0;
+      for (const { grupo: g } of elegidos) {
+        await fusionarGrupo(g);
+        setEnLote({ hechos: ++n, total: elegidos.length });
+      }
+      setFusionados((x) => x + n);
+      onCambio();
+      await recargar();
+      setTildados([]);
+      setModo('uno');
+    } catch (e) {
+      setFallo(e instanceof Error ? e.message : String(e));
+    } finally {
+      setEnLote(null);
+      setTrabajando(false);
+    }
+  }
+
   async function sonDistintos() {
     if (!grupo || trabajando) return;
     setTrabajando(true);
@@ -189,6 +266,32 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
     }
   }
 
+  /**
+   * Los grupos que se pueden aprobar sin mirarlos uno por uno.
+   *
+   * Tres condiciones, todas necesarias:
+   *   - son exactamente dos perfiles (no una maraña de tres o más),
+   *   - sus nombres normalizados coinciden enteros,
+   *   - la fusión no tiene conflictos ni choques de leads.
+   *
+   * Con eso, el lote deja de ser un acto de fe: lo que entra es lo que la
+   * pantalla de a uno también aprobaría sin dudar.
+   */
+  const paraLote = useMemo(() => {
+    const salida: { grupo: (typeof grupos)[number]; nombre: string }[] = [];
+    for (const g of grupos.slice(indice)) {
+      if (g.perfiles.length !== 2) continue;
+      const [a, b] = g.perfiles;
+      if (!a || !b) continue;
+      if (normalizar(a.nombre ?? '') !== normalizar(b.nombre ?? '')) continue;
+      const pl = planDeFusion(g.perfiles.map(aFusionable));
+      if (pl.conflictos.length) continue;
+      if (planDeLeads(pl.sobrevive, pl.absorbidos, g.leads).choques.length) continue;
+      salida.push({ grupo: g, nombre: a.nombre ?? '' });
+    }
+    return salida;
+  }, [grupos, indice]);
+
   const avance = grupos.length ? Math.round((indice / grupos.length) * 100) : 100;
   const conflictoDe = new Set((plan?.conflictos ?? []).map((c) => c.campo));
 
@@ -200,6 +303,31 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
           <span className="overlay-progreso">
             {grupos.length ? `${Math.min(indice + 1, grupos.length)} de ${grupos.length}` : '—'}
           </span>
+
+          {/* El modo lista sólo aparece si hay algo que aprobar en lote: un
+              botón que lleva a una pantalla vacía es peor que no tenerlo. */}
+          {paraLote.length > 0 && (
+            <div className="chips">
+              <button
+                type="button"
+                className={`chip ${modo === 'uno' ? 'chip-on' : ''}`}
+                onClick={() => setModo('uno')}
+              >
+                de a uno
+              </button>
+              <button
+                type="button"
+                className={`chip ${modo === 'lista' ? 'chip-on' : ''}`}
+                title="Los que coinciden en el nombre completo y no tienen nada que decidir"
+                onClick={() => {
+                  setModo('lista');
+                  setTildados(paraLote.map((x) => x.grupo.id));
+                }}
+              >
+                en lista · {paraLote.length}
+              </button>
+            </div>
+          )}
           <div className="barra">
             <div className="barra-avance" style={{ width: `${avance}%` }} />
           </div>
@@ -219,6 +347,64 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
             <div className="aviso-error">
               <strong>No se pudo leer la base.</strong>
               <p>{error}</p>
+            </div>
+          </div>
+        ) : modo === 'lista' ? (
+          <div className="overlay-cuerpo">
+            <div className="dup-encabezado">
+              <span className="pastilla pastilla-ok">{paraLote.length} sin nada que decidir</span>
+              <span className="campo-ayuda">
+                El nombre completo coincide y ninguno de los dos tiene otro candidato. Destildá el
+                que quieras mirar de a uno.
+              </span>
+            </div>
+
+            <div className="dup-lista">
+              {paraLote.map(({ grupo: g, nombre }) => {
+                const emails = [...new Set(g.leads.map((l) => l.email).filter(Boolean))];
+                const cuentas = [...new Set(g.leads.map((l) => l.cuenta_abrev).filter(Boolean))];
+                const tel = g.perfiles.find((x) => x.telefono)?.telefono ?? '';
+                const cargo = g.perfiles.find((x) => x.cargo)?.cargo ?? '';
+                const pais = g.perfiles.find((x) => x.pais)?.pais ?? '';
+                const tildado = tildados.includes(g.id);
+                return (
+                  <label key={g.id} className={`dup-lista-fila ${tildado ? '' : 'dup-lista-off'}`}>
+                    <input
+                      type="checkbox"
+                      checked={tildado}
+                      disabled={trabajando}
+                      onChange={() =>
+                        setTildados((v) =>
+                          v.includes(g.id) ? v.filter((x) => x !== g.id) : [...v, g.id],
+                        )
+                      }
+                    />
+                    {/* Sin foto: ni el export del Calendar ni el CSV la traen.
+                        Las iniciales es lo que usa el resto de la app. */}
+                    <span className="dup-lista-avatar">{iniciales(nombre)}</span>
+                    <span className="dup-lista-quien">
+                      <span className="dup-lista-nombre">{nombre}</span>
+                      <span className="campo-ayuda">
+                        {[cargo, pais].filter(Boolean).join(' · ') || 'sin cargo cargado'}
+                      </span>
+                    </span>
+                    <span className="dup-lista-dato">{emails[0] ?? '—'}</span>
+                    <span className="dup-lista-dato tabular">{tel || '—'}</span>
+                    <span className="dup-lista-cuentas">
+                      {cuentas.map((c) => (
+                        <span key={c} className="pastilla">
+                          {c}
+                        </span>
+                      ))}
+                      {/* Lo que gana la persona al fusionar, que es la razón de
+                          estar haciendo esto. */}
+                      <span className="pastilla pastilla-ok">
+                        {g.leads.length} lead{g.leads.length === 1 ? '' : 's'} + teléfono
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
             </div>
           </div>
         ) : grupo && !terminado ? (
@@ -373,9 +559,38 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
 
         <footer className="overlay-pie">
           <span className="campo-ayuda">
-            {grupos.length - indice > 0 ? `${grupos.length - indice} por revisar` : 'todo revisado'}
+            {enLote
+              ? `Uniendo ${enLote.hechos} de ${enLote.total}…`
+              : grupos.length - indice > 0
+                ? `${grupos.length - indice} por revisar`
+                : 'todo revisado'}
           </span>
-          {grupo && !terminado ? (
+
+          {modo === 'lista' ? (
+            <>
+              <button
+                type="button"
+                className="boton-secundario"
+                disabled={trabajando}
+                onClick={() => {
+                  setModo('uno');
+                  setTildados([]);
+                }}
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                className="boton-principal al-final"
+                disabled={trabajando || !tildados.length}
+                onClick={() => void aprobarLote()}
+              >
+                {trabajando
+                  ? 'Uniendo…'
+                  : `Aprobar ${tildados.length} ${tildados.length === 1 ? 'unión' : 'uniones'}`}
+              </button>
+            </>
+          ) : grupo && !terminado ? (
             <>
               <button
                 type="button"

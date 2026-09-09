@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { coincide } from '@crm/core/busqueda';
 import { etiquetaDeUltimoEnvio } from '@crm/core/envio';
+import { pasaElFiltro, siguienteEstado, tituloDelFiltro, type TresEstados } from '@crm/core/filtro';
 import { ETIQUETAS_EN_LA_FILA, etiquetasDeLaFila } from '@crm/core/etiqueta';
 import { nombreDePersona } from '@crm/core/linkedin';
 import { COLUMNA_LISTA } from '@crm/core/anchos';
@@ -10,6 +11,7 @@ import { tocaHoy } from '@crm/core/cadencia';
 import { diaLocal } from '@crm/core/fecha';
 import type { LeadRecord, UsuarioRecord } from '../../lib/types';
 import { BurbujaWhatsApp } from './IconosCanal';
+import { IconoWhatsApp } from '../../ui/iconos';
 import { pb } from '../../lib/pocketbase';
 import { ColaEnvios } from './ColaEnvios';
 import { Conversacion } from './Conversacion';
@@ -253,7 +255,7 @@ export function ListaContactos({
   const [soloVencidos, setSoloVencidos] = useState(false);
   // Los ocho filtros de §7.2. Los cuatro de abajo son listas que salen de los
   // datos, no opciones fijas: el catálogo de roles y ciudades lo define la base.
-  const [wa, setWa] = useState<'todos' | 'con' | 'sin'>('todos');
+  const [wa, setWa] = useState<TresEstados>('todos');
   const [reunion, setReunion] = useState<'todas' | 'con' | 'sin' | 'asistio' | 'no-asistio'>('todas');
   const [orden, setOrden] = useState<'nuevo' | 'viejo'>('nuevo');
   const [rol, setRol] = useState<string | null>(null);
@@ -338,8 +340,7 @@ export function ListaContactos({
         // El teléfono decide, no el permiso: si el filtro dependiera de
         // `veTelefono` daría resultados distintos según quién mira.
         const tieneWa = Boolean(p?.telefono_valido);
-        if (wa === 'con' && !tieneWa) return false;
-        if (wa === 'sin' && tieneWa) return false;
+        if (!pasaElFiltro(wa, tieneWa)) return false;
 
         const r = reunionDe(l.id);
         if (reunion === 'con' && !r) return false;
@@ -484,6 +485,31 @@ export function ListaContactos({
             <path d="M4 6h16M7 12h10M10 18h4" />
           </svg>
         </button>
+        {/* Acceso rápido a WhatsApp: un toque filtra los que lo tienen, dos
+            los excluye, tres vuelve a todos.
+
+            El mismo estado que el filtro del popover —no son dos filtros que
+            puedan contradecirse—, sólo que acá se llega en un toque. Es la
+            pregunta que más se hace sobre esta lista, y abrir el popover para
+            responderla eran tres clics.
+
+            Sin permiso de ver el teléfono no aparece: el botón revelaría que el
+            dato existe. */}
+        {veTelefono && (
+          <button
+            type="button"
+            title={tituloDelFiltro(wa, 'WhatsApp')}
+            className={`boton-icono boton-wa-filtro ${wa === 'con' ? 'boton-wa-si' : ''} ${wa === 'sin' ? 'boton-wa-no' : ''}`}
+            onClick={() => setWa(siguienteEstado(wa))}
+          >
+            <IconoWhatsApp />
+            {/* La barra sobre el icono es lo que hace legible el tercer
+                estado: sin ella, «con» y «sin» se distinguen sólo por el
+                color, que es justo lo que no se ve de reojo. */}
+            {wa === 'sin' && <span className="boton-wa-barra" />}
+          </button>
+        )}
+
         {/* §7.2: importar CSV vive acá, al lado del buscador, y solo con
             permiso. Es donde entra la base. */}
         {onImportar && (

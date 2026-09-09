@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { entrar, PB_URL } from './entrar.mjs';
 import { normalizarSlug, extraerUrn, huella } from '../../core/src/dedupe.ts';
+import { mejorNombre } from '../../core/src/cruce.ts';
 
 const RAIZ = path.resolve(import.meta.dirname, '../../..');
 const APLICAR = process.argv.includes('--aplicar');
@@ -97,7 +98,23 @@ for (const ev of eventos) {
 
   plan.push({
     nombre: nombreLead,
-    nombre_completo: ev.nombre_invitado || nombreLead,
+    /*
+     * El nombre COMPLETO, buscándolo donde esté.
+     *
+     * El título del evento —«Leonardo / Bruno / Augusto»— da el nombre de pila
+     * y nada más: 153 de las 178 personas quedaban con una sola palabra, y con
+     * un nombre de pila no se puede cruzar contra los contactos de WhatsApp
+     * (hay catorce Carlos en esta base).
+     *
+     * El link de LinkedIn y el email sí lo tienen, y entre los dos recuperan
+     * 132. `mejorNombre` los prueba en orden de confiabilidad y descarta las
+     * casillas de empresa: `contato@…` no es el nombre de nadie.
+     */
+    nombre_completo: mejorNombre({
+      titulo: ev.nombre_invitado || nombreLead,
+      link: ev.linkedin,
+      email: ev.email,
+    }),
     cuenta: cuenta,
     slug: link.slug,
     urn: link.urn,
