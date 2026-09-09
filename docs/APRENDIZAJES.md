@@ -10,8 +10,15 @@ que falta. La columna que importa es **cuántas veces**.
 **Cómo se hizo.** Reconstruido desde el historial de git (134 commits), los
 logs de PocketBase y la base, el 09/09/2026. No de memoria.
 
+**Tercera vuelta, 09/09/2026 · noche.** Augusto revisó la agenda ya arreglada
+y **cuatro cosas volvieron**. Están marcadas «volvió» en el tablero y sumadas
+en el número de veces de su familia. Ninguna de las cuatro la puede ver un
+script: las cuatro son de criterio.
+
 **Cómo se comprueba.** `node docs/revisar-aprendizajes.mjs` vuelve a buscar los
-que se pueden buscar solos. Al 09/09/2026 **no aparece ninguno**.
+que se pueden buscar solos. Al 09/09/2026 **no aparece ninguno** — y eso es
+justamente el límite del chequeo: los colores nuevos daban 5.80:1, 6.19:1 y
+6.05:1, todos aprobados, y aun así estaban mal.
 
 ---
 
@@ -20,19 +27,21 @@ que se pueden buscar solos. Al 09/09/2026 **no aparece ninguno**.
 | # | Familia | Veces | ¿Se puede chequear solo? | Estado |
 |---|---|---|---|---|
 | 1 | Borrar datos sin que nadie lo pida | **1** (10 ejecuciones) | no | cerrado con regla |
-| 2 | El contraste de la agenda | **6** | sí · B | cerrado |
+| 2 | El color de la agenda | **7** | sí · B | **volvió** |
 | 3 | Una regla vieja pisando a la nueva | **3** (14 reglas) | sí · C | cerrado |
-| 4 | Un control nuevo en vez del que ya existe | **5** | sí · D | cerrado |
+| 4 | Un control nuevo en vez del que ya existe | **6** | sí · D | **volvió** |
 | 5 | El scope de los handlers de PocketBase | **2** | sí · E | cerrado |
 | 6 | Programar contra el modelo imaginado | **6** | **no** | práctica |
 | 7 | Pedir la misma cosa en dos lugares | **5** | no | práctica |
-| 8 | Decidir por el usuario | **3** | no | práctica |
+| 8 | Decidir por el usuario | **5** | no | **volvió ×2** |
 | 9 | Trampas de las APIs | **3** | no | documentado |
 | 10 | Datos reales en un repo público | **1** | parcial | cerrado |
 | 11 | No había dónde guardarlo | **1** (pedido 4 veces) | no | cerrado |
+| 12 | Aprobar una descripción no es aprobar una pantalla | **1** | no | **nuevo** |
 
-**35 incidentes.** Los cuatro que se pueden mecanizar son los que más se
-repitieron: 16 de los 35.
+**40 incidentes.** Los cuatro que se pueden mecanizar son los que más se
+repitieron: 17 de los 40. Pero el saldo de la tercera vuelta es al revés: de
+los 5 nuevos, **ninguno lo podía atajar un script**.
 
 ---
 
@@ -62,9 +71,9 @@ hacer, no para borrar.
 
 ---
 
-## 2 · El contraste de la agenda
+## 2 · El color de la agenda
 
-> **6 vueltas.** El error más caro del proyecto, y el que más tardó en verse.
+> **7 vueltas.** El error más caro del proyecto, y el que más tardó en verse.
 
 Augusto lo reportó tres veces con las mismas palabras —«los colores son muy
 tenues»— y las tres primeras respuestas fueron arreglos del lugar equivocado.
@@ -77,8 +86,10 @@ tenues»— y las tres primeras respuestas fueron arreglos del lugar equivocado.
 | 4 | — | **Tres reglas de la versión pálida habían quedado después de las nuevas** y ganaban: el hover devolvía el bloque a `--info-light` con el nombre en `--text`. Texto oscuro sobre fondo oscuro |
 | 5 | Se midió | **La causa real**: `--surface` (#FAF7F1) sobre `--success-light` (#E8F5EB) = **1.1:1**, cuando lo mínimo legible es 4.5:1. En **tres de los cuatro estados** el nombre de la reunión era invisible |
 | 6 | Los cuatro estados sólidos | El ámbar no daba: `--warning` con texto blanco queda en **4.38:1**. Lo encontró el chequeo automático, no una persona |
+| 7 | — | **Se pasó de largo para el otro lado.** *«Es un verde demasiado fuerte»*, *«es como un gris»*, *«me gustaría una paleta un poquito más clara»*. Los números estaban bien —5.80, 6.19, 6.05— y el resultado igual estaba mal |
 
-**De dónde vino.** De dos cosas, y la segunda es la grave:
+**De dónde vino.** De tres cosas, y la tercera es la que explica por qué el
+péndulo fue de una punta a la otra:
 
 1. **Buscar el contraste en el fondo y no en el bloque.** El contraste de una
    agenda no sale de la columna: sale de los bloques. Los tres primeros
@@ -86,6 +97,15 @@ tenues»— y las tres primeras respuestas fueron arreglos del lugar equivocado.
 2. **Nunca calcular el número.** «Se ve tenue» se trató como una opinión de
    diseño durante tres rondas. Era una medición: 1.1:1. Un minuto de cuenta lo
    habría cerrado la primera vez.
+3. **Diseñar el color de la agenda mirando la agenda.** Las seis vueltas se
+   discutieron dentro de la pantalla, sin abrir ninguna otra. Y el resto del
+   dashboard ya tenía la respuesta escrita: **tinte claro de fondo, texto
+   saturado del mismo tono**. Así están `.fila-reunion-asistio` (5.89:1),
+   `.fila-ultimo` (4.94:1), `.badge-meeting` (6.78:1), `.badge-await`
+   (6.37:1) y `.pastilla` (5.93:1). **Bloque sólido con texto blanco no
+   existe en ninguna otra parte del CRM.** La agenda se inventó un idioma de
+   color propio, y por eso podía estar aprobada por el chequeo y desentonar
+   igual. Esto es la familia 4 disfrazada de familia 2.
 
 **Cómo se resolvió.**
 
@@ -100,8 +120,10 @@ tenues»— y las tres primeras respuestas fueron arreglos del lugar equivocado.
   que todo gritaba igual.**
 - Chequeo **B** en `revisar-aprendizajes.mjs`.
 
-**La lección, en una línea.** Cuando alguien dice «no se ve», medilo antes de
-opinar.
+**La lección, en dos líneas.** Cuando alguien dice «no se ve», medilo antes de
+opinar. Y cuando el número da bien y igual se ve mal, el problema no es el
+contraste: es que esa pantalla se está pintando con una paleta que el producto
+no usa en ningún otro lado. **4.5:1 es el piso, no el criterio.**
 
 ---
 
@@ -136,7 +158,7 @@ entera. Los errores se tapan entre ellos.
 
 ## 4 · Un control nuevo en vez del que ya existe
 
-> **5 veces**
+> **6 veces**
 
 **El problema.** Construir a mano un control que el producto ya tiene.
 
@@ -147,6 +169,7 @@ entera. Los errores se tapan entre ellos.
 | 3 | El punto de sin leer | `15px`, cuando la escala del producto es 9/10/11/12/13/14/17 |
 | 4 | El chevron de la hora | `8px`, por debajo del piso de la escala |
 | 5 | Los fondos de los overlays | `rgba(0,0,0,.45)` escrito a mano, más un token `--rule-fuerte` **que no existe en ningún lado** y siempre caía en el fallback |
+| 6 | Las fechas de la agenda | Cuatro `<input type="date">` del navegador, que obligan a poner el **año** para agendar mañana. `FechaReunion` ya tiene un calendario propio, y su comentario dice textual: *«el día se elige en un CALENDARIO, no en un `input type=date`»*. Se leyó el comentario y se escribió el input igual |
 
 **De dónde vino.** De escribir el CSS nuevo sin abrir antes el prototipo ni los
 tokens. Cada uno funcionaba; el problema es que juntos hacían que el producto
@@ -239,7 +262,9 @@ había otra. Si la hay, una de las dos se va en el mismo commit.
 
 ## 8 · Decidir por el usuario
 
-> **3 veces**
+> **5 veces.** Las dos nuevas son del 09/09 y tienen la misma forma: el código
+> explica en un comentario por qué NO deja hacer algo, y Augusto pide
+> exactamente eso.
 
 1. **Once chips fijos** R0–R8, «reinvitar» y «gracias» aparecían quisiera uno o
    no. Augusto: *«todo esto se elimina, yo elijo qué es lo que queda
@@ -250,10 +275,30 @@ había otra. Si la hay, una de las dos se va en el mismo commit.
 3. **El flujo de destacar al revés**: la lista primero, el alcance al final. Se
    elegía el mensaje a ciegas. Ahora son tres pasos en el orden en que se
    piensan: idioma → dónde vale → cuáles.
+4. **Los eventos de Google no se arrastran.** El comentario decía: *«moverlo
+   desde el CRM daría a entender que el CRM lo controla, cuando el dueño de
+   ese evento es Google»*. Augusto: *«mantengo apretado y quiero mover hacia
+   abajo, no me deja. Eso debería ser una funcionalidad»*. Y hoy **casi todo
+   lo que se ve en su agenda es un evento de Google**: 1.769 externos contra
+   288 reuniones del CRM. Se le bloqueó la mayor parte de la pantalla por una
+   distinción que a él no le importa: si está en su calendario, es suyo.
+5. **El teléfono sólo se conecta, no se escribe.** El chip vacío dice
+   «Conectar un teléfono que ya está en la base», y el comentario lo
+   justifica: *«hay 168 teléfonos sueltos esperando dueño y casi ninguno se va
+   a tipear a mano»*. Cierto para esos 168 — y **falso justo para el teléfono
+   que no está en la base**, que es el caso en que uno lo tiene en la mano y
+   quiere escribirlo. Quedó un callejón sin salida.
 
 **De dónde vino.** De confundir «tener un valor por defecto» con «tener la
 respuesta». Un default está bien cuando la pregunta tiene una respuesta obvia;
 acá no la tenía.
+
+**Y de una versión más fina, que es la de los dos nuevos:** justificar una
+restricción con un argumento correcto. «El dueño del evento es Google» es
+verdad. «Nadie tipea 168 teléfonos» es verdad. Las dos veces el argumento era
+sobre el sistema y la decisión era del usuario. **Un comentario que explica por
+qué algo no se puede hacer es una señal de alarma, no una defensa**: si hizo
+falta escribirlo, es porque alguien iba a querer hacerlo.
 
 ---
 
@@ -326,6 +371,36 @@ es que la respuesta anterior no fue a la causa.
 
 ---
 
+## 12 · Aprobar una descripción no es aprobar una pantalla
+
+> **1 vez**
+
+**El problema.** Augusto mandó unos mockups «como propuesta, analizá qué
+conviene». Se analizaron y se le ofrecieron tres agregados: los carteles de
+rato libre, el contador de reuniones por día y el reloj en la línea de ahora.
+Dijo **«vamos con todos esos cambios»** y se construyeron los tres.
+
+Al verlos en pantalla: *«sacá eso de una opción de una hora y media en el medio
+libre, sacá esos comentarios, no me sirve, no me sirve y no quiero»*.
+
+**De dónde vino.** De tratar un «dale» sobre un párrafo como un «dale» sobre
+una pantalla. En texto, «un cartel que dice cuánto rato libre queda» suena
+útil. En pantalla son **catorce carteles en una semana** —uno por hueco, por
+día— compitiendo por atención con las reuniones, que es lo único que la agenda
+tiene que mostrar. La descripción no lleva el costo; la pantalla sí.
+
+**Lo que agrava el caso.** El pedido original era *«mejorar los colores y el
+diseño»*. Los carteles no eran ni una cosa ni la otra: eran contenido nuevo
+metido en una revisión de forma.
+
+**Cómo se resuelve.** Para lo que **agrega tinta** a una pantalla densa —un
+cartel, un contador, una insignia— el «dale» de una descripción no alcanza. O
+se muestra antes, o entra apagado y se prende. Para lo que **cambia lo que ya
+está** —un color, un tamaño, una posición— el «dale» sirve, porque no hay nada
+nuevo peleando por el lugar.
+
+---
+
 ## Los cuatro chequeos
 
 `node docs/revisar-aprendizajes.mjs` — sale con código 1 si encuentra algo.
@@ -345,7 +420,14 @@ que no tenerlo. Así que las parejas se declaran: **un bloque de color nuevo
 suma una línea a la tabla**, y si un selector deja de existir el chequeo avisa
 en vez de callarse — ya pasó una vez, el mismo día que se escribió.
 
-**Lo que ningún chequeo puede ver** son las familias 6, 7 y 8, que son 14 de
-los 35 incidentes. Ésas no son de código: son de mirar los datos antes de
-escribir la regla, buscar si eso ya existía en otro lado, y no contestar una
-pregunta que le toca al usuario.
+**Lo que ningún chequeo puede ver** son las familias 6, 7, 8 y 12, que son 17
+de los 40 incidentes. Ésas no son de código: son de mirar los datos antes de
+escribir la regla, buscar si eso ya existía en otro lado, no contestar una
+pregunta que le toca al usuario, y no dar por aprobada una pantalla que nadie
+vio todavía.
+
+**Y la tercera vuelta agregó un límite que conviene tener escrito.** El chequeo
+B aprobó los cuatro colores nuevos —5.80:1, 6.19:1, 6.05:1, 12.83:1— y los
+cuatro estaban mal igual. B mide que el texto se lea; no mide que la pantalla
+se parezca al resto del producto. Eso lo dice una persona, y por eso el
+registro sigue teniendo más valor que el script.

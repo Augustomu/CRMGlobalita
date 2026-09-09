@@ -3,7 +3,7 @@
 Lo decidido y todavía no hecho. La especificación —cómo tiene que ser— está
 entera en `docs/MANUAL.md`. Acá va sólo el control de qué falta.
 
-Última revisión: **09/09/2026 · 22:00**, verificada contra el código, contra la
+Última revisión: **09/09/2026 · 23:40**, verificada contra el código, contra la
 base y contra los logs de PocketBase. Los números de acá salen de consultas, no
 de memoria.
 
@@ -39,6 +39,174 @@ de memoria.
 worker (8) es la otra mitad del producto y tres de sus cuatro items esperan
 datos de Augusto; producción (9) espera credenciales y su visto bueno; y los
 datos (10) son fusiones y limpiezas que se hacen desde la pantalla.
+
+---
+
+## 0 ter · La revisión de Augusto del 09/09 (tercera vuelta) — EL PLAN
+
+Miró la agenda ya arreglada y dictó dieciocho cosas. Pidió expresamente que
+esto se piense antes de tocar nada: *«quiero que te tomes más tiempo para poder
+pensar el resultado, no quiero que lo hagas así de imprevisto»* y *«pensemos en
+la estructura de los colores y los contrastes del resto del dashboard para
+poder pensar mejor en los colores de este»*. Nada de acá está implementado
+todavía. **Esperar el visto bueno del plan antes de empezar.**
+
+**Cuatro de las dieciocho ya estaban en `APRENDIZAJES.md` y volvieron.** El
+color de la agenda (7ª vuelta), un control nuevo en vez del que ya existe (6ª),
+y decidir por el usuario (4ª y 5ª). Más una familia nueva, la **12 · aprobar
+una descripción no es aprobar una pantalla**. Ya están registradas.
+
+---
+
+### Tanda 1 · El color. Va primero porque todo lo demás se apoya acá
+
+Augusto: *«es un verde demasiado fuerte»*, *«es como un gris»*, *«me gustaría
+una paleta un poquito más clara; total, el fondo es bastante blanco»*.
+
+**El hallazgo.** El resto del dashboard ya tiene una respuesta escrita, y la
+agenda es el único lugar que no la usa. Todo el CRM colorea igual: **fondo de
+tinte claro, texto saturado del mismo tono.**
+
+| Ya en el producto | Contraste |
+|---|---|
+| `.fila-reunion-asistio` — `--success-light` + `--success` | 5.89:1 |
+| `.fila-ultimo` — `--accent-light` + `--accent` | 4.94:1 |
+| `.badge-meeting` | 6.78:1 |
+| `.badge-await` | 6.37:1 |
+| `.pastilla` — `--bg` + `--muted` | 5.93:1 |
+
+**Bloque sólido con texto blanco no existe en ninguna otra parte del CRM.** La
+agenda se inventó un idioma propio. Por eso podía estar aprobada por el chequeo
+—5.80, 6.19, 6.05— y desentonar igual.
+
+- [ ] **Los estados pasan al idioma de la casa**: tinte claro + texto del mismo
+      tono + una **guía saturada de 3px a la izquierda**, que es la que dice el
+      estado de un vistazo sin que el bloque grite.
+
+      | Estado | Fondo | Texto | Contraste |
+      |---|---|---|---|
+      | programada | `--accent-light` | `--accent` | **4.94:1** |
+      | asistió | `--success-light` | `--success` | **5.89:1** |
+      | no asistió | `--error-light` | `--error` | **5.30:1** |
+      | cancelada | `--warning-light` | `--badge-await-text` | **6.59:1** |
+      | de Google, sin lead | `--info-light` | `--muted` | **6.28:1** |
+      | vinculado | `--teal-light` | `--accent` | **4.59:1** |
+
+- [ ] ⚠️ **La columna de hoy deja de ser `--accent-light`.** Es obligatorio, no
+      estético: «programada» pasa a ser `--accent-light`, así que el bloque y la
+      columna de hoy quedarían **del mismo color**. Es exactamente el error 2 del
+      registro, que ya costó seis vueltas. Hoy se marca con el encabezado —que ya
+      va en `--accent` y en negrita— y con la línea roja de ahora.
+- [ ] **La hora del bloque va en `--muted`, nunca en `--hint`.** Medido:
+      `--hint` sobre `--accent-light` da **2.91:1** y sobre `--info-light`
+      **3.35:1**. Los dos por debajo del piso.
+- [ ] **El hover no cambia de tono: profundiza.** El mismo tinte un paso más
+      oscuro y la guía izquierda más gruesa. **El azul queda descartado y no es
+      capricho**: en este CRM el azul es LinkedIn (`--brand-linkedin`), y un
+      evento azul al pasar el mouse se leería como «esto es de LinkedIn».
+      ❓ Si igual lo querés azul, decilo y lo hago.
+- [ ] **Sacar los carteles de rato libre.** Textual: *«no me sirve y no quiero»*.
+      Se va el render, se va el CSS `.agenda-libre`. **`core/huecos.ts` y sus
+      17 tests se quedan**: la regla es correcta y no cuesta nada; lo que sobraba
+      era ponerla en pantalla.
+      ❓ El **contador de reuniones por día** y el **reloj de la línea de ahora**
+      entraron en la misma tanda que los carteles. No dijo nada de ellos. Los
+      dejo salvo que me digas que también se van.
+
+---
+
+### Tanda 2 · Que la agenda se pueda manejar
+
+- [ ] **Arrastrar cualquier evento, incluidos los de Google.** Textual:
+      *«mantengo apretado y quiero mover hacia abajo, no me deja. Eso debería
+      ser una funcionalidad, y tiene que mandar una notificación a la persona»*.
+      Hoy el arrastre existe sólo para las 288 reuniones del CRM y está
+      **bloqueado para los 1.769 eventos externos**, o sea para casi toda su
+      pantalla. La justificación estaba escrita —«el dueño del evento es
+      Google»— y es la familia 8 del registro.
+- [ ] ⚠️ **Y acá está el peligro real de esta tanda: el eco infinito.**
+      `guardarEventoExterno()` escribe con `$app.save()`, que **sí dispara
+      hooks**. Un hook de salida sobre `evento_externo` haría: Google → la
+      sincronización escribe la fila → el hook la manda de vuelta a Google →
+      Google la trae como cambio → … **con un mail al invitado en cada rebote.**
+      El camino ya está probado en `aplicarEvento()`: **la escritura de entrada
+      pasa a SQL plano**, que no dispara hooks, y el hook de salida queda sólo
+      para lo que toca una persona. Sin esto, no se toca el arrastre.
+- [ ] **Notificar al mover** con la regla que ya existe: si el inicio **ya pasó**
+      es una corrección y Google no avisa; si es futuro, avisa.
+- [ ] **Estirar cualquier evento**, de a 15 minutos. Ya funciona así para las
+      reuniones del CRM (`DURACION_MINIMA = 15`); falta abrirlo a los externos.
+
+---
+
+### Tanda 3 · El tamaño y el encuadre
+
+- [ ] **La semana está demasiado grande.** Medido: `ALTO_TRAMO = 22px` por cada
+      15 minutos, o sea **88px por hora**. De 08:00 a 18:00 son **968px de alto**:
+      no entra en una laptop de 14" y obliga a scrollear siempre. Google Calendar
+      usa ~48px por hora y Outlook ~44. Propuesta: **`ALTO_TRAMO = 14`** (56px
+      por hora) → el día entero en ~620px, la semana se ve de una.
+      ⚠️ Contradice el prototipo, que dice 22. Manda lo que pidió Augusto, y el
+      manual se actualiza en el mismo commit.
+- [ ] **La diaria, como Google Calendar.** Textual: *«los eventos centrados y un
+      ancho seteado, que le pongo diaria y automáticamente se me reduce»*. Hoy la
+      única columna se estira a todo el ancho del panel. Va con ancho tope y
+      centrada.
+- [ ] **Revisar el diseño de la semana, no sólo achicarlo.** *«El diseño no me
+      gusta, deberíamos pensar un diseño más simple»*. Con la tanda 1 puesta y el
+      alto bajado, mirarlo de nuevo antes de seguir tocando.
+
+---
+
+### Tanda 4 · Conectar, y lo que ya está conectado
+
+- [ ] **Hover en un evento sin conectar**: el **correo de la persona invitada** y
+      un botón para conectar. Hoy el bloque «conectar» no tiene tarjeta: se toca y
+      se abre el modal, sin ver antes de quién es.
+      ⚠️ **A verificar primero contra la base**: `evento_externo` **no guarda el
+      correo del invitado** (columnas: `calendario, titulo, inicio, duracion_min,
+      zona, dia_entero, google_event_id, lead`). O se suma la columna y se trae
+      `attendees` en la sincronización, o no hay correo que mostrar. Es el
+      error 11 del registro —«no había dónde guardarlo»— y esta vez se mira el
+      esquema **antes** de dibujar la pantalla.
+- [ ] **Hover en un evento ya conectado**: asistió / no asistió, cambiar la
+      fecha, el correo, notas y «+». Es la misma tarjeta que ya tienen las
+      reuniones del CRM: se reusa, no se escribe otra.
+- [ ] **Un evento vinculado se ve como un enlace**, por defecto.
+
+---
+
+### Tanda 5 · Fuera de la agenda
+
+- [ ] **Las fechas sin año**, al agendar una reunión y en el próximo contacto.
+      Hoy son cuatro `<input type="date">` del navegador, que obligan a poner el
+      año para agendar mañana. `FechaReunion` **ya tiene un calendario propio**,
+      y su comentario dice textual *«el día se elige en un CALENDARIO, no en un
+      `input type=date`»*. Se reusa ése. (Familia 4 del registro, 6ª vez.)
+- [ ] **Cargar un teléfono a mano.** Hoy el chip vacío ofrece un solo camino,
+      «Conectar un teléfono que ya está en la base». Si el número **no está en la
+      base** no hay salida. Va el segundo camino **adentro del mismo modal**, no
+      como un botón al lado: dos botones para lo mismo es la familia 7.
+- [ ] **Chats: filtrar los que no tengo agendados.** ❓ WA Personal **ya tiene**
+      ese filtro (`no_agendados`, `WaPersonal.tsx:289`). Necesito que me digas
+      si el que falta es en otra pantalla, o si el que hay no hace lo que esperás.
+- [ ] ❓ **Las flechas y la fecha de contacto, intercambiadas.** No encuentro
+      flechas junto a una fecha de contacto en ninguna de las dos listas.
+      Necesito saber qué pantalla es.
+- [ ] ❓ **El emoji desalineado dentro del círculo.** Va con lo anterior: mismo
+      lugar, misma revisión.
+- [ ] **La línea verde de la vista Lista no sigue al perfil elegido.** El
+      resaltado existe (`.agenda-lista-on`, pinta con `seleccionado === l.id`).
+      La hipótesis: la vista Lista **sólo lista leads con seguimiento**, así que
+      al elegir un perfil que no está en esa lista no se pinta nada y queda el
+      anterior. Hay que reproducirlo antes de tocar.
+- [ ] ❓ **El texto raro de la columna 2, en la parte de reunión.** Dijiste que lo
+      ibas a pegar y quedó sin pegar. El chip de esa columna arma la fecha como
+      `DD/MM` y no debería salir raro, así que **pegámelo tal cual lo ves**.
+- [ ] ❓ **Jorge, Marcelo y Fabio como últimos editores en el demo.** Busqué los
+      tres nombres en las 26 tablas de la base: aparecen sólo como leads y
+      perfiles reales, en ningún campo de «editor». No están en el código de la
+      app. **¿En qué pantalla los estás viendo?**
 
 ---
 
