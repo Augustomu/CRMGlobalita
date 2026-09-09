@@ -36,6 +36,36 @@ datos (10) son fusiones y limpiezas que se hacen desde la pantalla.
 
 ---
 
+## 0 bis · La revisión de Augusto del 09/09 (segunda vuelta)
+
+Miró la UI pantalla por pantalla y marcó lo que no cerraba. Lo que sigue es
+lo que **quedó abierto**; lo arreglado está en el historial de git y en la
+página de revisión.
+
+- [ ] **Conectar un evento del calendario con un lead.** Es lo que hace que
+      sus eventos dejen de verse pálidos: «Julio - Augusto» y «Bruno /
+      Augusto» son eventos de Google **sin lead detrás**, y el color lo está
+      diciendo bien. Sólo las 288 importadas son reuniones del CRM.
+      ❓ **Falta decidir cómo.** De los 220 eventos de prospección sin perfil,
+      **45 son «FabriPT Catchup Herik» y 38 son «Brenno»**: la misma persona
+      repetida. Evento por evento serían 45 clics para una sola. La propuesta
+      es hacerlo **por persona** —una pantalla con los nombres del calendario
+      que no tienen lead, y para cada uno «es este lead» o «creá el lead»—
+      y que se enganchen todos sus eventos de una.
+- [ ] **Vista Lista: el botón de «no sé» y el de cambiar fecha.** Hoy están el
+      ✓ y la ✕. Para las reuniones viejas hace falta un tercero —«no me
+      acuerdo»— que las archive sin afirmar nada, y poder corregir la fecha
+      sin abrir la ficha.
+- [ ] **Editar o crear un mensaje desde «Destacar mensajes».** Hoy hay que ir
+      al Repositorio, y el momento en que uno se da cuenta de que falta un
+      texto es justo cuando lo está buscando para destacarlo.
+- [ ] **El diseño de los chips destacados.** Augusto: «no me gusta cómo
+      queda». Falta que diga qué le molesta —el alto, el borde, el tilde—.
+- [ ] ❓ **«Conectar un teléfono de la base» sólo aparece si falta el número.**
+      No lo encontró por eso. Hay que decidir si conviene que esté siempre.
+
+---
+
 ## 0 · Bugs vivos — lo que hoy está mal
 
 - [x] **«Cuentas conectadas» ya no miente.** Dice *5 LinkedIn · 5/7 WhatsApp* y
