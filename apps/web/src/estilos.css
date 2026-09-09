@@ -2615,23 +2615,44 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
  * hace legible su grilla no es el fondo, es que LOS EVENTOS SON SÓLIDOS. El
  * contraste lo pone el bloque, no la franja de atrás.
  */
+/*
+ * TERCERA VUELTA SOBRE ESTO, y la lección ya está clara: el contraste de una
+ * agenda no sale del fondo, sale de los bloques. Los dos intentos anteriores
+ * jugaron con el fondo —franjas, bandas— y el segundo hasta pintó la banda del
+ * mismo color que los eventos.
+ *
+ * Acá el fondo se aparta del todo: la columna es la superficie más clara que
+ * hay, y las líneas de hora son las más oscuras que admite sin verse como una
+ * grilla de planilla. Todo el color queda para los eventos.
+ */
 .agenda-col {
   position: relative;
   height: calc(var(--alto-hora) * var(--horas));
-  border-left: .5px solid var(--border);
+  border-left: .5px solid var(--rule-fuerte, var(--border));
   background: var(--surface);
   background-image:
+    /* la hora en punto */
+    repeating-linear-gradient(
+      to bottom,
+      var(--hint) 0 1px,
+      transparent 1px var(--alto-hora)
+    ),
+    /* la media hora, apenas insinuada */
     repeating-linear-gradient(
       to bottom,
       var(--border) 0 1px,
-      transparent 1px var(--alto-hora)
+      transparent 1px calc(var(--alto-hora) / 2)
     );
 }
-/* Hoy y el finde se marcan APENAS: el color fuerte es de los eventos. Teñir la
-   columna entera es volver a pelearle contraste al bloque. */
-.agenda-col-hoy { background: var(--info-light); }
+/* La columna de las horas, del mismo peso que las lineas. */
+.agenda-hora-col { color: var(--muted); font-weight: 500; }
+/* Hoy y el finde. El encabezado del dia lleva el peso; la columna se tiñe lo
+   justo para ubicarse de reojo y nada mas: el color fuerte es de los bloques.
+   Tenirla en serio es volver a pelearle contraste al evento, que es el error
+   que ya cometimos dos veces. */
+.agenda-col-hoy { background: var(--accent-light); }
 .agenda-col-finde { background: var(--bg); }
-.agenda-col-hoy, .agenda-col-finde { background-blend-mode: normal; }
+.agenda-cabeza-hoy { color: var(--accent); font-weight: 700; }
 
 /* El hueco que ocuparía la reunión al soltarla: del alto exacto que va a
    tener, que es lo que uno necesita ver antes de soltar. */
@@ -2668,13 +2689,15 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 2px 6px;
+  padding: 3px 7px;
   border-radius: 6px;
+  /* El verde fuerte del CRM, sin transparencia: es el unico bloque que uno
+     puede mover, abrir y confirmar, y tiene que gritarlo. */
   background: var(--accent);
   color: var(--surface);
   cursor: grab;
   overflow: hidden;
-  box-shadow: 0 1px 2px rgb(0 0 0 / .08);
+  box-shadow: 0 1px 3px rgb(0 0 0 / .18);
 }
 .agenda-evento:hover { background: var(--accent-hover); box-shadow: 0 2px 6px rgb(0 0 0 / .16); }
 .agenda-evento .agenda-evento-nombre { font-weight: 600; color: var(--surface); }
@@ -2760,7 +2783,7 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   grid-template-columns:
     26px
     calc(46px * var(--escala-texto))
-    34px
+    52px
     calc(112px * var(--escala-texto))
     26px
     minmax(0, 1.4fr)
@@ -6097,7 +6120,7 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 .estado-significado { width: 100%; font-size: var(--txt-md); resize: vertical; }
 
 /* -------------------------------------------- Agenda: confirmar asistencia */
-.agenda-lista-confirmar { display: inline-flex; gap: 3px; width: 34px; flex: 0 0 34px; }
+.agenda-lista-confirmar { display: inline-flex; gap: 2px; width: 52px; flex: 0 0 52px; }
 .agenda-lista-confirmar button {
   width: 15px;
   height: 16px;
@@ -6160,16 +6183,21 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
    es el color del fondo de la pantalla— y borde marcado a la izquierda, como
    los eventos «tentativos» de Google. Se ve que el horario está tomado y que
    eso no se toca desde acá. */
+/* El evento del calendario que NO es del CRM.
+   Relleno solido y oscuro, como el del CRM pero en el gris azulado de «esto no
+   se toca desde aca». Antes era un tono claro y a media pantalla de distancia
+   no se distinguia del fondo. */
 .agenda-evento-calendario {
-  /* Relleno propio y borde entero, no un tono apenas distinto del fondo: el
-     bloque tiene que verse como un bloque aunque no sea del CRM. */
-  background: var(--info-light);
-  border: .5px solid var(--info);
-  border-left: 4px solid var(--info);
-  color: var(--text);
+  background: var(--info);
+  border: none;
+  border-left: 4px solid var(--info-br);
+  color: var(--surface);
   cursor: default;
-  box-shadow: 0 1px 2px rgb(0 0 0 / .07);
+  box-shadow: 0 1px 3px rgb(0 0 0 / .18);
 }
+.agenda-evento-calendario:hover { background: var(--info); box-shadow: 0 2px 6px rgb(0 0 0 / .22); }
+.agenda-evento-calendario .agenda-evento-nombre { font-weight: 500; color: var(--surface); }
+.agenda-evento-calendario .agenda-evento-hora { color: var(--surface); opacity: .8; font-weight: 600; }
 .agenda-evento-calendario:hover { background: var(--info-light); box-shadow: 0 1px 3px rgb(0 0 0 / .1); }
 .agenda-evento-calendario .agenda-evento-nombre { font-weight: 500; color: var(--text); }
 .agenda-evento-calendario .agenda-evento-hora { color: var(--info); opacity: 1; font-weight: 600; }
@@ -6205,11 +6233,18 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
    Al tocar un lead en la ficha, su fila acá se ilumina: sin eso, con doscientas
    filas iguales, no hay forma de saber cuál se está mirando. Es el mismo verde
    que usa la lista de contactos para lo mismo. */
-.agenda-lista-fila-on {
+/* La fila elegida en Lista: se pinta el ENVOLTORIO, que es lo que ocupa el
+   ancho entero. Pintando sólo la fila de adentro quedaban las notas y los
+   links por fuera del resaltado y parecía media fila iluminada. */
+.agenda-lista-on {
   background: var(--accent-light);
-  box-shadow: inset 2px 0 0 var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
-.agenda-lista-fila-on .agenda-lista-nombre { font-weight: 600; color: var(--text); }
+.agenda-lista-on .agenda-lista-nombre { font-weight: 700; color: var(--text); }
+.agenda-lista-on .agenda-lista-fila { background: transparent; }
+
+/* «No me acuerdo»: archiva la confirmación sin afirmar nada de la reunión. */
+.agenda-lista-nose:hover { color: var(--muted) !important; border-color: var(--muted) !important; background: var(--bg) !important; }
 
 
 /* La marca de sin leer, a la izquierda del nombre: es lo primero que se busca

@@ -21,6 +21,15 @@ export interface Chip {
   placeholder?: string;
   titulo?: string;
   editable?: boolean;
+  /**
+   * Qué ofrecer cuando el campo está VACÍO, en vez de escribirlo a mano.
+   *
+   * El teléfono casi nunca se tipea: se conecta con un contacto que ya está en
+   * la base. Tener el chip vacío para escribir y además un botón aparte para
+   * conectar era pedir la misma cosa en dos lugares, y el botón de abajo
+   * Augusto directamente no lo encontró.
+   */
+  accion?: { texto: string; hacer: () => void };
 }
 
 export interface BloqueTexto {
@@ -127,9 +136,18 @@ export function Colapsable({
                   <button
                     key={c.clave}
                     type="button"
-                    className={`chip-campo ${c.valor ? '' : 'chip-campo-vacio'}`}
-                    title={c.titulo ?? (editable ? `Editar ${c.label.toLowerCase()}` : c.label)}
-                    onClick={() => empezar(c)}
+                    className={`chip-campo ${c.valor ? '' : 'chip-campo-vacio'} ${!c.valor && c.accion ? 'chip-campo-accion' : ''}`}
+                    title={
+                      !c.valor && c.accion
+                        ? c.accion.texto
+                        : (c.titulo ?? (editable ? `Editar ${c.label.toLowerCase()}` : c.label))
+                    }
+                    onClick={() => {
+                      // Vacío y con acción: la acción manda. Escribirlo a mano
+                      // sigue estando, desde el lápiz del panel que se abre.
+                      if (!c.valor && c.accion) return c.accion.hacer();
+                      empezar(c);
+                    }}
                   >
                     <span className="chip-campo-label">{c.label}</span>
                     <span className={c.valor ? 'chip-campo-valor' : 'chip-campo-placeholder'}>

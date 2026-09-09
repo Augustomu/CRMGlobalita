@@ -53,6 +53,13 @@ export interface EventoAgenda {
    * puede mover ni editar desde acá.
    */
   origen?: 'crm' | 'calendario';
+  /**
+   * Si alguien ya dijo «no me acuerdo» y dejamos de preguntar (§7.6).
+   *
+   * La reunión sigue en «sin dato» —ocurrió y el resultado no se registró, que
+   * es cierto— pero la fila deja de pedir un dato que nadie va a poder dar.
+   */
+  confirmacionArchivada?: boolean;
 }
 
 
@@ -63,6 +70,7 @@ interface ReunionCruda {
   zona: string;
   duracion_min: number;
   estado: string;
+  confirmacion_archivada?: boolean;
   notas: string;
   expand?: {
     lead?: {
@@ -175,6 +183,7 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
           // Sin `google_event_id` la reunión no llegó a escribirse en el
           // calendario todavía; con él, salió de acá.
           delCrm: true,
+          confirmacionArchivada: Boolean(r.confirmacion_archivada),
           duenio: r.expand?.lead?.expand?.asignado?.name ?? '',
         };
       });
@@ -302,6 +311,15 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
     [recargar],
   );
 
+  /** «No me acuerdo»: se archiva la confirmación, no la reunión (§7.6). */
+  const archivarConfirmacion = useCallback(
+    async (id: string) => {
+      await pb.collection('reunion').update(id, { confirmacion_archivada: true });
+      await recargar();
+    },
+    [recargar],
+  );
+
   const cambiarEstado = useCallback(
     async (id: string, estado: string) => {
       await pb.collection('reunion').update(id, { estado });
@@ -393,6 +411,7 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
     recargar,
     mover,
     cambiarEstado,
+    archivarConfirmacion,
     cambiarDuracion,
     cambiarProximo,
     cambiarNota,

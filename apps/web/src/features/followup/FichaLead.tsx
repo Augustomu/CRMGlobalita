@@ -293,6 +293,15 @@ export function FichaLead({
       label: 'Teléfono',
       valor: veTelefono ? valores.telefono : '· · · · ·',
       editable: veTelefono,
+      // Sin número, el chip ES el botón de conectar: hay 168 teléfonos sueltos
+      // esperando dueño y casi ninguno se va a tipear a mano.
+      accion:
+        editable && veTelefono && !p?.telefono
+          ? {
+              texto: 'Conectar un teléfono que ya está en la base',
+              hacer: () => setConectandoTelefono(true),
+            }
+          : undefined,
       titulo: !veTelefono
         ? 'El teléfono no está habilitado para tu usuario'
         : valores.telefono && !p?.telefono_valido
@@ -645,28 +654,11 @@ export function FichaLead({
         />
 
         {/*
-          Conectar un teléfono que ya está en la base.
-
-          Los datos entraron por dos puertas y no se tocan: los leads salieron
-          del calendario y los teléfonos de dos exportaciones de WhatsApp, que
-          entraron como perfiles sin lead. Duplicados cruzó los que tenían el
-          nombre igual y ahí se terminó lo automático — el resto no coincide
-          exacto y adivinar de más junta a dos personas distintas.
-
-          Sólo aparece cuando falta el número: con teléfono cargado, este botón
-          sería una invitación a pisarlo.
+          El botón suelto se fue: ahora es EL PROPIO CHIP de Teléfono cuando
+          está vacío. Estaba debajo del bloque y Augusto no lo encontró — y con
+          razón: pedía la misma cosa en dos lugares, el chip para escribir a
+          mano y un botón aparte para conectar.
         */}
-        {editable && veTelefono && !p?.telefono && (
-          <button
-            type="button"
-            className="boton-mini conectar-telefono"
-            title="Buscar entre los contactos de WhatsApp que todavía no son de nadie"
-            onClick={() => setConectandoTelefono(true)}
-          >
-            Conectar un teléfono de la base
-          </button>
-        )}
-
         {conectandoTelefono && p && (
           <ConectarTelefono
             perfilDelLead={p.id}

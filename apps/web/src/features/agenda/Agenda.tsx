@@ -83,6 +83,7 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
     error,
     mover,
     cambiarEstado,
+    archivarConfirmacion,
     cambiarDuracion,
     cambiarProximo,
     cambiarNota,
@@ -533,8 +534,11 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
               .join('')
               .toUpperCase();
             return (
-              <div key={l.id} className="agenda-lista-envoltorio">
-              <div className={`agenda-lista-fila ${seleccionado === l.id ? 'agenda-lista-fila-on' : ''}`}>
+              <div
+                key={l.id}
+                className={`agenda-lista-envoltorio ${seleccionado === l.id ? 'agenda-lista-on' : ''}`}
+              >
+              <div className="agenda-lista-fila">
                 <button
                   type="button"
                   className={`agenda-check ${chequeados.has(l.id) ? 'agenda-check-on' : ''}`}
@@ -573,7 +577,10 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
                 {/* 7.6 · Confirmar si fue o no fue, sin abrir nada. Sólo
                     aparece cuando falta el dato: una reunión ya confirmada no
                     necesita dos botones al lado pidiendo que se la confirme. */}
-                {ultima && ultima.estado !== 'asistio' && ultima.estado !== 'no-asistio' ? (
+                {ultima &&
+                ultima.estado !== 'asistio' &&
+                ultima.estado !== 'no-asistio' &&
+                !ultima.confirmacionArchivada ? (
                   <span className="agenda-lista-confirmar">
                     <button
                       type="button"
@@ -588,6 +595,19 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
                       onClick={() => void cambiarEstado(ultima.id, 'no-asistio')}
                     >
                       ✕
+                    </button>
+                    {/* «No me acuerdo». De una reunión de hace ocho meses nadie
+                        se acuerda, y sin esta opción las 173 sin confirmar
+                        piden para siempre un dato que no existe. La fecha sigue
+                        en la columna y la reunión sigue en el histórico: lo
+                        único que desaparece son estos botones. */}
+                    <button
+                      type="button"
+                      className="agenda-lista-nose"
+                      title="No me acuerdo: archivar la confirmación. La reunión queda en el histórico."
+                      onClick={() => void archivarConfirmacion(ultima.id)}
+                    >
+                      –
                     </button>
                   </span>
                 ) : (
