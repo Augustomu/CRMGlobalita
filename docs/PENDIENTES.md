@@ -3,8 +3,9 @@
 Lo decidido y todavía no hecho. La especificación —cómo tiene que ser— está
 entera en `docs/MANUAL.md`. Acá va sólo el control de qué falta.
 
-Última revisión: **09/09/2026**, verificada contra el código y contra la base,
-no de memoria.
+Última revisión: **09/09/2026 · 21:15**, verificada contra el código, contra la
+base y contra los logs de PocketBase. Los números de acá salen de consultas, no
+de memoria.
 
 > **Cómo leer esto.**
 > `[x]` hecho y verificado · `[ ]` falta · `[~]` a medias
@@ -27,7 +28,8 @@ no de memoria.
 | 7 · Agenda y Calendar | **7 de 7** |
 | 8 · Integraciones y worker | 1 de 5 |
 | 9 · Producción | 1 de 4 |
-| 10 · Los datos | 5 de 10 |
+| 10 · Los datos | **7 de 10** |
+| 11 · Las copias | 1 de 2 |
 
 **Los bloques 0 a 7 están cerrados.** Lo que queda no es de programar: el
 worker (8) es la otra mitad del producto y tres de sus cuatro items esperan
@@ -52,17 +54,29 @@ página de revisión.
       es hacerlo **por persona** —una pantalla con los nombres del calendario
       que no tienen lead, y para cada uno «es este lead» o «creá el lead»—
       y que se enganchen todos sus eventos de una.
-- [ ] **Vista Lista: el botón de «no sé» y el de cambiar fecha.** Hoy están el
-      ✓ y la ✕. Para las reuniones viejas hace falta un tercero —«no me
-      acuerdo»— que las archive sin afirmar nada, y poder corregir la fecha
-      sin abrir la ficha.
+      **Verificado el 09/09 contra la base**: 1769 eventos externos, 278 de
+      prospección, 58 caen en 31 personas que ya tienen perfil y **220 caen en
+      114 personas que no**. Evento por evento serían 220 clics; por persona
+      son 114, y las dos primeras se llevan 83 eventos.
+      ⚠️ **Falta también en la base**: `evento_externo` no tiene campo `lead`.
+      No hay dónde guardar el vínculo todavía —hace falta una migración—, así
+      que esto no es sólo pantalla.
+- [x] **Vista Lista: el botón de «no sé».** Es el tercer botón, «–», al lado
+      del ✓ y la ✕. Archiva la confirmación sin afirmar nada de la reunión:
+      la fecha sigue en la columna «Última» y la reunión sigue en el histórico.
+      Campo `reunion.confirmacion_archivada` (migración 1788603900).
+      Hoy hay **0 archivadas de 173 en `sin_dato`**: está puesto y sin usar.
+- [ ] **Vista Lista: cambiar la fecha sin abrir la ficha.** Es lo único que
+      quedó abierto de este punto.
 - [ ] **Editar o crear un mensaje desde «Destacar mensajes».** Hoy hay que ir
       al Repositorio, y el momento en que uno se da cuenta de que falta un
       texto es justo cuando lo está buscando para destacarlo.
 - [ ] **El diseño de los chips destacados.** Augusto: «no me gusta cómo
       queda». Falta que diga qué le molesta —el alto, el borde, el tilde—.
-- [ ] ❓ **«Conectar un teléfono de la base» sólo aparece si falta el número.**
-      No lo encontró por eso. Hay que decidir si conviene que esté siempre.
+- [x] **«Conectar un teléfono de la base» ya no es un botón aparte.** Es el
+      propio chip de Teléfono cuando está vacío: se toca el chip y se abre el
+      buscador. Era la misma cosa pedida en dos lugares, y el botón de abajo
+      Augusto no lo encontró. Con número cargado, el chip vuelve a ser un chip.
 
 ---
 
@@ -249,18 +263,57 @@ Contado contra la base, no de memoria.
 - [x] **La separación de perfiles funciona**: se usó 5 veces.
 - [x] **El slot 1 es Alejandro**, no Alberto. Corregido con migración.
 - [x] **Las 288 reuniones tienen `calendario`.**
-- [ ] **Quedan 2 en la bandeja de Duplicados**: el par «Jorge» / «Jorge Lara
-      Huerta», que necesita separarse antes de fusionar.
+- [x] **La bandeja de Duplicados quedó vacía.** Contado con el mismo filtro que
+      usa la pantalla (`posible_duplicado_de` no vacío y `fusionado_en = ""`):
+      **0 perfiles**. El par «Jorge» / «Jorge Lara Huerta» se resolvió.
 - [ ] ⚠️ **6 perfiles todavía juntan a dos personas**: Luiz, Jorge, Carlos, Juan,
       Ricardo y Wellington tienen leads con correos distintos.
+- [x] **Los dos CSV entraron enteros.** Comprobado número por número el 09/09:
+      `gerentes.csv` (228 filas) y `consultores.csv` (20) dan **239 teléfonos
+      distintos, y los 239 están en la base**. No falta ninguno por importar.
+      Lo que queda no es de importación: **167 de esos teléfonos son perfiles
+      sin lead** y **166 leads no tienen teléfono**. Eso se cruza a mano desde
+      el chip de Teléfono, porque el cruce automático por nombre exacto ya se
+      agotó y adivinar de más junta a dos personas distintas.
 - [ ] ⚠️ **Los leads de WhatsApp no tienen correo, y no lo tienen en ningún
       lado.** Los dos CSV son exports de Google Contacts de 19 columnas y ninguna
-      es de correo: cero `@` en las 248 filas. No se perdió al importar, nunca
-      estuvo. Sale de otra exportación o del scan de LinkedIn.
+      es de correo: son nombre, teléfono, organización y notas. No se perdió al
+      importar, nunca estuvo. Sale de otra exportación o del scan de LinkedIn.
 - [ ] **Limpieza de demo**: 12 tareas del seed, 11 actividades, y 2 leads de
       prueba míos («Prueba Alta 41577», «Nueva Persona 09271»).
 - [ ] ❓ **`AC` (Alberto Córdova) no existe como cuenta.** Si alguna vez hay leads
       suyos, hay que crearla con su cupo y línea de negocio.
+
+---
+
+## 11 · Las copias de seguridad
+
+Esto no salió de la UI: salió de mirar los logs de PocketBase y las tareas
+programadas de Windows.
+
+- [x] **La copia local por hora funciona.** `Globalita-SnapshotCRM` corre cada
+      hora y deja una copia fechada en `~/globalita-backups/crm/`. Están las
+      de las 17, 18, 19, 20 y 21 UTC, completas (sqlite + json + manifiesto),
+      con `integrity=ok` y sin errores de claves foráneas.
+- [ ] ⚠️ **La copia de Drive está congelada desde esta mañana.** `crm-snapshot`
+      en `G:\Mi unidad\Globalita-Backup` es del **09/09 a las 14:42 UTC** y
+      tiene **692 perfiles**; la base de ahora tiene 489. El script no la pisa
+      porque tiene una guarda —no sobrescribe Drive si la base cayó más del
+      20%— y **está haciendo bien su trabajo**: por eso la tarea de Windows
+      devuelve código 2 cada hora.
+      **La caída es legítima, verificado el 09/09**: los 692 eran 188 perfiles
+      del seed de demo más una importación duplicada. Comparado teléfono por
+      teléfono, de los 395 números que había **155 eran del seed inventado y
+      240 eran reales**; hoy hay 242 reales. **No se perdió ninguna persona de
+      verdad.** Lo único que no volvió son 98 perfiles de una sola palabra
+      («Josimar», «Waldemiro») que salían de títulos del calendario, y que hoy
+      son justamente los eventos sin lead del punto de arriba.
+      **Mientras tanto se hizo una copia que no pisa nada**:
+      `crm-snapshot-2026-09-09T21-05-48` en la misma carpeta de Drive, con la
+      base de hoy (489 perfiles, 242 leads, 288 reuniones). La vieja sigue ahí.
+      ❓ **Falta que Augusto decida** si se pisa `crm-snapshot` con la buena
+      (`CRM_FORZAR=1`) o si se deja la vieja. Hasta que se decida, la tarea
+      va a seguir devolviendo error cada hora.
 
 ---
 
@@ -276,7 +329,12 @@ Contado contra la base, no de memoria.
 - **No hay login de pruebas.** Al borrar `alberto@globalita.test` se perdió la
   sesión con la que se verificaban las pantallas: las comprobaciones visuales las
   tiene que hacer Augusto hasta que haya un usuario de pruebas.
-- **La cuenta `_superusers` falla todos los días.** En los logs hay
-  `auth-with-password` con `invalid login credentials` a las 03:00, 05:44, 06:00
-  y 15:00. Algo automático intenta entrar con una clave que no es. Hay que
-  encontrar qué.
+- ~~**La cuenta `_superusers` falla todos los días.**~~ **Resuelto, y no era del
+  CRM.** Es `backup-online.js` de `globalita-automation`, que corre cada hora y
+  busca el PocketBase de Globalita probando los puertos 8090, 8091 y 8092. El
+  8090 lo tiene ahora el CRM, así que prueba con la clave de Globalita, le
+  dicen que no, y sigue con el siguiente puerto. El propio script lo tiene
+  anotado en un comentario. La tarea termina en 0. **No hay que hacer nada.**
+- ⚠️ **`evento_externo` no tiene campo `lead`.** Los 1769 eventos del calendario
+  no tienen dónde guardar a quién pertenecen. Es lo que bloquea el pedido más
+  repetido de Augusto, y hace falta una migración, no sólo pantalla.
