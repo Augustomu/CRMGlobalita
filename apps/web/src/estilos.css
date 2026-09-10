@@ -4784,6 +4784,45 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   background: var(--success-light);
   color: var(--success);
   white-space: nowrap;
+  /* Desde el 10/09 es un BOTON: abre el panel del proyecto desde la fila.
+     Sin estas tres, el navegador le pone su borde gris y su fondo propio y
+     deja de parecer el mismo chip. */
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+.ctrl-chip-abierto:hover { background: var(--success); color: var(--surface); }
+
+/* ------------------------------------------- Control unificado (§7.11)
+   Proyectos, leads y reuniones en una sola lista. Antes eran tres solapas y
+   habia que llevar el hilo en la cabeza: uno leia «Reuniones 20», pasaba a
+   Leads y no sabia cuales de esos leads eran los de esas veinte. */
+.ctrl-resumen {
+  display: flex;
+  align-items: baseline;
+  gap: 4px 14px;
+  flex-wrap: wrap;
+}
+.ctrl-dato { font-size: var(--txt-sm); color: var(--muted); white-space: nowrap; }
+.ctrl-dato b { font-size: var(--txt-lg); font-weight: 700; color: var(--text); margin-right: 3px; }
+/* Lo que FALTA, en ambar. No es un error —nadie hizo nada mal— pero es lo
+   unico de la fila sobre lo que hay algo que hacer. El par medido:
+   --warning-light con --badge-await-text da 6.59:1. */
+.ctrl-dato-falta b, .ctrl-falta { color: var(--badge-await-text); }
+.ctrl-dato-falta { color: var(--badge-await-text); }
+.ctrl-falta { font-size: var(--txt-sm); font-weight: 600; }
+/* --muted y NO --hint: --hint sobre --surface da 3.42:1 y el piso es 4.5. Se
+   escribio --hint por reflejo —"suave" suena a gris claro— el mismo dia en
+   que ese error se registro por octava vez. La suavidad se consigue con el
+   tamano y el peso, no bajando el contraste. */
+.ctrl-dato-suave { color: var(--muted); font-size: var(--txt-xs); }
+/* Ocho columnas: contacto, empresa, lugar, origen, etiquetas, reuniones,
+   ultima y proyecto. Las dos numericas van angostas y a la derecha. */
+.ctrl-unificado-tabla .bc-encabezado,
+.ctrl-unificado-tabla .bc-fila {
+  grid-template-columns:
+    minmax(0, 1.4fr) minmax(0, 1.4fr) minmax(0, 1fr) auto
+    minmax(0, 1.2fr) 68px 62px 84px;
 }
 .ctrl-leyenda {
   font-size: var(--txt-sm);
