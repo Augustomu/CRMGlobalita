@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { pb } from '../../lib/pocketbase';
 import { abrirConPerfil } from '../../lib/abrir';
 import { IconoNotas } from '../../ui/iconos';
 import { PANEL_AGENDA } from '@crm/core/anchos';
 import { diaLocal } from '@crm/core/fecha';
+import { scrollHasta } from '@crm/core/ventana';
 import { useAncho } from '../../lib/useAncho';
 import {
   ALTO_HORA, bloqueDelEvento, carriles, duracionAlEstirar, enMinutos, horaEnLaColumna,
@@ -336,6 +337,26 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
     return m;
   }, [eventos, hoy]);
 
+  /**
+   * §7.6 · Que la fila iluminada de la vista Lista SE VEA.
+   *
+   * EL DIAGNÓSTICO ERA OTRO. Augusto: *«me aparece pintado en verde, pero a
+   * medida que voy seleccionando otros perfiles no me los va pintando»*. Yo
+   * supuse que la lista filtraba y por eso el lead elegido no estaba. Es
+   * falso: sólo saca los descartados y los agotados, así que el lead casi
+   * siempre está.
+   *
+   * Lo que pasaba es que la fila **sí se pintaba, fuera de la pantalla**. Son
+   * 240 filas y el panel muestra unas diez: elegir un lead en la columna 1
+   * iluminaba una fila que estaba a mil píxeles de scroll. La columna 1 hace
+   * exactamente esto desde siempre; la agenda no lo hacía.
+   *
+   * Se usa la misma cuenta de la columna 1 —`scrollHasta`, que deja la fila a
+   * un tercio de la altura y no pegada al borde— para que las dos listas se
+   * muevan igual.
+   */
+  const refFilas = useRef<HTMLDivElement>(null);
+
   const filas = useMemo(() => {
     const conSeguimiento = leadsConSeguimiento(leads);
     const filtradas =
@@ -349,6 +370,17 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
     // columna de fechas se veía salteada y no se podía recorrer.
     return porUltimaReunion(filtradas, (l) => ultimaDe.get(l.id));
   }, [leads, fCheck, chequeados, ultimaDe]);
+
+  useEffect(() => {
+    if (vista !== 'Lista' || !seleccionado) return;
+    const i = filas.findIndex((l) => l.id === seleccionado);
+    // -1 es un lead que no está en la lista: descartado o agotado. No se
+    // scrollea a ninguna parte y no se inventa una fila; simplemente no hay
+    // nada que iluminar.
+    if (i < 0) return;
+    const el = refFilas.current;
+    if (el) el.scrollTop = scrollHasta(i, el.clientHeight);
+  }, [seleccionado, vista, filas]);
 
   return (
     <aside className="agenda" style={anchoAgenda.estilo}>
@@ -661,7 +693,7 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
 
       {/* --------------------------------------------------------- lista */}
       {vista === 'Lista' && (
-        <div className="agenda-lista">
+        <div className="agenda-lista" ref={refFilas}>
           <div className="agenda-lista-cabeza">
             <span />
             <span>Última</span>

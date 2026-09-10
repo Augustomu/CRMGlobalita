@@ -6765,3 +6765,31 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 /* En dos tiempos el boton lleva texto, asi que ahi si se ensancha. */
 .usuario-icono-peligro { width: auto; padding: 0 8px; font-size: var(--txt-sm); font-weight: 600; }
 .usuario-rapidos { margin-left: auto; margin-top: 0; padding: 0; border-top: 0; }
+
+/* --------------------------------- El teléfono que NO está en la base
+   §7.2 · El segundo camino de «Conectar un teléfono». Va DENTRO del mismo
+   cuadro y no como otro botón al lado del chip: dos botones para lo mismo es
+   un error que ya se cometió cinco veces. Separado por una línea, porque es
+   la excepción y no lo que se hace 168 veces. */
+.conectar-mano {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 9px;
+  margin-top: 4px;
+  border-top: .5px solid var(--border);
+}
+.conectar-mano-fila { display: flex; gap: 6px; align-items: center; }
+.conectar-mano-campo {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--txt-base);
+  font-variant-numeric: tabular-nums;
+}
+.conectar-mano-campo:focus { outline: none; border-color: var(--accent); }

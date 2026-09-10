@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { pb } from '../../lib/pocketbase';
 import { useEscape } from '../../lib/useEscape';
 import { normalizar } from '@crm/core/cruce';
+import { normalizarTelefono } from '@crm/core/telefono';
 
 /**
  * Conectar un lead con un teléfono que ya está en la base (§7.2, §13).
@@ -47,6 +48,20 @@ export function ConectarTelefono({
   useEscape(onCerrar);
   const [candidatos, setCandidatos] = useState<PerfilConTelefono[]>([]);
   const [busqueda, setBusqueda] = useState('');
+  /**
+   * El número escrito a mano, cuando NO está en la base.
+   *
+   * ERA UN CALLEJÓN SIN SALIDA. Este cuadro ofrecía un solo camino —conectar
+   * un número que ya existe— y el comentario lo justificaba: «hay 168
+   * teléfonos sueltos esperando dueño y casi ninguno se va a tipear a mano».
+   * Cierto para esos 168, y falso justo para el caso en que uno TIENE el
+   * número en la mano y no está en la base. Augusto lo marcó el 09/09.
+   *
+   * Va ACÁ ADENTRO y no como otro botón al lado del chip: dos botones para lo
+   * mismo es la familia 7 del registro, y ya se cometió cinco veces.
+   */
+  const [aMano, setAMano] = useState('');
+  const [guardandoMano, setGuardandoMano] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +135,44 @@ export function ConectarTelefono({
         .some((x) => palabras.has(x)),
     ).length;
   }, [candidatos, nombreDelLead]);
+
+  /**
+   * Escribe el número directamente en el perfil del lead.
+   *
+   * Se normaliza con la MISMA regla que usa el resto del CRM
+   * (`core/telefono.ts`), no con una validación propia: el país sale del
+   * perfil, y el 9º dígito de Brasil o el de Argentina se agregan al armar el
+   * link de WhatsApp, no al guardar. Dos formas de normalizar un teléfono
+   * terminan en dos números distintos para la misma persona.
+   */
+  async function guardarAMano() {
+    const crudo = aMano.trim();
+    if (!crudo) return;
+    setGuardandoMano(true);
+    setError(null);
+    try {
+      const perfil = await pb.collection('perfil').getOne<{ pais?: string }>(perfilDelLead);
+      const tel = normalizarTelefono(crudo, perfil?.pais ?? '');
+      if (!tel.valor) {
+        setError('Ese número no se entiende. Probá con el código de país: +54 11 …');
+        setGuardandoMano(false);
+        return;
+      }
+      await pb.collection('perfil').update(perfilDelLead, {
+        telefono: tel.valor,
+        telefono_raw: tel.raw,
+        // Si no se pudo validar contra el país se guarda igual pero marcado
+        // «a revisar»: perder un número que alguien tipeó es peor que tenerlo
+        // con una duda al lado.
+        telefono_valido: tel.valido,
+      });
+      onConectado();
+      onCerrar();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setGuardandoMano(false);
+    }
+  }
 
   async function conectar(p: PerfilConTelefono) {
     setGuardando(p.id);
@@ -217,6 +270,40 @@ export function ConectarTelefono({
                 …y {ordenados.length - 60} más. Escribí para achicar la lista.
               </span>
             )}
+          </div>
+
+          {/* EL SEGUNDO CAMINO: el número que NO está en la base.
+              Va abajo y no arriba porque conectar uno existente es lo que se
+              hace 168 veces y escribir a mano es la excepción — pero la
+              excepción tiene que existir, que es lo que faltaba. */}
+          <div className="conectar-mano">
+            <span className="campo-label">¿No está en la lista?</span>
+            <div className="conectar-mano-fila">
+              <input
+                className="conectar-mano-campo"
+                value={aMano}
+                placeholder="Escribilo: +55 31 8477-0178"
+                onChange={(e) => setAMano(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void guardarAMano();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="boton-mini"
+                disabled={!aMano.trim() || guardandoMano}
+                onClick={() => void guardarAMano()}
+              >
+                {guardandoMano ? 'guardando…' : 'guardar'}
+              </button>
+            </div>
+            <span className="campo-ayuda">
+              Se guarda en <b>{nombreDelLead}</b> con el código de país de su ficha. Si no se
+              puede validar, queda cargado igual y marcado «a revisar».
+            </span>
           </div>
         </div>
       </div>
