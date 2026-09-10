@@ -90,17 +90,31 @@ function contraste(a, b) {
 }
 
 // ---------------------------------------------------------------------------
-// Los tokens del tema claro, que es el que se mira todo el día.
+// Los tokens, TEMA POR TEMA.
+//
+// Hasta el 09/09 esto leía sólo el tema claro, y con bloques sólidos alcanzaba:
+// el texto era blanco y el fondo saturado en los tres temas, así que medir uno
+// medía los tres. Con bloques de tinte claro dejó de alcanzar — en oscuro y en
+// noche esos mismos tokens cambian de rol— y un par que da 6.51 en claro
+// perfectamente puede no dar en noche. El agujero se encontró a mano; queda
+// tapado acá para no depender de que alguien se acuerde.
 // ---------------------------------------------------------------------------
 const tokensCss = leer('apps/web/public/design-tokens.css');
-const tokens = new Map();
-{
-  // Sólo el primer bloque, que es `:root, .tema-claro`.
-  const hasta = tokensCss.indexOf('.tema-oscuro');
-  for (const m of tokensCss.slice(0, hasta > 0 ? hasta : undefined).matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
-    tokens.set(m[1], m[2].trim());
-  }
+
+/** Los tokens declarados dentro del bloque de un tema. */
+function tokensDelTema(selector) {
+  const re = new RegExp('(?:^|[,\\s])' + selector.replace('.', '\\.') + '\\s*\\{([^}]*)\\}', 'm');
+  const m = re.exec(tokensCss);
+  const mapa = new Map();
+  if (!m) return mapa;
+  for (const d of m[1].matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) mapa.set(d[1], d[2].trim());
+  return mapa;
 }
+
+const TEMAS = ['claro', 'oscuro', 'noche'];
+const porTema = new Map(TEMAS.map((t) => [t, tokensDelTema('.tema-' + t)]));
+/** El claro es el de referencia: es el que se mira todo el día. */
+const tokens = porTema.get('claro');
 const definidos = new Set(tokens.keys());
 
 const estilos = leer('apps/web/src/estilos.css');
@@ -120,14 +134,19 @@ function buscarEnJsx(dir) {
 }
 buscarEnJsx(path.join(raiz, 'apps/web/src'));
 
-/** Resuelve `var(--x)` hasta llegar a un color, o null. */
-function comoColor(valor, vueltas = 0) {
+/**
+ * Resuelve `var(--x)` hasta llegar a un color, o null.
+ *
+ * `mapa` es el tema contra el que se resuelve. Por omisión el claro, así que
+ * todo lo que llamaba a esto antes sigue midiendo lo mismo.
+ */
+function comoColor(valor, mapa = tokens, vueltas = 0) {
   if (!valor || vueltas > 5) return null;
   const v = valor.trim();
   const hex = v.match(/^#[0-9a-fA-F]{3,8}$/);
   if (hex) return aRgb(v);
   const usa = v.match(/^var\((--[\w-]+)/);
-  if (usa) return comoColor(tokens.get(usa[1]), vueltas + 1);
+  if (usa) return comoColor(mapa.get(usa[1]), mapa, vueltas + 1);
   return null;
 }
 
@@ -156,13 +175,33 @@ const bloques = bloquesDe(estilos);
 const LEGIBLE = 4.5;
 
 /** Parejas (fondo, texto) que de verdad se ven juntas. */
+/*
+ * 09/09/2026 · La tabla cambió con los bloques claros.
+ *
+ * Antes el nombre tenía su propia regla de color por estado. Ahora hereda del
+ * bloque (`color: inherit`), así que el texto sale de la MISMA regla que el
+ * fondo: por eso varias parejas van con `null`, que es como se le dice acá.
+ *
+ * Y se sumó LA HORA de cada estado, que es la que casi se escapa: iba en
+ * `--hint`, y `--hint` sobre `--accent-light` da 2.91:1 y sobre `--info-light`
+ * 3.35:1. Un fondo claro perdona menos que uno oscuro, y el texto secundario
+ * es donde eso se paga primero.
+ */
 const PAREJAS = [
-  ['.agenda-evento', '.agenda-evento .agenda-evento-nombre', 'reunión programada'],
-  ['.agenda-evento-asistio', '.agenda-evento-asistio .agenda-evento-nombre', 'reunión que asistió'],
-  ['.agenda-evento-no-asistio', '.agenda-evento-no-asistio .agenda-evento-nombre', 'reunión que no asistió'],
-  ['.agenda-evento-cancelada', '.agenda-evento-cancelada .agenda-evento-nombre', 'reunión cancelada'],
+  ['.agenda-evento', null, 'reunión programada'],
+  ['.agenda-evento-asistio', null, 'reunión que asistió'],
+  ['.agenda-evento-no-asistio', null, 'reunión que no asistió'],
+  ['.agenda-evento-cancelada', null, 'reunión cancelada'],
   ['.agenda-evento-vinculado', '.agenda-evento-vinculado .agenda-evento-nombre', 'evento de Google con lead'],
   ['.agenda-evento-conectable', '.agenda-evento-conectable .agenda-evento-nombre', 'evento de Google sin lead'],
+  // La hora, sobre el tinte de cada estado.
+  ['.agenda-evento', '.agenda-evento-hora', 'la hora de una reunión programada'],
+  ['.agenda-evento-asistio', '.agenda-evento-hora', 'la hora de una reunión que asistió'],
+  ['.agenda-evento-no-asistio', '.agenda-evento-hora', 'la hora de una reunión que no asistió'],
+  ['.agenda-evento-cancelada', '.agenda-evento-hora', 'la hora de una reunión cancelada'],
+  ['.agenda-evento-vinculado', '.agenda-evento-vinculado .agenda-evento-hora', 'la hora de un evento con lead'],
+  ['.agenda-evento-conectable', '.agenda-evento-conectable .agenda-evento-hora', 'la hora de un evento sin lead'],
+  ['.agenda-evento', '.agenda-evento-dura', 'la duración de una reunión'],
   ['.agenda-evento-conectar', null, 'la etiqueta «conectar»'],
   ['.agenda-cabeza-cuantas', null, 'el contador del día'],
   ['.agenda-ahora-reloj', null, 'el reloj de la línea de ahora'],
@@ -185,25 +224,32 @@ const PAREJAS = [
       anotar('B', `la tabla nombra «${claseFondo}» (${donde}) y esa regla ya no existe: hay que actualizar PAREJAS`);
       continue;
     }
-    const fondo = comoColor(rFondo.props.get('background') || rFondo.props.get('background-color'));
-    if (!fondo) continue;
-
     // Sin regla propia de texto, el color sale de la misma regla del bloque.
     const rTexto = claseTexto ? reglaDe(claseTexto) : rFondo;
     if (!rTexto) {
       anotar('B', `la tabla nombra «${claseTexto}» (${donde}) y esa regla ya no existe: hay que actualizar PAREJAS`);
       continue;
     }
-    const texto = comoColor(rTexto.props.get('color'));
-    if (!texto) continue;
 
-    const r = contraste(fondo, texto);
-    if (r < LEGIBLE) {
-      anotar(
-        'B',
-        `${r.toFixed(2)}:1 en ${donde} — «${claseFondo}» (línea ${rFondo.linea}) con el color de ` +
-          `«${(claseTexto ?? claseFondo).split('\n')[0]}» (línea ${rTexto.linea}). Hace falta ${LEGIBLE}:1.`,
-      );
+    const crudoFondo = rFondo.props.get('background') || rFondo.props.get('background-color');
+    const crudoTexto = rTexto.props.get('color');
+
+    // LOS TRES TEMAS. El mismo par de tokens da números distintos en cada uno.
+    for (const tema of TEMAS) {
+      const mapa = porTema.get(tema);
+      const fondo = comoColor(crudoFondo, mapa);
+      const texto = comoColor(crudoTexto, mapa);
+      if (!fondo || !texto) continue;
+
+      const r = contraste(fondo, texto);
+      if (r < LEGIBLE) {
+        anotar(
+          'B',
+          `${r.toFixed(2)}:1 en ${donde}, tema ${tema} — «${claseFondo}» (línea ${rFondo.linea}) ` +
+            `con el color de «${(claseTexto ?? claseFondo).split('\n')[0]}» (línea ${rTexto.linea}). ` +
+            `Hace falta ${LEGIBLE}:1.`,
+        );
+      }
     }
   }
 }

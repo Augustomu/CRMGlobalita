@@ -12,7 +12,6 @@ import {
 import type { UsuarioRecord, LeadRecord } from '../../lib/types';
 import { leadsConSeguimiento, useAgenda, type EventoAgenda } from './useAgenda';
 import { personasSinLead, type PersonaDelCalendario } from '@crm/core/vincular';
-import { comoSeDiceElHueco, huecosDelDia } from '@crm/core/huecos';
 import { ConectarEvento } from './ConectarEvento';
 
 /**
@@ -240,22 +239,6 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
     for (const e of visibles) m.set(e.fecha, [...(m.get(e.fecha) ?? []), e]);
     return m;
   }, [visibles]);
-
-  /**
-   * Lo mismo pero SIN el filtro de cuenta, para calcular los ratos libres.
-   *
-   * El filtro esconde bloques; no los borra de la agenda. Calculando los
-   * huecos sobre lo filtrado, poner el filtro en «BR» haría aparecer «2 h
-   * libre» encima de una reunión de AL que sigue estando ahí — y ese cartel
-   * termina en dos reuniones a la misma hora, que es el error que la agenda
-   * existe para evitar. El contador de la cabecera sí respeta el filtro:
-   * ahí la pregunta es «cuántas de ESTA cuenta», no «cuándo estoy libre».
-   */
-  const porDiaSinFiltrar = useMemo(() => {
-    const m = new Map<string, EventoAgenda[]>();
-    for (const e of eventos) m.set(e.fecha, [...(m.get(e.fecha) ?? []), e]);
-    return m;
-  }, [eventos]);
 
   /**
    * El estirado, escuchado en `document`.
@@ -553,18 +536,6 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
                 delDia.map((e) => ({ a: enMinutos(e.hora), b: enMinutos(e.hora) + e.duracion })),
               );
               const hueco = huecoDestino(iso);
-              // Todo tapa: las reuniones, el almuerzo y los bloques de los
-              // otros administradores. El manual ya lo dice para el panel de
-              // fecha —el hueco que sirve es el que está libre en las dos
-              // agendas—, y un hueco con el almuerzo encima no es un hueco.
-              const libres = huecosDelDia(
-                (porDiaSinFiltrar.get(iso) ?? []).map((e) => ({
-                  desde: enMinutos(e.hora),
-                  hasta: enMinutos(e.hora) + e.duracion,
-                })),
-                HORA_DESDE * 60,
-                (HORA_DESDE + HORAS) * 60,
-              );
               return (
                 <div
                   key={iso}
@@ -587,27 +558,11 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
                     />
                   )}
 
-                  {/*
-                    Los ratos libres (§7.6). La agenda de prospección no se
-                    mira para saber qué se hizo: se mira para saber DÓNDE ENTRA
-                    la próxima. A ojo, un hueco de 40 minutos y uno de 25 se ven
-                    igual, y en uno entra una reunión y en el otro no.
-
-                    Van debajo de los bloques y sin recibir el mouse, para no
-                    robarle el clic a nada ni estorbar el arrastre.
-                  */}
-                  {libres.map((l) => (
-                    <div
-                      key={l.desde}
-                      className="agenda-libre"
-                      style={{
-                        top: `${((l.desde - HORA_DESDE * 60) / (HORAS * 60)) * 100}%`,
-                        height: `${(l.minutos / (HORAS * 60)) * 100}%`,
-                      }}
-                    >
-                      <span>{comoSeDiceElHueco(l.minutos)}</span>
-                    </div>
-                  ))}
+                  {/* Acá iban los carteles de rato libre. Se fueron el 09/09:
+                      «no me sirve y no quiero». En texto sonaban útiles; en
+                      pantalla eran catorce carteles por semana peleándole
+                      atención a las reuniones. La regla sigue viva en
+                      core/huecos.ts por si algún día tiene otro lugar. */}
 
                   {/* La línea de ahora, sólo en la columna de hoy (§7.6). */}
                   {iso === hoy && dondeEstaAhora !== null && (
@@ -655,9 +610,16 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
             La leyenda de la grilla (§7.6).
 
             La grilla dibuja seis clases de bloque y hasta hoy nada decía cuál
-            era cuál: había que deducirlo del color. Es la única idea que se
-            tomó del mockup del 09/09 —el resto bajaba el contraste, que es lo
-            contrario de lo que hacía falta—.
+            era cuál: había que deducirlo del color.
+
+            Nota del 09/09, tarde: acá decía que el resto del mockup «bajaba el
+            contraste, que es lo contrario de lo que hacía falta». Estaba mal y
+            Augusto tenía razón. La paleta clara del mockup era la dirección
+            correcta —es la que usa el resto del dashboard—; lo que faltaba no
+            era subir el tono sino MEDIR los pares. Medidos dan entre 5.30 y
+            6.59, o sea más que los bloques sólidos que habían reemplazado al
+            mockup. La lección quedó en APRENDIZAJES: 4.5:1 es el piso, no el
+            criterio.
           */}
           <div className="agenda-leyenda">
             {(

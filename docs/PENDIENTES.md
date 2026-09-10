@@ -58,7 +58,7 @@ una descripción no es aprobar una pantalla**. Ya están registradas.
 
 ---
 
-### Tanda 1 · El color. Va primero porque todo lo demás se apoya acá
+### Tanda 1 · El color — ✅ HECHA el 09/09
 
 Augusto: *«es un verde demasiado fuerte»*, *«es como un gris»*, *«me gustaría
 una paleta un poquito más clara; total, el fondo es bastante blanco»*.
@@ -79,9 +79,14 @@ tinte claro, texto saturado del mismo tono.**
 agenda se inventó un idioma propio. Por eso podía estar aprobada por el chequeo
 —5.80, 6.19, 6.05— y desentonar igual.
 
-- [ ] **Los estados pasan al idioma de la casa**: tinte claro + texto del mismo
+- [x] **Los estados pasan al idioma de la casa**: tinte claro + texto del mismo
       tono + una **guía saturada de 3px a la izquierda**, que es la que dice el
       estado de un vistazo sin que el bloque grite.
+      «Programada» quedó en `--accent-hover` y no en `--accent`: el nombre son
+      10px, y `--accent` daba 4.94:1 —pasa, pero justo— contra 6.51:1 del otro,
+      sin cambiar de tono ni salir de los tokens.
+      La **guía punteada** ganó significado: dice que no hubo reunión
+      (cancelada) o que todavía no hay lead (sin conectar).
 
       | Estado | Fondo | Texto | Contraste |
       |---|---|---|---|
@@ -92,26 +97,63 @@ agenda se inventó un idioma propio. Por eso podía estar aprobada por el cheque
       | de Google, sin lead | `--info-light` | `--muted` | **6.28:1** |
       | vinculado | `--teal-light` | `--accent` | **4.59:1** |
 
-- [ ] ⚠️ **La columna de hoy deja de ser `--accent-light`.** Es obligatorio, no
+- [x] ⚠️ **La columna de hoy deja de ser `--accent-light`.** Es obligatorio, no
       estético: «programada» pasa a ser `--accent-light`, así que el bloque y la
       columna de hoy quedarían **del mismo color**. Es exactamente el error 2 del
       registro, que ya costó seis vueltas. Hoy se marca con el encabezado —que ya
       va en `--accent` y en negrita— y con la línea roja de ahora.
-- [ ] **La hora del bloque va en `--muted`, nunca en `--hint`.** Medido:
+- [x] **La hora del bloque va en `--muted`, nunca en `--hint`.** Medido:
       `--hint` sobre `--accent-light` da **2.91:1** y sobre `--info-light`
       **3.35:1**. Los dos por debajo del piso.
-- [ ] **El hover no cambia de tono: profundiza.** El mismo tinte un paso más
+- [x] **El hover no cambia de tono: profundiza.** `filter: brightness(.93)` y la
+      guía de 3px a 5px. Bajar el brillo oscurece fondo y texto a la vez, así que
+      el contraste se mantiene y no hace falta un token nuevo por estado. Los
+      bloques que no responden a nada —el almuerzo— no tienen hover: diría «esto
+      se puede tocar» y sería mentira. El mismo tinte un paso más
       oscuro y la guía izquierda más gruesa. **El azul queda descartado y no es
       capricho**: en este CRM el azul es LinkedIn (`--brand-linkedin`), y un
       evento azul al pasar el mouse se leería como «esto es de LinkedIn».
       ❓ Si igual lo querés azul, decilo y lo hago.
-- [ ] **Sacar los carteles de rato libre.** Textual: *«no me sirve y no quiero»*.
+- [x] **Sacar los carteles de rato libre.** Textual: *«no me sirve y no quiero»*.
       Se va el render, se va el CSS `.agenda-libre`. **`core/huecos.ts` y sus
       17 tests se quedan**: la regla es correcta y no cuesta nada; lo que sobraba
       era ponerla en pantalla.
       ❓ El **contador de reuniones por día** y el **reloj de la línea de ahora**
       entraron en la misma tanda que los carteles. No dijo nada de ellos. Los
       dejo salvo que me digas que también se van.
+
+**La auditoría de la tanda 1 contra `APRENDIZAJES.md`** (pedida por Augusto):
+
+- ✅ **Familia 2 · el color.** Los 6 pares medidos, y no sólo en claro.
+- ⚠️ **Y ahí apareció un agujero del propio chequeo: B leía SÓLO el tema
+      claro.** Con bloques sólidos alcanzaba —el texto era blanco y el fondo
+      saturado en los tres temas, así que medir uno medía los tres—; con tinte
+      claro dejó de alcanzar, porque en oscuro y en noche esos tokens cambian de
+      rol. **Se extendió el chequeo a los tres temas**: son 16 parejas × 3 = 48
+      mediciones por corrida. Todas pasan; la más ajustada es «asistió» en tema
+      oscuro con **4.85:1**.
+- ✅ **Se probó que el chequeo DETECTA, no sólo que dice que sí.** Se rompió la
+      hora a `--hint` a propósito: encontró las 4. Y se subió el piso a 5.0:
+      encontró exactamente una, la del tema oscuro, con el número correcto.
+      Un chequeo que nunca se vio fallar no es un chequeo.
+- ✅ **Familia 3 · reglas muertas.** Chequeo C limpio. `porDiaSinFiltrar`, que
+      existía sólo para los carteles, se fue con ellos.
+- ✅ **Familia 4 · tokens.** Chequeo D limpio: ni un color literal ni un tamaño
+      fuera de escala. Los seis estados salen de tokens que ya existían — no
+      hizo falta inventar ninguno.
+- ✅ **Familia 7 · dos lugares para lo mismo.** Sin restos de `agenda-libre`
+      en el CSS, el JSX ni el manual. `core/huecos.ts` sigue con sus 17 tests.
+- ✅ **Familia 10 · datos reales.** Ni un teléfono ni un correo en el diff.
+- ✅ **Familia 12 · aprobar una descripción.** Aplica y se respetó: la tanda 1
+      **sólo cambia lo que ya estaba y saca tinta**, que es el caso donde el
+      «dale» por escrito alcanza. Si hubiera agregado algo a la pantalla, iba
+      mostrado antes.
+- 📝 **Se corrigió un comentario que había quedado mintiendo** en `Agenda.tsx`:
+      decía que el mockup de Augusto «bajaba el contraste, que es lo contrario
+      de lo que hacía falta». Era falso. La paleta clara del mockup era la
+      dirección correcta; lo que faltaba no era subir el tono sino medir.
+
+**Verificado**: 500 tests, `tsc` limpio, `vite build` verde, chequeo en 0.
 
 ---
 

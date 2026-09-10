@@ -1058,8 +1058,27 @@ Tres vistas. La **semanal** y la **diaria** son la misma grilla con distinta can
 - Se **arrastra** a otro día u otra hora. Al arrastrar se pinta el hueco **del alto exacto** que va a ocupar — no los cuadros que toca — porque eso es lo que uno necesita ver antes de soltar.
 - El bloque **dice cuánto dura** al lado de la hora. Cuando es de quince minutos, la hora y el nombre van en la misma línea: no hay alto para dos.
 - **Dos reuniones a la misma hora se reparten el ancho en carriles.** Una encima de otra haría desaparecer la de atrás sin ninguna señal, que es peor que verlas apretadas. El reparto es por grupo encadenado: si A pisa a B y B pisa a C, los tres achican, aunque A y C no se toquen.
-- Lunes a sábado, **domingo no se muestra** (→ §10.12). La columna de hoy en color de acento, sábado en gris.
-- **Los ratos libres se dicen, no se miden a ojo**: entre bloque y bloque va «2 h 30 libre», «45 min libre». La agenda de prospección no se mira para saber qué se hizo, se mira para saber **dónde entra la próxima**, y a ojo un hueco de 40 minutos y uno de 25 se ven igual —pero en uno entra una reunión y en el otro no—. **Tapa todo**: las reuniones, el almuerzo y los bloques de los otros administradores, por lo mismo que dice el panel de fecha —el hueco que sirve es el que está libre en las dos agendas—. Por debajo de **30 minutos no se anuncia**: la reunión más corta que se agenda es de veinte y el cartel sería ruido en una grilla ya apretada.
+- Lunes a sábado, **domingo no se muestra** (→ §10.12). Sábado en gris.
+- **La columna de hoy NO se tiñe**, y es obligatorio: «programada» es `--accent-light`, así que teñir la columna de hoy con ese mismo token borraría el bloque contra su propio fondo. Hoy se marca en el encabezado —acento, negrita y un subrayado de 2px— y con la línea roja de ahora, que sólo existe en esa columna.
+
+**El color de los bloques (§9.6).** La agenda usa **el idioma del resto del dashboard: fondo de tinte claro + texto saturado del mismo tono**, igual que `.fila-reunion-asistio`, `.fila-ultimo`, `.badge-meeting`, `.badge-await` y `.pastilla`. Hasta el 09/09 era el único lugar del CRM con bloques sólidos y texto blanco, y por eso desentonaba aunque el contraste diera bien: *«es un verde demasiado fuerte»*, *«me gustaría una paleta un poquito más clara»*.
+
+| Bloque | Fondo | Texto | Guía izquierda | Contraste |
+|---|---|---|---|---|
+| Programada | `--accent-light` | `--accent-hover` | 3px `--accent` | 6.51:1 |
+| Asistió | `--success-light` | `--success` | 3px `--success` | 5.89:1 |
+| No asistió | `--error-light` | `--error` | 3px `--error` | 5.30:1 |
+| Cancelada | `--warning-light` | `--badge-await-text` | 3px **punteada** `--warning` | 6.59:1 |
+| De Google, con lead | `--teal-light` | `--accent-hover` | 3px `--accent` | 6.05:1 |
+| De Google, sin lead | `--info-light` | `--muted` | 3px **punteada** `--accent` | 6.28:1 |
+| De Google, lo demás | rayado `--info-light` | `--muted` | 3px `--info-br` | 6.28:1 |
+
+**Lo que delimita el bloque es la guía, no el relleno.** El tinte contra la columna da **1.17:1**: si el color fuera lo único, el bloque desaparecería. La guía va en el color saturado y contra la columna da 5.80:1. El tinte agrupa; la guía delimita y dice el estado. La **punteada** significa que no hubo reunión (cancelada) o que todavía no hay lead (sin conectar).
+
+**La hora va en `--muted` y nunca en `--hint`**: medido, `--hint` sobre `--accent-light` da 2.91:1 y sobre `--info-light` 3.35:1. Un fondo claro perdona menos que uno oscuro y el texto secundario es donde se paga primero.
+
+**El hover no cambia de tono: baja el brillo un 7% y engrosa la guía.** No va azul aunque se pidió: en este CRM el azul es LinkedIn, y un evento que se pone azul se lee como «esto es de LinkedIn». Bajar el brillo oscurece fondo y texto a la vez, así que el contraste se mantiene y no hace falta un token nuevo por estado. Los bloques que no responden a nada —el almuerzo— no tienen hover: diría «esto se puede tocar» y sería mentira.
+- **Los ratos libres NO se dibujan.** Se probaron el 09/09 y se sacaron el mismo día: *«sacá eso de una opción de una hora y media en el medio libre, no me sirve y no quiero»*. En texto la idea suena útil; en pantalla eran catorce carteles por semana peleándole atención a las reuniones, que es lo único que la agenda tiene que mostrar. La regla vive en `core/huecos.ts` con sus 17 tests por si alguna vez tiene otro lugar —el panel de fecha, por ejemplo—, pero **la grilla no la usa**.
 - **La cabecera del día dice cuántas reuniones tiene.** Cuenta reuniones con gente —del CRM o de Google ya conectadas— y **no** el almuerzo, los bloques ajenos ni las canceladas: la pregunta que contesta el número es «¿cuánta gente veo el jueves?». En cero no se dibuja.
 - **La hora actual es una línea roja con su reloj**, sólo en la columna de hoy y sólo dentro de la franja de 8 a 20. Va por encima de todo, porque tapada por un evento deja de servir de referencia. Lleva el número al costado porque es lo único rojo de la grilla que no es un estado: una línea roja sola sobre un evento se lee como si el evento estuviera mal.
 - **Abajo va la leyenda** de las ocho clases de bloque. La grilla dibuja programada, asistió, no asistió, canceló, de Google con lead, de Google sin lead, bloqueo de Google y ocupado de otra agenda; sin leyenda hay que deducir el código de color mirando.
