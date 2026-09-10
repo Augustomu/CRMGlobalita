@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { coincide } from '@crm/core/busqueda';
+import { buscable, coincideTodos, terminosDe } from '@crm/core/busqueda';
+import { BuscadorChips } from '../../ui/BuscadorChips';
 import { NOMBRE_CASA, type Casa } from '@crm/core/proyecto';
 import { ddmm } from '@crm/core/fecha';
 import type { LeadDeControl } from './useControl';
@@ -24,6 +25,8 @@ interface Props {
 export function LeadsDelPartner({ leads }: Props) {
   const [etiqueta, setEtiqueta] = useState<string | null>(null);
   const [q, setQ] = useState('');
+  /** §7.2 · Las palabras ya fijadas. Todas tienen que cumplirse. */
+  const [chipsQ, setChipsQ] = useState<string[]>([]);
 
   // Las etiquetas que de verdad hay, no las tres del catálogo: un filtro con
   // una opción que siempre da cero es ruido.
@@ -35,9 +38,10 @@ export function LeadsDelPartner({ leads }: Props) {
   const vistos = useMemo(() => {
     return leads.filter((l) => {
       if (etiqueta && !l.etiquetas.includes(etiqueta)) return false;
-      return coincide([l.nombre, l.empresa, l.cargo, l.industria, l.ciudad, l.pais], q);
+      const b = buscable([l.nombre, l.empresa, l.cargo, l.industria, l.ciudad, l.pais]);
+      return coincideTodos(b, terminosDe(chipsQ, q));
     });
-  }, [leads, etiqueta, q]);
+  }, [leads, etiqueta, q, chipsQ]);
 
   const conProyecto = vistos.filter((l) => l.proyecto).length;
   const conReunion = vistos.filter((l) => l.reuniones > 0).length;
@@ -72,11 +76,13 @@ export function LeadsDelPartner({ leads }: Props) {
             {e} · {leads.filter((l) => l.etiquetas.includes(e)).length}
           </button>
         ))}
-        <input
-          className="bc-buscar"
-          value={q}
-          placeholder="Buscar por nombre, empresa, rubro…"
-          onChange={(e) => setQ(e.target.value)}
+        <BuscadorChips
+          className="lista-buscar bc-buscar"
+          chips={chipsQ}
+          onChips={setChipsQ}
+          texto={q}
+          onTexto={setQ}
+          placeholder="Buscar nombre, empresa, rubro…"
         />
       </div>
 

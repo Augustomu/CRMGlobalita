@@ -657,6 +657,43 @@ module.exports.traerCambios = traerCambios;
  * Nunca lanza. Esto corre adentro del reloj de sincronizacion y un evento raro
  * —una fecha imposible, un titulo de 10 KB— no puede frenar a los otros mil.
  */
+/**
+ * De un evento de Google, el correo de LA OTRA PERSONA.
+ *
+ * Google marca al dueno del calendario con `self: true`, asi que no hace
+ * falta saber su correo para descartarlo — que es bueno, porque aca se tiene
+ * el id del usuario y no su direccion.
+ *
+ * Se saltean tambien los RECURSOS (`resource: true`): una sala de reuniones
+ * es un "invitado" para Google y tiene correo, y ese correo no es de nadie.
+ *
+ * Devuelve el primero que quede. Un evento de prospeccion tiene dos personas
+ * y con una alcanza para saber a que lead conectarlo, que es para lo que se
+ * pidio. Guardar la lista entera seria guardar correos de gente que no es el
+ * lead en un CRM cuya base es de terceros.
+ */
+function invitadoDe(ev) {
+  // POR INDICE Y NO CON for...of. Lo que devuelve res.json no es un array
+  // de JavaScript sino la conversion de una estructura de Go, y en el runtime
+  // de PocketBase no siempre es iterable. Con for...of eso no explota: recorre
+  // cero veces y devuelve vacio, que se ve igual que un evento sin invitados
+  // — o sea, el error mas dificil de encontrar. El acceso por indice anda en
+  // los dos casos.
+  const lista = (ev && ev.attendees) || [];
+  const cuantos = Number(lista.length) || 0;
+  for (let i = 0; i < cuantos; i++) {
+    const a = lista[i];
+    if (!a || !a.email) continue;
+    if (a.self === true || a.resource === true) continue;
+    return String(a.email).trim().slice(0, 200);
+  }
+  // Sin lista de invitados, el organizador sirve si no es uno mismo. Es el
+  // caso de la reunion a la que a uno lo invitaron y no figura como attendee.
+  const org = ev && ev.organizer;
+  if (org && org.email && org.self !== true) return String(org.email).trim().slice(0, 200);
+  return '';
+}
+
 function guardarEventoExterno(ev, duenioDelCalendario) {
   if (!duenioDelCalendario) return;
   const id = String((ev && ev.id) || '');
@@ -736,6 +773,7 @@ function guardarEventoExterno(ev, duenioDelCalendario) {
       m: duracion,
       z: String((ev.start && ev.start.timeZone) || ''),
       e: diaEntero ? true : false,
+      v: invitadoDe(ev),
       u: ahora,
     };
 
@@ -744,7 +782,8 @@ function guardarEventoExterno(ev, duenioDelCalendario) {
       $app.db()
         .newQuery(
           'UPDATE evento_externo SET titulo = {:t}, inicio = {:i}, duracion_min = {:m},' +
-            ' zona = {:z}, dia_entero = {:e}, updated = {:u} WHERE id = {:id}',
+            ' zona = {:z}, dia_entero = {:e}, invitado_email = {:v}, updated = {:u}' +
+            ' WHERE id = {:id}',
         )
         .bind(campos)
         .execute();
@@ -756,8 +795,9 @@ function guardarEventoExterno(ev, duenioDelCalendario) {
       $app.db()
         .newQuery(
           'INSERT INTO evento_externo' +
-            ' (id, google_event_id, calendario, titulo, inicio, duracion_min, zona, dia_entero, lead, created, updated)' +
-            " VALUES ({:id}, {:g}, {:c}, {:t}, {:i}, {:m}, {:z}, {:e}, '', {:cr}, {:u})",
+            ' (id, google_event_id, calendario, titulo, inicio, duracion_min, zona,' +
+            ' dia_entero, invitado_email, lead, created, updated)' +
+            " VALUES ({:id}, {:g}, {:c}, {:t}, {:i}, {:m}, {:z}, {:e}, {:v}, '', {:cr}, {:u})",
         )
         .bind(campos)
         .execute();

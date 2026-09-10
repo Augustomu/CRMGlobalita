@@ -14,6 +14,7 @@ import { BurbujaWhatsApp } from './IconosCanal';
 import { tonoDeUltimaReunion } from '@crm/core/reunion';
 import { IconoWhatsApp } from '../../ui/iconos';
 import { pb } from '../../lib/pocketbase';
+import { BuscadorChips } from '../../ui/BuscadorChips';
 import { ColaEnvios } from './ColaEnvios';
 import { Conversacion } from './Conversacion';
 
@@ -231,13 +232,6 @@ export function ListaContactos({
    */
   const [chips, setChips] = useState<string[]>([]);
 
-  /** Fija lo tecleado como chip. Sin repetidos: dos veces la misma palabra no achica más. */
-  const fijarChip = useCallback(() => {
-    const t = busqueda.trim();
-    if (!t) return;
-    setChips((c) => (c.some((x) => x.toLowerCase() === t.toLowerCase()) ? c : [...c, t]));
-    setBusqueda('');
-  }, [busqueda]);
   /**
    * Cuántas filas se dibujan (§7.2, §11 «transversal desde el día uno»).
    *
@@ -338,7 +332,6 @@ export function ListaContactos({
   const [filtrosAbierto, setFiltrosAbierto] = useState(false);
   const [pos, setPos] = useState({ left: 0, top: 0 });
   const botonFiltros = useRef<HTMLButtonElement>(null);
-  const refBuscar = useRef<HTMLInputElement>(null);
 
   const cuentas = useMemo(() => {
     const s = new Set<string>();
@@ -585,47 +578,16 @@ export function ListaContactos({
           se escribe y se achica cuando no; el ancho mínimo es para que
           siempre se vea dónde escribir.
         */}
-        <div
-          className="lista-buscar"
-          onClick={(e) => {
-            // Tocar cualquier parte del recuadro pone el cursor a escribir.
-            // Sin esto, el espacio entre chips es un agujero muerto.
-            if (e.target === e.currentTarget) refBuscar.current?.focus();
-          }}
-        >
-          {chips.map((c) => (
-            <span key={c} className="lista-chip-buscar">
-              {c}
-              <button
-                type="button"
-                title={`Sacar «${c}»`}
-                onClick={() => setChips((v) => v.filter((x) => x !== c))}
-              >
-                ×
-              </button>
-            </span>
-          ))}
-          <input
-            ref={refBuscar}
-            type="text"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                fijarChip();
-                return;
-              }
-              // Borrar con el campo vacío saca el último chip, que es como se
-              // deshace sin tener que apuntarle a una × de 9px.
-              if (e.key === 'Backspace' && !busqueda && chips.length) {
-                setChips((v) => v.slice(0, -1));
-              }
-            }}
-            placeholder={chips.length ? 'y…' : 'Buscar cualquier dato del lead…'}
-            title="Enter agrega una palabra más. Todas tienen que cumplirse."
-          />
-        </div>
+        {/* §7.2 · El campo compartido: el mismo de la Base compartida y el
+            panel del partner. Estaba escrito acá adentro; llevarlo a los otros
+            dos copiando habria dejado tres versiones del mismo campo. */}
+        <BuscadorChips
+          chips={chips}
+          onChips={setChips}
+          texto={busqueda}
+          onTexto={setBusqueda}
+          placeholder="Buscar cualquier dato del lead…"
+        />
         <button
           ref={botonFiltros}
           type="button"

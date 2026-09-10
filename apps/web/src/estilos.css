@@ -6821,3 +6821,33 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 @container (max-height: 30px) {
   .agenda-evento-fallo { display: none; }
 }
+
+/* ------------------------------- La tarjeta de un evento de Google
+   §7.6 · Lo primero es el correo, porque es lo que contesta la pregunta que
+   uno tiene delante de un bloque sin lead: «¿de quién es esto?». */
+.agenda-hover-correo {
+  font-size: var(--txt-sm);
+  color: var(--accent);
+  word-break: break-all;
+}
+.agenda-hover-correo:hover { color: var(--accent-hover); text-decoration: underline; }
+/* Ámbar y no rojo, igual que la marca del bloque: el dato del CRM está bien,
+   lo que falló es el viaje a Google. --warning-light + --badge-await-text da
+   6.59:1. */
+.agenda-hover-fallo {
+  font-size: var(--txt-xs);
+  padding: 3px 6px;
+  border-radius: 8px;
+  background: var(--warning-light);
+  color: var(--badge-await-text);
+  border: .5px solid var(--warning);
+}
+
+/* Un evento de Google ya conectado LLEVA A LA FICHA, y ahora se ve sin pasar
+   el mouse (§7.6). Subrayado punteado y no continuo: continuo es de un link
+   de verdad —el perfil de LinkedIn, la web— y esto navega adentro del CRM. */
+.agenda-evento-link {
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}

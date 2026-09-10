@@ -15,6 +15,10 @@ export interface EventoAgenda {
   hora: string;
   duracion: number;
   estado: string;
+  /** El correo de la otra persona del evento de Google, si Google lo trajo. */
+  invitado?: string;
+  /** El id del evento en Google. Hace falta para no dibujarlo dos veces. */
+  googleId?: string;
   /**
    * Por qué el último movimiento NO llegó a Google, si es que no llegó.
    *
@@ -97,6 +101,7 @@ interface ReunionCruda {
   zona: string;
   duracion_min: number;
   estado: string;
+  google_event_id?: string;
   confirmacion_archivada?: boolean;
   notas: string;
   expand?: {
@@ -204,6 +209,9 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
           duracion: r.duracion_min || 30,
           estado: r.estado || 'pendiente',
           notas: r.notas ?? '',
+          // Para no dibujar dos veces el mismo evento de Google. Ver el
+          // dedupe de mas abajo.
+          googleId: r.google_event_id ?? '',
           // Sólo el nombre de la persona: el titular de LinkedIn trae el cargo
           // pegado y en un bloque de agenda tapa todo lo demás. El cargo se
           // muestra aparte, en la tarjeta.
@@ -242,6 +250,8 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
           lead?: string;
           sync_estado?: string;
           sync_detalle?: string;
+          invitado_email?: string;
+          google_event_id?: string;
         }>({ filter: 'dia_entero = false', sort: 'inicio' })
         .catch(() => []);
 
@@ -270,6 +280,8 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
           delCrm: false,
           duenio: '',
           origen: 'calendario',
+          invitado: x.invitado_email ?? '',
+          googleId: x.google_event_id ?? '',
           // Sólo se guarda el fallo. «ok» y «omitida» no son noticia: lo que
           // hay que contar es cuando el calendario de verdad quedó distinto.
           syncFallo:
@@ -338,7 +350,24 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
           lead: x.lead ?? '',
         })),
       );
-      setEventos([...conDetalle, ...delCalendario, ...bloques]);
+      // EL MISMO EVENTO DE GOOGLE NO SE DIBUJA DOS VECES.
+      //
+      // Hoy no se solapan —el reloj busca primero una reunion con ese mismo
+      // id de Google y solo si no la encuentra guarda el evento
+      // externo— pero en cuanto uno se PROMUEVE a reunión existen los dos: la
+      // reunión nueva y la fila vieja, que queda como rastro.
+      //
+      // Gana la reunión: tiene lead, estado y notas. El externo es el mismo
+      // horario con menos datos, así que dibujarlo al lado sería la misma
+      // reunión pintada dos veces, una de ellas mintiendo que no tiene estado.
+      const idsDeGoogleConReunion = new Set(
+        conDetalle.map((r) => r.googleId).filter(Boolean),
+      );
+      setEventos([
+        ...conDetalle,
+        ...delCalendario.filter((x) => !x.googleId || !idsDeGoogleConReunion.has(x.googleId)),
+        ...bloques,
+      ]);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -471,6 +500,52 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
     [recargar],
   );
 
+  /**
+   * §7.6 · Un evento de Google conectado con un lead pasa a ser una reunión.
+   *
+   * POR QUÉ ESTO EXISTE. Augusto pidió poder marcar «asistió / no asistió» en
+   * el hover de un evento conectado. Pero asistir es un estado de una REUNIÓN
+   * del CRM —es lo que alimenta la cadencia y las métricas— y un
+   * `evento_externo` no tiene ninguno.
+   *
+   * Había dos caminos. Sumarle un `estado` a `evento_externo` habría dejado
+   * la misma idea escrita en dos tablas, con dos formas de contar cuántas
+   * reuniones se hicieron: es la familia 7 del registro. El otro es éste:
+   * **marcar la asistencia PROMUEVE el evento a reunión**, una sola vez y
+   * porque una persona lo dijo.
+   *
+   * NO CONTRADICE la migración del vínculo, que decidió no convertirlos en
+   * masa: aquello eran 278 eventos de golpe, que habrían duplicado reuniones
+   * ya ocurridas y ensuciado las métricas. Esto es uno, a mano, cuando alguien
+   * afirma que esa reunión pasó.
+   *
+   * NO SE BORRA NADA. La fila de `evento_externo` queda como rastro, igual
+   * que un perfil fusionado. La sincronización deja de tocarla sola: el reloj
+   * busca primero una `reunion` con ese `google_event_id` y, al encontrarla,
+   * ya no escribe el evento externo. Y la agenda no la dibuja dos veces
+   * porque descarta los externos cuyo id ya tiene una reunión.
+   */
+  const promoverAReunion = useCallback(
+    async (e: EventoAgenda, estado: string) => {
+      if (!e.lead) return;
+      await pb.collection('reunion').create({
+        lead: e.lead,
+        inicio: new Date(`${e.fecha}T${e.hora}:00`).toISOString(),
+        zona: ZONA,
+        duracion_min: e.duracion,
+        estado,
+        // El id de Google viaja con ella: es lo que evita que el reloj la
+        // vuelva a traer como evento externo y lo que la deja seguir
+        // sincronizando contra el mismo evento.
+        google_event_id: e.googleId ?? '',
+        titulo_evento: e.nombre,
+        invitado_email: e.invitado ?? '',
+      });
+      await recargar();
+    },
+    [recargar],
+  );
+
   /** §7.6: estirar el bloque cambia la duración, y eso se guarda. */
   const cambiarDuracion = useCallback(
     async (id: string, duracion: number, origen: EventoAgenda['origen'] = 'crm') => {
@@ -506,6 +581,7 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
     pegarFoto,
     nuevaReunion,
     guardarNotas,
+    promoverAReunion,
   };
 }
 

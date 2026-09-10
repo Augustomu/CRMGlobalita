@@ -14,6 +14,7 @@ import type { UsuarioRecord, LeadRecord } from '../../lib/types';
 import { leadsConSeguimiento, useAgenda, type EventoAgenda } from './useAgenda';
 import { personasSinLead, type PersonaDelCalendario } from '@crm/core/vincular';
 import { ConectarEvento } from './ConectarEvento';
+import { ConectarTelefono } from '../followup/ConectarTelefono';
 import { CampoDia } from '../../ui/CampoDia';
 
 /**
@@ -96,6 +97,7 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
     guardarNotas,
     externos,
     vincularEventos,
+    promoverAReunion,
   } = useAgenda(true, usuario);
   const [vista, setVista] = useState<Vista>('Semanal');
   const [offset, setOffset] = useState(0);
@@ -167,6 +169,8 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
 
   /** Qué fila tiene abiertas las notas, en la vista Lista. */
   const [notasDe, setNotasDe] = useState<string | null>(null);
+  /** El lead al que se le está conectando un teléfono desde la vista Lista. */
+  const [conectandoTel, setConectandoTel] = useState<{ perfil: string; nombre: string } | null>(null);
   /**
    * Qué reunión tiene la fecha abierta para corregir, en la vista Lista.
    *
@@ -401,6 +405,21 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
       {/* §7.6 · Conectar los eventos de una persona del calendario con un
           lead. Se abre desde cualquier bloque de Google que sea de prospección
           y todavía no tenga lead. */}
+      {/* El mismo cuadro de la ficha, no otro parecido: conectar un teléfono
+          es una sola cosa y tiene que verse y comportarse igual en las dos
+          pantallas. */}
+      {conectandoTel && (
+        <ConectarTelefono
+          perfilDelLead={conectandoTel.perfil}
+          nombreDelLead={conectandoTel.nombre}
+          onCerrar={() => setConectandoTel(null)}
+          onConectado={() => {
+            setConectandoTel(null);
+            setAvisoLista('Teléfono conectado.');
+          }}
+        />
+      )}
+
       {conectando && (
         <ConectarEvento
           persona={conectando}
@@ -645,6 +664,10 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
                         onMover={mover}
                         onAviso={setAviso}
                         onConectar={setConectando}
+                        onPromover={async (x, st) => {
+                          await promoverAReunion(x, st);
+                          setAviso('Ahora es una reunión del CRM');
+                        }}
                         persona={personaPorEvento.get(e.id) ?? null}
                       />
                     );
@@ -932,12 +955,26 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
                       </svg>
                     </a>
                   ) : (
-                    <span className="agenda-lista-icono agenda-lista-apagado" title="Sin teléfono cargado">
+                    // §7.2 · SIN TELÉFONO, EL ICONO APAGADO ES EL BOTÓN.
+                    //
+                    // Augusto pidió «un botón en la vista Lista para conectar
+                    // ese perfil, por si no está conectado». No se agrega un
+                    // control nuevo: esta fila ya tiene diez columnas. Se le
+                    // da función al que ya estaba diciendo que falta el dato,
+                    // que es el mismo gesto que la ficha —«el chip vacío ES el
+                    // botón»— y así las dos pantallas se usan igual.
+                    <button
+                      type="button"
+                      className="agenda-lista-icono agenda-lista-apagado"
+                      title="Sin teléfono. Tocá para conectar uno."
+                      onClick={() => setConectandoTel({ perfil: p?.id ?? '', nombre: p?.nombre ?? '' })}
+                      disabled={!p?.id}
+                    >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                         <path d="M20 15a3 3 0 01-3 3H8l-4 3V6a3 3 0 013-3h10a3 3 0 013 3z" />
                         <path d="M4 4l16 16" />
                       </svg>
-                    </span>
+                    </button>
                   )}
                 </div>
 
@@ -998,6 +1035,7 @@ function Evento({
   perfilChrome,
   onConectar,
   persona,
+  onPromover,
 }: {
   e: EventoAgenda;
   /** Dónde va dentro de la columna del día: hora, duración y carril. */
@@ -1028,6 +1066,8 @@ function Evento({
    */
   onConectar: (p: PersonaDelCalendario) => void;
   persona: PersonaDelCalendario | null;
+  /** §7.6 · Marcar asistencia PROMUEVE el evento de Google a reunión. */
+  onPromover: (e: EventoAgenda, estado: string) => Promise<void>;
 }) {
   // Lo que se está escribiendo, sin guardar todavía.
   const [notas, setNotas] = useState(e.notas);
@@ -1078,7 +1118,12 @@ function Evento({
         : `${e.nombre} · de tu Google Calendar. Arrastralo para moverlo.`;
 
     return (
-      <div className="agenda-bloque" style={caja}>
+      <div
+        className={`agenda-bloque ${abierto ? 'agenda-bloque-abierto' : ''}`}
+        style={caja}
+        onMouseEnter={() => onHover(e.id)}
+        onMouseLeave={() => onHover(null)}
+      >
         <div
           className={clase}
           title={titulo}
@@ -1095,7 +1140,16 @@ function Evento({
           }}
         >
           <span className="agenda-evento-hora tabular">{e.hora}</span>
-          <span className="agenda-evento-nombre">{e.nombre}</span>
+          {/* §7.6 · Un evento conectado SE VE como un enlace, sin tener que
+              pasar el mouse: es lo único de la grilla que lleva a otra
+              pantalla, y hasta ahora eso había que descubrirlo tocando. */}
+          <span
+            className={
+              e.vinculado && e.lead ? 'agenda-evento-nombre agenda-evento-link' : 'agenda-evento-nombre'
+            }
+          >
+            {e.nombre}
+          </span>
           {conectable && !e.syncFallo && <span className="agenda-evento-conectar">conectar</span>}
           {/* EL MOVIMIENTO QUE NO LLEGÓ A GOOGLE.
               Va encima del chip «conectar» y no al lado: si el bloque quedó
@@ -1122,6 +1176,91 @@ function Evento({
           >
             <span className="agenda-estirar-linea" />
           </span>
+        )}
+
+        {/*
+          §7.6 · LA TARJETA DE UN EVENTO DE GOOGLE.
+
+          Augusto, mirando la pantalla: «le hago hover y no me aparece nada de
+          todas las opciones que deberían aparecerme», y sobre todo: «no me
+          muestra el correo, entonces si quiero conectarlo no sé a qué lead
+          pertenece».
+
+          Lo primero es EL CORREO, porque es lo que contesta la pregunta que
+          uno tiene delante de un bloque sin lead. Debajo, lo que se puede
+          hacer: conectarlo, o —si ya está conectado— decir si la reunión pasó.
+        */}
+        {abierto && (
+          <div className="agenda-hover" onClick={(ev) => ev.stopPropagation()}>
+            <span className="agenda-hover-nombre">{e.nombre}</span>
+
+            <div className="agenda-hover-datos">
+              <span className="pastilla tabular">
+                {e.hora} · {duracion}′
+              </span>
+              <span className="pastilla pastilla-suave">Google Calendar</span>
+            </div>
+
+            {/* El correo, o por qué no está. Que falte se DICE (§9.7): sin
+                esto uno no sabe si el evento no tiene invitado o si el dato
+                todavía no se sincronizó. */}
+            {e.invitado ? (
+              <a className="agenda-hover-correo" href={`mailto:${e.invitado}`}>
+                {e.invitado}
+              </a>
+            ) : (
+              <span className="campo-ayuda">
+                Google no trajo ningún invitado para este evento. Si lo tiene,
+                aparece en la próxima sincronización.
+              </span>
+            )}
+
+            {e.syncFallo && (
+              <span className="agenda-hover-fallo">No llegó a Google: {e.syncFallo}</span>
+            )}
+
+            {e.vinculado && e.lead ? (
+              <>
+                {/* Ya tiene lead: lo que falta es decir si la reunión pasó. Y
+                    decirlo la CONVIERTE en una reunión del CRM, porque asistir
+                    es un estado de una reunión y esto todavía no lo es. */}
+                <div className="reunion-estados">
+                  {(
+                    [
+                      ['asistio', 'Asistió', 'on-ok'],
+                      ['no-asistio', 'No asistió', 'on-error'],
+                    ] as const
+                  ).map(([valor, texto, clase]) => (
+                    <button
+                      key={valor}
+                      type="button"
+                      className={`reunion-estado ${clase}`}
+                      onClick={() => void onPromover(e, valor)}
+                    >
+                      {texto}
+                    </button>
+                  ))}
+                </div>
+                <span className="campo-ayuda">
+                  Marcarlo lo pasa a ser una reunión del CRM, con su estado y sus notas.
+                </span>
+                <button type="button" className="boton-mini" onClick={() => onIrAlLead(e.lead)}>
+                  Abrir la ficha
+                </button>
+              </>
+            ) : persona ? (
+              <button type="button" className="boton-mini" onClick={() => onConectar(persona)}>
+                {persona.cuantos === 1
+                  ? 'Conectar con un lead'
+                  : `Conectar los ${persona.cuantos} eventos de esta persona`}
+              </button>
+            ) : (
+              <span className="campo-ayuda">
+                No es un evento de prospección. Se dibuja para que la agenda no muestre
+                huecos que no existen.
+              </span>
+            )}
+          </div>
         )}
       </div>
     );

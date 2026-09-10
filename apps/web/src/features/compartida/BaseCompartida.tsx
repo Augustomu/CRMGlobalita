@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { BuscadorChips } from '../../ui/BuscadorChips';
 import {
   FILTROS_ETAPA,
   estaCompartido,
@@ -95,6 +96,8 @@ export function BaseCompartida({ onCerrar }: Props) {
   const [envios, setEnvios] = useState<EnvioRecord[]>([]);
   const [perfiles, setPerfiles] = useState<PerfilRecord[]>([]);
   const [q, setQ] = useState('');
+  /** §7.2 · Las palabras ya fijadas. Todas tienen que cumplirse. */
+  const [chipsQ, setChipsQ] = useState<string[]>([]);
   const [cuenta, setCuenta] = useState('todas');
   const [etapa, setEtapa] = useState<FiltroEtapa>('todas');
   const [abierto, setAbierto] = useState<string | null>(null);
@@ -238,11 +241,15 @@ export function BaseCompartida({ onCerrar }: Props) {
           <span className="overlay-titulo">Base compartida</span>
           <span className="campo-ayuda tabular">{filas.length.toLocaleString('es-AR')} perfiles</span>
           <span className="bc-badge">un registro por perfil invitado</span>
-          <input
-            className="bc-buscar"
-            value={q}
-            placeholder="Buscar por nombre, empresa, rol, ciudad…"
-            onChange={(e) => setQ(e.target.value)}
+          {/* §7.2 · El mismo buscador de varias palabras de la columna 1, no
+              una copia: la regla y el campo son compartidos. */}
+          <BuscadorChips
+            className="lista-buscar bc-buscar"
+            chips={chipsQ}
+            onChips={setChipsQ}
+            texto={q}
+            onTexto={setQ}
+            placeholder="Buscar nombre, empresa, rol, ciudad…"
           />
           <button type="button" className="boton-icono-28" title="Cerrar" onClick={onCerrar}>
             ×

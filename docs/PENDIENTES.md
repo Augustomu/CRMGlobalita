@@ -448,6 +448,59 @@ tanto — 2.382 eventos, cero ids rotos, cero duplicados, cero sin fecha,
 
 ---
 
+- [x] ✅ **Tanda 4 · El hover de un evento de Google — HECHO 10/09.** Muestra
+      **el correo del invitado primero**, que es lo que contesta «¿de quién es
+      esto?»; la hora y la duración; el aviso si el último movimiento no llegó a
+      Google; y abajo, lo que se puede hacer: conectarlo con un lead, o —si ya
+      está conectado— decir si la reunión pasó y abrir la ficha.
+      Si Google no trajo invitado, **se dice**: sin eso uno no sabe si el evento
+      no tiene invitado o si el dato todavía no se sincronizó.
+- [x] ✅ **El correo del invitado ya se guarda** (migración
+      `1788606000_evento_externo_invitado`). Era el error 11 del registro otra
+      vez —«no había dónde guardarlo»— y esta vez **se miró el esquema antes de
+      dibujar la pantalla**, no después de cuatro pedidos.
+      Un solo correo y no la lista: el dueño del calendario ya se sabe, así que
+      interesa el otro, y guardar la lista entera sería guardar correos de gente
+      que no es el lead. Google marca al dueño con `self`, así que no hace
+      falta saber su dirección para descartarlo; los recursos —una sala— también
+      se saltean, porque una sala tiene correo y no es de nadie.
+      ⚠️ **Se llena solo, con el reloj.** No hay backfill: pedirle a la API 3.590
+      eventos sería mil llamadas para traer lo que la sincronización trae gratis.
+      Al 10/09 hay 0 con correo porque sólo 2 eventos volvieron a pasar por el
+      código nuevo.
+- [x] ✅ **Marcar «asistió / no asistió» PROMUEVE el evento a reunión.** Asistir
+      es un estado de una reunión del CRM —es lo que alimenta la cadencia y las
+      métricas— y un evento de Google no tiene ninguno. La otra opción era
+      sumarle un `estado` a `evento_externo`, y eso dejaba la misma idea en dos
+      tablas con dos formas de contar cuántas reuniones se hicieron: familia 7.
+      **No contradice** la decisión de no convertirlos en masa: aquello eran 278
+      de golpe; esto es uno, a mano, cuando alguien afirma que esa reunión pasó.
+      **No se borra nada**: la fila queda como rastro, igual que un perfil
+      fusionado, y la agenda **descarta los externos cuyo id ya tiene reunión**
+      para no dibujar el mismo evento dos veces.
+- [x] ✅ **Un evento vinculado se ve como enlace**, sin pasar el mouse.
+      Subrayado punteado y no continuo: continuo es de un link de verdad —el
+      perfil de LinkedIn, la web— y esto navega adentro del CRM.
+- [x] ✅ **Conectar desde la vista Lista.** El icono de WhatsApp apagado, que ya
+      decía «falta el teléfono», **pasó a ser el botón**. No se agregó un control
+      nuevo: la fila ya tiene diez columnas, y es el mismo gesto que la ficha
+      —«el chip vacío ES el botón»— así que las dos pantallas se usan igual.
+      Abre **el mismo cuadro** de la ficha, no otro parecido.
+- [x] ✅ **Los chips del buscador, en las tres pantallas.** Se sacó el campo a
+      `ui/BuscadorChips.tsx` y lo usan Follow-up, la Base compartida y el panel
+      del partner. Llevarlo copiando habría dejado tres versiones del mismo
+      campo: la familia 7, cinco veces cometida. La regla sigue en
+      `core/busqueda.ts`; el componente es sólo el campo.
+- [x] ⚠️ **Y una trampa del runtime, atajada antes de que doliera.** Los
+      invitados se leían con `for...of`, y lo que devuelve `res.json` no es un
+      array de JavaScript sino la conversión de una estructura de Go: en el
+      runtime de PocketBase no siempre es iterable. Con `for...of` eso no
+      explota — recorre cero veces y devuelve vacío, **que se ve igual que un
+      evento sin invitados**. Se pasó a acceso por índice, que anda en los dos
+      casos.
+
+---
+
 ### Tanda 5 · Fuera de la agenda
 
 - [ ] **Las fechas sin año**, al agendar una reunión y en el próximo contacto.
