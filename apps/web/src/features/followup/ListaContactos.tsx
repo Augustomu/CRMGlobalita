@@ -415,10 +415,50 @@ export function ListaContactos({
     if (el) el.scrollTop = scrollHasta(i, el.clientHeight);
   }, [seleccionado]);
 
-  // §7.2: los últimos leads editados, como accesos rápidos.
+  /**
+   * §7.2 · Los últimos leads que EDITÓ UNA PERSONA, como accesos rápidos.
+   *
+   * ACÁ HABÍA UN BUG, y es exactamente el mismo de los chats: `lead.updated`
+   * NO es «cuándo lo editaste», es «cuándo se tocó la fila». La toca
+   * cualquier cosa —una importación, la sincronización de Google, un script
+   * de mantenimiento— así que esto mostraba lo último que escribió una
+   * máquina. El 09/09 quedaron clavados «Jorge, Marcelo y Fabio» a las 20:09,
+   * 16:54 y 16:53: son las tres filas que tocó el importador, no los tres
+   * leads que abrió Augusto.
+   *
+   * Es la familia 6 del registro por séptima vez, y la MISMA trampa de la
+   * cuarta: ordenar por `updated` creyendo que dice algo de la persona.
+   *
+   * La edición humana sí tiene su propio registro —la colección `edicion`,
+   * que escribe la ficha— y de ahí sale ahora. Si nadie editó nada todavía la
+   * fila no se dibuja: es la verdad, y es mejor que tres nombres que uno no
+   * tocó.
+   */
+  const [ultimosIds, setUltimosIds] = useState<string[]>([]);
+  useEffect(() => {
+    let vivo = true;
+    pb.collection('edicion')
+      .getList<{ lead: string }>(1, 40, { fields: 'lead', sort: '-created' })
+      .then((r) => {
+        if (!vivo) return;
+        const vistos: string[] = [];
+        for (const e of r.items) {
+          if (e.lead && !vistos.includes(e.lead)) vistos.push(e.lead);
+          if (vistos.length === 3) break;
+        }
+        setUltimosIds(vistos);
+      })
+      .catch(() => {
+        // Sin permiso o sin red la fila no aparece. No se inventa.
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [leads.length]);
+
   const ultimos = useMemo(
-    () => [...leads].sort((a, b) => b.updated.localeCompare(a.updated)).slice(0, 3),
-    [leads],
+    () => ultimosIds.map((id) => leads.find((l) => l.id === id)).filter(Boolean) as LeadRecord[],
+    [ultimosIds, leads],
   );
 
   // Cuántos filtros hay puestos, para el número del botón (§7.2). El ORDEN no

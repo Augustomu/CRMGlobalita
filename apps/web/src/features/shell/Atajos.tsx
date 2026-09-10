@@ -19,7 +19,9 @@ const ATAJOS: { tecla: string; que: string }[] = [
   { tecla: 'G', que: 'Abrir o cerrar la conversación' },
   { tecla: 'H', que: 'Abrir el chat real del canal elegido' },
   { tecla: 'V', que: 'Abrir el perfil de LinkedIn' },
-  { tecla: 'C', que: 'Deshacer la última edición de la ficha' },
+  // La C se sacó el 09/09 a pedido de Augusto. Ctrl+Z se queda: es el gesto
+  // que todo el mundo ya tiene en el dedo, y una letra suelta que deshace es
+  // fácil de apretar sin querer.
   { tecla: 'Ctrl+Z', que: 'Deshacer la última edición de la ficha' },
   { tecla: 'Esc', que: 'Cerrar el panel abierto' },
 ];

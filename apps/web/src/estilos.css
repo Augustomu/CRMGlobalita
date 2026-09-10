@@ -6362,7 +6362,10 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   padding: 7px 8px;
   border-bottom: .5px solid var(--border);
 }
-.wap-chat-acciones { display: flex; gap: 4px; align-items: center; margin-left: auto; flex: 0 0 auto; }
+/* Las dos flechas viven en el renglón del nombre, no contra el borde derecho
+   (09/09). Sin `margin-left: auto`: ahí adentro tienen que quedar pegadas al
+   nombre, que es lo que se pidió tres veces. */
+.wap-chat-acciones { display: flex; gap: 4px; align-items: center; flex: 0 0 auto; }
 
 /* ------------------------------------------ Administrador de estados */
 .ctrl-leyenda-cabeza { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
@@ -6631,9 +6634,20 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 /* El nombre y la hora del ultimo mensaje, en la misma linea y pegados. Suelta
    contra el borde derecho la hora quedaba desalineada entre filas —cada nombre
    tiene otro largo— y habia que cruzar la fila con la vista para leerla. */
-.wap-chat-arriba { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.wap-chat-arriba { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .wap-chat-arriba .wap-chat-nombre { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wap-chat-hora { font-size: var(--txt-xs); color: var(--hint); flex: 0 0 auto; }
+/* La hora, ahora al borde derecho de la fila. `margin-left: auto` es lo que
+   la empuja hasta ahí, que es el trabajo que antes hacían las flechas.
+   Va en --muted y no en --hint: --hint sobre --surface da 3.35:1, y este es
+   el mismo descuido que en la agenda costó seis vueltas. */
+.wap-chat-hora {
+  font-size: var(--txt-xs);
+  color: var(--muted);
+  flex: 0 0 auto;
+  margin-left: auto;
+  align-self: center;
+  font-variant-numeric: tabular-nums;
+}
 
 /* El tilde del chip destacado cuyo paso ya salio con este lead. */
 .dest-chip-enviado { border-color: var(--accent-br); background: var(--accent-light); }

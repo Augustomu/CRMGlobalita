@@ -14,7 +14,6 @@ import { useEffect } from 'react';
  * | G     | Abrir o cerrar la conversación  |
  * | H     | Abrir el chat real del canal    |
  * | V     | Abrir el perfil de LinkedIn     |
- * | C     | Deshacer                        |
  * | Ctrl+Z / Cmd+Z | Deshacer               |
  */
 export interface Atajos {
@@ -64,7 +63,7 @@ export function useAtajos(atajos: Atajos, bloqueados = false) {
         g: atajos.conversacion,
         h: atajos.irAlChat,
         v: atajos.verPerfil,
-        c: atajos.deshacer,
+        // La C ya no deshace (09/09, a pedido). Ctrl+Z sí.
       };
 
       const accion = mapa[k];

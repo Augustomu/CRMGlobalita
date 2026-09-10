@@ -157,6 +157,76 @@ agenda se inventó un idioma propio. Por eso podía estar aprobada por el cheque
 
 ---
 
+### Cuarta vuelta de Augusto, 09/09 noche · lo que sumó al mirar la tanda 1
+
+**El color: aprobado.** *«Lo veo perfecto.»* No queda nada de la tanda 1.
+
+**Hecho en el momento, porque son cosas que ya estaban y sólo cambian o se
+van** —el caso donde el «dale» por escrito alcanza, según la familia 12—:
+
+- [x] **El texto raro se eliminó entero.** *«No me interesa que esté.»* Eran
+      cuatro renglones fijos en la columna más apretada del CRM explicando un
+      formato que inventó él. ⚠️ **Se fue con ellos el aviso de «falta el link
+      de LinkedIn en la ficha»**, que era lo único accionable de ese bloque. Si
+      hace falta vuelve como un icono, no como un párrafo.
+- [x] **El atajo `C` se sacó.** `Ctrl+Z` sigue: es el gesto que todo el mundo
+      tiene en el dedo, y una letra suelta que deshace se aprieta sin querer.
+      (La idea de la barra espaciadora la descartó él mismo.)
+- [x] ⚠️ **«Últimos editados» mostraba lo que tocó una máquina.** Ver abajo: es
+      un error del registro que volvió.
+- [x] **WhatsApp personal · el número cuando no está agendado.** Si el número no
+      está en la base ahora se muestra **el teléfono**, como hace WhatsApp, en
+      vez del nombre que mandó el celular. Con el filtro de «no agendados»
+      puesto, una lista de nombres era justo lo contrario de lo que ese filtro
+      busca. Usa la misma cuenta que el filtro —los últimos ocho dígitos— para
+      que no puedan discrepar.
+- [x] **WhatsApp personal · las flechas y la hora, intercambiadas.** Tercer
+      pedido sobre lo mismo, así que esta vez va literal: **las flechas al lado
+      del nombre** y **la hora al borde derecho**.
+
+**Lo que se investigó y NO era una pérdida de datos:**
+
+- [x] ✅ **«Erick Márquez» no falta: nunca llegó.** Verificado contra los dos CSV
+      originales de Descargas: **248 contactos con teléfono, los 248 están en la
+      base**, y ese apellido **no aparece en ninguno de los dos**.
+      Queda como herramienta permanente, para no tener que escribir un script a
+      medida la próxima vez:
+      `node packages/db/recuperacion/auditar-importacion.mjs <csv>... --buscar «apellido»`
+- [ ] 🧹 **Pero esa persona está partida en tres perfiles**: «Herik Pires»,
+      «Herik Brasil» y «Erick», los tres sin teléfono, creados el mismo minuto
+      desde títulos del calendario. Uno de ellos tiene el lead con su correo y
+      55 eventos. **Va a Duplicados y lo resuelve Augusto**: fusionar mal junta
+      a dos personas distintas, que es el error caro.
+
+**Lo que se suma al plan** (no está hecho):
+
+- [ ] **Tanda 2 · La animación del arrastre.** Además de que se pueda arrastrar:
+      mientras se mueve tiene que **saltar de a 15 minutos** —9:00, 9:15, 9:30—
+      y el fantasma tiene que **medir lo que dura la reunión**: una de hora y
+      media arrastrada a las 9:00 se dibuja tapando hasta las 10:30.
+      🔎 **Diagnóstico del «no me lo mueve»**: probó sobre «Bruno / Augusto» del
+      miércoles, que es un **evento de Google**, y ésos están bloqueados. Es
+      justo el punto 4 de la familia 8. El fantasma del alto exacto ya existe
+      para las reuniones del CRM; lo que falta es abrir el arrastre.
+- [ ] **Tanda 4 · El hover no muestra nada.** Confirmado: un evento de Google
+      **no tiene tarjeta**, ni conectado ni sin conectar. Tiene que traer
+      asistió / no asistió, cambiar fecha, el correo, notas y «+».
+      ⚠️ Y sigue en pie que **`evento_externo` no guarda el correo del
+      invitado**: sin esa columna no hay correo que mostrar, y sin correo no se
+      sabe a qué lead conectarlo. Es lo primero de esa tanda.
+- [ ] **Tanda 5 · Las fechas, otra vez.** «Nueva» y «Próximo contacto» siguen
+      mostrando **mes, día y año** y el **icono de calendario del navegador**.
+      Las dos cosas vienen de `<input type="date">`. Se reemplaza por el
+      calendario que ya tiene `FechaReunion`.
+- [ ] **Tanda 5 · Conectar un perfil con un lead desde la vista Lista.** Hoy sólo
+      se puede desde la grilla.
+- [ ] **Tanda 5 · Guardar un contacto de WhatsApp en Google Contacts.** *«Para
+      que se me guarde mi contacto de Gmail también.»* Es la People API de
+      Google, y el permiso que tenemos hoy es sólo de Calendar: **hay que sumar
+      el scope y volver a conectar la cuenta**. No es un botón.
+
+---
+
 ### Tanda 2 · Que la agenda se pueda manejar
 
 - [ ] **Arrastrar cualquier evento, incluidos los de Google.** Textual:

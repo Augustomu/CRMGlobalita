@@ -251,8 +251,10 @@ export function FechaReunion({
     lead.expand?.cuenta?.nombre_perfil ?? lead.expand?.cuenta?.abrev ?? '',
     usuario?.name ?? '',
   );
+  // El link del perfil viaja DENTRO de la descripción del evento, que es donde
+  // sirve: en el Calendar de Augusto, al abrir la reunión. Se dejó de mostrar
+  // en la ficha el 09/09, junto con el bloque de texto que lo acompañaba.
   const descripcion = descripcionEvento(perfil?.slug ?? '', lead.id);
-  const linkPerfil = perfil?.slug ? `https://www.linkedin.com/in/${perfil.slug}` : '';
 
   /**
    * Qué hay tomado cada día, como BLOQUES con principio y fin.
@@ -710,24 +712,21 @@ export function FechaReunion({
 
       {abierto && (
         <>
-          <div className="reunion-evento">
-            <span className="campo-label">Evento que se crea en Google Calendar</span>
-            <span className="reunion-evento-titulo">{titulo}</span>
-            {linkPerfil ? (
-              <a className="reunion-evento-link" href={linkPerfil} target="_blank" rel="noreferrer">
-                {linkPerfil}
-              </a>
-            ) : (
-              <span className="reunion-evento-falta">
-                Falta el link del perfil de LinkedIn en la ficha: el evento sale sin perfil.
-              </span>
-            )}
-            <span className="reunion-evento-ayuda">
-              Nombre completo del lead / primer nombre de la cuenta de origen / tu nombre — el
-              mismo formato que tienen tus eventos viejos, así el importador los puede leer. El
-              link es el del perfil, no el de Sales Navigator.
-            </span>
-          </div>
+          {/* Acá había un bloque de cuatro renglones que explicaba el formato
+              del título del evento y cuál link va. Se sacó entero el 09/09:
+              «la parte de texto raro no me interesa que esté, quisiera que la
+              eliminemos».
+
+              Tenía razón. Explicaba un formato que él mismo inventó, fijo en
+              la columna más apretada del CRM, y después de la primera vez no
+              informaba: ocupaba. El título se sigue armando igual —lo hace
+              `tituloEvento()` en core/reunion.ts, con sus tests— y el manual
+              lo documenta en §7.6.
+
+              SE FUE CON ÉL el aviso de «falta el link de LinkedIn en la
+              ficha», que era lo único accionable de los cuatro renglones. Si
+              hace falta vuelve como un icono al lado del botón de agendar, no
+              como un párrafo. */}
 
           <div className="reunion-cuerpo">
             <div className="reunion-mes">

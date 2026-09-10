@@ -31,7 +31,7 @@ justamente el límite del chequeo: los colores nuevos daban 5.80:1, 6.19:1 y
 | 3 | Una regla vieja pisando a la nueva | **3** (14 reglas) | sí · C | cerrado |
 | 4 | Un control nuevo en vez del que ya existe | **6** | sí · D | **volvió** |
 | 5 | El scope de los handlers de PocketBase | **2** | sí · E | cerrado |
-| 6 | Programar contra el modelo imaginado | **6** | **no** | práctica |
+| 6 | Programar contra el modelo imaginado | **7** | **no** | **volvió** |
 | 7 | Pedir la misma cosa en dos lugares | **5** | no | práctica |
 | 8 | Decidir por el usuario | **5** | no | **volvió ×2** |
 | 9 | Trampas de las APIs | **3** | no | documentado |
@@ -39,9 +39,9 @@ justamente el límite del chequeo: los colores nuevos daban 5.80:1, 6.19:1 y
 | 11 | No había dónde guardarlo | **1** (pedido 4 veces) | no | cerrado |
 | 12 | Aprobar una descripción no es aprobar una pantalla | **1** | no | **nuevo** |
 
-**40 incidentes.** Los cuatro que se pueden mecanizar son los que más se
-repitieron: 17 de los 40. Pero el saldo de la tercera vuelta es al revés: de
-los 5 nuevos, **ninguno lo podía atajar un script**.
+**41 incidentes.** Los cuatro que se pueden mecanizar son los que más se
+repitieron: 17 de los 41. Pero el saldo de las últimas dos vueltas es al revés:
+de los 6 nuevos, **ninguno lo podía atajar un script**.
 
 ---
 
@@ -211,7 +211,8 @@ busca lo declarado al nivel del archivo y avisa si un handler lo usa.
 
 ## 6 · Programar contra el modelo imaginado, no contra los datos
 
-> **6 veces.** El que más se repite de los que **no** se pueden automatizar.
+> **7 veces.** El que más se repite de los que **no** se pueden automatizar —
+> y el único que ya se cometió dos veces **con el mismo campo**.
 
 **El problema.** Escribir una regla contra cómo uno cree que son los datos, y
 no contra cómo son.
@@ -224,9 +225,21 @@ no contra cómo son.
 | 4 | Que `updated` sirve para ordenar chats por hora | `updated` es cuándo se tocó la fila, y marcar leído la toca: los chats salían 08:12, 11:24, 17:40, 10:45 |
 | 5 | Que la × del chip sacaba el chip | Llamaba a `sinCuenta()`, que con un alcance por casa devuelve el alcance **intacto**, a propósito. La × no hacía nada |
 | 6 | Que los huecos libres se calculan sobre lo que se ve | Se calculaban sobre los eventos **filtrados**: con el filtro en «BR» aparecía «2 h libre» encima de una reunión de AL |
+| 7 | Que `lead.updated` sirve para «últimos editados» | **Es `updated` otra vez, el mismo campo del #4.** `updated` es cuándo se tocó la fila, y la toca una importación, la sincronización de Google o cualquier script. El 09/09 la barra de accesos rápidos quedó clavada en «Jorge, Marcelo y Fabio» a las 20:09, 16:54 y 16:53: las tres filas que tocó el importador, no los tres leads que abrió Augusto. Lo reportó él, no un chequeo |
 
-**De dónde vino.** De implementar sin consultar la base primero. Los seis se
+**De dónde vino.** De implementar sin consultar la base primero. Los siete se
 habrían visto con una consulta de treinta segundos.
+
+**Y el 7 agrega algo que el 4 ya había enseñado y no alcanzó.** Las dos veces
+fue `updated`, y las dos veces el error fue el mismo: **confundir «cuándo
+cambió la fila» con «cuándo lo hizo una persona»**. Documentarlo en el caso de
+los chats no impidió repetirlo en el de los leads, porque nadie vuelve a leer
+un comentario que está en otro archivo.
+
+> **La regla, corta:** `created` y `updated` son de la fila, no de nadie. Si
+> lo que se quiere mostrar es lo que hizo una PERSONA, tiene que salir de una
+> tabla que registre personas — acá, `edicion`. Y si esa tabla está vacía, la
+> respuesta correcta es no mostrar nada, no caer a `updated`.
 
 **Por qué no se puede automatizar.** Ningún script sabe qué esperabas. La única
 defensa es la práctica: **antes de escribir una regla sobre los datos, contarlos
@@ -401,6 +414,37 @@ nuevo peleando por el lugar.
 
 ---
 
+## Lo que NO era un error, y por eso hay una herramienta nueva
+
+El 09/09 Augusto dijo que faltaba un contacto —«Erick Márquez»— y agregó:
+*«visto que tenemos mucho cuidado con los datos, no puede faltar ningún
+dato»*. Tiene razón, y sin embargo no había forma de contestarle sin escribir
+un script a medida.
+
+La respuesta fue: **los 248 teléfonos de los dos CSV están en la base, los
+248**, y esa persona **no está en ninguno de los dos**. O sea que el dato no se
+perdió: **nunca llegó**. Son dos cosas muy distintas y no poder distinguirlas
+en un minuto es un problema por sí solo — porque la duda, sin número, se
+parece demasiado al recuerdo del formateo.
+
+Queda como herramienta permanente:
+
+```
+node packages/db/recuperacion/auditar-importacion.mjs <csv>... [--buscar «apellido»]
+```
+
+Compara por los **últimos ocho dígitos** —el mismo número aparece escrito de
+tres formas— y busca la columna `Phone 1 - Value` **exacta**, porque
+`/phone|tel/i` matchea «Phonetic First Name» y devuelve cero teléfonos con
+239 ahí adelante. Las dos trampas ya están en este registro.
+
+**Lo que sí quedó pendiente de eso**: esa persona existe en el CRM partida en
+**tres perfiles** —«Herik Pires», «Herik Brasil» y «Erick»—, los tres sin
+teléfono, creados el mismo minuto desde títulos del calendario. Es la familia
+de los perfiles que se llevan dos personas, y va a Duplicados.
+
+---
+
 ## Los cuatro chequeos
 
 `node docs/revisar-aprendizajes.mjs` — sale con código 1 si encuentra algo.
@@ -420,8 +464,8 @@ que no tenerlo. Así que las parejas se declaran: **un bloque de color nuevo
 suma una línea a la tabla**, y si un selector deja de existir el chequeo avisa
 en vez de callarse — ya pasó una vez, el mismo día que se escribió.
 
-**Lo que ningún chequeo puede ver** son las familias 6, 7, 8 y 12, que son 17
-de los 40 incidentes. Ésas no son de código: son de mirar los datos antes de
+**Lo que ningún chequeo puede ver** son las familias 6, 7, 8 y 12, que son 18
+de los 41 incidentes. Ésas no son de código: son de mirar los datos antes de
 escribir la regla, buscar si eso ya existía en otro lado, no contestar una
 pregunta que le toca al usuario, y no dar por aprobada una pantalla que nadie
 vio todavía.

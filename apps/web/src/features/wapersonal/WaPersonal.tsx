@@ -323,44 +323,61 @@ export function WaPersonal({ onIrAlLead }: Props) {
                 ●
               </button>
               <div className="wap-chat-medio">
-                {/* La hora va PEGADA AL NOMBRE, no contra el borde derecho.
-                    Suelta al final quedaba desalineada entre filas —cada nombre
-                    tiene otro largo— y para leer «Vero, 14:30» había que cruzar
-                    la fila entera con la vista. */}
                 <span className="wap-chat-arriba">
-                  <span className="wap-chat-nombre">{c.nombre}</span>
-                  <span className="wap-chat-hora tabular">
-                    {hora(String(c.mensajes?.[c.mensajes.length - 1]?.en ?? ''))}
+                  {/*
+                    EL NÚMERO CUANDO NO ESTÁ AGENDADO, igual que WhatsApp.
+
+                    Un chat cuyo número no está en la base es alguien a quien
+                    el CRM no conoce, y mostrar el nombre que mandó WhatsApp
+                    hace creer que sí. Con el filtro de «no agendados» puesto
+                    era peor: una lista entera de nombres, que es justo lo
+                    contrario de lo que ese filtro busca.
+
+                    Se usa la MISMA cuenta que el filtro —los últimos ocho
+                    dígitos— para que las dos cosas no puedan discrepar.
+                  */}
+                  <span className="wap-chat-nombre">
+                    {telefonosEnLaBase.has(ultimosOcho(c.telefono))
+                      ? c.nombre
+                      : String(c.telefono ?? '').trim() || c.nombre}
+                  </span>
+                  {/*
+                    LAS FLECHAS VAN ACÁ, pegadas al nombre, y la hora se fue al
+                    borde derecho. Es el tercer pedido de Augusto sobre lo
+                    mismo, así que esta vez va literal: donde estaba la hora van
+                    las flechas y donde estaban las flechas va la hora.
+
+                    Cada flecha dice una cosa distinta: la diagonal SALE de la
+                    aplicación —abre el chat real de WhatsApp— y la horizontal
+                    MUEVE de una lista a otra, dentro del CRM.
+                  */}
+                  <span className="wap-chat-acciones" onClick={(ev) => ev.stopPropagation()}>
+                    <a
+                      className="wap-accion"
+                      href={`https://wa.me/${String(c.telefono ?? '').replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Abrir la conversación en WhatsApp"
+                    >
+                      ↗
+                    </a>
+                    <button
+                      type="button"
+                      className="wap-accion wap-accion-fu"
+                      title="Mover a Follow-up: le crea un lead y entra en la cadencia"
+                      onClick={() => {
+                        void moverAFollowup(c.telefono, c.nombre, c.cuenta, undefined, c.id);
+                      }}
+                    >
+                      →
+                    </button>
                   </span>
                 </span>
                 <span className="wap-chat-ultimo">{ultimoTexto(c.mensajes ?? [])}</span>
               </div>
-              {/* Las dos acciones de la derecha, siempre visibles y con ancho
-                  fijo. Cada flecha dice una cosa distinta y no se pueden
-                  confundir: la diagonal SALE de la aplicación —abre el chat
-                  real de WhatsApp— y la horizontal MUEVE de una lista a otra,
-                  dentro del CRM. */}
-              <div className="wap-chat-acciones" onClick={(ev) => ev.stopPropagation()}>
-                <a
-                  className="wap-accion"
-                  href={`https://wa.me/${String(c.telefono ?? '').replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  title="Abrir la conversación en WhatsApp"
-                >
-                  ↗
-                </a>
-                <button
-                  type="button"
-                  className="wap-accion wap-accion-fu"
-                  title="Mover a Follow-up: le crea un lead y entra en la cadencia"
-                  onClick={() => {
-                    void moverAFollowup(c.telefono, c.nombre, c.cuenta, undefined, c.id);
-                  }}
-                >
-                  →
-                </button>
-              </div>
+              <span className="wap-chat-hora tabular">
+                {hora(String(c.mensajes?.[c.mensajes.length - 1]?.en ?? ''))}
+              </span>
             </div>
           ))}
           {visibles.length === 0 && chats.length > 0 && (
