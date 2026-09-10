@@ -13,6 +13,7 @@ import {
 import { useControl, type ProyectoConDatos } from './useControl';
 import { PanelProyecto } from './PanelProyecto';
 import { AdminEstados } from './AdminEstados';
+import { EstadisticaReuniones } from './EstadisticaReuniones';
 
 /** Los siete estados, en el orden en que avanza un proyecto. */
 const ESTADOS: EstadoProyecto[] = [
@@ -65,7 +66,7 @@ interface Props {
  * el proyecto; acá se mira. Es lo único que ve el Observador.
  */
 export function Control({ usuario }: Props) {
-  const { proyectos, leads, lineas, cargando, error } = useControl(usuario);
+  const { proyectos, reuniones, leads, lineas, cargando, error } = useControl(usuario);
   // Quien ve las dos lineas puede mirar una por vez. Quien ve una sola no elige
   // nada: el filtro ya se aplico al leer.
   const [linea, setLinea] = useState<LineaNegocio | null>(null);
@@ -87,6 +88,20 @@ export function Control({ usuario }: Props) {
   }, [leads, linea]);
 
   const resumen = useMemo(() => resumenDeControl(filas), [filas]);
+
+  /**
+   * Las reuniones de la línea, para la estadística.
+   *
+   * OJO CON EL RECORTE: acá NO se filtra por la etiqueta Control. La
+   * estadística mide la actividad de la línea entera —cuántas reuniones hubo,
+   * de dónde son, en qué terminaron— y la lista de abajo mide el avance de los
+   * leads marcados. Filtrar las dos por lo mismo sonaría más prolijo y
+   * escondería la mitad del trabajo hecho.
+   */
+  const reunionesDeLaLinea = useMemo(
+    () => (linea ? reuniones.filter((r) => r.linea === linea) : reuniones),
+    [reuniones, linea],
+  );
 
   /** Para abrir el panel desde la fila: del id del proyecto al proyecto. */
   const proyectoPorId = useMemo(
@@ -270,6 +285,15 @@ export function Control({ usuario }: Props) {
         )}
 
         {!cargando && !error && filas.length > 0 && (
+          <div className="ctrl-bloque-cabecera">
+            <span className="ctrl-filtro-label">Los leads que se siguen</span>
+            <span className="campo-ayuda ctrl-derecha">
+              sólo los de etiqueta {ETIQUETA_CONTROL} · primero el que hace más que no se toca
+            </span>
+          </div>
+        )}
+
+        {!cargando && !error && filas.length > 0 && (
           <div className="bc-scroll">
             <div className="bc-tabla ctrl-unificado-tabla">
               <div className="bc-encabezado">
@@ -340,6 +364,30 @@ export function Control({ usuario }: Props) {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* LA ESTADÍSTICA DE LAS REUNIONES, al final y no arriba.
+            Primero va lo accionable —en qué estado está cada lead marcado y
+            cuál hace más que no se toca— y después el análisis, que es largo:
+            ocho tarjetas, el gráfico por mes, diez agrupadores y la tabla del
+            período. Puesto arriba, empujaba la lista fuera de la pantalla.
+
+            Se había perdido entera al unificar las tres solapas, y Augusto lo
+            marcó enseguida: «todo donde estaba antes, pero solamente en una
+            solapa». Unificar era juntar, no recortar. */}
+        {!cargando && !error && reunionesDeLaLinea.length > 0 && (
+          <div className="ctrl-bloque">
+            <div className="ctrl-bloque-cabecera">
+              <span className="ctrl-filtro-label">Las reuniones de la línea</span>
+              {/* El recorte se dice en pantalla. Sin esto, este número y el de
+                  la lista de arriba se leen como si contaran lo mismo, que es
+                  exactamente lo que hizo preguntar de dónde salían las 20. */}
+              <span className="campo-ayuda ctrl-derecha">
+                todas las de la línea, con etiqueta {ETIQUETA_CONTROL} o sin ella
+              </span>
+            </div>
+            <EstadisticaReuniones reuniones={reunionesDeLaLinea} />
           </div>
         )}
       </div>
