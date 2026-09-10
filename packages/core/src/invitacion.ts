@@ -62,7 +62,7 @@ export function urlDeLista(
   return `https://www.linkedin.com/sales/search/people?savedSearchId=${id}`;
 }
 
-export type EstadoLista = 'agotada' | 'en uso' | 'en espera';
+export type EstadoLista = 'sin medir' | 'agotada' | 'en uso' | 'en espera';
 
 export const NOMBRE_FUENTE: Record<FuenteLista, string> = {
   sales_navigator: 'Sales Navigator',
@@ -75,6 +75,24 @@ export const SLOTS_DE_CUENTA = 10;
 
 export function estaAgotada(l: ListaInvitacion): boolean {
   return l.pagina >= l.paginas;
+}
+
+/**
+ * Las listas cuyo total todavía no midió nadie.
+ *
+ * `paginas` en 0 NO quiere decir «vacía»: quiere decir **«no se sabe»**. Para
+ * `estaAgotada` las dos cosas se ven igual —`0 >= 0`— y por eso la lista no
+ * entra en la cola, que es lo correcto: una lista cuyo tamaño nadie midió no
+ * puede prometer invitaciones (§3.4).
+ *
+ * Lo que no es correcto es *decirle* «agotada» a la de arriba. El 10/09 las 22
+ * búsquedas guardadas de verdad figuraban las 22 como agotadas y la única
+ * lectura posible de esa pantalla era «se terminaron», cuando lo que pasaba era
+ * «nunca se midieron». Distinguirlas es la diferencia entre ir a cargar listas
+ * nuevas y ir a medir las que ya están.
+ */
+export function sinMedir(listas: ListaInvitacion[]): ListaInvitacion[] {
+  return listas.filter((l) => !(l.paginas > 0));
 }
 
 /**
@@ -103,6 +121,10 @@ export function laQueTrabaja(listas: ListaInvitacion[]): ListaInvitacion | null 
 }
 
 export function estadoDeLista(l: ListaInvitacion, listas: ListaInvitacion[]): EstadoLista {
+  // «Sin medir» va PRIMERO y antes que «agotada», porque las dos salen del
+  // mismo `0 >= 0` y no significan lo mismo: una se terminó, la otra nunca se
+  // midió. Ver `sinMedir`.
+  if (!(l.paginas > 0)) return 'sin medir';
   if (estaAgotada(l)) return 'agotada';
   return laQueTrabaja(listas)?.id === l.id ? 'en uso' : 'en espera';
 }
@@ -130,11 +152,26 @@ export function mover(
   return orden.map((l, k) => ({ id: l.id, orden: k + 1 }));
 }
 
-/** «2 listas · 1 con páginas» — el estado de la cuenta en una línea. */
+/**
+ * «2 listas · 1 con páginas» — el estado de la cuenta en una línea.
+ *
+ * Las que nadie midió se cuentan aparte («· 3 sin medir») y sólo aparecen si
+ * las hay: no son listas que se acabaron, son listas a las que les falta un
+ * paso.
+ *
+ * ⚠️ Ese paso TODAVÍA NO SE PUEDE DAR. Falta leer del encabezado de Sales
+ * Navigator cuántos resultados tiene la búsqueda —de ahí sale el total de
+ * páginas— y no hay ningún comando que lo haga. Hoy el único camino es que
+ * alguien escriba el número a mano. Está anotado en `docs/PENDIENTES.md` 8.4.
+ */
 export function resumenDeListas(listas: ListaInvitacion[]): string {
   if (!listas.length) return 'sin listas asignadas';
   const vivas = listas.filter((l) => !estaAgotada(l)).length;
-  return `${listas.length} ${listas.length === 1 ? 'lista' : 'listas'} · ${vivas} con páginas`;
+  const faltan = sinMedir(listas).length;
+  return (
+    `${listas.length} ${listas.length === 1 ? 'lista' : 'listas'} · ${vivas} con páginas` +
+    (faltan ? ` · ${faltan} sin medir` : '')
+  );
 }
 
 export interface CuentaInvitacion {

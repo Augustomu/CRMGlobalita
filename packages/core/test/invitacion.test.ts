@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   estadoDeLista,
+  sinMedir,
   laQueTrabaja,
   mover,
   restantes,
@@ -240,4 +241,56 @@ test('§3.4 · lo que no es un id no se convierte en un link roto', () => {
 test('§3.4 · un CSV no tiene dirección y no se le inventa una', () => {
   assert.equal(urlDeLista('csv', 'contactos-marzo.csv'), '');
   assert.equal(urlDeLista('manual', '1995468452'), '');
+});
+
+// §3.4 · «Sin medir» NO es lo mismo que «agotada», aunque las dos salgan del
+// mismo `0 >= 0`.
+//
+// El 10/09 se cargaron las 22 búsquedas guardadas reales de Augusto y las 22
+// figuraban AGOTADAS, porque `paginas` venía en 0: el documento traía los
+// nombres y los ids, no cuántas páginas tiene cada una. La única lectura
+// posible de esa pantalla era «se terminaron», y lo que pasaba era «nunca se
+// midieron». La diferencia decide qué hace uno: ir a cargar listas nuevas, o ir
+// a medir las que ya están.
+test('§3.4 · una lista sin medir no dice «agotada»', () => {
+  const listas = [
+    lista({ id: 'nueva', paginas: 0 }),
+    lista({ id: 'usada', orden: 2, pagina: 10, paginas: 10 }),
+    lista({ id: 'viva', orden: 3, pagina: 2, paginas: 8 }),
+  ];
+  assert.equal(estadoDeLista(listas[0], listas), 'sin medir');
+  assert.equal(estadoDeLista(listas[1], listas), 'agotada');
+  assert.equal(estadoDeLista(listas[2], listas), 'en uso');
+});
+
+test('§3.4 · sinMedir devuelve exactamente las que faltan medir', () => {
+  const listas = [
+    lista({ id: 'a', paginas: 0 }),
+    lista({ id: 'b', paginas: 12 }),
+    lista({ id: 'c', paginas: 0 }),
+  ];
+  assert.deepEqual(sinMedir(listas).map((l) => l.id), ['a', 'c']);
+  assert.deepEqual(sinMedir([]), []);
+  assert.deepEqual(sinMedir([lista({ id: 'z', paginas: 5 })]), []);
+});
+
+test('§3.4 · sin medir NO entra en la cola, y eso está bien', () => {
+  // Una lista cuyo tamaño nadie midió no puede prometer invitaciones. Que no
+  // trabaje es lo correcto; lo que no era correcto es llamarla «agotada».
+  const listas = [lista({ id: 'sinmedir', orden: 1, paginas: 0 })];
+  assert.equal(laQueTrabaja(listas), null);
+  assert.equal(restantes(listas[0]), 0);
+});
+
+test('§3.4 · el resumen las cuenta aparte, y sólo si las hay', () => {
+  const conFaltantes = [
+    lista({ id: 'a', paginas: 0 }),
+    lista({ id: 'b', orden: 2, paginas: 10 }),
+  ];
+  const texto = resumenDeListas(conFaltantes);
+  assert.ok(texto.includes('sin medir'), texto);
+  assert.ok(texto.includes('2 listas'), texto);
+
+  // Con todas medidas no se menciona: un «· 0 sin medir» permanente es ruido.
+  assert.ok(!resumenDeListas([lista({ id: 'b', paginas: 10 })]).includes('sin medir'));
 });
