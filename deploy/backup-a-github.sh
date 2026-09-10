@@ -41,6 +41,13 @@ CLON="$DESTINO/repo-datos"
 REPO="${REPO_DATOS:-git@github.com:Augustomu/globalita-data.git}"
 RETENER=30
 
+# Pararse en una carpeta que el usuario crm pueda leer, ANTES de cualquier
+# otra cosa. Corriendo con sudo -u crm desde /root, el find de backup.sh muere
+# con "Failed to restore initial working directory" y el backup no se hace.
+# En cron el directorio es otro, pero la corrida a mano es la que se usa para
+# probar, y una prueba que falla por el directorio no prueba nada.
+cd "$DESTINO"
+
 echo "[$(date -Is)] arranca la subida a GitHub"
 
 # 1. Una copia fresca, con el script que ya existe y que verifica lo que arma.
