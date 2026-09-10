@@ -35,6 +35,39 @@ invitaciones. La cancelación de §5.4 es otra corrida y otro riesgo.
 
 ## Cómo se corre
 
+### Antes de cualquiera de los tres
+
+**Todas las rutas de acá abajo son relativas a la raíz del repositorio.** Correr
+uno de estos comandos desde otra carpeta —`C:\Windows\system32`, por ejemplo, que
+es donde abre PowerShell por defecto— da un `Cannot find module` con la ruta
+pegada al directorio equivocado. Pasó.
+
+En PowerShell, una sola vez por ventana:
+
+```powershell
+cd "C:\Users\Augusto Unzaga AMU\Projects\CRMGlobalita"
+$env:PB_USER = "el correo con el que entrás al CRM"
+$env:PB_PASS = "la clave"
+```
+
+Las variables duran lo que dure la ventana, así que después se corren los tres
+comandos sin volver a ponerlas. **Es la cuenta del CRM** (la de `localhost:5173`),
+no la del panel de PocketBase: esa es otra y va contra `_superusers`.
+
+Hay atajos en el `package.json` de la raíz, que son lo mismo escrito más corto:
+
+```powershell
+npm run li:vincular -- AL
+npm run li:medir -- AL --simular
+npm run li:invitar -- AL --simular
+npm run wa -- vincular AMU
+npm run wa:estado -- AMU
+```
+
+⚠️ **Los atajos tampoco andan desde cualquier lado.** Parado adentro de
+`apps/web/` o de `packages/core/`, npm resuelve al `package.json` de ESE
+workspace y contesta `Missing script`. El `cd` a la raíz no lo evita nada.
+
 **Lo primero, y una sola vez por cuenta antes de todo lo demás:**
 
 ```
