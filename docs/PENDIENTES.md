@@ -879,6 +879,85 @@ página de revisión.
 
 ## 8 · Integraciones y worker
 
+### 8.0 · Recuperar el historial de LinkedIn del backup — SIN TOCAR LINKEDIN
+
+- [ ] 💎 **438 aceptaciones, 6.111 identidades de LinkedIn y 123 links de chat
+      están en el backup de la bitácora y el CRM no las tiene.**
+
+      Medido el 10/09 sobre `globalita-data/pocketbase/contactos_historia.json`
+      (6.165 registros, exportado ese día):
+
+      | | |
+      |---|---|
+      | Identidades de LinkedIn (`perfil_url`) | **6.111** |
+      | **Fechas de aceptación** | **438**, todas con nombre, del 17/03 al 01/05 |
+      | Links de chat | 123 · Correos 275 · Teléfonos 127 · Cargos 409 |
+      | Fechas de invitación | **0** — eso sí se perdió de verdad |
+
+      **Y casi nada está en el CRM.** Cruce medido: **0** coincidencias por
+      identificador de Sales Navigator, **1** por slug, **38** por nombre exacto.
+      El CRM tiene 487 perfiles y sólo 16 con slug: son dos poblaciones casi
+      disjuntas —el CRM se rearmó desde Google Calendar y un CSV de WhatsApp; el
+      backup viene de los escaneos de LinkedIn—.
+
+      **Por qué va primero:** es el trabajo que el re-escaneo (8.7) iba a salir a
+      buscar contra LinkedIn. Leer un archivo no tiene riesgo de detección, no
+      necesita las listas, no necesita que nadie decida nada y no depende de
+      ninguna hipótesis sobre el DOM. Estimado 33-45 h con la bandeja incluida.
+
+      **Cómo, sin romper la regla del CRM:** nada se fusiona solo. Las
+      observaciones entran en una tabla aparte y una pantalla propone —calcada de
+      `features/duplicados/`, que ya hace exactamente eso— y una persona aprueba.
+      El motor de identidad ya existe: `core/dedupe.ts` (`decidirAlta`),
+      `core/cruce.ts` (`parecido` con su piso de dos palabras) y `core/fusion.ts`.
+
+      ⚠️ **Decisión de Augusto antes de empezar:** de los 6.165, **5.079 tienen URL
+      pero no nombre** (restos de escaneo). Meterlos como `perfil` serían 5.079
+      filas sin nombre en una base de 487. La recomendación es que entren como
+      observaciones —la cola de trabajo del re-escaneo, que dice a quién mirar—
+      y no como gente que el CRM conozca.
+
+### 8.7 · El re-escaneo de LinkedIn («unreached»)
+
+- [ ] 🔒 **Reconstruir a quién se invitó, quién aceptó y qué se habló.** Pedido
+      el 10/09: *«se nos perdieron todos los datos… deberíamos desarrollar un
+      unreached para revisar todas las cuentas, todas las listas… y para que no
+      nos detecte LinkedIn, lo hacemos directamente de las listas»*.
+
+      **La fuente más barata no estaba en el plan de Augusto y es la mejor:**
+      `/mynetwork/invitation-manager/sent/` — **una sola navegación por cuenta**
+      devuelve todos los pendientes con nombre, slug público y un «enviada hace 3
+      semanas». Es la fecha de invitación que se daba por perdida, aproximada.
+      El extractor ya existe y está probado (`cancelar-invitaciones.js:1387-1467`).
+
+      **Dos correcciones al método propuesto**, verificadas contra el código:
+      1. **No hace falta abrir el chat para saber si aceptó.** La insignia «· 1er»
+         está en la fila de la lista y `escaneo-conectados.js:262-301` ya la lee.
+      2. **«Chat vacío = no aceptó» es falso.** También aparece vacío si aceptó y
+         nunca se le escribió, o si se le escribió desde otra cuenta.
+
+      ⚠️ **Abrir chats quema rapport y no se deshace.** `rules--unread-no-tocar.md`
+      del repositorio de automatización es una regla inviolable: abrir una
+      conversación sin leer la marca como leída, y el prospecto ve «leído y no me
+      contestó». Un re-escaneo que abra 3.000 chats hace eso 3.000 veces.
+      **Decisión de Augusto: ¿va el paso de los chats o no?** Sin él igual se sabe
+      quién aceptó, quién está pendiente y desde cuándo; sólo se pierde cuántos
+      mensajes hubo y de qué fecha.
+
+      **Bloqueante técnico previo:** `scan-listas-agent.js` y los dos scripts de
+      reconocimiento de DOM (`scan-linkedin-ui.js`, `scan-flow-completo.js`) **no
+      importan la capa de seguridad** — verificado por grep, cero coincidencias.
+      Correrlos hoy saltea el kill-switch, los cooldowns y las pausas.
+
+      **Faltan dos campos** y es la familia 11: no hay dónde decir «esto lo
+      revisamos y esto no» (`updated` NO sirve: lo toca cualquier importación), ni
+      dónde decir que una fecha es aproximada.
+
+      Estimado 70-96 h. Todo lo que toca LinkedIn depende de una sesión de
+      reconocimiento de DOM: el código de referencia es de abril-mayo y LinkedIn
+      cambia el DOM sin avisar.
+
+
 - [x] **8.1 · Google Calendar** (bloque 7).
 - [~] **8.2 · `apps/worker/` existe y sabe invitar — 10/09.** Ya no está vacío.
       Lo que hace: la corrida de invitaciones de LinkedIn entera (§8.1.1), con
