@@ -232,6 +232,124 @@ function sincronizar(reunion) {
   };
 }
 
+/**
+ * Mueve en Google un evento que NO es del CRM (§7.6).
+ *
+ * Es el camino de salida de `evento_externo`, y existe desde el 09/09: hasta
+ * ese dia los bloques de Google no se arrastraban a proposito —«el dueno del
+ * evento es Google»—. El argumento era cierto y la decision era de Augusto,
+ * que pidio poder moverlos. En su base son 1769 contra 288 reuniones del CRM.
+ *
+ * QUE MANDA Y QUE NO. Solo el horario: `start` y `end`. El titulo, la
+ * descripcion y los invitados son de Google y el CRM no los toca — moverlo de
+ * lugar no es apropiarselo.
+ *
+ * NUNCA LANZA. Devuelve {estado, detalle} y el que llama decide. Que Google
+ * este caido no puede tumbar la escritura en la base: el evento ya se movio en
+ * el CRM y lo que falta es contarlo.
+ */
+function moverEventoExterno(fila) {
+  const c = config();
+  if (!configurado(c)) {
+    return { estado: 'sin_conexion', detalle: 'Google no esta configurado en el servidor' };
+  }
+
+  const eventId = String(fila.get('google_event_id') || '');
+  if (!eventId) {
+    return { estado: 'omitida', detalle: 'el evento no tiene id de Google' };
+  }
+
+  const inicio = String(fila.get('inicio') || '');
+  if (!inicio) return { estado: 'omitida', detalle: 'sin fecha' };
+
+  if (fila.get('dia_entero')) {
+    // Un evento de dia entero no tiene hora que mover, y mandarle un start con
+    // hora lo convertiria en un evento con horario. No es lo que nadie pidio.
+    return { estado: 'omitida', detalle: 'es un evento de dia entero' };
+  }
+
+  // De quien es la agenda. En `evento_externo` el campo `calendario` guarda el
+  // USUARIO dueno del calendario, que es la misma clave con la que la grilla
+  // decide que bloques son suyos.
+  const usuarioId = String(fila.get('calendario') || '');
+  if (!usuarioId) return { estado: 'omitida', detalle: 'el evento no tiene dueno' };
+
+  const cuenta = cuentaDe(usuarioId);
+  if (!cuenta || !cuenta.get('refresh_token')) {
+    return { estado: 'sin_conexion', detalle: 'ese usuario todavia no conecto su Google Calendar' };
+  }
+
+  let token;
+  try {
+    token = accessToken(c, cuenta.get('refresh_token'));
+  } catch (err) {
+    return { estado: 'error', detalle: 'no se pudo renovar el permiso: ' + err.message };
+  }
+
+  const zona = fila.get('zona') || 'UTC';
+  const evento = {
+    start: { dateTime: new Date(inicio.replace(' ', 'T')).toISOString(), timeZone: zona },
+    end: { dateTime: finDe(inicio, fila.get('duracion_min')), timeZone: zona },
+  };
+
+  // A QUIEN SE LE AVISA. La misma regla que las reuniones del CRM (§8.3), y
+  // por el mismo motivo: mover algo que todavia no paso es reagendarlo y el
+  // invitado tiene que enterarse; corregir la fecha de algo que YA PASO es
+  // arreglar un dato, y «tu reunion se movio» por algo de hace ocho meses no
+  // avisa nada, hace ruido. La regla es del horario, no de la pantalla.
+  const yaPaso = new Date(inicio.replace(' ', 'T')).getTime() < Date.now();
+  const aviso = yaPaso ? 'none' : 'all';
+
+  const calendario = encodeURIComponent(cuenta.get('calendario') || 'primary');
+  const res = $http.send({
+    url:
+      GOOGLE_API + '/calendars/' + calendario + '/events/' + encodeURIComponent(eventId) +
+      '?sendUpdates=' + aviso,
+    method: 'PATCH',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify(evento),
+    timeout: 25,
+  });
+
+  if (res.statusCode < 200 || res.statusCode > 299) {
+    const d = (res.json && res.json.error && res.json.error.message) || 'HTTP ' + res.statusCode;
+    return { estado: 'error', detalle: d };
+  }
+
+  return {
+    estado: 'ok',
+    detalle: yaPaso ? 'movido en Google, sin avisar (ya paso)' : 'movido en Google y avisado',
+  };
+}
+
+/**
+ * Escribe el resultado en la fila, con SQL plano.
+ *
+ * Las dos razones de siempre, y las dos ya costaron un rato: `$app.save()`
+ * sobre el registro que esta adentro de su propio hook deja la peticion
+ * colgada, y ademas volveria a disparar el hook — que es justo el eco que se
+ * cerro el 09/09.
+ */
+function anotarExterno(id, r) {
+  try {
+    $app
+      .db()
+      .newQuery('UPDATE evento_externo SET sync_estado = {:e}, sync_detalle = {:d} WHERE id = {:id}')
+      .bind({ id: id, e: r.estado, d: String(r.detalle || '').slice(0, 400) })
+      .execute();
+  } catch (err) {
+    $app.logger().error('google-salida', 'evento_externo', id, 'err', String(err));
+  }
+}
+
+/** Mueve y deja escrito como fue. Es lo que llama el hook. */
+function moverYAnotar(fila) {
+  const r = moverEventoExterno(fila);
+  anotarExterno(fila.id, r);
+  $app.logger().info('google-salida', 'evento_externo', fila.id, 'estado', r.estado, 'detalle', r.detalle);
+  return r;
+}
+
 module.exports = {
   GOOGLE_AUTH,
   GOOGLE_TOKEN,
@@ -242,6 +360,8 @@ module.exports = {
   cuentaDe,
   form,
   sincronizar,
+  moverEventoExterno,
+  moverYAnotar,
 };
 
 /**

@@ -127,7 +127,14 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
    * Se dibuja desde acá mientras dura el arrastre y recién al soltar se
    * guarda: un PATCH por cada píxel serían cientos de escrituras.
    */
-  const [estirando, setEstirando] = useState<{ id: string; y0: number; base: number; dur: number } | null>(null);
+  const [estirando, setEstirando] = useState<{
+    id: string;
+    y0: number;
+    base: number;
+    dur: number;
+    /** De qué colección es: una reunión del CRM o un evento de Google. */
+    origen: EventoAgenda['origen'];
+  } | null>(null);
   /**
    * 7.7 · Con qué perfil de Chrome se abren los links de esta pantalla.
    *
@@ -256,7 +263,7 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
       setEstirando((s) => {
         // Sólo se guarda si cambió: soltar sin mover no tiene que escribir.
         if (s && s.dur !== s.base) {
-          void cambiarDuracion(s.id, s.dur);
+          void cambiarDuracion(s.id, s.dur, s.origen);
           setAviso(`${s.dur} min · Calendar actualizado`);
         }
         return null;
@@ -296,8 +303,14 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
     const e = arrastrando;
     setArrastrando(null);
     setDestino(null);
-    await mover(e.id, fecha, hora);
-    setAviso(`${hora} · Calendar actualizado`);
+    // §7.6 · El origen decide a qué colección se escribe. Desde el 09/09 los
+    // eventos de Google también se mueven: son 1769 contra 288 reuniones, así
+    // que bloquearlos era bloquear casi toda la pantalla.
+    await mover(e.id, fecha, hora, e.origen);
+    // Lo que se avisa depende de si ya pasó, igual que en el servidor: decirle
+    // «avisado» cuando el hook no avisó a nadie sería mentirle a la pantalla.
+    const paso = fecha < hoy;
+    setAviso(paso ? `${hora} · corregido, sin avisar` : `${hora} · Calendar actualizado`);
   }
 
 /**
@@ -590,7 +603,9 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
                         onHover={setHover}
                         onArrastrar={setArrastrando}
                         onEstado={cambiarEstado}
-                        onEstirar={(x, y) => setEstirando({ id: x.id, y0: y, base: x.duracion, dur: x.duracion })}
+                        onEstirar={(x, y) =>
+                          setEstirando({ id: x.id, y0: y, base: x.duracion, dur: x.duracion, origen: x.origen })
+                        }
                         onIrAlLead={onIrAlLead}
                         onNotas={guardarNotas}
                         onFoto={pegarFoto}
@@ -990,61 +1005,76 @@ function Evento({
   // ni se abre: acá no hay lead, y moverlo desde el CRM daría a entender que
   // el CRM lo controla, cuando el dueño de ese evento es Google.
   if (e.origen === 'calendario') {
-    // §7.6 · Ya conectado con un lead. Deja de ser un bloque de horario y pasa
-    // a ser lo que siempre fue: una reunión con alguien. Se pinta como tal y
-    // el clic abre la ficha. Lo que NO cambia es que sigue siendo de Google:
-    // no se arrastra, porque moverlo desde acá daría a entender que el CRM lo
-    // controla.
-    if (e.vinculado && e.lead) {
-      return (
-        <div className="agenda-bloque" style={caja}>
-          <div
-            className="agenda-evento agenda-evento-vinculado"
-            title={`${e.nombre} · conectado con un lead · el evento sigue siendo de Google`}
-            onClick={() => onIrAlLead(e.lead)}
-          >
-            <span className="agenda-evento-hora tabular">{e.hora}</span>
-            <span className="agenda-evento-nombre">{e.nombre}</span>
-          </div>
-        </div>
-      );
-    }
+    /*
+      §7.6 · LOS BLOQUES DE GOOGLE, QUE DESDE EL 09/09 SE MUEVEN.
 
-    // §7.6 · De prospección y sin lead: es lo que Augusto veía «pálido». El
-    // color decía la verdad —no hay lead detrás— y lo que faltaba era poder
-    // ponérselo. El clic abre la pantalla de conectar.
-    if (persona) {
-      return (
-        <div className="agenda-bloque" style={caja}>
-          <div
-            className="agenda-evento agenda-evento-calendario agenda-evento-conectable"
-            title={
-              persona.cuantos === 1
-                ? `${e.nombre} · sin lead. Tocá para conectarlo.`
-                : `${e.nombre} · sin lead. Tocá para conectar los ${persona.cuantos} eventos de esta persona.`
-            }
-            onClick={() => onConectar(persona)}
-          >
-            <span className="agenda-evento-hora tabular">{e.hora}</span>
-            <span className="agenda-evento-nombre">{e.nombre}</span>
-            <span className="agenda-evento-conectar">conectar</span>
-          </div>
-        </div>
-      );
-    }
+      Hasta ese día no se arrastraban a propósito, y el comentario que estaba
+      acá lo justificaba: «moverlo desde acá daría a entender que el CRM lo
+      controla, cuando el dueño de ese evento es Google». El argumento era
+      cierto y la decisión no era mía. Augusto: «mantengo apretado y quiero
+      mover hacia abajo, no me deja; eso debería ser una funcionalidad, y
+      tiene que mandar una notificación a la persona».
 
-    // Lo demás del calendario propio: el almuerzo, la clase, la reunión
-    // interna. Se dibuja para que la agenda no muestre huecos que no existen,
-    // pero acá no hay nada que conectar.
+      Y el costo era peor de lo que parecía: son 1769 eventos de Google contra
+      288 reuniones del CRM. El arrastre estaba habilitado en la porción chica
+      de la pantalla y bloqueado en toda la otra.
+
+      Las tres clases comparten envoltorio en vez de tener tres returns con su
+      propio `draggable`: escribir el arrastre tres veces es la forma segura de
+      que dentro de un mes funcione en dos de las tres.
+    */
+    const conectable = !e.vinculado && persona;
+    const clase = e.vinculado && e.lead
+      ? 'agenda-evento agenda-evento-vinculado'
+      : conectable
+        ? 'agenda-evento agenda-evento-calendario agenda-evento-conectable'
+        : 'agenda-evento agenda-evento-calendario';
+
+    const titulo = e.vinculado && e.lead
+      ? `${e.nombre} · conectado con un lead · arrastralo para moverlo en Google`
+      : conectable
+        ? persona!.cuantos === 1
+          ? `${e.nombre} · sin lead. Tocá para conectarlo, arrastrá para moverlo.`
+          : `${e.nombre} · sin lead. Tocá para conectar los ${persona!.cuantos} eventos de esta persona.`
+        : `${e.nombre} · de tu Google Calendar. Arrastralo para moverlo.`;
+
     return (
       <div className="agenda-bloque" style={caja}>
         <div
-          className="agenda-evento agenda-evento-calendario"
-          title={`${e.nombre} · de tu Google Calendar, no del CRM`}
+          className={clase}
+          title={titulo}
+          draggable
+          onDragStart={(ev) => {
+            // Firefox no arranca el arrastre sin datos en el dataTransfer.
+            ev.dataTransfer.setData('text/plain', e.id);
+            onArrastrar(e);
+          }}
+          onDragEnd={() => onArrastrar(null)}
+          onClick={() => {
+            if (e.vinculado && e.lead) return onIrAlLead(e.lead);
+            if (conectable) return onConectar(persona!);
+          }}
         >
           <span className="agenda-evento-hora tabular">{e.hora}</span>
           <span className="agenda-evento-nombre">{e.nombre}</span>
+          {conectable && <span className="agenda-evento-conectar">conectar</span>}
         </div>
+
+        {/* La manija de estirar, también para los de Google. De a 15 minutos,
+            igual que las reuniones del CRM: es el paso de la grilla. */}
+        {onEstirar && (
+          <span
+            className="agenda-estirar"
+            title="Estirar para cambiar la duración"
+            onMouseDown={(ev) => {
+              ev.preventDefault();
+              ev.stopPropagation();
+              onEstirar(e, ev.clientY);
+            }}
+          >
+            <span className="agenda-estirar-linea" />
+          </span>
+        )}
       </div>
     );
   }

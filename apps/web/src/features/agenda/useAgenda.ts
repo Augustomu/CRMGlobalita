@@ -341,9 +341,20 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
    * mirando. Guardar el string tal cual dejaría la reunión corrida por el huso.
    */
   const mover = useCallback(
-    async (id: string, fecha: string, hora: string) => {
+    async (id: string, fecha: string, hora: string, origen: EventoAgenda['origen'] = 'crm') => {
       const inicio = new Date(`${fecha}T${hora}:00`).toISOString();
-      await pb.collection('reunion').update(id, { inicio, zona: ZONA });
+      // §7.6 · Los eventos de Google también se mueven, desde el 09/09. Van a
+      // OTRA colección: `evento_externo`, no `reunion`. El hook de salida los
+      // empuja a Google y avisa al invitado si todavía no pasaron.
+      if (origen === 'calendario') {
+        await pb.collection('evento_externo').update(id, {
+          // PocketBase guarda en UTC con espacio en vez de T.
+          inicio: inicio.replace('T', ' '),
+          zona: ZONA,
+        });
+      } else {
+        await pb.collection('reunion').update(id, { inicio, zona: ZONA });
+      }
       await recargar();
     },
     [recargar],
@@ -444,8 +455,10 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
 
   /** §7.6: estirar el bloque cambia la duración, y eso se guarda. */
   const cambiarDuracion = useCallback(
-    async (id: string, duracion: number) => {
-      await pb.collection('reunion').update(id, { duracion_min: duracion });
+    async (id: string, duracion: number, origen: EventoAgenda['origen'] = 'crm') => {
+      // Igual que `mover`: el bloque de Google vive en otra colección.
+      const coleccion = origen === 'calendario' ? 'evento_externo' : 'reunion';
+      await pb.collection(coleccion).update(id, { duracion_min: duracion });
       await recargar();
     },
     [recargar],

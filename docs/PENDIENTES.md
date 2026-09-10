@@ -356,7 +356,50 @@ Lo demás:
       una sincronización), se reinició PocketBase y **la sincronización escribió
       dos filas nuevas con el código nuevo** — id de 15, `created` correcto,
       y los 3 vínculos que había siguen en pie.
-- [ ] **Falta el hook de salida y el arrastre.** Con el eco cerrado, ya se puede.
+- [x] ✅ **Arrastrar cualquier evento, los de Google incluidos — HECHO 09/09.**
+      Se arrastran y se estiran los tres tipos: el conectado con un lead, el de
+      prospección sin conectar y el bloqueo suelto (almuerzo, focus time). Sólo
+      queda quieto el de OTRA agenda, que no es suyo.
+      Las tres clases comparten un envoltorio en vez de repetir el arrastre en
+      cada rama: escribirlo tres veces es la forma segura de que dentro de un
+      mes ande en dos de las tres.
+- [x] ✅ **El hook de salida** `moverYAnotar` empuja el horario a Google.
+      Manda **sólo** `start` y `end`: el título, la descripción y los
+      invitados son de Google y el CRM no los toca. Moverlo de lugar no es
+      apropiárselo.
+      Se dispara **sólo si cambió el horario**: conectar un evento con un lead
+      también es un update de esa colección, y vincular no tiene por qué
+      mandarle un mail a nadie.
+- [x] ✅ **Avisar al mover**, con la regla del horario y no de la pantalla: si el
+      inicio **ya pasó** es una corrección y Google no notifica; si es futuro,
+      avisa. La misma de §8.3, y el cartel de la agenda ahora dice cuál de las
+      dos fue — decir «avisado» cuando el hook no avisó sería mentirle a la
+      pantalla.
+- [x] ✅ **Estirar de a 15 minutos**, también los de Google. Es el paso de la
+      grilla y ya existía para las reuniones del CRM.
+- [x] ✅ **La animación del arrastre.** *«En el momento en el que lo mueve tiene
+      que haber una animación que pase de nueve, nueve y cuarto, nueve y
+      media.»* El destino se calcula en cuartos, así que sin transición el
+      fantasma **saltaba** y no se leía como movimiento. Ahora se desliza en
+      90 ms, y el **alto también se anima**: una reunión de hora y media soltada
+      a las 9 tapa hasta las 10:30, y verlo antes de soltar es para lo que el
+      fantasma existe. Respeta `prefers-reduced-motion`.
+- [x] ⚠️ **Dos columnas nuevas para no mentir**: `sync_estado` y
+      `sync_detalle` en `evento_externo` (migración
+      `1788605000_evento_externo_se_mueve`). Mover el bloque en la agenda es
+      instantáneo, pero el viaje a Google puede fallar —permiso vencido, Google
+      caído, el evento borrado del otro lado—. Sin esto la pantalla diría
+      «movido» y el calendario de verdad seguiría igual, sin que nadie se
+      entere. Un log en el servidor no lo lee nadie a tiempo.
+- [ ] **Falta mostrar ese estado en la pantalla.** Las columnas se escriben; la
+      agenda todavía no las lee. Es lo próximo de esta tanda.
+
+**Verificado, no sólo escrito:** migración aplicada limpia, PocketBase arriba,
+y la sincronización escribió **612 filas nuevas** con el SQL nuevo mientras
+tanto — 2.382 eventos, cero ids rotos, cero duplicados, cero sin fecha,
+`integrity_check = ok`, y los 3 vínculos evento↔lead intactos.
+ `google_cuenta` sigue devolviendo **403** sin autenticación: el
+`refresh_token` no sale por la API.
 - [ ] **Notificar al mover** con la regla que ya existe: si el inicio **ya pasó**
       es una corrección y Google no avisa; si es futuro, avisa.
 - [ ] **Estirar cualquier evento**, de a 15 minutos. Ya funciona así para las

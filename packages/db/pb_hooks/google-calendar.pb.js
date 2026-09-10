@@ -238,3 +238,30 @@ onRecordAfterUpdateSuccess((e) => {
   if (cambio) g.sincronizarYAnotar(e.record);
   e.next();
 }, 'reunion');
+
+// ---------------------------------------------- mover un evento de Google
+//
+// §7.6 · Desde el 09/09 un bloque del calendario se arrastra y se estira en la
+// agenda. Cuando eso pasa hay que moverlo TAMBIEN en Google, que es donde el
+// invitado lo ve.
+//
+// SOLO SI CAMBIO EL HORARIO. Conectar un evento con un lead tambien es un
+// update de esta coleccion, y no tiene por que mandarle un mail a nadie:
+// vincular es una anotacion del CRM, no un cambio del evento.
+//
+// EL ECO ESTA CERRADO DEL OTRO LADO: la sincronizacion de ENTRADA escribe con
+// SQL plano, que no dispara hooks. Sin eso, esto que sigue seria un bucle
+// infinito con un mail al invitado en cada vuelta. Ver guardarEventoExterno().
+onRecordAfterUpdateSuccess((e) => {
+  const importa = ['inicio', 'duracion_min', 'zona'];
+  let cambio = false;
+  try {
+    const viejo = e.record.original();
+    cambio = importa.some((f) => String(e.record.get(f)) !== String(viejo.get(f)));
+  } catch (_) {}
+
+  // El require va ADENTRO del callback: los handlers corren aislados y no ven
+  // el scope del archivo. Es la familia 5 del registro y ya se cometio dos veces.
+  if (cambio) require(`${__hooks}/google.js`).moverYAnotar(e.record);
+  e.next();
+}, 'evento_externo');

@@ -2732,7 +2732,22 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   right: 0;
   border-radius: 6px;
   background: var(--accent-br);
+  border-left: 3px solid var(--accent);
   pointer-events: none;
+  /* LA ANIMACION DEL ARRASTRE (09/09). Augusto: «en el momento en el que lo
+     mueve tiene que haber una animacion que pase de nueve, nueve y cuarto,
+     nueve y media». El destino se calcula en cuartos de hora, asi que sin
+     transicion el fantasma SALTA de un cuarto al otro y no se lee como
+     movimiento. Con 90ms se ve el paso y sigue yendo atras del mouse.
+     El alto tambien se anima porque el fantasma MIDE lo que dura la reunion:
+     una de hora y media soltada a las 9 tapa hasta las 10:30, y verlo antes
+     de soltar es justamente para lo que existe. */
+  transition: top 90ms ease-out, height 90ms ease-out;
+}
+/* Quien pidio menos movimiento no lo recibe: el salto instantaneo sigue
+   diciendo lo mismo. */
+@media (prefers-reduced-motion: reduce) {
+  .agenda-hueco { transition: none; }
 }
 
 /* El lugar del evento en la columna: la hora manda el borde de arriba, la
