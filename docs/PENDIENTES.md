@@ -192,11 +192,40 @@ van** —el caso donde el «dale» por escrito alcanza, según la familia 12—:
       Queda como herramienta permanente, para no tener que escribir un script a
       medida la próxima vez:
       `node packages/db/recuperacion/auditar-importacion.mjs <csv>... --buscar «apellido»`
-- [ ] 🧹 **Pero esa persona está partida en tres perfiles**: «Herik Pires»,
-      «Herik Brasil» y «Erick», los tres sin teléfono, creados el mismo minuto
-      desde títulos del calendario. Uno de ellos tiene el lead con su correo y
-      55 eventos. **Va a Duplicados y lo resuelve Augusto**: fusionar mal junta
-      a dos personas distintas, que es el error caro.
+- [x] ✅ **Los datos de Herik los pasó Augusto y ya están cargados.**
+      *«Herik Marques · Gerente · BH · BR · +55 31 8477-0178»*.
+      Fueron al perfil `nltw2mi3k6tnprq`, que es **el que ya tenía su lead**
+      (`herik.marques@hotmail.com`, etapa R1, cuenta AL). El criterio para
+      elegir cuál de los tres fue **el correo, que es único**, y no el nombre,
+      que está escrito de tres formas: elegir por nombre mete el teléfono de una
+      persona en la ficha de otra.
+      «Herik Brasil» pasó a llamarse **«Herik Marques»**: el anterior salía de
+      un título de calendario, no de él.
+      **El teléfono se guarda sin el 9º dígito** —`553184770178`— y
+      `paraWhatsApp()` lo agrega al armar el link: `wa.me/5531984770178`. Así
+      lo guardado sigue siendo lo que uno marca en un teléfono y la rareza de
+      Brasil vive en un solo lugar. La regla ya existía en `core/telefono.ts`.
+      ❓ **«BR» se leyó como Brasil (país), no como la cuenta BR.** El lead ya
+      tiene cuenta AL y no se tocó. Si querías decir la cuenta, avisá.
+- [ ] 🧹 **Los otros dos perfiles quedaron marcados y esperan en Duplicados.**
+      «Herik Pires» (`nxgawm7uf306j3z`) y «Erick» (`0t91hxfzyixk465`), los dos
+      sin teléfono. Se les puso `posible_duplicado_de` apuntándose entre sí, así
+      que **la bandeja de Duplicados ya muestra el grupo**. Fusionar lo hace
+      Augusto: unir mal junta a dos personas distintas y no se puede deshacer.
+- [ ] ⚠️ **Y esto destapó algo de la bandeja: sólo muestra lo que alguien marcó
+      antes.** `useDuplicados` lee los perfiles con `posible_duplicado_de`
+      puesto; **no busca nada por su cuenta**. Que la bandeja diga cero no
+      quiere decir que no haya duplicados: quiere decir que nadie los marcó.
+      El detector (`packages/db/recuperacion/detectar-duplicados.mjs`) sí busca,
+      pero **exige un segundo dato que confirme** —slug de LinkedIn o correo del
+      invitado— y sin eso no marca. Es deliberado y está bien: emparejar por
+      nombre de pila daba 181 grupos, «una bandeja de 181 pantallas no la mira
+      nadie», y hay dos personas distintas compartiendo un teléfono.
+      **Pero el punto ciego tiene tamaño: 77 de los 412 perfiles vivos** son de
+      una sola palabra, sin slug y sin teléfono. Los tres de Herik eran tres de
+      esos 77. Hace falta decidir qué hacer con ese resto — no automatizarlo a
+      ciegas, pero tampoco dejar que la bandeja en cero se lea como «está todo
+      limpio».
 
 **Lo que se suma al plan** (no está hecho):
 
