@@ -25,9 +25,17 @@ import {
   type EnvioMedido,
   type LeadMedido,
 } from '@crm/core/rendimiento';
+import {
+  CONFIG_INVITAR_INICIAL,
+  NOMBRE_FRENO,
+  aQuienLeToca,
+  turnoDeInvitaciones,
+  type ConfigInvitar,
+  type CuentaQueInvita,
+  type Freno,
+} from '@crm/core/invitar';
 import type { ConfigCadencia } from '@crm/core/tipos';
 import { diaLocal } from '@crm/core/fecha';
-import { estadoDeSesion, NOMBRE_ESTADO_SESION } from '@crm/core/sesion';
 import { pb } from '../../lib/pocketbase';
 
 type Grupo = 'Invitaciones' | 'Cancelación' | 'Seguimiento';
@@ -46,7 +54,26 @@ const CANAL_LEGIBLE: Record<string, string> = {
   whatsapp_si_hay_telefono: 'WhatsApp si hay teléfono',
 };
 
-interface CuentaRecord extends CuentaInvitacion {
+/**
+ * Cómo se pinta cada freno.
+ *
+ * Tres tonos y no ocho: verde cuando la cuenta está invitando, gris cuando le
+ * falta algo que hay que ir a hacer —vincularla, cargarle el Chrome, sacarla de
+ * pausa— y ámbar cuando algo se rompió o LinkedIn la frenó. El detalle exacto
+ * va en el `title`; el color contesta «¿tengo que hacer algo?».
+ */
+const TONO_DEL_FRENO: Record<Freno, 'activa' | 'caida' | 'sin_vincular'> = {
+  pausa_general: 'sin_vincular',
+  cooldown: 'caida',
+  fuera_de_horario: 'sin_vincular',
+  sin_vincular: 'sin_vincular',
+  sesion_caida: 'caida',
+  sin_chrome: 'sin_vincular',
+  cupo_cumplido: 'activa',
+  sin_material: 'sin_vincular',
+};
+
+interface CuentaRecord extends CuentaQueInvita, CuentaInvitacion {
   linea_negocio?: string;
 }
 
@@ -137,6 +164,14 @@ export function Automatizaciones() {
   }) as unknown as ConfigCancelacion;
   const pausado = Boolean((config['automatizacion']?.valor as { pausado?: boolean })?.pausado);
 
+  // El ritmo de la corrida (§8.1). Se completa contra los valores iniciales de
+  // core: una configuración a la que le falta un campo dejaría una espera en
+  // `undefined`, que en una multiplicación da `NaN` y en la pantalla, vacío.
+  const ritmo: ConfigInvitar = {
+    ...CONFIG_INVITAR_INICIAL,
+    ...((config['invitaciones']?.valor ?? {}) as Partial<ConfigInvitar>),
+  };
+
   async function guardarConfig(clave: string, valor: unknown) {
     const r = config[clave];
     setConfig((c) => ({ ...c, [clave]: { ...(c[clave] ?? { id: '', clave }), valor } as ConfigRecord }));
@@ -154,6 +189,29 @@ export function Automatizaciones() {
     () => salidasDeHoy(cuentas, listasPorCuenta, leads, cancelacion, hoy, pausado),
     [cuentas, listasPorCuenta, leads, cancelacion, hoy, pausado],
   );
+
+  // Lo que salió hoy sale de los envíos R0 y no de un contador aparte: un
+  // contador aparte se desincroniza con la realidad y nadie se entera.
+  const enviadasHoy = useMemo(() => {
+    const m = new Map<string, number>();
+    const porLead = new Map(leads.map((l) => [l.id, l]));
+    for (const e of envios) {
+      if (e.paso !== 'R0' || !String(e.enviado_en ?? '').startsWith(hoy)) continue;
+      const cuenta = porLead.get(e.lead)?.cuenta;
+      if (cuenta) m.set(cuenta, (m.get(cuenta) ?? 0) + 1);
+    }
+    return m;
+  }, [envios, leads, hoy]);
+
+  // El turno: a quién le toca invitar AHORA y, sobre todo, por qué a las otras
+  // no. Es la misma función que usa el worker para decidir — si acá dijera una
+  // cosa y el proceso hiciera otra, la pantalla sería decorativa.
+  const turnos = useMemo(
+    () => turnoDeInvitaciones(cuentas, listasPorCuenta, enviadasHoy, ritmo, pausado),
+    [cuentas, listasPorCuenta, enviadasHoy, ritmo, pausado],
+  );
+  const turnoPorCuenta = useMemo(() => new Map(turnos.map((t) => [t.cuenta, t])), [turnos]);
+  const leToca = aQuienLeToca(turnos);
   const totalHoy = salidas.reduce((a, s) => a + s.invitaciones + s.seguimiento + s.cancelaciones, 0);
   const frenadas = salidas.filter((s) => s.frenada).map((s) => s.cuenta);
 
@@ -252,13 +310,21 @@ export function Automatizaciones() {
               </div>
               {cuentas.map((c) => {
                 const mias = enPrioridad(listasPorCuenta.get(c.id) ?? []);
-                // El estado se DEDUCE de la última señal, igual que en Cuentas
-                // conectadas. Acá se leía `c.estado_sesion`, que es un campo del
-                // seed de demo: la pantalla decía «activa» en cinco cuentas que
-                // nunca dieron una señal. Familia 7 — se había arreglado en la
-                // otra pantalla y esta quedó con la versión vieja.
-                const sesion = estadoDeSesion(c.ultima_senal_li);
-                const libre = sesion === 'sin_vincular';
+                // POR QUÉ NO SE MUESTRA EL ESTADO DE LA SESIÓN Y SÍ EL FRENO.
+                //
+                // Acá decía «activa» / «sesión caída» / «sin vincular», deducido
+                // de la última señal. Estaba bien y era insuficiente: una cuenta
+                // con la sesión perfecta tampoco invita si le falta el perfil de
+                // Chrome, si LinkedIn la frenó, si son las tres de la mañana o si
+                // ya salió el cupo del día — y la pantalla decía «activa» igual.
+                //
+                // El impedimento CONTIENE al estado de la sesión: `sin_vincular`
+                // y `sesion_caida` son dos de sus ocho valores. Poner los dos al
+                // lado sería la familia 7; esto lo reemplaza.
+                const turno = turnoPorCuenta.get(c.id);
+                const freno = turno?.impedimento?.freno ?? null;
+                const tono = freno ? TONO_DEL_FRENO[freno] : 'activa';
+                const libre = freno === 'sin_vincular';
                 const esta = abierta === c.id;
                 const m = metricas.find((x) => x.cuenta === c.abrev);
                 return (
@@ -266,8 +332,15 @@ export function Automatizaciones() {
                     <div className="auto-cuenta-fila">
                       <span className={`auto-cuenta-abrev ${libre ? 'auto-apagado' : ''}`}>{c.abrev}</span>
                       <span className="auto-cuenta-medio">
-                        <span className={`auto-cuenta-estado auto-sesion-${sesion}`}>
-                          {sesion === 'caida' ? 'sesión caída' : NOMBRE_ESTADO_SESION[sesion]}
+                        <span
+                          className={`auto-cuenta-estado auto-sesion-${tono}`}
+                          title={turno?.impedimento?.detalle ?? 'La cuenta puede invitar ahora.'}
+                        >
+                          {freno
+                            ? NOMBRE_FRENO[freno]
+                            : leToca?.cuenta === c.id
+                              ? `le toca · ${turno?.cuantas ?? 0}`
+                              : `puede · ${turno?.cuantas ?? 0}`}
                         </span>
                         <span className="campo-ayuda">{resumenDeListas(mias)}</span>
                       </span>
@@ -324,6 +397,77 @@ export function Automatizaciones() {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {grupo === 'Invitaciones' && (
+            <div className="auto-tarjeta">
+              <div className="auto-tarjeta-header">
+                <span className="auto-titulo">Ritmo de la corrida</span>
+                <span className="campo-ayuda">lo lee el worker</span>
+              </div>
+              <NumeroConTexto
+                valor={ritmo.espera_min_s}
+                min={1}
+                max={120}
+                texto="segundos como mínimo entre una invitación y la siguiente"
+                onCambio={(v) => void guardarConfig('invitaciones', { ...ritmo, espera_min_s: v })}
+              />
+              <NumeroConTexto
+                valor={ritmo.espera_max_s}
+                min={1}
+                max={180}
+                texto="y como máximo — la espera se sortea entre los dos"
+                onCambio={(v) => void guardarConfig('invitaciones', { ...ritmo, espera_max_s: v })}
+              />
+              <NumeroConTexto
+                valor={ritmo.pausa_media_cada}
+                min={0}
+                max={200}
+                texto="invitaciones → pausa media"
+                onCambio={(v) => void guardarConfig('invitaciones', { ...ritmo, pausa_media_cada: v })}
+              />
+              <NumeroConTexto
+                valor={ritmo.pausa_larga_cada}
+                min={0}
+                max={400}
+                texto="invitaciones → pausa larga"
+                onCambio={(v) => void guardarConfig('invitaciones', { ...ritmo, pausa_larga_cada: v })}
+              />
+              <NumeroConTexto
+                valor={ritmo.reset_navegador_cada}
+                min={0}
+                max={400}
+                texto="invitaciones → se reinicia el navegador"
+                onCambio={(v) => void guardarConfig('invitaciones', { ...ritmo, reset_navegador_cada: v })}
+              />
+              <NumeroConTexto
+                valor={ritmo.tope_por_corrida}
+                min={1}
+                max={400}
+                texto="invitaciones como tope de una corrida"
+                onCambio={(v) => void guardarConfig('invitaciones', { ...ritmo, tope_por_corrida: v })}
+              />
+              <NumeroConTexto
+                valor={ritmo.hora_desde}
+                min={0}
+                max={23}
+                texto="hora desde la que se puede operar"
+                onCambio={(v) => void guardarConfig('invitaciones', { ...ritmo, hora_desde: v })}
+              />
+              <NumeroConTexto
+                valor={ritmo.hora_hasta}
+                min={1}
+                max={24}
+                texto="hora hasta la que se puede operar"
+                onCambio={(v) => void guardarConfig('invitaciones', { ...ritmo, hora_hasta: v })}
+              />
+              <span className="auto-nota auto-nota-borde">
+                Estos números no son cosméticos: son lo único que separa una corrida de una ráfaga.
+                El <b>12/05/2026</b> LinkedIn le mandó un aviso de automatización a una de las cuentas
+                por operar sin pausas y con varias sesiones a la vez, y el freno duró tres días.
+                Subirlos es seguro; bajarlos no.
+              </span>
             </div>
           )}
 

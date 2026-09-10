@@ -872,10 +872,22 @@ página de revisión.
 ## 8 · Integraciones y worker
 
 - [x] **8.1 · Google Calendar** (bloque 7).
-- [ ] 🔒 **8.2 · `apps/worker/` está vacío.** Es la mitad del producto que no
-      existe: hoy el CRM registra lo que se hace a mano, no manda un mensaje ni
-      invita a nadie. De acá cuelgan LinkedIn, WhatsApp, el estado real de las
-      sesiones (bloque 0) y el Chrome de 7.7.
+- [~] **8.2 · `apps/worker/` existe y sabe invitar — 10/09.** Ya no está vacío.
+      Lo que hace: la corrida de invitaciones de LinkedIn entera (§8.1.1), con
+      el chequeo previo antes de abrir nada, el Chrome por cuenta
+      (`--profile-directory`), el ritmo y las pausas anti-detección, el freno
+      automático cuando LinkedIn avisa, la señal de vida en `ultima_senal_li`
+      —que **nadie escribía**, y por eso las siete cuentas figuraban «sin
+      vincular»— y cada invitación anotada en la base (`perfil` + `lead` +
+      `envio` R0), no en un JSON local.
+      Las reglas están en `core/invitar.ts` con 24 tests que citan el manual;
+      el worker sólo maneja el navegador.
+      **Falta la otra mitad**: la cola de envíos R1–R8, la cancelación de §5.4,
+      WhatsApp (8.5), y que corra solo — hoy se dispara a mano.
+      ⚠️ **No se probó contra LinkedIn.** Se escribió sin poder ejecutarlo:
+      Claude no puede abrir Playwright contra LinkedIn. La primera corrida la
+      tiene que hacer Augusto, con `--simular` primero y después con una cuenta
+      y el cupo bajo.
 - [ ] 🔒 **8.3 · LinkedIn.** Augusto tiene que pasar **las URLs de los perfiles**
       y **cuál es el Chrome que tiene conectado**. Sin eso no se puede empezar.
       Es donde está el 90% de la operación y lo que completa empresa e industria.
@@ -1024,6 +1036,17 @@ página de revisión.
 ## 10 · Los datos
 
 Contado contra la base, no de memoria.
+
+- [ ] ❓ **Cinco archivos basura en la raíz del repositorio — los borra Augusto.**
+      Están vacíos y tienen nombres que son pedazos de una frase: `Sincronizar`,
+      `de`, `para`, `cuál` y uno que arranca con `**Esto`. Salieron de un comando
+      de terminal mal escrito el 10/09 a las 09:32.
+      **Tres ya están commiteados** (`Sincronizar`, `de`, `para`) y los otros dos
+      todavía no. El repositorio es público (§13.4), así que además de ruido son
+      cinco nombres raros a la vista de cualquiera.
+      No se borran acá por la primera regla del `CLAUDE.md`: los borrados los
+      pide Augusto. Cuando quiera: `git rm Sincronizar de para` y `rm cuál` más
+      el que empieza con `**Esto`.
 
 - [x] **Los cruces Calendar ↔ WhatsApp están hechos.** 76 perfiles absorbidos,
       **75 leads con teléfono** donde a la mañana había 2.

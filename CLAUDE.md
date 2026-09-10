@@ -63,7 +63,10 @@ manual dice cómo tiene que ser; PENDIENTES dice qué falta.
 ```
 apps/
   web/        React + Vite. Carpetas por feature (followup/, agenda/, usuarios/).
-              CERO reglas de negocio adentro. HOY ES LA ÚNICA APP QUE EXISTE.
+              CERO reglas de negocio adentro.
+  worker/     El proceso que HACE. Playwright contra LinkedIn. Hoy sabe una sola
+              cosa: mandar invitaciones (§8.1.1). CERO reglas adentro también:
+              le pregunta a core y ejecuta. Ver apps/worker/README.md.
 packages/
   core/       TODAS las reglas de negocio, como funciones puras, sin I/O.
               40 módulos: cadencia.ts  telefono.ts  idioma.ts  permisos.ts
@@ -75,9 +78,10 @@ docs/         MANUAL.md (la especificación entera), PENDIENTES.md (lo que falta
 
 TODAVÍA NO EXISTEN, y este archivo los daba por hechos:
   apps/api/       Iba a ser el backend. Su trabajo lo hacen los hooks de pb_hooks/.
-  apps/worker/    Cola de envíos, Playwright (LinkedIn), sesión de WhatsApp.
-                  Es el bloqueante de §8.2 y de Baileys: sin esto no se envía nada solo.
   packages/shared/ Los tipos compartidos viven en core/tipos.ts y apps/web/src/lib/types.ts.
+
+Y de apps/worker/ falta la mitad: la cola de envíos (R1-R8), la cancelación de
+§5.4 y la sesión de WhatsApp con Baileys. Hoy sólo invita.
 ```
 
 ## Las reglas que evitan el código de más

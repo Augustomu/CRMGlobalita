@@ -248,10 +248,14 @@ Se solapa con `mensajes_li[]` / `mensajes_wa[]` → D06.
 | `id`, `abrev` | id, string | `AL`, `DL`, … |
 | `nombre_perfil` | string | nombre real del perfil de LinkedIn |
 | `linea_negocio` | enum | `ia` (Globalita) \| `inversiones` (Seng). **De acá sale la casa** de todo lo que cuelga de la cuenta: leads, proyectos, reuniones |
-| `estado_sesion` | enum | `activa` \| `caida` \| `sin_vincular` |
+| `estado_sesion` | enum | `activa` \| `caida` \| `sin_vincular`. **No se lee para mostrar el estado**: es un campo que alguien escribió una vez y el seed lo dejó en «activa» en cinco cuentas sin sesión. Sigue existiendo porque la pantalla de vincular lo usa como intención — «esta cuenta se quiere conectar» |
+| `ultima_senal_li` | fecha | **La señal, no el estado.** El worker la toca cada vez que LinkedIn contesta; `core/sesion.ts` mira cuán vieja es (15 min). Vacía = sin vincular, que mientras el worker no corra es la verdad |
+| `ultima_senal_wa` | fecha | lo mismo para WhatsApp |
+| `chrome_perfil` | string | con qué perfil de Chrome se abre esa cuenta («Default», «Profile 1»…). Depende de la máquina, por eso es un campo y no una tabla en el código. Sin esto el worker **no arranca**: abriría un navegador sin sesión o el de otra cuenta, y en LinkedIn eso deja rastro |
+| `cooldown_hasta` | fecha | hasta cuándo quedó frenada por un aviso de LinkedIn (§8.1.1). Lo escribe el worker solo; no se levanta a mano — el indicador interno de LinkedIn sigue activo aunque la cuenta parezca que volvió |
 | `cupo_diario` | int | invitaciones por día; editable por cuenta. Default 40 |
 | `objetivo_semanal` | int | default 200 |
-| `sesion_wa` | enum | `activa` \| `caida` — WhatsApp se vincula por QR, **aparte** de LinkedIn |
+| `sesion_wa` | enum | `activa` \| `caida` — WhatsApp se vincula por QR, **aparte** de LinkedIn. Mismo caso que `estado_sesion` |
 
 Hay **10 slots fijos**. Los no vinculados se muestran como `libre 7`…`libre 10`.
 
@@ -1046,7 +1050,11 @@ en el camino se perdían el idioma y el alcance ya elegidos.
 
 Columna izquierda con tres pestañas; columna derecha fija. Arriba de todo, un botón global **en marcha / todo en pausa**.
 
-**Invitaciones** — las 10 cuentas. Cada fila: abreviatura, estado de sesión, resumen de listas, cupo diario editable, avance semanal. Se despliega y muestra sus listas con prioridad (flechas para reordenar), última página vista (dato de la automatización, no editable), perfiles restantes estimados y chip *agotada / en uso / en espera*.
+**Invitaciones** — las 10 cuentas. Cada fila: abreviatura, **por qué no está invitando** (o «le toca» con cuántas salen), resumen de listas, cupo diario editable, avance semanal. Se despliega y muestra sus listas con prioridad (flechas para reordenar), última página vista (dato de la automatización, no editable), perfiles restantes estimados y chip *agotada / en uso / en espera*.
+
+Debajo, **Ritmo de la corrida**: los números que gobiernan el proceso de invitaciones (§8.1.1), editables. Se guardan en `configuracion` con clave `invitaciones` y los lee el worker.
+
+**El chip de la izquierda muestra el freno, no el estado de la sesión.** Antes decía *activa / sesión caída / sin vincular*, deducido de la última señal. Estaba bien y era insuficiente: una cuenta con la sesión perfecta tampoco invita si le falta el perfil de Chrome, si LinkedIn la frenó, si son las tres de la mañana o si ya salió el cupo del día — y la pantalla decía «activa» igual. El freno **contiene** al estado de la sesión (`sin vincular` y `sesión caída` son dos de sus ocho valores), así que lo reemplaza en vez de ponerse al lado.
 
 **Cancelación** — los tres números configurables (días sin aceptar, espera de recontacto, tope por día y cuenta) y la tabla «Vuelven a la cola de envío» por cuenta (hoy / esta semana / la próxima) con el total listo para reinvitar.
 
@@ -1291,6 +1299,100 @@ Consecuencias que el diseño ya asume:
 6. **Proxy residencial por cuenta** queda como plan B si aparecen verificaciones, no como gasto inicial (~USD 5–15 por cuenta y mes).
 
 Empezar por **una sola cuenta** durante dos semanas antes de mover las diez.
+
+### 8.1.1 La corrida de invitaciones
+
+Es lo que hace `apps/worker/` — la primera cosa que el worker sabe hacer, y por
+ahora la única. Las reglas viven en `core/invitar.ts` con sus tests; el worker
+sólo abre el navegador y ejecuta lo que core le dice.
+
+**A quién le toca.** Una cuenta por vez, en orden de slot. De esa cuenta se toma
+la lista de mayor prioridad que todavía tenga páginas (§3.4), y cuántas
+invitaciones salen es el **mínimo entre tres cosas**: lo que queda del cupo
+diario, lo que queda en la lista, y el tope de la corrida. El cupo manda, pero
+sin material no hay invitación por más cupo que sobre.
+
+**Los ocho frenos.** Antes de abrir nada se pregunta si la cuenta puede operar.
+Si no puede, se dice cuál es el motivo y se termina **sin abrir el navegador**:
+
+| Freno | Qué pasó |
+|---|---|
+| `pausa_general` | alguien apretó «todo en pausa» en §7.3 |
+| `cooldown` | LinkedIn avisó algo y la cuenta está frenada hasta una fecha |
+| `fuera_de_horario` | son las tres de la mañana |
+| `sin_vincular` | la sesión nunca dio señal |
+| `sesion_caida` | la sesión dio señal y dejó de darla |
+| `sin_chrome` | no está cargado con qué perfil de Chrome se abre esa cuenta |
+| `cupo_cumplido` | ya salieron las del día |
+| `sin_material` | ninguna lista de la cuenta tiene páginas |
+
+Se evalúan **en ese orden**, y el orden no es alfabético: primero lo que no se
+discute y vale para todas las cuentas, después lo de la sesión, y al final lo
+del trabajo. Una cuenta con todo mal a la vez tiene que decir «en pausa» y no
+«sin material», porque arreglarle el material no la hace arrancar.
+
+**El estado de la sesión no se declara: se deduce.** Se mira `ultima_senal_li`,
+que el worker toca cada vez que LinkedIn contesta. `cuenta.estado_sesion` no se
+lee — es un campo del seed que decía «activa» en cinco cuentas que nunca
+tuvieron una sesión detrás.
+
+**El ritmo.** Todos estos números son **configuración, no constantes**, y se
+editan en §7.3. Los valores iniciales salen de `globalita-automation`, donde
+estuvieron en producción:
+
+| | Inicial | Para qué |
+|---|---|---|
+| espera entre una y otra | 3–9 s, sorteada | que no haya dos iguales |
+| pausa media | cada 30, de 90–180 s | un descanso corto |
+| pausa larga | cada 50, de 180–300 s | cortar el patrón del bucle sostenido |
+| reinicio del navegador | cada 40 | limpia la huella acumulada en el proceso |
+| mirar señales de bloqueo | cada 10 | enterarse antes, no después |
+| tope de la corrida | 40 | para seguir se vuelve a correr el proceso |
+| espera de arranque | 10–20 s | abrir y disparar en el mismo instante es la firma más barata que hay |
+| franja horaria | 08:00–22:00 | fuera de eso no hay nadie trabajando |
+
+Cuando la pausa media y la larga caen en el mismo número —a las 150, con 30 y
+50— **salen las dos**. Acortarlo sería aflojar una medida anti-detección sin
+ninguna razón nueva.
+
+**La espera se ajusta a cómo contesta LinkedIn**, y la intuición va al revés de
+lo que parece: que conteste **muy rápido** (menos de medio segundo) es mala
+señal —eso no es una persona navegando, y suele ser caché servido a un cliente
+ya marcado— así que se espera entre 1,5 y 2 veces más. Cuando contesta lento
+(2–4 s) se aprovecha, porque el ritmo ya es humano por sí solo. Y cuando
+contesta muy lento (más de 4 s) se frena 2 a 3 veces más: eso no es la red, es
+estrangulamiento, y es lo que precede al bloqueo.
+
+**Cuando LinkedIn avisa** se corta, no se insiste. La gravedad cambia el freno:
+
+| Aviso | Freno de la cuenta | ¿Para todo? |
+|---|---|---|
+| verificación de que sos humano | 24 h | no |
+| actividad inusual | 24 h | no |
+| uso de una herramienta de automatización | **72 h** | **sí** |
+| cuenta restringida | **168 h** (una semana) | **sí** |
+
+Los dos graves paran **todas** las cuentas y no sólo la avisada: las vecinas
+salen de la misma IP, así que si LinkedIn marcó una, las otras ya están
+miradas. La pausa que se activa es la **misma** de §7.3, la que se ve en
+pantalla — un freno de emergencia invisible es un freno que alguien levanta sin
+enterarse de por qué estaba puesto.
+
+**Qué queda anotado.** Cada invitación que sale escribe tres cosas en la base:
+el `perfil` (la persona, deduplicada por §14 · D02), el `lead` con su
+`f_invitacion`, y un `envio` con `paso = R0`. **Nada de esto va a un archivo
+local.** En el repositorio viejo el historial vivía en `history.json` y las
+cuotas en `quota-invitar.json`, los dos en la raíz y los dos en el disco que se
+formateó el 03/09.
+
+Y lo que salió hoy se cuenta **desde los envíos R0 de hoy**, no desde un
+contador aparte: un contador aparte se desincroniza con la realidad cada vez
+que un proceso muere a la mitad, y nadie se entera.
+
+**Lo que esta corrida NO hace todavía**: no escribe nota en la invitación (el
+texto de R0 sale del repositorio de mensajes, §5.2, y falta decidir si va con
+nota), no maneja el caso en que LinkedIn exige el correo para poder invitar —el
+perfil se saltea—, no cancela (§5.4) y no corre solo: se dispara a mano.
 
 ### 8.2 WhatsApp
 
