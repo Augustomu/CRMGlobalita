@@ -78,15 +78,23 @@ La base anterior quedó guardada en el servidor como `data.db.antes-de-migrar`.
 > ⚠️ **DESDE AHORA, `127.0.0.1:8090` ES OTRA BASE.** Lo que se cargue ahí no
 > aparece en el CRM de verdad. La local queda para desarrollar y nada más.
 
-- [ ] ❗ **La copia horaria de la PC está respaldando la base equivocada.**
-      `Globalita-SnapshotCRM` sigue copiando `.pb/pb_data` de la máquina, que a
-      partir de hoy es una copia vieja que se va a ir quedando atrás. Quien
-      restaure desde GitHub va a recuperar datos de antes de la migración,
-      creyendo que son los buenos. **Hay que apuntarla al VPS o apagarla.**
-- [ ] ❗ **Falta la parte 3: el VPS todavía no sube su copia a GitHub.** Hoy hace
-      UNA copia, a las 03:15, en el mismo disco que los datos — su propio script
-      lo avisa en cada corrida. Con la base de verdad allá, eso no alcanza.
-      El paso a paso está en `deploy/PASAR-AL-VPS.md`, parte 3.
+- [x] ✅ **La copia horaria de la PC ya no sube la base equivocada.** Al revisarlo
+      el 10/09 apareció que `subir-crm-a-github.js` YA tenía una guarda que se niega
+      a subir: dice «la base de verdad ya no es la de esta máquina» y sale sin tocar
+      nada. La tarea sigue corriendo y devuelve 0, pero no sube el CRM.
+
+      **Lo que sí estaba roto era otra cosa, y peor.** Desde que el VPS empezó a
+      escribir en `globalita-data`, la rama `main` es suya y la PC pusheaba a la
+      misma: rechazo por non-fast-forward. Y encima los transcripts de Claude
+      pasaron los 100 MB, que GitHub rechaza del lado del servidor volteando el
+      push ENTERO. Resultado: **la bitácora y los 6165 contactos llevaban horas
+      sin ninguna copia online**, con la tarea marcando error y nadie mirándola.
+      Arreglado el 10/09: transcripts comprimidos (125 MB → 45), rama propia para
+      la PC, y `fetch` + `reset --hard` antes de commitear igual que hace el VPS.
+- [x] ✅ **El VPS sube su copia a GitHub.** Hecho y VERIFICADO CORRIENDOLO el 10/09,
+      no sólo instalado: `/etc/cron.d/crm-globalita-github` lo dispara a las 03:30
+      —quince minutos después del backup local, para que no se pisen— y una corrida
+      a mano dejó tres `.tar.gz` en el VPS y las copias en `globalita-data`.
 - [ ] 🧹 **El usuario de demo ya no está en producción**: se fue con la base
       limpia. Si alguna migración del seed lo recrea en una base nueva, borrarlo.
 
@@ -888,8 +896,14 @@ página de revisión.
       Claude no puede abrir Playwright contra LinkedIn. La primera corrida la
       tiene que hacer Augusto, con `--simular` primero y después con una cuenta
       y el cupo bajo.
-- [ ] 🔒 **8.3 · LinkedIn.** Augusto tiene que pasar **las URLs de los perfiles**
-      y **cuál es el Chrome que tiene conectado**. Sin eso no se puede empezar.
+- [x] ✅ **8.3 · El mapa Chrome → cuenta, cargado.** Augusto lo pasó el 10/09:
+      las **nueve cuentas tienen `chrome_perfil`** (AC Profile 6, AL 1, FR 2, ED 3,
+      BR 4, AU 5, DL 7, DP 8, AMU Default). Ya no hay un solo Chrome.
+      Lo que sigue abierto de 8.3 son **las URLs de los perfiles de LinkedIn**, que
+      es otra cosa: son los perfiles de las personas a las que se invita, y hoy sólo
+      16 de 487 perfiles tienen `slug`.
+      (Lo que decía antes:) Augusto tiene que pasar **las URLs de los perfiles**
+      y **cuál es el Chrome que tiene conectado**.
       Es donde está el 90% de la operación y lo que completa empresa e industria.
       **Dijo el 09/09 que ya tiene las sesiones de Chrome abiertas.** Lo que hace
       falta es el **mapa perfil de Chrome → cuenta**: cuál de los perfiles
@@ -900,8 +914,16 @@ página de revisión.
       ⚠️ **Lo que NO hay que mandar por chat**: contraseñas, cookies de sesión,
       tokens ni códigos de verificación. Con el nombre del perfil alcanza; la
       sesión se usa desde el Chrome que ya está abierto en su máquina.
-- [ ] 🔒 **8.4 · Las listas de prospección.** Las tiene que pasar Augusto.
+- [x] ✅ **8.4 · Las listas de prospección.** Augusto las pasó el 10/09 en un
+      documento. **22 búsquedas guardadas cargadas** con su `savedSearchId`, en seis
+      cuentas. Falta una sola cosa para que sirvan: el conteo de páginas de cada
+      una (`paginas` está en 0, así que figuran agotadas y la cola calcula 0).
+      Ese número sale de mirar la búsqueda en Sales Navigator y lo tiene que pasar él.
 - [ ] 🔒 **8.5 · WhatsApp con Baileys.** Una sola cuenta, según Augusto.
+      **El número ya está decidido**: lo pasó el 10/09 y quedó en `.env` como
+      `WA_NUMERO` (no en el repo: es público). Ya no bloquea.
+      **Y `apps/worker/` ya existe** desde el 10/09, así que el primer paso de la
+      lista de abajo está hecho. Falta el adaptador de Baileys en sí.
       Pedido el 09/09: *«desarrollar la Baileys para conectar WhatsApp»*.
       Lo que implica, en orden: `apps/worker/` desde cero (hoy está vacío) →
       Baileys con la sesión en disco y el QR servido por una ruta del CRM →
@@ -1074,7 +1096,10 @@ Contado contra la base, no de memoria.
 - [x] ✅ **Limpieza de demo**: 12 tareas del seed, 11 actividades, y 2 leads de
       prueba míos («Prueba Alta 41577», «Nueva Persona 09271»).
       **Hecho el 09/09: 43 registros, con `limpiar-demo.mjs`. No se tocaron cuentas, plantillas, reglas ni etiquetas.**
-- [ ] ❓ **`AC` (Alberto Córdova) no existe como cuenta.** Si alguna vez hay leads
+- [x] ✅ **`AC` existe: es Alberto Córdoba, Profile 6.** Salió del documento del
+      10/09. Ojo que la base lo escribe «Cordova» y el manual «Córdoba»; ídem
+      «Brenno» vs «Bruno». Los dos son nombres de personas reales y los corrige Augusto.
+      (Lo que decía antes:) **`AC` (Alberto Córdova) no existe como cuenta.** Si alguna vez hay leads
       suyos, hay que crearla con su cupo y línea de negocio.
 
 ---
@@ -1127,8 +1152,9 @@ programadas de Windows.
       hora y deja una copia fechada en `~/globalita-backups/crm/`. Están las
       de las 17, 18, 19, 20 y 21 UTC, completas (sqlite + json + manifiesto),
       con `integrity=ok` y sin errores de claves foráneas.
-- [ ] **La copia del VPS no se verificó nunca.** Va con 9.6: el script está,
-      falta confirmar que el cron corra y que una copia bajada se abra. Las tres
+- [x] ✅ **La copia del VPS, verificada corriéndola.** El 10/09 se disparó el
+      script a mano: escribió el `.tar.gz`, hizo `reset --hard` contra el remoto y
+      pusheó. Quedó registrado en el historial de `globalita-data`. Las tres
       copias que hoy funcionan —local por hora, GitHub y Drive— son todas **de la
       base de la PC**. La base de producción no tiene ninguna verificada.
 - [ ] ⚠️ **La copia de Drive está congelada desde esta mañana.** `crm-snapshot`
