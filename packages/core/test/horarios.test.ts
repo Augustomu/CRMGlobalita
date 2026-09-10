@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  ALTO_TRAMO,
   DURACION_MAXIMA,
   DURACION_MINIMA,
   duracionAlEstirar,
@@ -107,8 +108,12 @@ test('hhmm y enMinutos son inversas', () => {
 // §7.6 — estirar el bloque de la agenda cambia la duración, de a 15 minutos.
 test('la duración se estira de a un tramo, no píxel a píxel', () => {
   // 22 px es un tramo. Media reunión estirada 44 px son dos tramos: +30 min.
-  assert.equal(duracionAlEstirar(30, 44), 60);
-  assert.equal(duracionAlEstirar(30, -22), 15);
+  // En PASOS y no en píxeles sueltos: lo que la regla promete es que cada
+  // tramo de la grilla suma o resta quince minutos. Escrito «44» a mano, el
+  // test se rompía al cambiar el alto de la hora aunque la regla siguiera
+  // intacta — y eso enseña a tocar el test en vez de mirar la regla.
+  assert.equal(duracionAlEstirar(30, ALTO_TRAMO * 2), 60);
+  assert.equal(duracionAlEstirar(30, -ALTO_TRAMO), 15);
   // Los movimientos chicos no cambian nada: sin redondear a pasos, la duración
   // termina en 37 minutos, que no es un horario que exista.
   assert.equal(duracionAlEstirar(30, 5), 30);

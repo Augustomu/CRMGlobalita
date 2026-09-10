@@ -13,6 +13,7 @@ import type { UsuarioRecord, LeadRecord } from '../../lib/types';
 import { leadsConSeguimiento, useAgenda, type EventoAgenda } from './useAgenda';
 import { personasSinLead, type PersonaDelCalendario } from '@crm/core/vincular';
 import { ConectarEvento } from './ConectarEvento';
+import { CampoDia } from '../../ui/CampoDia';
 
 /**
  * La franja de trabajo. Fuera de 8 a 20 no se agenda, así que dibujar el resto
@@ -800,12 +801,16 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
                 {/* §7.6: el próximo contacto se EDITA acá. Es la mitad del
                     sentido de esta vista: se recorre el seguimiento y se
                     corrigen fechas sin abrir ficha por ficha. */}
-                <input
-                  type="date"
-                  className="agenda-lista-fechainput tabular"
-                  title="Fecha del próximo contacto"
-                  defaultValue={l.proximo_contacto ? String(l.proximo_contacto).slice(0, 10) : ''}
-                  onChange={(ev) => void cambiarProximo(l.id, ev.target.value)}
+                {/* Día y mes, sin año y sin el icono del navegador (§7.6).
+                    El año lo deduce `core/fecha.ts`: hacia adelante, porque
+                    un próximo contacto es algo que todavía no pasó. */}
+                <CampoDia
+                  valor={l.proximo_contacto ? String(l.proximo_contacto).slice(0, 10) : ''}
+                  titulo="Fecha del próximo contacto"
+                  preferir="futuro"
+                  onCambiar={(iso) => {
+                    if (iso) void cambiarProximo(l.id, iso);
+                  }}
                 />
 
                 {/* La foto se PEGA del portapapeles: de LinkedIn se copia, no
@@ -832,12 +837,14 @@ export function Agenda({ leads, usuario, seleccionado, onCerrar, onIrAlLead }: P
                   <span className="agenda-lista-nombre">{l.expand?.perfil?.nombre}</span>
                 </button>
 
-                <input
-                  type="date"
-                  className="agenda-lista-fechainput tabular"
-                  title="Agendar una reunión nueva ese día, a las 10"
-                  value=""
-                  onChange={(ev) => void nuevaReunion(l.id, ev.target.value)}
+                <CampoDia
+                  valor=""
+                  vacio="nueva"
+                  titulo="Agendar una reunión nueva ese día, a las 10"
+                  preferir="futuro"
+                  onCambiar={(iso) => {
+                    if (iso) void nuevaReunion(l.id, iso);
+                  }}
                 />
 
                 <button

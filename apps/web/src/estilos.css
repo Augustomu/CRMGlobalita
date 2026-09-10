@@ -2555,10 +2555,19 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   display: grid;
   grid-template-columns: calc(44px * var(--escala-texto)) repeat(6, minmax(0, 1fr));
 }
-/* La vista diaria es la misma grilla con una sola columna. */
+/* LA VISTA DIARIA: la misma grilla con una sola columna, PERO CON TOPE.
+   Augusto: «que los eventos estén centrados y un ancho seteado, que le pongo
+   diaria y automáticamente se me reduce».
+   Estirada a todo el ancho del panel, un día solo queda con bloques de 500 px
+   de largo por 30 de alto —una reunión de media hora se lee como una barra— y
+   la hora queda a media pantalla del nombre. El tope es el ancho que tiene una
+   columna en la vista semanal, así que pasar de una a otra no cambia de forma.
+   Centrarla es lo que la deja en el medio; sin eso el tope la pega a la
+   izquierda y deja un vacio raro a la derecha. */
 .agenda-fila-cabeza.agenda-un-dia,
 .agenda-cuerpo.agenda-un-dia {
-  grid-template-columns: calc(44px * var(--escala-texto)) minmax(0, 1fr);
+  grid-template-columns: calc(44px * var(--escala-texto)) minmax(0, calc(320px * var(--escala-texto)));
+  justify-content: center;
 }
 .agenda-fila-cabeza {
   position: sticky;
@@ -6381,6 +6390,30 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
    (09/09). Sin `margin-left: auto`: ahí adentro tienen que quedar pegadas al
    nombre, que es lo que se pidió tres veces. */
 .wap-chat-acciones { display: flex; gap: 4px; align-items: center; flex: 0 0 auto; }
+
+/* --------------------------------------------------- Día y mes, sin año
+   §7.6 · Dos listas que se leen como un campo solo: el borde y el radio son
+   los de `.campo-chico select`, que ya existía. El día va primero porque es
+   lo que cambia todos los días; el mes casi nunca. */
+.campo-dia { display: inline-flex; gap: 3px; align-items: center; }
+.campo-dia select {
+  padding: 2px 3px;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--txt-sm);
+  font-family: inherit;
+  cursor: pointer;
+}
+.campo-dia select:hover { border-color: var(--accent-br); }
+.campo-dia select:focus { outline: none; border-color: var(--accent); }
+/* Sin elegir, el campo no tiene que pesar más que una fila con dato.
+   La clase la pone el componente. Se intentaron dos selectores que NO
+   matchean nunca y habrian quedado ahi sin aplicarse: un select no refleja lo
+   elegido en su atributo value, y la pseudoclase de invalido no dispara si el
+   campo no es obligatorio. */
+.campo-dia-vacio { color: var(--hint); }
 
 /* ------------------------------------------------ El buscador con chips
    §7.2 · Un campo que contiene chips. El recuadro es del DIV, no del input:

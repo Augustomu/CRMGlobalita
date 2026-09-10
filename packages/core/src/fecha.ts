@@ -40,3 +40,78 @@ export function ddmmaaaa(iso: string | null | undefined): string {
   const s = String(iso ?? '');
   return s.length >= 10 ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}` : '';
 }
+
+/**
+ * Cuántos días tiene un mes de un año. Febrero incluido.
+ *
+ * `new Date(anio, mes, 0)` da el último día del mes anterior, así que pasando
+ * el mes SIN restarle uno se obtiene el último del mes que uno quiere.
+ */
+export function diasDelMes(anio: number, mes: number): number {
+  return new Date(anio, mes, 0).getDate();
+}
+
+/**
+ * El año que corresponde a un día y un mes escritos sin año (§7.6).
+ *
+ * POR QUÉ EXISTE. Augusto: *«en la parte de nueva y próximo contacto, que
+ * solamente sea mes y día, no hace falta año»*. Tiene razón: nadie agenda a
+ * dos años vista, y escribir «2026» cada vez que se corre una fecha es
+ * tipear un dato que el sistema ya sabe.
+ *
+ * PERO EL AÑO HAY QUE ELEGIRLO, y no siempre es el de hoy. En diciembre,
+ * «15/01» es del año que viene; en enero, «28/12» es del año pasado si se
+ * está corrigiendo algo que ya pasó. Por eso hace falta decir hacia dónde se
+ * mira:
+ *
+ *   'futuro'  la próxima vez que caiga ese día. Es el de agendar.
+ *   'pasado'  la última vez que cayó. Es el de corregir un histórico.
+ *
+ * Hoy cuenta como válido en los dos sentidos: agendar «para hoy» y corregir
+ * «a hoy» son las dos cosas que más se hacen.
+ *
+ * EL 29 DE FEBRERO. Si el año candidato no es bisiesto, ese día no existe y
+ * se sigue buscando: hacia adelante o hacia atrás según corresponda. Sin esto
+ * devolvería «2027-02-29», que `Date` interpreta como el 1 de marzo — o sea
+ * una fecha que nadie escribió.
+ */
+export function anioDe(
+  dia: number,
+  mes: number,
+  hoy: string,
+  preferir: 'futuro' | 'pasado' = 'futuro',
+): number | null {
+  if (!Number.isInteger(dia) || !Number.isInteger(mes)) return null;
+  if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return null;
+
+  const base = Number(String(hoy).slice(0, 4));
+  if (!Number.isFinite(base)) return null;
+
+  // Cuatro años de margen alcanza y sobra: el salto más largo es el de
+  // diciembre a enero, y el 29 de febrero aparece una vez cada cuatro.
+  const paso = preferir === 'futuro' ? 1 : -1;
+  for (let i = 0; i <= 4; i++) {
+    const anio = base + i * paso;
+    if (dia > diasDelMes(anio, mes)) continue;
+    const iso = `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    if (preferir === 'futuro' ? iso >= hoy : iso <= hoy) return anio;
+  }
+  return null;
+}
+
+/**
+ * El ISO que resulta de un día y un mes sin año, o `''` si no es una fecha.
+ *
+ * Devolver `''` y no lanzar es a propósito: esto se llama mientras alguien
+ * escribe, y un 31 a medio tipear en un mes de 30 no es un error de nadie.
+ */
+export function fechaDeDiaMes(
+  dia: number,
+  mes: number,
+  hoy: string,
+  preferir: 'futuro' | 'pasado' = 'futuro',
+): string {
+  const anio = anioDe(dia, mes, hoy, preferir);
+  if (anio === null) return '';
+  return `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+}

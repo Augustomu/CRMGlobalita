@@ -47,8 +47,23 @@ export const PASO_DURACION = 15;
 export const DURACION_MINIMA = 15;
 export const DURACION_MAXIMA = 180;
 
-/** Cuánto mide en pantalla un tramo de 15 minutos. Sale del prototipo. */
-export const ALTO_TRAMO = 22;
+/**
+ * Cuánto mide en pantalla un tramo de 15 minutos.
+ *
+ * ERA 22, que sale del prototipo, y de ahí salían **88 px por hora**: de 08:00
+ * a 20:00 son 1.144 px de alto. No entra en una laptop de 14" —que es el
+ * objetivo declarado del diseño— así que la semana obligaba a scrollear
+ * siempre. Augusto, el 09/09: *«la parte semanal está horrible, está demasiado
+ * grande, tendríamos que reducir un poco el tamaño»*.
+ *
+ * 14 da **56 px por hora**. Google Calendar usa ~48 y Outlook ~44; no se bajó
+ * hasta ahí porque a 48 una reunión de quince minutos mide 12 px y no le entra
+ * el nombre. A 56 mide 14, que con la fila de una sola línea alcanza.
+ *
+ * Esto CONTRADICE al prototipo, que es la fuente de verdad visual. Manda lo
+ * que pidió Augusto, y el manual quedó actualizado en el mismo commit.
+ */
+export const ALTO_TRAMO = 14;
 
 /**
  * La duración que resulta de estirar el bloque.
