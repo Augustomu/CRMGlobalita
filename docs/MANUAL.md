@@ -1396,9 +1396,38 @@ perfil se saltea—, no cancela (§5.4) y no corre solo: se dispara a mano.
 
 ### 8.2 WhatsApp
 
-Vinculación por **QR por cuenta** (sesión de WhatsApp Web). Se necesita:
+Vinculación por **QR por cuenta** (sesión de WhatsApp Web).
 
-- Estado de sesión por cuenta y aviso cuando cae.
+**Hecho el 10/09: vincular y sostener la sesión.** `apps/worker/src/whatsapp.ts`,
+con la librería Baileys. `vincular <ABREV>` dibuja el QR en la terminal y lo
+escribe en la cuenta para que también lo muestre la pantalla; `estado <ABREV>`
+dice cómo está sin tocar nada. **No manda ningún mensaje**, y es a propósito:
+una sesión que sólo está conectada no se bloquea, así que es el paso con menos
+riesgo y el que desbloquea lo demás.
+
+Lo que decide —si se reconecta, cuánto espera, cuándo hay que dejar de insistir,
+si la credencial murió— vive en `core/whatsapp.ts` con 15 tests. Baileys **no es
+una API oficial**: WhatsApp puede bloquear el número, el bloqueo puede ser
+permanente y no hay soporte al que apelar. Insistir contra un rechazo es lo que
+convierte un bloqueo temporal en uno definitivo.
+
+Tres detalles que no son opcionales:
+
+- **El QR caduca al minuto.** Por eso se guarda `qr_wa_desde` y la pantalla
+  distingue uno vigente de uno vencido: un QR vencido a la vista es peor que
+  ninguno, porque se escanea, no pasa nada, y parece que WhatsApp está roto.
+- **Se comprueba con qué número se vinculó.** El QR lo escanea una persona con
+  un teléfono en la mano y nada le impide usar el equivocado; si eso pasa y
+  nadie mira, se descubre el día que sale un mensaje. El número esperado sale de
+  `WA_NUMERO`, y en los logs va tapado —los últimos cuatro dígitos— porque el
+  repositorio es público y las salidas de terminal se pegan en mensajes.
+- **La credencial no va a la base ni al repositorio.** Vive en una carpeta del
+  home, fuera de todo lo que se respalda. Una sesión de WhatsApp no se respalda:
+  se vuelve a vincular. Copiarla a un lugar versionado es peor que perderla.
+
+Falta todavía:
+
+- Recepción de entrantes y el ruteo de §5.8.
 - Recepción de entrantes y el ruteo de §5.8.
 - Acks de mensaje (`enviado` / `entregado` / `leído`).
 - Acceso directo a `wa.me/<número>` como salida de escape cuando conviene escribir a mano.
