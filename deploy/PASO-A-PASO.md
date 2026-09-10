@@ -157,12 +157,28 @@ Después, en el panel de PocketBase (`https://crm.globalita.tech/_/`) →
 | Port | `465` |
 | Username | `finanzas@globalita.tech` |
 | Password | la de esa casilla |
-| TLS encryption | tildado (465 es SSL directo) |
+| TLS encryption | **SSL directo**, NO «Auto (StartTLS)» |
 | Sender name | `CRM Globalita` |
 | Sender address | `finanzas@globalita.tech` |
 
-Si el 465 no conecta, probá **587 sin TLS tildado** (STARTTLS). Son las dos
-formas que ofrece Hostinger y depende de cómo tengan el servidor ese mes.
+**EL PUERTO Y EL CIFRADO VAN DE A PARES**, y equivocarlos es el error que
+realmente cuesta —le pasó a Augusto el 10/09 y de paso yo lo mandé al puerto
+equivocado por como estaba escrito acá—:
+
+| Puerto | Cifrado |
+|---|---|
+| **465** | SSL directo. La conexión va cifrada desde el primer byte. |
+| **587** | StartTLS. Arranca en claro y después sube a cifrado. |
+
+Cruzarlos —465 con StartTLS— hace que el cliente mande texto plano contra un
+socket que sólo habla cifrado: se cuelga o falla, y el error no dice nada de
+esto. Las dos combinaciones funcionan con Hostinger; verificado el 10/09, el
+587 contesta `220 ESMTP` en claro y el 465 no, que es exactamente la
+diferencia.
+
+Este campo **era una casilla de sí/no** en versiones anteriores de PocketBase
+y la guía decía «tildado». Ahora es un desplegable, así que «tildado» no
+significa nada: hay que elegir la opción que **no** dice StartTLS.
 
 **Probalo antes de invitar a nadie**: en esa misma pantalla hay un botón *Send
 test email*. Si llega, el alta funciona.

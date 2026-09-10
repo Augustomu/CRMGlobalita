@@ -861,8 +861,16 @@ página de revisión.
       copió**. GitHub → Settings → Developer settings → Personal access tokens →
       el de `globalita-automation` → Delete. No hace falta crear otro: `gh` ya
       resuelve la autenticación.
-- [ ] **9.2 · SMTP de Hostinger** (`deploy/PASO-A-PASO.md`, paso 4.5). Sin eso,
-      dar de alta a alguien falla.
+- [x] ✅ **9.2 · SMTP de Hostinger — CONFIGURADO Y PROBADO EN LOCAL, 10/09.**
+      Casilla `finanzas@globalita.tech`, host `smtp.hostinger.com`, puerto **465**
+      con **SSL directo**. El envío de prueba salió: **HTTP 204 en 2,3 s**.
+      ⚠️ **El puerto y el cifrado van de a pares**, y cruzarlos fue lo que costó
+      la vuelta: 465 es SSL directo y 587 es StartTLS. Con 465 + StartTLS el
+      cliente manda texto plano contra un socket cifrado y se cuelga, sin que el
+      error diga nada. La guía decía «TLS tildado», que valía cuando ese campo
+      era una casilla de sí/no; ahora es un desplegable y «tildado» no significa
+      nada. Corregido en `deploy/PASO-A-PASO.md` con la tabla de pares.
+      ⚠️ **Falta lo mismo en producción**: la configuración NO se comparte.
 - [ ] **9.2 bis · Testear el envío de mail de verdad.** Pedido el 09/09. No
       alcanza con configurar el SMTP: hay que **dar de alta a un usuario y ver
       llegar la invitación**. Es el único camino de alta que existe —nunca se
