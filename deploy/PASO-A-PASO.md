@@ -139,6 +139,14 @@ nada— pero sin DKIM la invitación tiene más chances de caer en Promociones o
 spam. Hostinger lo activa desde el panel de Emails, y conviene hacerlo antes de
 invitar a alguien de afuera.
 
+> ⚠️ **El panel de PocketBase NO usa tu usuario del CRM.** Son dos cuentas
+> distintas: el CRM autentica contra la colección `users` y el panel contra
+> `_superusers`. Entrar al panel con el correo del CRM da «Invalid login
+> credentials», y es correcto — ser administrador del CRM no da acceso al panel.
+> **En local** el superusuario es el que imprime `node packages/db/dev.mjs` en cada
+> arranque (`dev@globalita.test`). **En producción es otro**, y no lo imprime nadie.
+> Le pasó a Augusto el 10/09/2026.
+
 Después, en el panel de PocketBase (`https://crm.globalita.tech/_/`) →
 **Settings → Mail settings**:
 
