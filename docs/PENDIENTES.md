@@ -378,9 +378,22 @@ Lo demás:
 
 - [x] ✅ **Auditado el archivo que pasó Augusto: los 248 contactos están.**
       Ninguno falta como persona.
-- [ ] ❓ **PERO sólo 77 de los 248 son leads. Los otros 171 son perfiles
-      sueltos**, y un perfil sin lead **no aparece en la columna 1**: para el que
-      mira la pantalla, «no está».
+- [x] ✅ **DECIDIDO EL 10/09: se quedan como perfiles.** Augusto: *«los únicos
+      leads que importan son los que te mandé del CSV, esas dos listas… el resto no
+      importa que haya, luego deberíamos conectarlos en el enrich»*.
+
+      **Son 253, no 171** — el número del ítem estaba viejo. Medido el 10/09: los
+      253 entraron el 09/09, 244 con teléfono, 243 con cargo y país, sólo 6 con
+      empresa. Por país: 162 Brasil, 51 México, 19 Argentina, 7 Mozambique, 10 sin
+      país. Los nombres son los del teléfono («Fabript (Mauro Matos)», «Llamar
+      francisco y Nicolás»): son contactos de WhatsApp, no fichas de prospecto.
+
+      No hace falta crear leads en lote. El enrich (8.7) los va a ir enganchando
+      solo, que es para lo que sirve. Exportados a `Desktopperfiles-sin-lead.csv`
+      el 10/09 para que Augusto los mirara.
+
+      (Lo que decía antes:) **sólo 77 de los 248 son leads. Los otros 171 son
+      perfiles sueltos**, y un perfil sin lead **no aparece en la columna 1**.
       No es una pérdida —el dato está entero— sino una decisión que falta:
       **un lead es la relación con UNA cuenta**, y el CSV no dice cuál. Los 240
       leads de hoy salieron del calendario y por eso tienen cuenta; estos son
@@ -881,8 +894,21 @@ página de revisión.
 
 ### 8.0 · Recuperar el historial de LinkedIn del backup — SIN TOCAR LINKEDIN
 
-- [ ] 💎 **438 aceptaciones, 6.111 identidades de LinkedIn y 123 links de chat
-      están en el backup de la bitácora y el CRM no las tiene.**
+- [x] ❌ **DESCARTADO POR AUGUSTO el 10/09: se empieza de cero.** Textual:
+      *«no tomaría esos datos y empezaría de cero nuevamente»*. El re-escaneo (8.7)
+      sale a buscar todo contra LinkedIn en vez de leer el backup.
+
+      **La consecuencia, para que quede escrita:** las **438 fechas de aceptación**
+      son el único dato que el re-escaneo puede NO poder recuperar. Depende de una
+      hipótesis sin verificar (que la página de contactos muestre «Conectado el
+      <fecha>»); si resulta falsa, de esas 438 queda sólo el hecho binario «es
+      contacto de primer grado», sin cuándo. El archivo no se borra: sigue en
+      `globalita-data`, y esto se puede revertir el día que se quiera.
+
+      Lo que decía el ítem, medido el 10/09 y sigue siendo cierto:
+
+- [ ] 💎 ~~438 aceptaciones, 6.111 identidades de LinkedIn y 123 links de chat
+      están en el backup de la bitácora y el CRM no las tiene.~~
 
       Medido el 10/09 sobre `globalita-data/pocketbase/contactos_historia.json`
       (6.165 registros, exportado ese día):
@@ -940,9 +966,15 @@ página de revisión.
       del repositorio de automatización es una regla inviolable: abrir una
       conversación sin leer la marca como leída, y el prospecto ve «leído y no me
       contestó». Un re-escaneo que abra 3.000 chats hace eso 3.000 veces.
-      **Decisión de Augusto: ¿va el paso de los chats o no?** Sin él igual se sabe
-      quién aceptó, quién está pendiente y desde cuándo; sólo se pierde cuántos
-      mensajes hubo y de qué fecha.
+      **DECIDIDO EL 10/09: VA.** Augusto: *«no pasa nada, vamos a tomar medidas de
+      seguridad para ejecutarlo»*. Entonces las medidas no son opcionales y son
+      éstas, que salen del código que ya existe:
+      · el guard de `unread` de `scan-chat-por-perfil.js` es OBLIGATORIO, y si el
+        archivo de no-leídos tiene más de 24 h el paso NO corre —sin él el guard
+        falla abierto y se abren chats sin leer—;
+      · 20 chats por cuenta y por día (`SCAN_MAX_DIA`, ya probado en producción);
+      · primero los que ya tuvieron reunión: ésos ya hablaron y no hay rapport que
+        quemar.
 
       **Bloqueante técnico previo:** `scan-listas-agent.js` y los dos scripts de
       reconocimiento de DOM (`scan-linkedin-ui.js`, `scan-flow-completo.js`) **no
@@ -997,7 +1029,13 @@ página de revisión.
       documento. **22 búsquedas guardadas cargadas** con su `savedSearchId`, en seis
       cuentas. Falta una sola cosa para que sirvan: el conteo de páginas de cada
       una (`paginas` está en 0, así que figuran agotadas y la cola calcula 0).
-      Ese número sale de mirar la búsqueda en Sales Navigator y lo tiene que pasar él.
+      **10/09, decidido: el avance se reseteó y el total se va a DESCUBRIR.**
+      Augusto: *«quiero que todas las páginas se reseteen porque tenemos que volver
+      a hacer el enrich, saber si respondieron, cuántos mensajes»*. `pagina` quedó
+      en 0 en las 35 listas (13 tenían avance, todas de demo). Y el total no se va a
+      tipear: Sales Navigator muestra la cantidad de resultados arriba de la lista,
+      así que sale de ahí. Tipear 22 números a mano se hace mal una vez y envejece
+      solo — una búsqueda guardada crece.
 - [ ] 🔒 **8.5 · WhatsApp con Baileys.** Una sola cuenta, según Augusto.
       **El número ya está decidido**: lo pasó el 10/09 y quedó en `.env` como
       `WA_NUMERO` (no en el repo: es público). Ya no bloquea.
