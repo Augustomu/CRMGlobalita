@@ -339,14 +339,24 @@ Lo demás:
       **bloqueado para los 1.769 eventos externos**, o sea para casi toda su
       pantalla. La justificación estaba escrita —«el dueño del evento es
       Google»— y es la familia 8 del registro.
-- [ ] ⚠️ **Y acá está el peligro real de esta tanda: el eco infinito.**
-      `guardarEventoExterno()` escribe con `$app.save()`, que **sí dispara
-      hooks**. Un hook de salida sobre `evento_externo` haría: Google → la
-      sincronización escribe la fila → el hook la manda de vuelta a Google →
-      Google la trae como cambio → … **con un mail al invitado en cada rebote.**
-      El camino ya está probado en `aplicarEvento()`: **la escritura de entrada
-      pasa a SQL plano**, que no dispara hooks, y el hook de salida queda sólo
-      para lo que toca una persona. Sin esto, no se toca el arrastre.
+- [x] ✅ **El eco quedó cerrado — 09/09, y era el primer paso obligatorio.**
+      `guardarEventoExterno()` escribía con `$app.save()`, que **sí dispara
+      hooks**. Mientras `evento_externo` no tenía hook de salida no molestaba;
+      en cuanto un evento de Google se pueda arrastrar, el circuito sería:
+      Google mueve → la sincronización escribe → el hook lo manda de vuelta →
+      Google lo trae como cambio → y otra vez, **con un mail al invitado en
+      cada rebote**.
+      Ahora la escritura de entrada es **SQL plano** —insert, update y delete—,
+      que no dispara hooks. Es el mismo camino que ya usaba `aplicarEvento()`.
+      El campo `lead` **no aparece en el UPDATE**, a propósito: el vínculo lo
+      pone una persona y el reloj no lo pisa. Manda sobre horario y título, no
+      sobre con quién es.
+      **Verificado con datos de verdad**, no sólo leyendo: se probó el SQL
+      contra una copia (insert, update, borrado, y que el `lead` sobreviva a
+      una sincronización), se reinició PocketBase y **la sincronización escribió
+      dos filas nuevas con el código nuevo** — id de 15, `created` correcto,
+      y los 3 vínculos que había siguen en pie.
+- [ ] **Falta el hook de salida y el arrastre.** Con el eco cerrado, ya se puede.
 - [ ] **Notificar al mover** con la regla que ya existe: si el inicio **ya pasó**
       es una corrección y Google no avisa; si es futuro, avisa.
 - [ ] **Estirar cualquier evento**, de a 15 minutos. Ya funciona así para las

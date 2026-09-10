@@ -555,7 +555,13 @@ function guardarEventoExterno(ev, duenioDelCalendario) {
     }
 
     if (String((ev && ev.status) || '') === 'cancelled') {
-      if (fila) $app.delete(fila);
+      // SQL plano, igual que el resto de esta funcion. Ver el comentario largo
+      // de abajo: el borrado tambien dispara hooks.
+      if (fila) {
+        $app.db().newQuery('DELETE FROM evento_externo WHERE id = {:id}')
+          .bind({ id: fila.id })
+          .execute();
+      }
       return;
     }
 
@@ -579,17 +585,63 @@ function guardarEventoExterno(ev, duenioDelCalendario) {
       ? String(arranca)
       : new Date(String(arranca).replace(' ', 'T')).toISOString().replace('T', ' ');
 
-    if (!fila) {
-      fila = new Record($app.findCollectionByNameOrId('evento_externo'));
-      fila.set('google_event_id', id);
-      fila.set('calendario', duenioDelCalendario);
+    // ------------------------------------------------------------------
+    // CON SQL PLANO, A PROPOSITO. Es la misma razon que en `aplicarEvento`.
+    //
+    // `$app.save()` DISPARA LOS HOOKS. Mientras `evento_externo` no tenia
+    // hook de salida eso no molestaba. Desde que un evento de Google se puede
+    // arrastrar desde la agenda, hay uno — y con `$app.save()` aca el
+    // circuito seria:
+    //
+    //   Google mueve un evento
+    //     -> esta funcion escribe la fila con save()
+    //       -> el hook de salida la manda de vuelta a Google
+    //         -> Google la trae como cambio en la vuelta siguiente
+    //           -> y otra vez, para siempre
+    //
+    // Con un mail al invitado en cada rebote, porque mover un evento futuro
+    // notifica. Ya paso una vez con `reunion` y por eso aquella escritura
+    // tambien es SQL plano.
+    //
+    // El campo `lead` NO aparece en el UPDATE, y es a proposito: el vinculo
+    // evento<->lead lo pone una persona y la sincronizacion no lo pisa. El
+    // reloj manda sobre el horario y el titulo, no sobre con quien es.
+    //
+    // `created`/`updated` van a mano: con SQL plano el autodate no corre.
+    // ------------------------------------------------------------------
+    const ahora = new Date().toISOString().replace('T', ' ');
+    const campos = {
+      t: String((ev && ev.summary) || '(sin titulo)').slice(0, 300),
+      i: cuando,
+      m: duracion,
+      z: String((ev.start && ev.start.timeZone) || ''),
+      e: diaEntero ? true : false,
+      u: ahora,
+    };
+
+    if (fila) {
+      campos.id = fila.id;
+      $app.db()
+        .newQuery(
+          'UPDATE evento_externo SET titulo = {:t}, inicio = {:i}, duracion_min = {:m},' +
+            ' zona = {:z}, dia_entero = {:e}, updated = {:u} WHERE id = {:id}',
+        )
+        .bind(campos)
+        .execute();
+    } else {
+      campos.id = $security.randomString(15);
+      campos.g = id;
+      campos.c = duenioDelCalendario;
+      campos.cr = ahora;
+      $app.db()
+        .newQuery(
+          'INSERT INTO evento_externo' +
+            ' (id, google_event_id, calendario, titulo, inicio, duracion_min, zona, dia_entero, lead, created, updated)' +
+            " VALUES ({:id}, {:g}, {:c}, {:t}, {:i}, {:m}, {:z}, {:e}, '', {:cr}, {:u})",
+        )
+        .bind(campos)
+        .execute();
     }
-    fila.set('titulo', String((ev && ev.summary) || '(sin titulo)').slice(0, 300));
-    fila.set('inicio', cuando);
-    fila.set('duracion_min', duracion);
-    fila.set('zona', String((ev.start && ev.start.timeZone) || ''));
-    fila.set('dia_entero', diaEntero);
-    $app.save(fila);
   } catch (err) {
     $app.logger().error('google-entrada', 'evento_externo', id, 'err', String(err));
   }
