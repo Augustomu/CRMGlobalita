@@ -18,6 +18,16 @@ de memoria.
 
 ---
 
+> **Cómo se cierra un pendiente acá.** Dos veces el mismo día hubo que venir
+> a reconciliar este documento: cada vuelta de revisión agregaba una sección
+> nueva y los items de arriba quedaban abiertos, así que la lista decía que
+> faltaban cosas ya hechas. Es la familia 7 del registro —la misma cosa en dos
+> lugares— aplicada al propio archivo.
+>
+> **Al terminar algo se cierra donde YA ESTABA ESCRITO**, con la fecha y el
+> porqué. Una sección nueva sirve para lo que se pidió nuevo, no para volver a
+> anotar lo viejo.
+
 ## Tablero
 
 | Bloque | Hecho |
@@ -238,18 +248,21 @@ van** —el caso donde el «dale» por escrito alcanza, según la familia 12—:
       justo el punto 4 de la familia 8. El fantasma del alto exacto ya existe
       para las reuniones del CRM; lo que falta es abrir el arrastre.
       **Hecho el 09/09: se desliza en 90 ms entre cuartos y el alto se anima con la duración.**
-- [ ] **Tanda 4 · El hover no muestra nada.** Confirmado: un evento de Google
+- [x] ✅ **Tanda 4 · El hover no muestra nada.** Confirmado: un evento de Google
       **no tiene tarjeta**, ni conectado ni sin conectar. Tiene que traer
       asistió / no asistió, cambiar fecha, el correo, notas y «+».
       ⚠️ Y sigue en pie que **`evento_externo` no guarda el correo del
       invitado**: sin esa columna no hay correo que mostrar, y sin correo no se
       sabe a qué lead conectarlo. Es lo primero de esa tanda.
-- [ ] **Tanda 5 · Las fechas, otra vez.** «Nueva» y «Próximo contacto» siguen
+      **Hecho el 10/09, con el correo del invitado y la promoción a reunión.**
+- [x] ✅ **Tanda 5 · Las fechas, otra vez.** «Nueva» y «Próximo contacto» siguen
       mostrando **mes, día y año** y el **icono de calendario del navegador**.
       Las dos cosas vienen de `<input type="date">`. Se reemplaza por el
       calendario que ya tiene `FechaReunion`.
-- [ ] **Tanda 5 · Conectar un perfil con un lead desde la vista Lista.** Hoy sólo
+      **Hecho el 09/09: día y mes, sin año y sin el icono del navegador.**
+- [x] ✅ **Tanda 5 · Conectar un perfil con un lead desde la vista Lista.** Hoy sólo
       se puede desde la grilla.
+      **Hecho el 10/09: el icono de WhatsApp apagado pasó a ser el botón.**
 - [ ] **Tanda 5 · Guardar un contacto de WhatsApp en Google Contacts.** *«Para
       que se me guarde mi contacto de Gmail también.»* Es la People API de
       Google, y el permiso que tenemos hoy es sólo de Calendar: **hay que sumar
@@ -286,7 +299,7 @@ Lo demás:
       tres, «311» entra en media agenda.
 - [x] **Una sola regla, no dos.** `coincide()` pasó a ser una envoltura de la
       nueva. `core/busqueda.ts` · **19 tests** que citan §7.2.
-- [ ] **Falta llevarlo a los otros dos buscadores.** Hoy los chips están sólo en
+- [x] ✅ **Falta llevarlo a los otros dos buscadores.** Hoy los chips están sólo en
       la columna 1 de Follow-up; la Base compartida (§7.5) y el panel del partner
       siguen con un término. La regla ya es común, así que es conectarla.
 
@@ -294,6 +307,7 @@ Lo demás:
 
 ### La limpieza de demo y la auditoría del archivo — 09/09 noche
 
+      **Hecho el 10/09: el campo salió a `ui/BuscadorChips.tsx` y lo usan las tres pantallas.**
 - [x] ✅ **Los datos de demo se fueron: 43 registros.** 12 tareas, 11
       actividades, 4 entrantes, 11 chats personales de mentira, el usuario de
       demo y los 2 leads de prueba del alta manual con sus perfiles.
@@ -393,7 +407,7 @@ Lo demás:
       caído, el evento borrado del otro lado—. Sin esto la pantalla diría
       «movido» y el calendario de verdad seguiría igual, sin que nadie se
       entere. Un log en el servidor no lo lee nadie a tiempo.
-- [ ] **Falta mostrar ese estado en la pantalla.** Las columnas se escriben; la
+- [x] ✅ **Falta mostrar ese estado en la pantalla.** Las columnas se escriben; la
       agenda todavía no las lee. Es lo próximo de esta tanda.
 
 **Verificado, no sólo escrito:** migración aplicada limpia, PocketBase arriba,
@@ -402,6 +416,7 @@ tanto — 2.382 eventos, cero ids rotos, cero duplicados, cero sin fecha,
 `integrity_check = ok`, y los 3 vínculos evento↔lead intactos.
  `google_cuenta` sigue devolviendo **403** sin autenticación: el
 `refresh_token` no sale por la API.
+      **Hecho el 10/09: el bloque dice «sin sincronizar» y la tarjeta da el motivo.**
 - [x] ✅ **Notificar al mover** con la regla que ya existe: si el inicio **ya pasó**
       es una corrección y Google no avisa; si es futuro, avisa.
       **Hecho el 09/09: la regla es del horario, y el cartel de la agenda dice cuál de las dos fue.**
@@ -413,17 +428,19 @@ tanto — 2.382 eventos, cero ids rotos, cero duplicados, cero sin fecha,
 ### Tanda 3 · El tamaño y el encuadre
 
       **Hecho el 09/09: los de Google también, de a 15 minutos.**
-- [ ] **La semana está demasiado grande.** Medido: `ALTO_TRAMO = 22px` por cada
+- [x] ✅ **La semana está demasiado grande.** Medido: `ALTO_TRAMO = 22px` por cada
       15 minutos, o sea **88px por hora**. De 08:00 a 18:00 son **968px de alto**:
       no entra en una laptop de 14" y obliga a scrollear siempre. Google Calendar
       usa ~48px por hora y Outlook ~44. Propuesta: **`ALTO_TRAMO = 14`** (56px
       por hora) → el día entero en ~620px, la semana se ve de una.
       ⚠️ Contradice el prototipo, que dice 22. Manda lo que pidió Augusto, y el
       manual se actualiza en el mismo commit.
-- [ ] **La diaria, como Google Calendar.** Textual: *«los eventos centrados y un
+      **Hecho el 09/09: de 88 px por hora a 56.**
+- [x] ✅ **La diaria, como Google Calendar.** Textual: *«los eventos centrados y un
       ancho seteado, que le pongo diaria y automáticamente se me reduce»*. Hoy la
       única columna se estira a todo el ancho del panel. Va con ancho tope y
       centrada.
+      **Hecho el 09/09: ancho tope y centrada.**
 - [ ] **Revisar el diseño de la semana, no sólo achicarlo.** *«El diseño no me
       gusta, deberíamos pensar un diseño más simple»*. Con la tanda 1 puesta y el
       alto bajado, mirarlo de nuevo antes de seguir tocando.
@@ -432,7 +449,7 @@ tanto — 2.382 eventos, cero ids rotos, cero duplicados, cero sin fecha,
 
 ### Tanda 4 · Conectar, y lo que ya está conectado
 
-- [ ] **Hover en un evento sin conectar**: el **correo de la persona invitada** y
+- [x] ✅ **Hover en un evento sin conectar**: el **correo de la persona invitada** y
       un botón para conectar. Hoy el bloque «conectar» no tiene tarjeta: se toca y
       se abre el modal, sin ver antes de quién es.
       ⚠️ **A verificar primero contra la base**: `evento_externo` **no guarda el
@@ -441,13 +458,16 @@ tanto — 2.382 eventos, cero ids rotos, cero duplicados, cero sin fecha,
       `attendees` en la sincronización, o no hay correo que mostrar. Es el
       error 11 del registro —«no había dónde guardarlo»— y esta vez se mira el
       esquema **antes** de dibujar la pantalla.
-- [ ] **Hover en un evento ya conectado**: asistió / no asistió, cambiar la
+      **Hecho el 10/09: el correo primero, y el botón de conectar debajo.**
+- [x] ✅ **Hover en un evento ya conectado**: asistió / no asistió, cambiar la
       fecha, el correo, notas y «+». Es la misma tarjeta que ya tienen las
       reuniones del CRM: se reusa, no se escribe otra.
-- [ ] **Un evento vinculado se ve como un enlace**, por defecto.
+      **Hecho el 10/09. Marcar asistencia lo promueve a reunión del CRM.**
+- [x] ✅ **Un evento vinculado se ve como un enlace**, por defecto.
 
 ---
 
+      **Hecho el 10/09: subrayado punteado, sin pasar el mouse.**
 - [x] ✅ **Tanda 4 · El hover de un evento de Google — HECHO 10/09.** Muestra
       **el correo del invitado primero**, que es lo que contesta «¿de quién es
       esto?»; la hora y la duración; el aviso si el último movimiento no llegó a
@@ -503,15 +523,21 @@ tanto — 2.382 eventos, cero ids rotos, cero duplicados, cero sin fecha,
 
 ### Tanda 5 · Fuera de la agenda
 
-- [ ] **Las fechas sin año**, al agendar una reunión y en el próximo contacto.
+- [x] ✅ **Las fechas sin año**, al agendar una reunión y en el próximo contacto.
+      **Hecho el 09/09, y NO reusando el calendario de `FechaReunion` como decía
+      acá: ese calendario está pegado a esa pantalla y sacarlo era un refactor
+      más grande que el pedido. Va un campo propio de día y mes —dos listas—
+      con la regla del año en `core/fecha.ts`. Se documenta el desvío porque
+      la nota anterior decía otra cosa.**
       Hoy son cuatro `<input type="date">` del navegador, que obligan a poner el
       año para agendar mañana. `FechaReunion` **ya tiene un calendario propio**,
       y su comentario dice textual *«el día se elige en un CALENDARIO, no en un
       `input type=date`»*. Se reusa ése. (Familia 4 del registro, 6ª vez.)
-- [ ] **Cargar un teléfono a mano.** Hoy el chip vacío ofrece un solo camino,
+- [x] ✅ **Cargar un teléfono a mano.** Hoy el chip vacío ofrece un solo camino,
       «Conectar un teléfono que ya está en la base». Si el número **no está en la
       base** no hay salida. Va el segundo camino **adentro del mismo modal**, no
       como un botón al lado: dos botones para lo mismo es la familia 7.
+      **Hecho el 09/09, dentro del mismo cuadro y no como otro botón al lado.**
 - [x] ✅ **Chats: filtrar los que no tengo agendados — RESUELTO, y no era lo
       que parecía.** Confirmó que es la pestaña de WhatsApp personal y pidió
       «cargá chats demo sin agendar para testear el botón».
@@ -534,11 +560,12 @@ tanto — 2.382 eventos, cero ids rotos, cero duplicados, cero sin fecha,
 - [x] ✅ ❓ **El emoji desalineado dentro del círculo.** Va con lo anterior: mismo
       lugar, misma revisión.
       **Va con lo anterior, en la misma fila de WhatsApp personal.**
-- [ ] **La línea verde de la vista Lista no sigue al perfil elegido.** El
+- [x] ✅ **La línea verde de la vista Lista no sigue al perfil elegido.** El
       resaltado existe (`.agenda-lista-on`, pinta con `seleccionado === l.id`).
       La hipótesis: la vista Lista **sólo lista leads con seguimiento**, así que
       al elegir un perfil que no está en esa lista no se pinta nada y queda el
       anterior. Hay que reproducirlo antes de tocar.
+      **Hecho el 09/09, y el diagnóstico era otro: la fila se pintaba fuera de pantalla.**
 - [x] ✅ ✅ **El texto raro de la columna 2 — CONTESTADO, y ubicado.** Lo pegó:
       es el bloque `.reunion-evento` de `FechaReunion.tsx:711-729`, el que
       aparece al abrir «Fecha de reunión». Son cuatro cosas apiladas: el título
