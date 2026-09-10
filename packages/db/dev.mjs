@@ -182,7 +182,12 @@ spawn(exe, ['serve', '--dir', datos, '--migrationsDir', migraciones, '--hooksDir
      * de mas.
      */
     CHROME_LOCAL: process.env.CHROME_LOCAL ?? '1',
-    MAIL_DESDE: process.env.MAIL_DESDE || 'crm@globalita.test',
+    // Sin valor por defecto A PROPOSITO. Antes venia 'crm@globalita.test', un
+    // dominio inventado, y eso terminaba siendo el remitente real de los
+    // correos: el From no coincidia con la casilla autenticada y el servidor
+    // los rechazaba. Vacio, manda el 'Sender address' del panel, que es el que
+    // se carga junto con el usuario y la clave.
+    MAIL_DESDE: process.env.MAIL_DESDE || '',
   },
 });
 

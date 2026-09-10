@@ -236,8 +236,41 @@ function emitir(app, usuario, quien, motivo, cfg) {
     enlace: enlace,
   });
 
+  // ------------------------------------------------------------------
+  // SIN SMTP NO SE INTENTA: se dice.
+  //
+  // Antes se llamaba igual y el fallo volvia como el texto crudo de la
+  // excepcion, que no le dice a nadie que hay que ir a Settings. Augusto el
+  // 10/09: «hay un bug, cuando intento enviar la invitacion no aparece la
+  // confirmacion de enviado». No habia bug en el envio: no habia servidor de
+  // correo configurado, y el mensaje no lo decia.
+  let smtpListo = false;
   try {
-    const remitente = cfg.remitente || app.settings().meta.senderAddress;
+    smtpListo = Boolean(app.settings().smtp && app.settings().smtp.enabled);
+  } catch (_) {}
+  if (!smtpListo) {
+    fila.set('usada_en', ahora);
+    try { app.save(fila); } catch (_) {}
+    return {
+      ok: false,
+      error:
+        'El servidor de correo no esta configurado, asi que la invitacion no se mando. ' +
+        'Va en el panel de PocketBase, en Settings > Mail settings (esta el paso a paso ' +
+        'en deploy/PASO-A-PASO.md). Local y produccion se configuran por separado.',
+    };
+  }
+
+  try {
+    // EL REMITENTE SALE DEL PANEL, NO DEL ENTORNO. Estaba al reves y era un
+    // bug esperando: `MAIL_DESDE` trae por defecto `crm@globalita.test`, un
+    // dominio inventado, y con eso el From no coincide con la casilla con la
+    // que uno se autentica. Hostinger —y cualquier servidor serio— rechaza
+    // mandar en nombre de un dominio que la cuenta no puede usar.
+    //
+    // El `senderAddress` del panel se carga JUNTO con el usuario y la clave
+    // del SMTP, asi que es el unico que se sabe alineado. `MAIL_DESDE` queda
+    // como respaldo para un despliegue que configure el correo por entorno.
+    const remitente = app.settings().meta.senderAddress || cfg.remitente;
     const mensaje = new MailerMessage({
       from: { address: remitente, name: 'CRM Globalita' },
       to: [{ address: usuario.get('email') }],
