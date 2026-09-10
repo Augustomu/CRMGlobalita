@@ -229,7 +229,7 @@ van** —el caso donde el «dale» por escrito alcanza, según la familia 12—:
 
 **Lo que se suma al plan** (no está hecho):
 
-- [ ] **Tanda 2 · La animación del arrastre.** Además de que se pueda arrastrar:
+- [x] ✅ **Tanda 2 · La animación del arrastre.** Además de que se pueda arrastrar:
       mientras se mueve tiene que **saltar de a 15 minutos** —9:00, 9:15, 9:30—
       y el fantasma tiene que **medir lo que dura la reunión**: una de hora y
       media arrastrada a las 9:00 se dibuja tapando hasta las 10:30.
@@ -237,6 +237,7 @@ van** —el caso donde el «dale» por escrito alcanza, según la familia 12—:
       miércoles, que es un **evento de Google**, y ésos están bloqueados. Es
       justo el punto 4 de la familia 8. El fantasma del alto exacto ya existe
       para las reuniones del CRM; lo que falta es abrir el arrastre.
+      **Hecho el 09/09: se desliza en 90 ms entre cuartos y el alto se anima con la duración.**
 - [ ] **Tanda 4 · El hover no muestra nada.** Confirmado: un evento de Google
       **no tiene tarjeta**, ni conectado ni sin conectar. Tiene que traer
       asistió / no asistió, cambiar fecha, el correo, notas y «+».
@@ -332,13 +333,14 @@ Lo demás:
 
 ### Tanda 2 · Que la agenda se pueda manejar
 
-- [ ] **Arrastrar cualquier evento, incluidos los de Google.** Textual:
+- [x] ✅ **Arrastrar cualquier evento, incluidos los de Google.** Textual:
       *«mantengo apretado y quiero mover hacia abajo, no me deja. Eso debería
       ser una funcionalidad, y tiene que mandar una notificación a la persona»*.
       Hoy el arrastre existe sólo para las 288 reuniones del CRM y está
       **bloqueado para los 1.769 eventos externos**, o sea para casi toda su
       pantalla. La justificación estaba escrita —«el dueño del evento es
       Google»— y es la familia 8 del registro.
+      **Hecho el 09/09, con el hook de salida y el eco cerrado antes.**
 - [x] ✅ **El eco quedó cerrado — 09/09, y era el primer paso obligatorio.**
       `guardarEventoExterno()` escribía con `$app.save()`, que **sí dispara
       hooks**. Mientras `evento_externo` no tenía hook de salida no molestaba;
@@ -400,15 +402,17 @@ tanto — 2.382 eventos, cero ids rotos, cero duplicados, cero sin fecha,
 `integrity_check = ok`, y los 3 vínculos evento↔lead intactos.
  `google_cuenta` sigue devolviendo **403** sin autenticación: el
 `refresh_token` no sale por la API.
-- [ ] **Notificar al mover** con la regla que ya existe: si el inicio **ya pasó**
+- [x] ✅ **Notificar al mover** con la regla que ya existe: si el inicio **ya pasó**
       es una corrección y Google no avisa; si es futuro, avisa.
-- [ ] **Estirar cualquier evento**, de a 15 minutos. Ya funciona así para las
+      **Hecho el 09/09: la regla es del horario, y el cartel de la agenda dice cuál de las dos fue.**
+- [x] ✅ **Estirar cualquier evento**, de a 15 minutos. Ya funciona así para las
       reuniones del CRM (`DURACION_MINIMA = 15`); falta abrirlo a los externos.
 
 ---
 
 ### Tanda 3 · El tamaño y el encuadre
 
+      **Hecho el 09/09: los de Google también, de a 15 minutos.**
 - [ ] **La semana está demasiado grande.** Medido: `ALTO_TRAMO = 22px` por cada
       15 minutos, o sea **88px por hora**. De 08:00 a 18:00 son **968px de alto**:
       no entra en una laptop de 14" y obliga a scrollear siempre. Google Calendar
@@ -470,17 +474,19 @@ tanto — 2.382 eventos, cero ids rotos, cero duplicados, cero sin fecha,
       `9u1wrqb9co5u34b` `ehuyv6wbqx2ziep` `4jaia8b9svjw5la`
       `wvtipapkbrikpz9` `uro37cimtmkdp6x` `fg6lbce0cq4t7h5`.
       Todos tienen «(demo)» en el nombre.
-- [ ] ❓ **Las flechas y la fecha de contacto, intercambiadas.** No encuentro
+- [x] ✅ ❓ **Las flechas y la fecha de contacto, intercambiadas.** No encuentro
       flechas junto a una fecha de contacto en ninguna de las dos listas.
       Necesito saber qué pantalla es.
-- [ ] ❓ **El emoji desalineado dentro del círculo.** Va con lo anterior: mismo
+      **Era WhatsApp personal. Hecho el 09/09: flechas al lado del nombre, hora al borde derecho.**
+- [x] ✅ ❓ **El emoji desalineado dentro del círculo.** Va con lo anterior: mismo
       lugar, misma revisión.
+      **Va con lo anterior, en la misma fila de WhatsApp personal.**
 - [ ] **La línea verde de la vista Lista no sigue al perfil elegido.** El
       resaltado existe (`.agenda-lista-on`, pinta con `seleccionado === l.id`).
       La hipótesis: la vista Lista **sólo lista leads con seguimiento**, así que
       al elegir un perfil que no está en esa lista no se pinta nada y queda el
       anterior. Hay que reproducirlo antes de tocar.
-- [ ] ✅ **El texto raro de la columna 2 — CONTESTADO, y ubicado.** Lo pegó:
+- [x] ✅ ✅ **El texto raro de la columna 2 — CONTESTADO, y ubicado.** Lo pegó:
       es el bloque `.reunion-evento` de `FechaReunion.tsx:711-729`, el que
       aparece al abrir «Fecha de reunión». Son cuatro cosas apiladas: el título
       que se va a crear («Jorge / Alejandro / Augusto»), el aviso de que falta el
@@ -494,7 +500,8 @@ tanto — 2.382 eventos, cero ids rotos, cero duplicados, cero sin fecha,
       link faltante, que es accionable— y la explicación se va al `title` de la
       etiqueta «Evento que se crea en Google Calendar». Sigue estando para quien
       la necesite y deja de estar para quien no.
-- [ ] ❓ **Jorge, Marcelo y Fabio como últimos editores en el demo.** Busqué los
+      **Eliminado entero el 09/09, a pedido.**
+- [x] ✅ ❓ **Jorge, Marcelo y Fabio como últimos editores en el demo.** Busqué los
       tres nombres en las 26 tablas de la base: aparecen sólo como leads y
       perfiles reales, en ningún campo de «editor». No están en el código de la
       app. **¿En qué pantalla los estás viendo?**
@@ -507,6 +514,7 @@ Miró la UI pantalla por pantalla y marcó lo que no cerraba. Lo que sigue es
 lo que **quedó abierto**; lo arreglado está en el historial de git y en la
 página de revisión.
 
+      **Era un bug: «últimos editados» ordenaba por `updated`, que lo toca cualquier script. Familia 6, séptima vez. Arreglado el 09/09.**
 - [x] **Conectar un evento del calendario con un lead.** Hecho el 09/09.
       Está en la agenda: un bloque de Google que sea de prospección y no
       tenga lead se toca y abre «Conectar con un lead».
@@ -848,8 +856,9 @@ Contado contra la base, no de memoria.
       lado.** Los dos CSV son exports de Google Contacts de 19 columnas y ninguna
       es de correo: son nombre, teléfono, organización y notas. No se perdió al
       importar, nunca estuvo. Sale de otra exportación o del scan de LinkedIn.
-- [ ] **Limpieza de demo**: 12 tareas del seed, 11 actividades, y 2 leads de
+- [x] ✅ **Limpieza de demo**: 12 tareas del seed, 11 actividades, y 2 leads de
       prueba míos («Prueba Alta 41577», «Nueva Persona 09271»).
+      **Hecho el 09/09: 43 registros, con `limpiar-demo.mjs`. No se tocaron cuentas, plantillas, reglas ni etiquetas.**
 - [ ] ❓ **`AC` (Alberto Córdova) no existe como cuenta.** Si alguna vez hay leads
       suyos, hay que crearla con su cupo y línea de negocio.
 
