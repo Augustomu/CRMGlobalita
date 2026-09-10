@@ -52,6 +52,45 @@ datos (10) son fusiones y limpiezas que se hacen desde la pantalla.
 
 ---
 
+## 0 quater · EL CRM VIVE EN EL VPS — 10/09/2026, 15:29 UTC
+
+**La base de verdad ya no está en la PC de Augusto: está en
+.** Migrada y verificada desde afuera:
+
+| | |
+|---|---|
+| leads | **240** |
+| perfiles | **487** |
+| reuniones | **288** |
+| eventos del calendario | **3.590** |
+| cuentas | **9** (AC AL AMU AU BR DL DP ED FR) |
+| usuarios | 1 — sin el de demo |
+| superusuarios | 2, y el login de Augusto devuelve 200 |
+
+El SMTP viajó dentro de la base, así que producción ya manda correo con
+. Y se corrigió la , que venía en
+: de ahí sale el enlace del correo de invitación, y sin
+cambiarlo apuntaba a la máquina de quien lo recibiera.
+
+La base anterior quedó guardada en el servidor como .
+
+> ⚠️ **DESDE AHORA,  ES OTRA BASE.** Lo que se cargue ahí no
+> aparece en el CRM de verdad. La local queda para desarrollar y nada más.
+
+- [ ] ❗ **La copia horaria de la PC está respaldando la base equivocada.**
+       sigue copiando  de la máquina, que a
+      partir de hoy es una copia vieja que se va a ir quedando atrás. Quien
+      restaure desde GitHub va a recuperar datos de antes de la migración,
+      creyendo que son los buenos. **Hay que apuntarla al VPS o apagarla.**
+- [ ] ❗ **Falta la parte 3: el VPS todavía no sube su copia a GitHub.** Hoy hace
+      UNA copia, a las 03:15, en el mismo disco que los datos — su propio script
+      lo avisa en cada corrida. Con la base de verdad allá, eso no alcanza.
+      El paso a paso está en , parte 3.
+- [ ] 🧹 **El usuario de demo ya no está en producción**: se fue con la base
+      limpia. Si alguna migración del seed lo recrea en una base nueva, borrarlo.
+
+---
+
 ## 0 ter · La revisión de Augusto del 09/09 (tercera vuelta) — EL PLAN
 
 Miró la agenda ya arreglada y dictó dieciocho cosas. Pidió expresamente que
