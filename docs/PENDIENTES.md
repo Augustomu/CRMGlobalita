@@ -842,20 +842,25 @@ página de revisión.
       borrarlo del todo hay que pedírselo a su soporte. Y lo que estuvo
       público, estuvo público: esto corta hacia adelante, no borra lo que
       alguien ya haya clonado.
-- [ ] ⚠️ **9.1 bis · Hay un token de GitHub escrito en claro dentro de
-      `globalita-automation/.git/config`.** Encontrado el 09/09 al mirar los
-      remotes: el `origin` de ese repositorio es una URL con un
-      `github_pat_…` adentro, o sea **una credencial viva guardada en texto
-      plano en el disco**. El repositorio es privado, así que no está publicado
-      — pero cualquier copia de esa carpeta se lleva el token, y con él se
-      entra a **todos** los repos a los que ese token alcance.
-      **Qué hacer**: revocarlo en GitHub (Settings → Developer settings →
-      Personal access tokens) y dejar el remote sin credencial:
-      `git remote set-url origin https://github.com/Augustomu/globalita-automation.git`.
-      La autenticación ya la resuelve `gh`, que está instalado y logueado.
-      **Es la misma familia que 9.1**: un secreto que quedó escrito donde no
-      correspondía. Aquel era público y éste no, pero el arreglo es igual de
-      barato mientras nadie lo copió.
+- [x] ⚠️ **9.1 bis · El token de GitHub ya no está en el disco — 10/09.**
+      Estaba escrito en claro dentro de la URL del remote de
+      `globalita-automation`. El repo es privado, así que no estaba publicado,
+      pero cualquier copia de esa carpeta se lleva la credencial.
+      **No alcanzaba con borrarlo: dos scripts lo LEÍAN de ahí.**
+      `backup-online.js` y `verificar-backup-remoto.js` lo sacaban de
+      `.git/config` con una expresión regular. Los dos pasan a pedírselo a `gh`,
+      que ya está logueado y guarda la credencial donde el sistema la protege.
+      Probado: el verificador corre y reporta OK sobre `globalita-data`.
+      **Y el agujero de fondo**: `chequeos-estaticos.js` busca credenciales en los
+      archivos **versionados**, y `.git/config` no está versionado —no puede
+      estarlo—. El único lugar donde git guarda credenciales por diseño quedaba
+      afuera del único chequeo que las busca. Va un chequeo nuevo de las URLs de
+      los remotes, probado rompiéndolo a propósito.
+- [ ] ❗ **Falta que Augusto REVOQUE el token viejo.** Sacarlo del disco evita
+      que se siga copiando; **revocarlo es lo que lo deja inservible si ya se
+      copió**. GitHub → Settings → Developer settings → Personal access tokens →
+      el de `globalita-automation` → Delete. No hace falta crear otro: `gh` ya
+      resuelve la autenticación.
 - [ ] **9.2 · SMTP de Hostinger** (`deploy/PASO-A-PASO.md`, paso 4.5). Sin eso,
       dar de alta a alguien falla.
 - [ ] **9.2 bis · Testear el envío de mail de verdad.** Pedido el 09/09. No
