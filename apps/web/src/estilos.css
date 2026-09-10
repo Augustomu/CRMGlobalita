@@ -6413,7 +6413,10 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
    matchean nunca y habrian quedado ahi sin aplicarse: un select no refleja lo
    elegido en su atributo value, y la pseudoclase de invalido no dispara si el
    campo no es obligatorio. */
-.campo-dia-vacio { color: var(--hint); }
+/* --muted y NO --hint: --hint sobre --surface da 3.42:1 y el piso es 4.5.
+   Se puso --hint el 09/09 y lo encontro el chequeo el mismo dia, horas
+   despues de escribir la regla que dice justamente eso. --muted da 6.42. */
+.campo-dia-vacio { color: var(--muted); }
 
 /* ------------------------------------------------ El buscador con chips
    §7.2 · Un campo que contiene chips. El recuadro es del DIV, no del input:
@@ -6793,3 +6796,28 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   font-variant-numeric: tabular-nums;
 }
 .conectar-mano-campo:focus { outline: none; border-color: var(--accent); }
+
+/* --------------------------- El movimiento que no llegó a Google
+   §7.6 · Se dibuja sobre el bloque, en el lugar del chip «conectar»: si el
+   evento quedó distinto en Google eso es más urgente que conectarlo con un
+   lead, y en un bloque de quince minutos no entran los dos.
+   Ámbar y no rojo: el dato del CRM está bien, lo que falta es el viaje. Rojo
+   es de «no asistió», que es un estado de la reunión y no del sistema.
+   El par medido: --warning-light con --badge-await-text da 6.59:1. */
+.agenda-evento-fallo {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  font-size: var(--txt-xs);
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 8px;
+  background: var(--warning-light);
+  color: var(--badge-await-text);
+  border: .5px solid var(--warning);
+  white-space: nowrap;
+}
+@container (max-height: 30px) {
+  .agenda-evento-fallo { display: none; }
+}

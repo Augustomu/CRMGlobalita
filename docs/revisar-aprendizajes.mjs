@@ -203,6 +203,8 @@ const PAREJAS = [
   ['.agenda-evento-conectable', '.agenda-evento-conectable .agenda-evento-hora', 'la hora de un evento sin lead'],
   ['.agenda-evento', '.agenda-evento-dura', 'la duración de una reunión'],
   ['.agenda-evento-conectar', null, 'la etiqueta «conectar»'],
+  ['.agenda-evento-fallo', null, 'el aviso de que no llegó a Google'],
+  ['.campo-dia select', '.campo-dia-vacio', 'el día y el mes sin elegir'],
   ['.agenda-cabeza-cuantas', null, 'el contador del día'],
   ['.agenda-ahora-reloj', null, 'el reloj de la línea de ahora'],
 ];

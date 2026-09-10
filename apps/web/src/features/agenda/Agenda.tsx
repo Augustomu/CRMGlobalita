@@ -1096,7 +1096,16 @@ function Evento({
         >
           <span className="agenda-evento-hora tabular">{e.hora}</span>
           <span className="agenda-evento-nombre">{e.nombre}</span>
-          {conectable && <span className="agenda-evento-conectar">conectar</span>}
+          {conectable && !e.syncFallo && <span className="agenda-evento-conectar">conectar</span>}
+          {/* EL MOVIMIENTO QUE NO LLEGÓ A GOOGLE.
+              Va encima del chip «conectar» y no al lado: si el bloque quedó
+              distinto en Google, eso es más urgente que conectarlo con un
+              lead — y en un bloque de quince minutos no entran los dos. */}
+          {e.syncFallo && (
+            <span className="agenda-evento-fallo" title={`No llegó a Google: ${e.syncFallo}`}>
+              ⚠ sin sincronizar
+            </span>
+          )}
         </div>
 
         {/* La manija de estirar, también para los de Google. De a 15 minutos,

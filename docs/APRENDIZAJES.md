@@ -27,7 +27,7 @@ justamente el límite del chequeo: los colores nuevos daban 5.80:1, 6.19:1 y
 | # | Familia | Veces | ¿Se puede chequear solo? | Estado |
 |---|---|---|---|---|
 | 1 | Borrar datos sin que nadie lo pida | **1** (10 ejecuciones) | no | cerrado con regla |
-| 2 | El color de la agenda | **7** | sí · B | **volvió** |
+| 2 | El color de la agenda | **8** | sí · B | **volvió** |
 | 3 | Una regla vieja pisando a la nueva | **3** (14 reglas) | sí · C | cerrado |
 | 4 | Un control nuevo en vez del que ya existe | **6** | sí · D | **volvió** |
 | 5 | El scope de los handlers de PocketBase | **2** | sí · E | cerrado |
@@ -73,7 +73,8 @@ hacer, no para borrar.
 
 ## 2 · El color de la agenda
 
-> **7 vueltas.** El error más caro del proyecto, y el que más tardó en verse.
+> **8 vueltas.** El error más caro del proyecto, y el que más tardó en verse —
+> y el único que se repitió **el mismo día** en que se escribió su regla.
 
 Augusto lo reportó tres veces con las mismas palabras —«los colores son muy
 tenues»— y las tres primeras respuestas fueron arreglos del lugar equivocado.
@@ -86,6 +87,7 @@ tenues»— y las tres primeras respuestas fueron arreglos del lugar equivocado.
 | 4 | — | **Tres reglas de la versión pálida habían quedado después de las nuevas** y ganaban: el hover devolvía el bloque a `--info-light` con el nombre en `--text`. Texto oscuro sobre fondo oscuro |
 | 5 | Se midió | **La causa real**: `--surface` (#FAF7F1) sobre `--success-light` (#E8F5EB) = **1.1:1**, cuando lo mínimo legible es 4.5:1. En **tres de los cuatro estados** el nombre de la reunión era invisible |
 | 6 | Los cuatro estados sólidos | El ámbar no daba: `--warning` con texto blanco queda en **4.38:1**. Lo encontró el chequeo automático, no una persona |
+| 8 | — | **Lo volví a cometer el mismo día.** El campo de día y mes nuevo puso el texto vacío en `--hint`: **3.42:1** sobre `--surface`. Horas después de escribir en este registro que `--hint` no da. Lo encontró el chequeo B, y sólo porque se agregó la pareja a la tabla — sin esa línea habría pasado en silencio |
 | 7 | — | **Se pasó de largo para el otro lado.** *«Es un verde demasiado fuerte»*, *«es como un gris»*, *«me gustaría una paleta un poquito más clara»*. Los números estaban bien —5.80, 6.19, 6.05— y el resultado igual estaba mal |
 
 **De dónde vino.** De tres cosas, y la tercera es la que explica por qué el
@@ -119,6 +121,19 @@ péndulo fue de una punta a la otra:
   las reuniones. Van rayados. **No era que las reuniones fueran tenues: era
   que todo gritaba igual.**
 - Chequeo **B** en `revisar-aprendizajes.mjs`.
+
+**Lo que enseñó la octava, que es distinto de las siete anteriores.** Escribir
+la regla no alcanza, ni siquiera el mismo día: el que la escribió la rompió a
+las pocas horas eligiendo un token por cómo se ve el nombre —«hint» suena a
+texto secundario— y no por el número. **Lo único que lo atajó fue la tabla del
+chequeo B**, y sólo porque se le sumó la línea del bloque nuevo. La regla de
+oro de esa tabla —«un bloque de color nuevo suma una línea acá»— dejó de ser
+burocracia el día que se cumplió.
+
+Y una trampa de la tabla misma: **el primer selector tiene que ser el que trae
+el FONDO**. Se anotó `.campo-dia-vacio`, que sólo pone `color`, y el chequeo
+la saltó en silencio — una pareja mal escrita se ve igual que una pareja que
+pasa. Ahora dice `.campo-dia select`.
 
 **La lección, en dos líneas.** Cuando alguien dice «no se ve», medilo antes de
 opinar. Y cuando el número da bien y igual se ve mal, el problema no es el

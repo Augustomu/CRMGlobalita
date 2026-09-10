@@ -15,6 +15,16 @@ export interface EventoAgenda {
   hora: string;
   duracion: number;
   estado: string;
+  /**
+   * Por qué el último movimiento NO llegó a Google, si es que no llegó.
+   *
+   * Vacío es lo normal. Mover el bloque en la agenda es instantáneo —se
+   * escribe en la base y listo— pero el viaje a Google puede fallar: el
+   * permiso vencido, Google caído, el evento borrado del otro lado. Sin esto
+   * la pantalla diría «movido» y el calendario de verdad seguiría igual, sin
+   * que nadie se entere hasta la reunión.
+   */
+  syncFallo?: string;
   notas: string;
   nombre: string;
   empresa: string;
@@ -230,6 +240,8 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
           zona: string;
           dia_entero: boolean;
           lead?: string;
+          sync_estado?: string;
+          sync_detalle?: string;
         }>({ filter: 'dia_entero = false', sort: 'inicio' })
         .catch(() => []);
 
@@ -258,6 +270,12 @@ export function useAgenda(activo: boolean, usuario?: UsuarioRecord | null) {
           delCrm: false,
           duenio: '',
           origen: 'calendario',
+          // Sólo se guarda el fallo. «ok» y «omitida» no son noticia: lo que
+          // hay que contar es cuando el calendario de verdad quedó distinto.
+          syncFallo:
+            x.sync_estado === 'error' || x.sync_estado === 'sin_conexion'
+              ? x.sync_detalle || 'no se pudo actualizar en Google'
+              : '',
         };
       });
 
