@@ -33,6 +33,30 @@ invitaciones. La cancelación de §5.4 es otra corrida y otro riesgo.
 
 ## Cómo se corre
 
+**Lo primero, y una sola vez por cuenta antes de todo lo demás:**
+
+```
+node apps/worker/src/vincular.ts <ABREV>          # comprueba que la sesión está viva
+```
+
+Abre Chrome con el perfil de esa cuenta, entra a LinkedIn, mira si la sesión
+está iniciada y escribe la señal. **No invita a nadie.**
+
+Hace falta porque si no, invitar **no puede arrancar nunca**. `invitar` se frena
+cuando la sesión está «sin vincular», y eso está bien: mandar invitaciones con
+una sesión que nadie comprobó es la forma de enterarse dos horas tarde de que
+estaba caída. Pero «sin vincular» quiere decir «`ultima_senal_li` está vacío», y
+esa fecha la escribe el worker cuando LinkedIn le contesta — dentro de la
+corrida que el freno no deja empezar. Es un círculo cerrado, y se comprobó el
+10/09 contra la base real: las nueve cuentas daban «la sesión nunca dio señal»,
+con las listas cargadas y el perfil de Chrome puesto.
+
+No es sólo un arranque: es la respuesta a «¿mis sesiones están vivas?», que es
+lo que promete la pantalla de Cuentas conectadas. Se corre cuando uno quiera y
+cada vez refresca la señal, que dura 15 minutos (`core/sesion.ts`).
+
+**Después, la corrida de verdad:**
+
 ```
 node apps/worker/src/invitar.ts <ABREV>          # una cuenta: AL, FR, ED…
 node apps/worker/src/invitar.ts <ABREV> --simular  # no toca LinkedIn ni la base

@@ -47,6 +47,12 @@ function preguntar(texto: string): Promise<string> {
 }
 
 export async function entrar(): Promise<PocketBase> {
+  // El usuario de demo YA NO EXISTE. `alberto@globalita.test` / `demo12345`
+  // eran del seed, y el seed se limpió: hoy la base local tiene una sola
+  // cuenta, la de Augusto. Se dejan como último recurso —por si alguien
+  // levanta una base nueva con el seed puesto— pero lo normal es que fallen, y
+  // por eso el error de abajo dice qué hacer en vez de sólo «credenciales
+  // inválidas», que es lo que decía y no ayudaba a nadie.
   const usuario = process.env.PB_USER || (LOCAL ? 'alberto@globalita.test' : await preguntar(`Usuario de ${PB_URL}: `));
   const clave = process.env.PB_PASS || (LOCAL ? 'demo12345' : await preguntar('Clave: '));
 
@@ -57,6 +63,18 @@ export async function entrar(): Promise<PocketBase> {
   } catch (e) {
     const err = e as { status?: number; message?: string };
     const detalle = err?.status === 400 ? 'usuario o clave incorrectos' : err?.message || String(e);
+    if (err?.status === 400 && LOCAL && !process.env.PB_USER) {
+      throw new Error(
+        `No se pudo entrar a ${PB_URL} como ${usuario}: ${detalle}.\n\n` +
+          'Ese es el usuario del seed de demo, y la base local ya no lo tiene.\n' +
+          'Pasá el tuyo por variable de entorno. En PowerShell:\n\n' +
+          '    $env:PB_USER = "tu-correo@ejemplo.com"\n' +
+          '    $env:PB_PASS = "tu clave"\n' +
+          '    node apps/worker/src/vincular.ts AL\n\n' +
+          'Es la MISMA cuenta con la que entrás al CRM en localhost:5173,\n' +
+          'no la del panel de PocketBase (esa es otra, va contra _superusers).',
+      );
+    }
     throw new Error(`No se pudo entrar a ${PB_URL} como ${usuario}: ${detalle}`);
   }
   return pb;

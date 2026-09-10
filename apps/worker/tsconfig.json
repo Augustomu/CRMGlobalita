@@ -1,7 +1,19 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022"],
+    // DOM va acá aunque esto sea Node y no un navegador.
+    //
+    // Las funciones que van adentro de `page.evaluate()` NO corren en este
+    // proceso: Playwright las serializa y las ejecuta dentro de Chrome, donde
+    // `document`, `window` y `HTMLElement` sí existen. Sin `DOM` en la lista,
+    // TypeScript las marca como nombres inexistentes y `tsc` da 30 errores
+    // sobre código que está bien.
+    //
+    // El costo es real y conviene saberlo: con esto, escribir `document` por
+    // error FUERA de un `evaluate` compila igual y explota recién al correr.
+    // No hay forma de pedirle a TypeScript «DOM sólo adentro de estas
+    // funciones»; es el compromiso que hace todo proyecto con Playwright.
+    "lib": ["ES2022", "DOM"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "allowImportingTsExtensions": true,
