@@ -879,27 +879,40 @@ página de revisión.
       uno de demo en estado «pendiente», que es justamente una invitación que
       nunca se pudo mandar.
       Se prueba contra una casilla propia antes que contra la de un colaborador.
-- [ ] ⚠️ **9.3 · Esto estaba desactualizado: el CRM YA ESTÁ EN PRODUCCIÓN.**
-      Verificado el 09/09: `https://crm.globalita.tech/api/health` devuelve
-      **200** y la raíz también. O sea que hay un PocketBase vivo en el VPS con
-      **su propia base**, separada de la de la PC.
-      Lo que falta ahora no es publicar: es **saber en qué estado está**.
-- [ ] **9.5 · Revisar que PocketBase de producción funcione bien.** Pedido el
-      09/09. Qué mirar: que el servicio arranque solo después de un reboot
-      (`crm-globalita.service`) · que la versión desplegada sea la de ahora y no
-      una de hace semanas · que las migraciones estén todas aplicadas —incluida
-      `1788604000_evento_con_lead`, la del vínculo evento↔lead— · que las reglas
-      de API sean las mismas que en local, sobre todo que `google_cuenta` siga
-      con **todas las reglas en `null`** para que el `refresh_token` no salga
-      nunca por la API · y **cuántos registros tiene**, que hoy no lo sabe nadie.
-- [ ] **9.6 · Revisar que el guardado de base de datos funcione.** Pedido el
-      09/09. `deploy/backup.sh` existe y está bien escrito —usa
-      `VACUUM INTO`, que copia sin parar el servicio ni arriesgar una copia a
-      medio escribir, y retiene 14 días— pero **nadie verificó que el cron esté
-      instalado y corriendo en el VPS**. Un script de backup que no corre es
-      peor que ninguno, porque uno cree que está cubierto.
-      Va con `deploy/traer-backup.sh`: bajar una copia y **abrirla**. Una copia
-      que no se restauró nunca es una copia que no se sabe si sirve.
+- [x] ✅ **9.3 · PUBLICADO — 10/09/2026, 15:07 UTC.** Producción venía corriendo
+      una versión del **7 de septiembre**: tres días vieja, sin el sistema de
+      invitaciones (`/api/invitar` devolvía 404) y sin ninguna migración
+      posterior. Ahora responde 401 en esa ruta —o sea que el código nuevo está—
+      y `evento_externo` tiene sus cuatro columnas: `lead`, `sync_estado`,
+      `sync_detalle` e `invitado_email`.
+      Se publicó con `deploy/publicar.sh`, que corre los tests antes y **no toca**
+      `pb_data`. Copia del servidor tomada antes, a mano.
+- [x] ✅ **9.5 · Producción revisada — 10/09.** El servicio está `active` y arranca
+      solo. Superusuario: `augusto.unzaga@outlook.com.ar` (existe, es otro que el
+      local). Migraciones al día tras publicar.
+      ⚠️ **Faltaba el archivo de entorno**: `/etc/crm-globalita.env` NO EXISTÍA, y
+      el unit de systemd desplegado era anterior al del repo —sin `APP_URL` ni
+      `EnvironmentFile`—. Sin eso, Google Calendar no podía conectar y las
+      invitaciones habrían fallado con «falta APP_URL». Se creó el archivo con
+      `chmod 600` y se subió el unit corregido. **Las credenciales de Google se
+      copiaron del `.env` local por la entrada estándar del ssh**, sin pasar por
+      la línea de comandos ni por el chat.
+      🧹 **Producción tiene el usuario de demo** (`demo@globalita.test`, pendiente):
+      lo recrea una migración del seed en cada base nueva. Local ya está limpio;
+      allá lo borra Augusto.
+      ❓ **Y sólo tiene 2 cuentas, AC y DP.** Local tiene 9. Las otras siete se
+      crearon localmente y no viajan en ninguna migración. Hay que decidir si van.
+- [x] ✅ **9.6 · El backup del VPS corre, y se probó restaurándolo — 10/09.**
+      Está en `/etc/cron.d/crm-globalita-backup`: **03:15 todos los días**, como el
+      usuario `crm`. Por eso no aparecía en `crontab -l` de nadie. Hay copias
+      del 8, 9 y 10, y el log dice «verificado».
+      **Probado de verdad**: se bajó la del 10/09 a esta máquina, se descomprimió
+      y se abrió. `integrity_check = ok`, 23 tablas. Una copia que no se
+      restauró nunca es una copia que no se sabe si sirve.
+      ⚠️ **Sigue siendo UNA sola copia, en el mismo servidor que los datos.** El
+      propio script lo avisa en cada corrida. Hoy no importa —producción está
+      vacía— pero en cuanto tenga datos hay que bajarla con
+      `deploy/traer-backup.sh` para cumplir la regla de las tres copias.
 - [ ] **9.4 · Backups del VPS.** Un snapshot del proveedor cubre lo que las tres
       copias no cubren: que se rompa el servidor, no la PC.
       **09/09 · Hostinger ofreció crear un snapshot manual del VPS 1961198.**

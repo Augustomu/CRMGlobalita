@@ -15,7 +15,14 @@ WorkingDirectory=/opt/crm-globalita
 # esto el correo saldria con un enlace a ningun lado, asi que el endpoint de
 # invitar corta antes de crear a nadie y lo dice.
 Environment=APP_URL=https://crm.globalita.tech
-Environment=MAIL_DESDE=crm@globalita.tech
+# MAIL_DESDE queda SIN valor a proposito (10/09/2026). El remitente sale del
+# panel de PocketBase —Settings > Mail settings, campo "Sender address"— que es
+# el que se carga junto con el usuario y la clave del SMTP y por eso es el unico
+# que se sabe alineado con la casilla que autentica. Un valor fijo aca pisaba al
+# del panel y el servidor rechazaba el envio por remitente que no coincide.
+# Se deja como respaldo para un despliegue que quiera configurar el correo por
+# entorno en vez de por panel:
+# Environment=MAIL_DESDE=
 
 # Las credenciales de Google (paso 4.6). NO van aca: este archivo esta en el
 # repo, que es publico, y un client_secret que estuvo en un commit hay que
