@@ -124,8 +124,20 @@ El CRM manda un correo cuando das de alta a alguien: le llega su usuario y un
 enlace para elegir su contraseña (§6.7 del manual). **Sin esto configurado, dar
 de alta falla y te lo dice** — no crea a nadie a medias.
 
-Hostinger da casillas con el dominio. Entrá al panel de Hostinger → **Emails** →
-creá `crm@globalita.tech` y anotá su contraseña.
+Hostinger da casillas con el dominio. La casilla elegida por Augusto el 10/09 es
+`finanzas@globalita.tech`. Panel de Hostinger → **Emails** → esa casilla; la
+contraseña se guarda en un gestor, nunca en un chat ni en el repo.
+
+**El DNS ya está listo, verificado el 10/09**: el MX de `globalita.tech` apunta a
+`mx1/mx2.hostinger.com`, el SPF incluye `_spf.mail.hostinger.com` —o sea que
+Hostinger está autorizado a mandar en nombre del dominio— y el DMARC está en
+`p=none`, que observa y no rechaza. Los puertos 465 y 587 contestan.
+
+⚠️ **No hay DKIM publicado** (se probaron los selectores `hostingermail1..3`,
+`default` y `hostinger`). No bloquea nada —con DMARC en `p=none` no rebota
+nada— pero sin DKIM la invitación tiene más chances de caer en Promociones o
+spam. Hostinger lo activa desde el panel de Emails, y conviene hacerlo antes de
+invitar a alguien de afuera.
 
 Después, en el panel de PocketBase (`https://crm.globalita.tech/_/`) →
 **Settings → Mail settings**:
@@ -135,11 +147,11 @@ Después, en el panel de PocketBase (`https://crm.globalita.tech/_/`) →
 | Use SMTP mail server | tildado |
 | SMTP server host | `smtp.hostinger.com` |
 | Port | `465` |
-| Username | `crm@globalita.tech` |
+| Username | `finanzas@globalita.tech` |
 | Password | la de esa casilla |
 | TLS encryption | tildado (465 es SSL directo) |
 | Sender name | `CRM Globalita` |
-| Sender address | `crm@globalita.tech` |
+| Sender address | `finanzas@globalita.tech` |
 
 Si el 465 no conecta, probá **587 sin TLS tildado** (STARTTLS). Son las dos
 formas que ofrece Hostinger y depende de cómo tengan el servidor ese mes.
