@@ -2,9 +2,30 @@ import { useMemo, useState } from 'react';
 import { NOMBRE_LINEA, type LineaNegocio } from '@crm/core/permisos';
 import type { UsuarioRecord } from '../../lib/types';
 import { leadsDeControl, porAtencion, resumenDeControl, ETIQUETA_CONTROL } from '@crm/core/control';
-import { ddmm } from '@crm/core/fecha';
+import { ddmm, diaLocal } from '@crm/core/fecha';
+import {
+  ESTADOS_ACTIVOS,
+  NOMBRE_ESTADO,
+  REGLA_ESTADO,
+  estadoEfectivo,
+  type EstadoProyecto,
+} from '@crm/core/proyecto';
 import { useControl, type ProyectoConDatos } from './useControl';
 import { PanelProyecto } from './PanelProyecto';
+import { AdminEstados } from './AdminEstados';
+
+/** Los siete estados, en el orden en que avanza un proyecto. */
+const ESTADOS: EstadoProyecto[] = [
+  'sin_hablar',
+  'en_conversacion',
+  'propuesta_enviada',
+  'nuestra_pelota',
+  'congelado',
+  'cerrado_ganado',
+  'cerrado_perdido',
+];
+
+const HOY = diaLocal();
 
 /**
  * El puente entre los dos vocabularios de la misma división.
@@ -49,6 +70,8 @@ export function Control({ usuario }: Props) {
   // nada: el filtro ya se aplico al leer.
   const [linea, setLinea] = useState<LineaNegocio | null>(null);
   const [abierto, setAbierto] = useState<ProyectoConDatos | null>(null);
+  /** §3.13.2 · El editor de los estados. Se abre desde la leyenda. */
+  const [adminAbierto, setAdminAbierto] = useState(false);
 
   /**
    * Los leads de la pantalla: los de la línea elegida, con la etiqueta, y
@@ -70,6 +93,34 @@ export function Control({ usuario }: Props) {
     () => new Map(proyectos.map((p) => [p.proyecto.id, p])),
     [proyectos],
   );
+
+  /**
+   * LAS TARJETAS, sobre los proyectos DE LOS LEADS MARCADOS.
+   *
+   * Antes contaban todos los proyectos de la línea. Ahora cuentan los de esta
+   * lista, que es de lo que trata la pantalla: si el resumen mide un conjunto
+   * y la tabla muestra otro, los dos números se leen como si hablaran de lo
+   * mismo y no hablan de lo mismo.
+   *
+   * El estado se calcula con `estadoEfectivo`, no se lee del campo: un
+   * proyecto sin movimiento hace más de 30 días está congelado aunque nadie
+   * haya tocado nada. La regla vive en core y la comparten el filtro, los
+   * conteos y las tarjetas para que no puedan discrepar.
+   */
+  const tarjetas = useMemo(() => {
+    const suyos = filas
+      .map((l) => (l.proyecto ? proyectoPorId.get(l.proyecto) : null))
+      .filter((x): x is ProyectoConDatos => Boolean(x))
+      .map((x) => estadoEfectivo(x.proyecto, x.reuniones, HOY));
+    const cuenta = (f: (e: EstadoProyecto) => boolean) => suyos.filter(f).length;
+    return [
+      { n: cuenta((e) => ESTADOS_ACTIVOS.includes(e)), label: 'Activos', detalle: 'Sin hablar, en conversación, propuesta enviada y nuestra pelota.', color: 'var(--accent)' },
+      { n: cuenta((e) => e === 'propuesta_enviada'), label: 'Propuesta enviada', detalle: 'La pelota está del otro lado.', color: 'var(--info)' },
+      { n: cuenta((e) => e === 'nuestra_pelota'), label: 'Nuestra pelota', detalle: 'Nos falta hacer algo a nosotros.', color: 'var(--warning)' },
+      { n: cuenta((e) => e === 'congelado'), label: 'Congelados', detalle: 'Más de 30 días sin movimiento.', color: 'var(--muted)' },
+      { n: cuenta((e) => e === 'cerrado_ganado'), label: 'Cerrados ganados', detalle: 'Se cerraron y arrancó el trabajo.', color: 'var(--success)' },
+    ];
+  }, [filas, proyectoPorId]);
 
   // El panel muestra lo recién leído, no una copia congelada de cuando se abrió.
   const panel = abierto
@@ -160,6 +211,56 @@ export function Control({ usuario }: Props) {
             <p>{error}</p>
           </div>
         )}
+        {/*
+          LOS ESTADOS, ARRIBA. Estaban al final de la pantalla vieja, después de
+          la tabla entera: había que bajar hasta el fondo para leer qué
+          significa «Nuestra pelota», que es justo lo que uno necesita ANTES de
+          mirar la tabla.
+        */}
+        {!cargando && !error && (
+          <div className="ctrl-bloque">
+            <div className="ctrl-leyenda-cabeza">
+              <span className="ctrl-filtro-label">Los estados y cuándo se aplican</span>
+              {/* §3.13.2 · Acá se editan. Antes esta leyenda salía de un
+                  archivo de código y corregir una palabra era un cambio de
+                  programa. */}
+              <button
+                type="button"
+                className="boton-mini al-final"
+                title="Cambiar el nombre y el significado de cada estado"
+                onClick={() => setAdminAbierto(true)}
+              >
+                Editar los estados
+              </button>
+            </div>
+            <div className="ctrl-leyenda">
+              {ESTADOS.map((e) => (
+                <div key={e} className="ctrl-leyenda-item">
+                  <span className={`ctrl-pastilla ctrl-estado-${e}`}>{NOMBRE_ESTADO[e]}</span>
+                  <span className="ctrl-tarjeta-detalle">{REGLA_ESTADO[e]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Las tarjetas, de los proyectos DE ESTOS leads. Si el resumen midiera
+            un conjunto y la tabla mostrara otro, los dos números se leerían
+            como si hablaran de lo mismo. */}
+        {!cargando && !error && filas.length > 0 && (
+          <div className="ctrl-tarjetas">
+            {tarjetas.map((t) => (
+              <div key={t.label} className="ctrl-tarjeta">
+                <span className="ctrl-tarjeta-n" style={{ color: t.color }}>
+                  {t.n}
+                </span>
+                <span className="ctrl-tarjeta-label">{t.label}</span>
+                <span className="ctrl-tarjeta-detalle">{t.detalle}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {!cargando && !error && filas.length === 0 && (
           <p className="vacio">
             Ningún lead con la etiqueta <b>{ETIQUETA_CONTROL}</b>. Se pone desde la ficha del
@@ -244,6 +345,7 @@ export function Control({ usuario }: Props) {
       </div>
 
       {panel && <PanelProyecto p={panel} onCerrar={() => setAbierto(null)} />}
+      {adminAbierto && <AdminEstados onCerrar={() => setAdminAbierto(false)} />}
     </section>
   );
 }
