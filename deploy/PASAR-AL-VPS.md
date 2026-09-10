@@ -16,55 +16,90 @@ desarrollar.
 
 ---
 
+## Antes de empezar: dónde se escribe todo esto
+
+**Todo se hace desde tu PC. En ningún momento hace falta «entrar» al servidor.**
+
+Abrí **PowerShell**: tecla Windows, escribí `powershell`, Enter. Se abre una
+ventana negra o azul con un cursor. Ahí se pegan los comandos, de a uno, y se
+aprieta Enter después de cada uno.
+
+Cada comando de abajo empieza con `ssh` o `scp`. Eso significa «hacé esto en el
+servidor» o «mandá este archivo al servidor», pero **la ventana sigue siendo la
+de tu máquina**: el comando va, se ejecuta allá, vuelve la respuesta, y el
+cursor queda de nuevo en tu PC. No hay que salir de ningún lado.
+
+Se pega **un bloque, se lee lo que contesta, y recién ahí el siguiente.**
+
+---
+
 ## Parte 1 · Mover los datos
 
-La copia consistente ya está hecha en `.pb/copias/2026-09-10_091947-a-mano/`:
+Lo que se sube es la copia consistente que ya está hecha:
 **240 leads, 487 perfiles, 288 reuniones, 3.590 eventos**, integridad `ok`.
 
-Se sube esa y no el archivo vivo: copiar una base SQLite mientras PocketBase
-escribe puede dar una copia rota, y el `--copia` usa `VACUUM INTO`, que no.
+Se sube esa y no la base viva: copiar SQLite mientras PocketBase escribe puede
+dar una copia rota. La copia se hizo con `VACUUM INTO`, que no.
 
-**1.1 · En el VPS** — parar y guardar lo que hay:
+### Paso 1 de 3 — apagar el CRM del servidor y guardar lo que hay
 
-```bash
-ssh -i ~/.ssh/bitacora_vps root@45.90.108.64
-systemctl stop crm-globalita
-cp -a /opt/crm-globalita/pb_data/data.db /opt/crm-globalita/pb_data/data.db.antes-de-migrar
-exit
+```powershell
+ssh -i "$HOME\.ssh\bitacora_vps" root@45.90.108.64 "systemctl stop crm-globalita; cp -a /opt/crm-globalita/pb_data/data.db /opt/crm-globalita/pb_data/data.db.antes-de-migrar; echo PASO-1-OK"
 ```
 
-**1.2 · Desde la PC**, parado en `Projects/CRMGlobalita`:
+**Tiene que contestar:** `PASO-1-OK`
 
-```bash
-scp -i ~/.ssh/bitacora_vps ".pb/copias/2026-09-10_091947-a-mano/data.db" \
-    root@45.90.108.64:/opt/crm-globalita/pb_data/data.db
+Durante los próximos minutos `crm.globalita.tech` no va a responder. Es normal:
+está apagado a propósito. Si contesta otra cosa, **parar acá** y mandarme lo
+que dijo.
+
+### Paso 2 de 3 — subir tu base
+
+```powershell
+scp -i "$HOME\.ssh\bitacora_vps" "$HOME\Projects\CRMGlobalita\.pb\copias\2026-09-10_091947-a-mano\data.db" root@45.90.108.64:/opt/crm-globalita/pb_data/data.db
 ```
 
-**1.3 · En el VPS** — limpiar los restos del diario y arrancar:
+**Tiene que mostrar** una barra de progreso que llega a `100%` y vuelve el
+cursor. Son 2,2 MB: tarda unos segundos. Si no dice nada y vuelve el cursor,
+también está bien — cuando el archivo es chico a veces no dibuja la barra.
 
-```bash
-ssh -i ~/.ssh/bitacora_vps root@45.90.108.64
-mv /opt/crm-globalita/pb_data/data.db-wal /tmp/ 2>/dev/null
-mv /opt/crm-globalita/pb_data/data.db-shm /tmp/ 2>/dev/null
-chown crm:crm /opt/crm-globalita/pb_data/data.db
-systemctl start crm-globalita
-systemctl is-active crm-globalita
+### Paso 3 de 3 — limpiar y prender
+
+```powershell
+ssh -i "$HOME\.ssh\bitacora_vps" root@45.90.108.64 "mv /opt/crm-globalita/pb_data/data.db-wal /tmp/ 2>/dev/null; mv /opt/crm-globalita/pb_data/data.db-shm /tmp/ 2>/dev/null; chown crm:crm /opt/crm-globalita/pb_data/data.db; systemctl start crm-globalita; sleep 3; systemctl is-active crm-globalita"
 ```
+
+**Tiene que contestar:** `active`
 
 Los `-wal` y `-shm` son el diario de la base anterior. Dejarlos al lado de una
-base distinta es cómo se corrompe una: SQLite los cree suyos.
+base distinta es la forma clásica de corromper una: SQLite los cree suyos.
 
-**Dos cosas cambian y conviene saberlas antes:**
+### Y listo
 
-- **El panel de producción va a pedir las credenciales locales.** Los usuarios
-  y los superusuarios viajan dentro de la base.
-- **El SMTP de `finanzas@` ya va a estar cargado allá**, por lo mismo.
+Entrá a **https://crm.globalita.tech** y tienen que estar tus leads.
 
-**1.4 · Corregir la URL de la aplicación.** La base local dice
-`http://localhost:8090`, y de ahí salen los enlaces de las invitaciones. En
-`https://crm.globalita.tech/_/` → **Settings → Application** → *Application URL*
-→ `https://crm.globalita.tech`. Sin esto, el enlace del correo apunta a la
-máquina de quien lo recibe.
+**Dos cosas cambian, y sorprenden si no se sabe:**
+
+- **El panel de producción va a pedir las credenciales de tu base local**, no
+  las que usabas allá. Los usuarios viajan adentro del archivo.
+- **El SMTP de `finanzas@` ya va a estar cargado**, por lo mismo.
+
+### Una cosa más, en la pantalla y no en la terminal
+
+En **https://crm.globalita.tech/_/** → **Settings → Application** →
+*Application URL* → escribir `https://crm.globalita.tech` y guardar.
+
+Tu base local dice `http://localhost:8090`, y de ahí sale el enlace que lleva
+el correo de invitación. Sin cambiarlo, ese enlace apunta a la máquina de quien
+lo recibe.
+
+### Si algo sale mal
+
+La base anterior quedó guardada. Para volver atrás:
+
+```powershell
+ssh -i "$HOME\.ssh\bitacora_vps" root@45.90.108.64 "systemctl stop crm-globalita; cp -a /opt/crm-globalita/pb_data/data.db.antes-de-migrar /opt/crm-globalita/pb_data/data.db; systemctl start crm-globalita; systemctl is-active crm-globalita"
+```
 
 ---
 
