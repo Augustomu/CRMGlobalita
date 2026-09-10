@@ -256,6 +256,41 @@ van** —el caso donde el «dale» por escrito alcanza, según la familia 12—:
 
 ---
 
+### Buscador compuesto — ✅ HECHO el 09/09
+
+Pedido de Augusto: chips que se acumulan, teléfono sin importar el formato, y
+buscar dentro de cualquier dato del lead «como Google Drive».
+
+**Dos cosas se preguntaron antes de escribir nada**, porque cambiaban la regla
+de raíz y elegir mal costaba rehacerla entera:
+
+- [x] **Los chips se acumulan con «Y»**, no con «o». Cada uno achica. Lo eligió
+      él con la contra a la vista: «Martín» + «Josefina» da cero porque nadie se
+      llama las dos cosas. **Hay un test que fija esa contra** para que nadie la
+      lea después como un bug.
+- [x] ⚠️ **El teléfono respeta el permiso (§6.2).** Quien no puede ver teléfonos
+      tampoco los encuentra: si buscar un número trajera un lead, el buscador
+      sería una forma de confirmarlos sin verlos. Los teléfonos viajan **aparte**
+      del texto y quien arma el buscable decide si los pasa; no se filtra
+      después, que es donde estaría el agujero.
+
+Lo demás:
+
+- [x] **Enter fija, la cruz saca, y borrar con el campo vacío saca el último.**
+- [x] **Lo tecleado cuenta antes del enter**, así que la lista se achica mientras
+      se escribe. El enter sólo fija lo que ya se veía.
+- [x] **Busca en todo el lead**: perfil entero, los tres correos, **las notas**,
+      etapa, situación, lista, motivos, cuenta, colaborador y **etiquetas**.
+- [x] **El teléfono, por dígitos y en los dos sentidos.** Mínimo 4 dígitos: con
+      tres, «311» entra en media agenda.
+- [x] **Una sola regla, no dos.** `coincide()` pasó a ser una envoltura de la
+      nueva. `core/busqueda.ts` · **19 tests** que citan §7.2.
+- [ ] **Falta llevarlo a los otros dos buscadores.** Hoy los chips están sólo en
+      la columna 1 de Follow-up; la Base compartida (§7.5) y el panel del partner
+      siguen con un término. La regla ya es común, así que es conectarla.
+
+---
+
 ### Tanda 2 · Que la agenda se pueda manejar
 
 - [ ] **Arrastrar cualquier evento, incluidos los de Google.** Textual:

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { coincide } from '@crm/core/busqueda';
+import { buscable, coincideTodos, terminosDe, type Buscable } from '@crm/core/busqueda';
 import { etiquetaDeUltimoEnvio } from '@crm/core/envio';
 import { pasaElFiltro, siguienteEstado, tituloDelFiltro, type TresEstados } from '@crm/core/filtro';
 import { ETIQUETAS_EN_LA_FILA, etiquetasDeLaFila } from '@crm/core/etiqueta';
@@ -223,6 +223,22 @@ export function ListaContactos({
 }: Props) {
   const [busqueda, setBusqueda] = useState('');
   /**
+   * §7.2 · Los chips del buscador. Cada uno achica la lista.
+   *
+   * Se acumulan con «Y» y no con «o»: lo decidió Augusto el 09/09 sabiendo la
+   * contra —«Martín» y «Josefina» juntos dan cero, porque nadie se llama las
+   * dos cosas— y a cambio se puede afinar: «Martín» + «Vale» + «gerente».
+   */
+  const [chips, setChips] = useState<string[]>([]);
+
+  /** Fija lo tecleado como chip. Sin repetidos: dos veces la misma palabra no achica más. */
+  const fijarChip = useCallback(() => {
+    const t = busqueda.trim();
+    if (!t) return;
+    setChips((c) => (c.some((x) => x.toLowerCase() === t.toLowerCase()) ? c : [...c, t]));
+    setBusqueda('');
+  }, [busqueda]);
+  /**
    * Cuántas filas se dibujan (§7.2, §11 «transversal desde el día uno»).
    *
    * La base tiene miles de leads. Dibujarlos todos hacía que cada tecla del
@@ -322,6 +338,7 @@ export function ListaContactos({
   const [filtrosAbierto, setFiltrosAbierto] = useState(false);
   const [pos, setPos] = useState({ left: 0, top: 0 });
   const botonFiltros = useRef<HTMLButtonElement>(null);
+  const refBuscar = useRef<HTMLInputElement>(null);
 
   const cuentas = useMemo(() => {
     const s = new Set<string>();
@@ -335,8 +352,47 @@ export function ListaContactos({
     return [...m].map(([id, name]) => ({ id, name }));
   }, [leads]);
 
+  /**
+   * §7.2 · TODO lo que de cada lead se puede buscar, armado una sola vez.
+   *
+   * Augusto lo pidió «como Google Drive, que buscás una frase y te encuentra
+   * el archivo que la tiene adentro». Así que va todo: los datos del perfil,
+   * los tres correos, LAS NOTAS —que es donde uno escribe lo que después no
+   * sabe cómo buscar—, las etiquetas, la etapa, la situación, la lista de
+   * origen y la cuenta.
+   *
+   * EL TELÉFONO VA APARTE Y SÓLO SI SE PUEDE VER (§6.2). Si viajara con el
+   * resto, buscar un número y ver aparecer un lead sería una forma de
+   * confirmar teléfonos sin tener permiso de verlos.
+   *
+   * Se memoriza por lead: normalizar el texto entero en cada tecla y por cada
+   * chip es el camino corto a que el cursor vaya atrás de lo que uno escribe.
+   */
+  const buscables = useMemo(() => {
+    const m = new Map<string, Buscable>();
+    for (const l of leads) {
+      const p = l.expand?.perfil;
+      m.set(
+        l.id,
+        buscable(
+          [
+            p?.nombre, p?.empresa, p?.cargo, p?.industria, p?.ciudad, p?.pais, p?.web, p?.resumen,
+            l.email, l.email2, l.email3,
+            l.nota, l.archivada_motivo,
+            l.etapa, l.situacion, l.lista, l.motivo_descarte,
+            l.expand?.cuenta?.abrev,
+            l.expand?.asignado?.name,
+            ...(l.expand?.etiquetas ?? []).map((e) => e.nombre),
+          ],
+          veTelefono ? [p?.telefono, p?.telefono_raw] : [],
+        ),
+      );
+    }
+    return m;
+  }, [leads, veTelefono]);
+
   const visibles = useMemo(() => {
-    const q = busqueda.trim();
+    const terminos = terminosDe(chips, busqueda);
     return leads
       .filter((l) => {
         const p = l.expand?.perfil;
@@ -367,10 +423,11 @@ export function ListaContactos({
         if (ciudad && (p?.ciudad || '—') !== ciudad) return false;
         if (etiqueta && !(l.expand?.etiquetas ?? []).some((e) => e.nombre === etiqueta)) return false;
 
-        // §7.2: nombre, empresa, teléfono y ciudad. Sin tildes: la base está
+        // §7.2: todos los chips, contra todo el lead. Sin tildes: la base está
         // llena de «Gonçalves» y «Villagrán», y nadie los escribe con acento
         // cuando los está buscando.
-        return coincide([p?.nombre, p?.empresa, p?.telefono, p?.ciudad], q);
+        const b = buscables.get(l.id);
+        return b ? coincideTodos(b, terminos) : false;
       })
       // Los vencidos primero SIEMPRE; dentro de cada grupo manda el orden
       // elegido. Es del prototipo: lo que ya venció no puede quedar sepultado
@@ -383,7 +440,7 @@ export function ListaContactos({
         if (venA !== venB) return venA - venB;
         return orden === 'nuevo' ? y.localeCompare(x) : x.localeCompare(y);
       });
-  }, [leads, busqueda, cuenta, colaborador, soloVencidos, wa, reunion, rol, pais, ciudad, etiqueta, orden, reunionDe]);
+  }, [leads, busqueda, chips, buscables, cuenta, colaborador, soloVencidos, wa, reunion, rol, pais, ciudad, etiqueta, orden, reunionDe]);
 
   // Cambiar el filtro o la búsqueda vuelve la ventana a 80: mantenerla estirada
   // después de pasar de 3000 leads a 12 sigue costando lo mismo y no muestra
@@ -391,7 +448,7 @@ export function ListaContactos({
   useEffect(() => {
     setCuantas(LOTE);
     if (refLista.current) refLista.current.scrollTop = 0;
-  }, [busqueda, cuenta, colaborador, soloVencidos, wa, reunion, rol, pais, ciudad, etiqueta, orden]);
+  }, [busqueda, chips, cuenta, colaborador, soloVencidos, wa, reunion, rol, pais, ciudad, etiqueta, orden]);
 
   const dibujadas = useMemo(() => visibles.slice(0, cuantas), [visibles, cuantas]);
 
@@ -519,12 +576,56 @@ export function ListaContactos({
 
       {/* fila 2 del grid: buscador de 52px */}
       <div className="lista-buscador">
-        <input
-          type="text"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          placeholder="Buscar nombre, empresa, teléfono…"
-        />
+        {/*
+          §7.2 · EL CAMPO ES UNO SOLO aunque tenga chips adentro.
+
+          Los chips van DENTRO del recuadro y no arriba ni al costado: son
+          parte de lo que se está buscando, y sacarlos afuera los convierte en
+          otro control que hay que aprender aparte. El input crece con lo que
+          se escribe y se achica cuando no; el ancho mínimo es para que
+          siempre se vea dónde escribir.
+        */}
+        <div
+          className="lista-buscar"
+          onClick={(e) => {
+            // Tocar cualquier parte del recuadro pone el cursor a escribir.
+            // Sin esto, el espacio entre chips es un agujero muerto.
+            if (e.target === e.currentTarget) refBuscar.current?.focus();
+          }}
+        >
+          {chips.map((c) => (
+            <span key={c} className="lista-chip-buscar">
+              {c}
+              <button
+                type="button"
+                title={`Sacar «${c}»`}
+                onClick={() => setChips((v) => v.filter((x) => x !== c))}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          <input
+            ref={refBuscar}
+            type="text"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                fijarChip();
+                return;
+              }
+              // Borrar con el campo vacío saca el último chip, que es como se
+              // deshace sin tener que apuntarle a una × de 9px.
+              if (e.key === 'Backspace' && !busqueda && chips.length) {
+                setChips((v) => v.slice(0, -1));
+              }
+            }}
+            placeholder={chips.length ? 'y…' : 'Buscar cualquier dato del lead…'}
+            title="Enter agrega una palabra más. Todas tienen que cumplirse."
+          />
+        </div>
         <button
           ref={botonFiltros}
           type="button"

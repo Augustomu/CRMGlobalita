@@ -918,7 +918,19 @@ Tres columnas, las dos últimas opcionales.
 
 **Columna 1 — lista de contactos** (ancho arrastrable 260–520 px, doble clic alterna 260/340, persistido):
 
-- Buscador por nombre, empresa, teléfono, ciudad.
+- **Buscador compuesto, y busca dentro de todo el lead** (09/09/2026). Augusto lo pidió *«como Google Drive, que buscás una frase y te encuentra el archivo que la tiene adentro»*.
+
+  **Los chips se acumulan con «Y».** Se escribe una palabra, enter, y queda fija como chip; la siguiente **achica** lo que quedó. Es lo que significa «filtro» y es lo que hace Drive. Decidido por Augusto **con la contra a la vista**: «Martín» y «Josefina» juntos dan cero, porque nadie se llama las dos cosas. A cambio se puede afinar: «Martín» + «Vale» + «gerente». La cruz de cada chip lo saca, y **borrar con el campo vacío saca el último**, que es cómo se deshace sin apuntarle a una cruz de 9px.
+
+  **Lo tecleado cuenta antes del enter**: la lista se achica mientras se escribe y el enter sólo fija lo que ya se estaba viendo. Si hubiera que confirmar cada palabra para ver algo, escribir a ciegas sería el modo normal de usarlo.
+
+  **Dónde busca**: nombre, empresa, cargo, industria, ciudad, país, web y resumen del perfil; los tres correos; **las notas** —que es donde uno escribe lo que después no sabe cómo buscar—; etapa, situación, lista de origen, motivo de descarte y de archivado; la cuenta, el colaborador asignado y **las etiquetas**. Quedaron afuera dos que parecían texto y no lo son: `nota_r0` es un interruptor y `pagina_origen` un número de página.
+
+  **El teléfono se compara por dígitos y en los dos sentidos**: `8477-0178` encuentra a `+55 31 8477-0178`, y al revés, escribirlo con el prefijo de país encuentra al que se guardó sin él. El mismo número está cargado de tres formas y el prefijo aparece o no según de dónde vino el contacto; comparar como texto casi nunca da. Hacen falta **4 dígitos** para tratar algo como teléfono: con tres, «311» entra en media agenda.
+
+  **El teléfono respeta el permiso (§6.2).** Quien no puede verlos tampoco los encuentra buscando: si buscar un número trajera un lead, el buscador sería una forma de confirmar teléfonos sin tener permiso de verlos. Por eso los teléfonos viajan **aparte** del resto del texto y quien arma el buscable decide si los incluye — no se filtra después, que es donde estaría el agujero. Al lead se sigue llegando por el nombre.
+
+  **Una sola regla, no dos**: `coincide()` —la de la Base compartida y el panel del partner— pasó a ser una envoltura de la nueva. Dos implementaciones de «coincide» encuentran cosas distintas, que es lo que hubo que venir a arreglar la primera vez. Regla en `core/busqueda.ts`, con 19 tests que citan esta sección.
 - **Nuevo lead** y **Importar CSV**, los dos con el permiso `importarLeads`: son
   las dos formas de meter gente a la base, y quien puede una puede la otra.
 - Filtros en popover: próximo contacto (todos / sólo vencidos) y orden, WhatsApp (con/sin), reunión (con / sin / asistió / no asistió), rol, país, ciudad, etiquetas. El botón muestra cuántos filtros hay activos y cuántos leads quedan.

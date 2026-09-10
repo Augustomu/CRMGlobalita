@@ -6367,6 +6367,64 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
    nombre, que es lo que se pidió tres veces. */
 .wap-chat-acciones { display: flex; gap: 4px; align-items: center; flex: 0 0 auto; }
 
+/* ------------------------------------------------ El buscador con chips
+   §7.2 · Un campo que contiene chips. El recuadro es del DIV, no del input:
+   el input de adentro va sin borde y sin fondo para que los dos se lean como
+   una sola cosa. Copiado de cómo se ve un campo del resto del CRM —.5px,
+   radio 8— y no inventado, que es el error 4 del registro. */
+.lista-buscar {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 3px 6px;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: text;
+}
+.lista-buscar:focus-within { border-color: var(--accent); }
+.lista-buscar input {
+  flex: 1;
+  min-width: 70px;
+  border: 0;
+  outline: none;
+  background: none;
+  padding: 2px 0;
+  font-family: inherit;
+  font-size: var(--txt-base);
+  color: var(--text);
+}
+/* El chip de una palabra buscada. Es el mismo idioma que el resto del
+   dashboard —tinte claro y texto del mismo tono— igual que .fila-ultimo. */
+.lista-chip-buscar {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 3px 1px 7px;
+  border-radius: 8px;
+  background: var(--accent-light);
+  color: var(--accent-hover);
+  font-size: var(--txt-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+}
+.lista-chip-buscar button {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--txt-base);
+  line-height: 1;
+  padding: 0 3px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.lista-chip-buscar button:hover { color: var(--error); }
+
 /* ------------------------------------------ Administrador de estados */
 .ctrl-leyenda-cabeza { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
 .estado-fila { padding: 9px 0; border-bottom: .5px solid var(--border); }
