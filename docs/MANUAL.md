@@ -269,12 +269,24 @@ Las dos casas, hoy:
 | `id`, `nombre` | | |
 | `cuenta_id` | fk Cuenta | una lista pertenece a una cuenta |
 | `fuente` | enum | `Sales Navigator` \| `CSV importado` |
+| `origen_id` | string | **De dónde salen los perfiles.** En Sales Navigator es el `savedSearchId` de la búsqueda guardada; en un CSV, el nombre del archivo importado. Sin esto la automatización sabe cómo se llama la lista y por qué página va, pero no a dónde ir a buscarla (→ §8.1) |
 | `prioridad` | int | 1 es la más alta |
 | `paginas_total` | int | |
 | `pagina_actual` | int | hasta dónde llegó el script. **Dato de la automatización: se muestra, no se edita a mano** (→ §10.4) |
 | `perfiles_por_pagina` | int | 25 en Sales Navigator |
 
 Derivados: `restantes = (paginas_total − pagina_actual) × perfiles_por_pagina`; estado `agotada` (sin páginas), `en uso` (la de mayor prioridad con páginas), `en espera`.
+
+**La URL se arma, no se guarda.** De una búsqueda guardada se anota el
+`savedSearchId` y nada más. La dirección que uno copia del navegador trae
+`lipi` y `snfl` pegados atrás —tracking de la sesión que la generó— que
+cambian en cada visita y no identifican la búsqueda; guardarlos es guardar algo
+que envejece mal. La regla vive en `core/invitacion.ts`.
+
+`paginas_total` en 0 deja la lista **agotada**, y eso es correcto: una lista
+cuyo tamaño nadie midió todavía no puede prometer invitaciones. El número sale
+de mirar la búsqueda en Sales Navigator; hasta entonces la lista está cargada
+pero no entra en la cola.
 
 Las listas se reordenan con **flechas, no con drag**: son 2–3 por cuenta, el drag no ahorra pasos y las flechas ya son accesibles por teclado y touch (→ §10.5).
 

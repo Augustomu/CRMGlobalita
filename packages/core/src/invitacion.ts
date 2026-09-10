@@ -17,6 +17,16 @@ export interface ListaInvitacion {
   cuenta: string;
   nombre: string;
   fuente: FuenteLista;
+  /**
+   * De dónde salen los perfiles (§3.4). En Sales Navigator es el
+   * `savedSearchId`; en un CSV, el nombre del archivo importado.
+   *
+   * Sin esto la lista sabe cómo se llama, de quién es y por qué página va —
+   * pero no dónde está, así que el worker no tiene a dónde ir. Se agregó el
+   * 10/09 al cargar las 22 búsquedas reales: la familia 11 del registro, «no
+   * había dónde guardarlo», encontrada esta vez ANTES de escribir el script.
+   */
+  origen_id?: string;
   /** Prioridad. 1 es la que trabaja primero. */
   orden: number;
   /** Hasta qué página llegó el script. Dato de la automatización: no se edita. */
@@ -24,6 +34,32 @@ export interface ListaInvitacion {
   paginas: number;
   /** Cuántos perfiles trae una página de esa fuente. */
   por_pagina: number;
+}
+
+/**
+ * La dirección de una lista, armada a partir de su origen.
+ *
+ * SE ARMA, NO SE GUARDA. La URL que uno copia del navegador viene con `lipi`
+ * y `snfl` pegados atrás: son tracking de la sesión que la generó, cambian en
+ * cada visita y no identifican la búsqueda. Guardar eso es guardar algo que
+ * envejece mal — la de ayer apunta a una sesión que ya no existe. Con el id
+ * sola sale siempre limpia.
+ *
+ * Un CSV no tiene dirección: devuelve vacío, y quien llame decide qué hacer.
+ * Es a propósito que no invente una: un string que parece una URL y no lleva a
+ * ningún lado es peor que no tener nada.
+ */
+export function urlDeLista(
+  fuente: FuenteLista,
+  origenId: string | null | undefined,
+): string {
+  const id = String(origenId ?? '').trim();
+  if (fuente !== 'sales_navigator' || !id) return '';
+  // Sólo dígitos: un savedSearchId es numérico, y cualquier otra cosa acá es
+  // un pegado con la URL entera adentro. Armar la dirección con eso daría un
+  // link roto que parece bueno.
+  if (!/^[0-9]+$/.test(id)) return '';
+  return `https://www.linkedin.com/sales/search/people?savedSearchId=${id}`;
 }
 
 export type EstadoLista = 'agotada' | 'en uso' | 'en espera';

@@ -6,6 +6,7 @@ import {
   mover,
   restantes,
   resumenDeCuentas,
+  urlDeLista,
   resumenDeListas,
   salidasDeHoy,
   vuelvenALaCola,
@@ -202,4 +203,41 @@ test('§8.1 · la señal fresca sí deja salir', () => {
     salidasDeHoy([cuenta({ id: 'c1', ultima_senal_li: en(16) })], listas, [], CANCEL, HOY, false, AHORA)[0].frenada,
     true,
   );
+});
+
+// §3.4 · La dirección de una lista se ARMA, no se guarda.
+//
+// Augusto pasó las 22 búsquedas guardadas el 10/09 y las URLs venían como las
+// copia uno del navegador: con `lipi` y `snfl` pegados atrás. Esos dos son
+// tracking de la sesión que generó el link — cambian en cada visita y no
+// identifican la búsqueda. Se guarda el id y la dirección sale sola.
+test('§3.4 · de un savedSearchId sale la URL, siempre limpia', () => {
+  assert.equal(
+    urlDeLista('sales_navigator', '1995468452'),
+    'https://www.linkedin.com/sales/search/people?savedSearchId=1995468452',
+  );
+  // Con espacios alrededor, que es como llega de un copiar y pegar.
+  assert.equal(
+    urlDeLista('sales_navigator', '  1990990676  '),
+    'https://www.linkedin.com/sales/search/people?savedSearchId=1990990676',
+  );
+});
+
+test('§3.4 · lo que no es un id no se convierte en un link roto', () => {
+  // El pegado más probable: la URL entera adentro del campo. Armar la
+  // dirección con eso da algo que PARECE un link y no lleva a ningún lado,
+  // que es peor que no tener nada.
+  assert.equal(
+    urlDeLista('sales_navigator', 'https://www.linkedin.com/sales/search/people?savedSearchId=123'),
+    '',
+  );
+  assert.equal(urlDeLista('sales_navigator', '1995468452&lipi=urn%3Ali'), '');
+  assert.equal(urlDeLista('sales_navigator', ''), '');
+  assert.equal(urlDeLista('sales_navigator', null), '');
+  assert.equal(urlDeLista('sales_navigator', undefined), '');
+});
+
+test('§3.4 · un CSV no tiene dirección y no se le inventa una', () => {
+  assert.equal(urlDeLista('csv', 'contactos-marzo.csv'), '');
+  assert.equal(urlDeLista('manual', '1995468452'), '');
 });
