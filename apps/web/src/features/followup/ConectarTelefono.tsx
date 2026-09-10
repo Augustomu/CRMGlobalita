@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { pb } from '../../lib/pocketbase';
 import { useEscape } from '../../lib/useEscape';
 import { normalizar } from '@crm/core/cruce';
+import { leadsParecidos, palabrasEnComun } from '@crm/core/vincular';
 import { normalizarTelefono } from '@crm/core/telefono';
 
 /**
@@ -118,23 +119,19 @@ export function ConectarTelefono({
 
     if (texto) return conFiltro;
 
-    const palabras = new Set(normalizar(nombreDelLead).split(' ').filter((x) => x.length > 2));
-    const puntos = (p: PerfilConTelefono) =>
-      normalizar(p.nombre)
-        .split(' ')
-        .filter((x) => palabras.has(x)).length;
-
-    return [...conFiltro].sort((a, b) => puntos(b) - puntos(a));
+    // La regla del parecido es de `core/vincular.ts`, la misma que usa
+    // «Conectar evento» en la agenda. Acá estaba escrita otra vez y ya no
+    // coincidía: partía por espacio Y por puntuación, y la de core sólo por
+    // espacio, así que un «Marcelo-Carneiro» se ordenaba distinto en cada
+    // pantalla. Se arregló la de core —partir la puntuación era lo correcto— y
+    // esta pasó a llamarla.
+    return leadsParecidos(nombreDelLead, conFiltro, (p) => p.nombre);
   }, [candidatos, busqueda, nombreDelLead]);
 
-  const parecidos = useMemo(() => {
-    const palabras = new Set(normalizar(nombreDelLead).split(' ').filter((x) => x.length > 2));
-    return candidatos.filter((p) =>
-      normalizar(p.nombre)
-        .split(' ')
-        .some((x) => palabras.has(x)),
-    ).length;
-  }, [candidatos, nombreDelLead]);
+  const parecidos = useMemo(
+    () => candidatos.filter((p) => palabrasEnComun(nombreDelLead, p.nombre) > 0).length,
+    [candidatos, nombreDelLead],
+  );
 
   /**
    * Escribe el número directamente en el perfil del lead.

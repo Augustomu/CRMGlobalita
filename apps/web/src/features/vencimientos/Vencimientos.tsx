@@ -11,7 +11,8 @@ import {
 import { casaDeLinea } from '@crm/core/proyecto';
 import { canalDe } from '@crm/core/cadencia';
 import type { Idioma, Paso } from '@crm/core/tipos';
-import { diaLocal } from '@crm/core/fecha';
+import { cuandoEs, diaLocal } from '@crm/core/fecha';
+import { CampoDia } from '../../ui/CampoDia';
 import { pb } from '../../lib/pocketbase';
 import type { LeadRecord, PlantillaRecord } from '../../lib/types';
 
@@ -40,12 +41,20 @@ function nombreCorto(nombre: string): string {
   return nombre.replace(/^\s*R\d[\w-]*\s*[·:.-]\s*/i, '').trim() || nombre;
 }
 
-/** "hace 3 días" / "en 5 días", igual que en la lista. */
+/**
+ * Cuándo vence, dicho igual que en la lista — ahora de verdad.
+ *
+ * Antes esta función tenía su propia copia de la cuenta y el comentario decía
+ * «igual que en la lista» sin serlo: le faltaban los casos de ±1, así que para
+ * mañana mostraba «en 1 días», con el plural roto, mientras la lista de al
+ * lado decía «mañana». La cuenta y las palabras viven en `core/fecha.ts`.
+ *
+ * Lo único de esta pantalla es el verbo: acá cada fila es un vencimiento, y
+ * «vence hoy» dice lo que «hoy» solo no dice.
+ */
 function cuanto(fecha: string): string {
-  const dias = Math.round((Date.parse(fecha.slice(0, 10)) - Date.parse(HOY)) / 86_400_000);
-  if (dias === 0) return 'vence hoy';
-  if (dias < 0) return `hace ${-dias} días`;
-  return `en ${dias} días`;
+  const dicho = cuandoEs(fecha, HOY);
+  return dicho === 'hoy' ? 'vence hoy' : dicho;
 }
 
 /**
@@ -305,14 +314,16 @@ export function Vencimientos({ leads, plantillas, onCerrar, onCambio, comoPanel 
               <div className="venc-tarjeta venc-tarjeta-acento">
                 <span className="campo-label">Próximo contacto</span>
                 {/* Editable: la cadencia propone, la persona decide (§5.10).
-                    El input nativo abre el calendario del sistema, que es el
-                    mismo que se usa en la ficha y en la agenda. */}
-                <input
-                  type="date"
-                  className="venc-fecha-input"
-                  value={fecha ?? ''}
-                  onChange={(e) => setFechaAMano(e.target.value || null)}
-                  title="Cambiar la fecha del próximo contacto"
+                    El mismo campo que la agenda y el alta: día y mes, sin año.
+                    Acá había un `<input type="date">` defendido por un
+                    comentario que decía que era «el mismo calendario que la
+                    ficha y la agenda» — y no lo era: la ficha usa
+                    `FechaReunion` y la agenda `CampoDia`, las dos propias. */}
+                <CampoDia
+                  valor={fecha ?? ''}
+                  titulo="Cambiar la fecha del próximo contacto"
+                  preferir="futuro"
+                  onCambiar={(iso) => setFechaAMano(iso || null)}
                 />
                 <span className="campo-ayuda">
                   {paso} · {fecha ? cuanto(fecha) : 'sin próximo paso'}

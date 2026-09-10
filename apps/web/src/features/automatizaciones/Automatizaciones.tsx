@@ -26,6 +26,8 @@ import {
   type LeadMedido,
 } from '@crm/core/rendimiento';
 import type { ConfigCadencia } from '@crm/core/tipos';
+import { diaLocal } from '@crm/core/fecha';
+import { estadoDeSesion, NOMBRE_ESTADO_SESION } from '@crm/core/sesion';
 import { pb } from '../../lib/pocketbase';
 
 type Grupo = 'Invitaciones' | 'Cancelación' | 'Seguimiento';
@@ -43,11 +45,6 @@ const CANAL_LEGIBLE: Record<string, string> = {
   whatsapp: 'WhatsApp',
   whatsapp_si_hay_telefono: 'WhatsApp si hay teléfono',
 };
-
-function hoyIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 interface CuentaRecord extends CuentaInvitacion {
   linea_negocio?: string;
@@ -99,7 +96,7 @@ export function Automatizaciones() {
   const [abierta, setAbierta] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const hoy = hoyIso();
+  const hoy = diaLocal();
 
   const recargar = useCallback(async () => {
     try {
@@ -255,7 +252,13 @@ export function Automatizaciones() {
               </div>
               {cuentas.map((c) => {
                 const mias = enPrioridad(listasPorCuenta.get(c.id) ?? []);
-                const libre = c.estado_sesion === 'sin_vincular';
+                // El estado se DEDUCE de la última señal, igual que en Cuentas
+                // conectadas. Acá se leía `c.estado_sesion`, que es un campo del
+                // seed de demo: la pantalla decía «activa» en cinco cuentas que
+                // nunca dieron una señal. Familia 7 — se había arreglado en la
+                // otra pantalla y esta quedó con la versión vieja.
+                const sesion = estadoDeSesion(c.ultima_senal_li);
+                const libre = sesion === 'sin_vincular';
                 const esta = abierta === c.id;
                 const m = metricas.find((x) => x.cuenta === c.abrev);
                 return (
@@ -263,12 +266,8 @@ export function Automatizaciones() {
                     <div className="auto-cuenta-fila">
                       <span className={`auto-cuenta-abrev ${libre ? 'auto-apagado' : ''}`}>{c.abrev}</span>
                       <span className="auto-cuenta-medio">
-                        <span className={`auto-cuenta-estado auto-sesion-${c.estado_sesion}`}>
-                          {c.estado_sesion === 'activa'
-                            ? 'activa'
-                            : c.estado_sesion === 'caida'
-                              ? 'sesión caída'
-                              : 'sin vincular'}
+                        <span className={`auto-cuenta-estado auto-sesion-${sesion}`}>
+                          {sesion === 'caida' ? 'sesión caída' : NOMBRE_ESTADO_SESION[sesion]}
                         </span>
                         <span className="campo-ayuda">{resumenDeListas(mias)}</span>
                       </span>

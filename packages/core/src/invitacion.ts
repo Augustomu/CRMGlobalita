@@ -8,6 +8,8 @@
 // existe para no gatillar los límites de la plataforma (§8.1). Es configurable
 // porque el límite real cambia sin aviso.
 
+import { estadoDeSesion } from './sesion.ts';
+
 export type FuenteLista = 'sales_navigator' | 'csv' | 'manual';
 
 export interface ListaInvitacion {
@@ -99,20 +101,36 @@ export function resumenDeListas(listas: ListaInvitacion[]): string {
   return `${listas.length} ${listas.length === 1 ? 'lista' : 'listas'} · ${vivas} con páginas`;
 }
 
-export type EstadoSesion = 'activa' | 'caida' | 'sin_vincular';
-
 export interface CuentaInvitacion {
   id: string;
   abrev: string;
-  estado_sesion: EstadoSesion;
+  /**
+   * Cuándo respondió por última vez la sesión de LinkedIn. **La señal, no el
+   * estado.**
+   *
+   * Acá había un `estado_sesion` que se leía tal cual del registro, y ese campo
+   * viene del seed de demo: dice «activa» en cinco cuentas que no tienen ni una
+   * sesión detrás. `core/sesion.ts` se escribió el 09/09 justamente por eso y
+   * la pantalla de Cuentas conectadas se pasó a la señal — pero este módulo no,
+   * así que la cola de envíos y el panel de Automatizaciones siguieron creyendo
+   * el campo viejo. Familia 7: se arregló en un lugar y no en el otro.
+   *
+   * El tipo `EstadoSesion` también estaba declarado acá, igual que en
+   * `sesion.ts`. Queda uno solo, el de `sesion.ts`.
+   */
+  ultima_senal_li: string | null;
   cupo_diario: number;
   objetivo_semanal: number;
 }
 
 /** «6 vinculadas de 10 · 5 activas» */
-export function resumenDeCuentas(cuentas: CuentaInvitacion[]): string {
-  const vinculadas = cuentas.filter((c) => c.estado_sesion !== 'sin_vincular').length;
-  const activas = cuentas.filter((c) => c.estado_sesion === 'activa').length;
+export function resumenDeCuentas(
+  cuentas: CuentaInvitacion[],
+  ahora: Date = new Date(),
+): string {
+  const estados = cuentas.map((c) => estadoDeSesion(c.ultima_senal_li, ahora));
+  const vinculadas = estados.filter((e) => e !== 'sin_vincular').length;
+  const activas = estados.filter((e) => e === 'activa').length;
   return `${vinculadas} vinculadas de ${SLOTS_DE_CUENTA} · ${activas} activas`;
 }
 
@@ -166,11 +184,16 @@ export function salidasDeHoy(
   cancelacion: ConfigCancelacion,
   hoy: string,
   pausado: boolean,
+  ahora: Date = new Date(),
 ): SalidasDelDia[] {
   const corte = menosDias(hoy, cancelacion.dias_sin_aceptar);
 
   return cuentas.map((c) => {
-    const frenada = c.estado_sesion !== 'activa';
+    // Frenada se DEDUCE de la última señal. Antes se leía de un campo, y ese
+    // campo venía del seed: la cola daba por listas para enviar a cinco cuentas
+    // sin ninguna sesión detrás, que es exactamente lo que el punto 2 de arriba
+    // dice que no puede pasar.
+    const frenada = estadoDeSesion(c.ultima_senal_li, ahora) !== 'activa';
     if (pausado || frenada) {
       return { cuenta: c.abrev, invitaciones: 0, seguimiento: 0, cancelaciones: 0, frenada };
     }

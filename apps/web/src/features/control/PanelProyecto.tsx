@@ -9,17 +9,10 @@ import {
   type Registro,
   type TipoProyecto,
 } from '@crm/core/proyecto';
-import { diaLocal } from '@crm/core/fecha';
+import { ddmmaa, diaLocal } from '@crm/core/fecha';
 import type { ProyectoConDatos } from './useControl';
 
 const HOY = diaLocal();
-
-function fechaCorta(iso: string): string {
-  const f = String(iso).slice(0, 10);
-  if (!f) return '';
-  const [a, m, d] = f.split('-');
-  return `${d}/${m}/${a.slice(2)}`;
-}
 
 const nuevoPrimero = (a: Registro, b: Registro) =>
   String(b.fecha).slice(0, 10).localeCompare(String(a.fecha).slice(0, 10));
@@ -58,12 +51,12 @@ export function PanelProyecto({ p, onCerrar }: Props) {
     ['País y ciudad', [proyecto.pais, proyecto.ciudad].filter(Boolean).join(' · ') || '—'],
     ['Cuenta', cuenta_abrev || '—'],
     ['Responsable', responsable || 'sin asignar'],
-    ['Abierto', fechaCorta(proyecto.abierto) || '—'],
+    ['Abierto', ddmmaa(proyecto.abierto) || '—'],
     [
       'Reuniones',
       ult.total === 0
         ? 'sin reuniones'
-        : `${ult.total} · última ${ult.fecha === '—' ? ult.detalle : fechaCorta(ult.fecha)}`,
+        : `${ult.total} · última ${ult.fecha === '—' ? ult.detalle : ddmmaa(ult.fecha)}`,
     ],
     ['Ficha del lead', proyecto.lead ? 'sí, en el CRM' : 'no vino de la prospección'],
   ];
@@ -130,7 +123,7 @@ export function PanelProyecto({ p, onCerrar }: Props) {
                 {c.items.length === 0 && <span className="campo-ayuda">Sin registros.</span>}
                 {c.items.map((i, n) => (
                   <div key={n} className="panel-item">
-                    <span className="panel-item-fecha tabular">{fechaCorta(i.fecha)}</span>
+                    <span className="panel-item-fecha tabular">{ddmmaa(i.fecha)}</span>
                     <span className="panel-item-texto">{i.texto}</span>
                   </div>
                 ))}
@@ -148,7 +141,7 @@ export function PanelProyecto({ p, onCerrar }: Props) {
                 <span className="panel-reunion-i tabular">{i + 1}</span>
                 <span className="panel-reunion-fecha tabular">
                   {/* D23: la hora que vale es la de la zona, no la UTC de la base. */}
-                  {fechaCorta(enSuZona(r.inicio, r.zona))} {enSuZona(r.inicio, r.zona).slice(11, 16)}
+                  {ddmmaa(enSuZona(r.inicio, r.zona))} {enSuZona(r.inicio, r.zona).slice(11, 16)}
                 </span>
                 <span className={`ctrl-pastilla ctrl-reunion-${r.estado}`}>{r.estado}</span>
               </div>

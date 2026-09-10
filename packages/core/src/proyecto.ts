@@ -8,6 +8,7 @@
 import type { EstadoReunion } from './reunion.ts';
 
 import { enSuZona } from './reunion.ts';
+import { diasEntre } from './fecha.ts';
 
 export type TipoProyecto = 'fabript_piv' | 'parceria' | 'prototipo' | 'inversion';
 
@@ -140,8 +141,6 @@ export interface Proyecto {
   acciones: Registro[];
 }
 
-const DIA = 86_400_000;
-
 function soloFecha(iso: string): string {
   return String(iso ?? '').slice(0, 10);
 }
@@ -155,13 +154,6 @@ function soloFecha(iso: string): string {
  */
 function fechaDe(r: ReunionDelProyecto): string {
   return enSuZona(r.inicio, r.zona).slice(0, 10);
-}
-
-function diasEntre(desde: string, hasta: string): number {
-  const a = Date.parse(soloFecha(desde));
-  const b = Date.parse(soloFecha(hasta));
-  if (Number.isNaN(a) || Number.isNaN(b)) return 0;
-  return Math.round((b - a) / DIA);
 }
 
 /**

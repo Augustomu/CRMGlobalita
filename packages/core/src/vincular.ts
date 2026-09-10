@@ -137,22 +137,38 @@ export function personasSinLead(eventos: EventoParaVincular[]): PersonaDelCalend
  * lead que no comparte ninguna palabra queda igual en la lista, más abajo: el
  * nombre del calendario suele ser apenas un pedazo del nombre real.
  */
+export function palabrasDelNombre(nombre: string): Set<string> {
+  return new Set(
+    // Se parte por CUALQUIER cosa que no sea letra o número, no sólo por el
+    // espacio: «Marcelo-Carneiro» y «Marcelo Carneiro» son la misma persona
+    // escrita por dos sistemas distintos, y partiendo sólo por espacio la
+    // primera queda como una palabra sola que no coincide con nada.
+    comoSeCompara(nombre)
+      .split(/[^a-z0-9]+/)
+      // Las de dos letras no cuentan: «de», «da», «el» aparecen en media base
+      // y empujarían a cualquiera.
+      .filter((x) => x.length > 2),
+  );
+}
+
+/** Cuántas palabras enteras comparten dos nombres. */
+export function palabrasEnComun(a: string, b: string): number {
+  const palabras = palabrasDelNombre(a);
+  if (!palabras.size) return 0;
+  let n = 0;
+  for (const x of palabrasDelNombre(b)) if (palabras.has(x)) n += 1;
+  return n;
+}
+
 export function leadsParecidos<T>(
   nombreDelCalendario: string,
   leads: T[],
   nombreDe: (l: T) => string,
 ): T[] {
-  const palabras = new Set(
-    comoSeCompara(nombreDelCalendario)
-      .split(' ')
-      .filter((x) => x.length > 2),
-  );
+  const palabras = palabrasDelNombre(nombreDelCalendario);
   if (!palabras.size) return [...leads];
 
-  const puntos = (l: T) =>
-    comoSeCompara(nombreDe(l))
-      .split(' ')
-      .filter((x) => palabras.has(x)).length;
+  const puntos = (l: T) => palabrasEnComun(nombreDelCalendario, nombreDe(l));
 
   // Estable: entre dos que empatan queda el orden con el que vinieron.
   return [...leads]

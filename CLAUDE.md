@@ -63,18 +63,21 @@ manual dice cómo tiene que ser; PENDIENTES dice qué falta.
 ```
 apps/
   web/        React + Vite. Carpetas por feature (followup/, agenda/, usuarios/).
-              CERO reglas de negocio adentro.
-  api/        Backend. Rutas finas: validar -> llamar a core -> responder.
-  worker/     Cola de envíos, Playwright (LinkedIn), sesión de WhatsApp.
-              Aislado detrás de una interfaz: el resto del sistema no sabe cómo se envía.
+              CERO reglas de negocio adentro. HOY ES LA ÚNICA APP QUE EXISTE.
 packages/
   core/       TODAS las reglas de negocio, como funciones puras, sin I/O.
-              cadencia.ts  cancelacion.ts  cupos.ts  telefono.ts  idioma.ts
-              permisos.ts  ruteo.ts  envio.ts  reglas.ts  reunion.ts  metricas.ts
-  db/         Esquema y migraciones de PocketBase.
-  shared/     Tipos y esquemas de validación compartidos.
+              40 módulos: cadencia.ts  telefono.ts  idioma.ts  permisos.ts
+              ruteo.ts  envio.ts  regla.ts  reunion.ts  metricas.ts  fecha.ts …
+  db/         Esquema, migraciones y hooks de PocketBase. El backend de hoy son
+              7 hooks en pb_hooks/, no un servicio aparte.
 docs/         MANUAL.md (la especificación entera), PENDIENTES.md (lo que falta)
               y el prototipo. La documentación viaja con el código.
+
+TODAVÍA NO EXISTEN, y este archivo los daba por hechos:
+  apps/api/       Iba a ser el backend. Su trabajo lo hacen los hooks de pb_hooks/.
+  apps/worker/    Cola de envíos, Playwright (LinkedIn), sesión de WhatsApp.
+                  Es el bloqueante de §8.2 y de Baileys: sin esto no se envía nada solo.
+  packages/shared/ Los tipos compartidos viven en core/tipos.ts y apps/web/src/lib/types.ts.
 ```
 
 ## Las reglas que evitan el código de más
@@ -88,8 +91,17 @@ docs/         MANUAL.md (la especificación entera), PENDIENTES.md (lo que falta
    todo es configurable por el usuario. Las funciones de `core/` reciben la config como
    argumento; no la leen de ningún lado.
 
-3. **Dependencias en una sola dirección:** `web -> shared -> core` y `api/worker -> db -> core`.
-   Jamás al revés. Se verifica en CI con dependency-cruiser.
+3. **Dependencias en una sola dirección:** `web -> core` y `db -> core`. Jamás al revés,
+   y `core` no importa nada de afuera de sí mismo —ni npm— salvo `node:`.
+
+   ```
+   node docs/revisar-dependencias.mjs    # sale 1 si algo apunta al revés
+   ```
+
+   Hasta el 10/09 esta línea decía «se verifica en CI con dependency-cruiser». No había
+   dependency-cruiser, no había CI y no había `.github/`. Era la única regla que se
+   declaraba automatizada y la única sin nada detrás, que es lo peor de los dos mundos:
+   una regla que se cree verificada se deja de mirar a mano.
 
 4. **Prohibido el cajón de sastre.** Nada de `utils.ts`, `helpers.ts` ni `common/`.
    Si algo no encaja en ningún módulo, falta nombrar el módulo.
@@ -126,9 +138,10 @@ docs/         MANUAL.md (la especificación entera), PENDIENTES.md (lo que falta
 
 ## Los errores que ya cometimos
 
-`docs/APRENDIZAJES.md` tiene los 35 que salieron mal, con de dónde vinieron y
-**cuántas veces volvieron**. No es historia: cuatro de esas familias se
-repitieron entre 2 y 6 veces cada una, y por eso existen los chequeos.
+`docs/APRENDIZAJES.md` tiene los **41** que salieron mal, en 12 familias, con de
+dónde vinieron y **cuántas veces volvieron**. No es historia: ocho de las doce
+familias se repitieron —la del color de la agenda va por **8** y la de programar
+contra el modelo imaginado por 7— y por eso existen los chequeos.
 
 ```
 node docs/revisar-aprendizajes.mjs     # sale 1 si alguno volvió
@@ -141,8 +154,12 @@ archivo. Los cuatro son errores que ya se cometieron acá.
 
 Lo que el script NO puede ver son los tres más repetidos: programar contra el
 modelo imaginado en vez de contra los datos, pedir la misma cosa en dos
-lugares, y contestar una pregunta que le toca al usuario. Ésos son 14 de los
-35 y sólo los evita leer el registro.
+lugares, y contestar una pregunta que le toca al usuario. Ésos son **17 de los
+41** y sólo los evita leer el registro.
+
+Y este archivo mismo fue un caso de la familia 7: daba por existentes `apps/api/`,
+`apps/worker/`, `packages/shared/` y tres módulos de core que nunca se escribieron.
+Cuando cambie la estructura, se cambia acá en la misma tanda.
 
 ---
 

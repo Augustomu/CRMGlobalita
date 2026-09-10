@@ -9,7 +9,8 @@ import {
   type Registro,
   type TipoProyecto,
 } from '@crm/core/proyecto';
-import { diaLocal } from '@crm/core/fecha';
+import { ddmm, diaLocal } from '@crm/core/fecha';
+import { CampoDia } from '../../ui/CampoDia';
 import { pb } from '../../lib/pocketbase';
 import type { LeadRecord } from '../../lib/types';
 
@@ -44,13 +45,6 @@ const CARRIL: Record<Carril, { label: string; placeholder: string; boton: string
     boton: 'Agregar',
   },
 };
-
-function fechaCorta(iso: string): string {
-  const f = String(iso).slice(0, 10);
-  if (!f) return '';
-  const [, m, d] = f.split('-');
-  return `${d}/${m}`;
-}
 
 interface Props {
   lead: LeadRecord;
@@ -213,12 +207,11 @@ export function ProyectosDelLead({ lead, editable, onCambio }: Props) {
                   {cual === 'acciones' && (
                     <label className="campo campo-chico">
                       <span className="campo-label">Para cuándo</span>
-                      <input
-                        type="date"
-                        value={fechaAccion[p.id] ?? HOY}
-                        onChange={(e) =>
-                          setFechaAccion((f) => ({ ...f, [p.id]: e.target.value }))
-                        }
+                      <CampoDia
+                        valor={fechaAccion[p.id] ?? HOY}
+                        titulo="Para cuándo hay que hacerla"
+                        preferir="futuro"
+                        onCambiar={(iso) => setFechaAccion((f) => ({ ...f, [p.id]: iso }))}
                       />
                     </label>
                   )}
@@ -247,7 +240,7 @@ export function ProyectosDelLead({ lead, editable, onCambio }: Props) {
                 )
                 .map(({ r, i }) => (
                   <div key={i} className="proyecto-item">
-                    <span className="panel-item-fecha tabular">{fechaCorta(r.fecha)}</span>
+                    <span className="panel-item-fecha tabular">{ddmm(r.fecha)}</span>
                     <span
                       className={`panel-item-texto ${r.hecha ? 'proyecto-item-hecha' : ''}`}
                     >

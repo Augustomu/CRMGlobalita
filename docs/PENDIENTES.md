@@ -569,10 +569,30 @@ tanto — 2.382 eventos, cero ids rotos, cero duplicados, cero sin fecha,
       más grande que el pedido. Va un campo propio de día y mes —dos listas—
       con la regla del año en `core/fecha.ts`. Se documenta el desvío porque
       la nota anterior decía otra cosa.**
-      Hoy son cuatro `<input type="date">` del navegador, que obligan a poner el
-      año para agendar mañana. `FechaReunion` **ya tiene un calendario propio**,
-      y su comentario dice textual *«el día se elige en un CALENDARIO, no en un
-      `input type=date`»*. Se reusa ése. (Familia 4 del registro, 6ª vez.)
+      Decía «hoy son cuatro `<input type="date">`». **Eran ocho**, y el 09/09 se
+      cambiaron sólo los dos de la agenda: el ítem quedó marcado hecho con la
+      mitad del trabajo afuera, incluida la pantalla de alta —que es literalmente
+      «nueva»— y el «Próximo contacto» de Vencimientos.
+      **Cerrado de verdad el 10/09.** Pasaron a `CampoDia`: `NuevoLead`,
+      `Vencimientos`, `Tareas` (los dos «Vence») y `ProyectosDelLead`
+      («Para cuándo»). Y el comentario de `Vencimientos` que defendía el input
+      nativo diciendo que era «el mismo calendario que la ficha y la agenda» se
+      fue: no lo era —la ficha usa `FechaReunion` y la agenda `CampoDia`, las
+      dos propias—. (Familia 4 del registro, 6ª vez; familia 8 el comentario.)
+
+      **Quedan dos a propósito, los dos en `Agenda.tsx`:**
+      `:777` corrige la fecha de una reunión pasada con `autoFocus` y cierre
+      al perder el foco, semántica que `CampoDia` no tiene; `:1414` va pegado
+      a un `<input type="time">` dentro de la tarjeta de hover, y meterle dos
+      listas al lado del campo de hora en ese ancho empeora la tarjeta. No hay
+      equivalente propio para la hora.
+
+      **Bug encontrado al hacerlo, y arreglado.** `CampoDia` le devolvía al
+      llamador un ISO a medias —«2026-09-00» al elegir sólo el mes— confiando en
+      que el guard `if (iso)` lo filtrara. No lo filtra: esa cadena es
+      verdadera, y los llamadores que guardan al vuelo la escribían en la base.
+      Ahora la mitad elegida vive adentro del componente y afuera sólo sale una
+      fecha completa o vacío.
 - [x] ✅ **Cargar un teléfono a mano.** Hoy el chip vacío ofrece un solo camino,
       «Conectar un teléfono que ya está en la base». Si el número **no está en la
       base** no hay salida. Va el segundo camino **adentro del mismo modal**, no
@@ -703,6 +723,32 @@ página de revisión.
       escribió una vez; tiene que salir de la sesión de verdad (el worker) y
       llevar fecha de última señal. Mientras el worker no exista, lo honesto es
       que **todas digan «sin vincular»** y que la pantalla diga por qué.
+      **Hecho el 09/09 en `core/sesion.ts`, pero SÓLO en esa pantalla.**
+
+- [x] **Automatizaciones seguía creyendo el campo del seed.** Hecho el 10/09.
+      El arreglo del 09/09 tocó «Cuentas conectadas» y ahí quedó: `Automatizaciones.tsx`
+      pintaba la pastilla con `c.estado_sesion` y mostraba «activa» en cinco
+      cuentas cuyas `ultima_senal_li` y `ultima_senal_wa` están las nueve
+      vacías. Familia 7 en su forma exacta: se arregló en un lugar y no en el otro.
+
+      **Y había algo peor que la pastilla.** `salidasDeHoy()` en
+      `core/invitacion.ts` decidía `frenada` con el mismo campo, así que la
+      **cola de envíos** daba por listas para enviar a esas cinco cuentas y les
+      mostraba el cupo lleno. Su propio comentario dice que eso es «prometer
+      envíos que no van a ocurrir — que es exactamente cómo alguien se entera
+      tarde de que la sesión se cayó»: lo decía mientras lo hacía.
+
+      Se sacó `estado_sesion` de `CuentaInvitacion` y en su lugar va
+      `ultima_senal_li`; `resumenDeCuentas` y `salidasDeHoy` deducen con
+      `estadoDeSesion()`. Cuatro tests nuevos, incluido el corte de 15 minutos
+      por los dos lados. El tipo `EstadoSesion`, que estaba declarado en
+      `invitacion.ts` **y** en `sesion.ts`, queda sólo en `sesion.ts`.
+
+- [ ] 🔴 **DECISIÓN DE AUGUSTO: las dos columnas muertas.** `cuenta.estado_sesion`
+      y `cuenta.sesion_wa` siguen en la base con los valores del seed. Ya no las
+      lee nadie —quedan marcadas `@deprecated` en `lib/types.ts`— pero mientras
+      existan, alguien las va a volver a leer. Sacarlas es una migración que
+      borra columnas: **no la hago sin que lo pidas**.
 - [x] **El switch de canal manda.** Hoy el canal lo
       calcula `canalDe()` desde la cadencia y la pastilla sólo lo informa.
       Se arregla junto con 1.2.

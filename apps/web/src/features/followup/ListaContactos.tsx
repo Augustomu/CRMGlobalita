@@ -8,7 +8,7 @@ import { COLUMNA_LISTA } from '@crm/core/anchos';
 import { LOTE, hayQueCrecer, scrollHasta, ventanaPara } from '@crm/core/ventana';
 import { useAncho } from '../../lib/useAncho';
 import { tocaHoy } from '@crm/core/cadencia';
-import { diaLocal } from '@crm/core/fecha';
+import { cuandoEs, diaLocal } from '@crm/core/fecha';
 import type { LeadRecord, UsuarioRecord } from '../../lib/types';
 import { BurbujaWhatsApp } from './IconosCanal';
 import { tonoDeUltimaReunion } from '@crm/core/reunion';
@@ -52,15 +52,7 @@ export function iniciales(nombre: string): string {
  * que el ojo encuentre las filas que SÍ tienen fecha.
  */
 function etiquetaContacto(fecha: string | null): string {
-  if (!fecha) return '';
-  const dias = Math.round(
-    (Date.parse(fecha.slice(0, 10)) - Date.parse(HOY)) / 86_400_000,
-  );
-  if (dias === 0) return 'hoy';
-  if (dias === 1) return 'mañana';
-  if (dias === -1) return 'ayer';
-  if (dias < 0) return `hace ${-dias} días`;
-  return `en ${dias} días`;
+  return fecha ? cuandoEs(fecha, HOY) : '';
 }
 
 interface Props {

@@ -11,7 +11,8 @@ import {
   type FiltroTarea,
   type Tarea,
 } from '@crm/core/tarea';
-import { ddmm } from '@crm/core/fecha';
+import { ddmm, diaLocal } from '@crm/core/fecha';
+import { CampoDia } from '../../ui/CampoDia';
 import { nombreDePersona } from '@crm/core/linkedin';
 import { linkWhatsApp } from '@crm/core/telefono';
 import { pb } from '../../lib/pocketbase';
@@ -42,11 +43,6 @@ const ORDENES: { clave: ClaveOrden; titulo: string }[] = [
   { clave: 'prioridad', titulo: 'Ordenar por estrellas' },
   { clave: 'inicio', titulo: 'Ordenar por fecha de inicio' },
 ];
-
-function hoyIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 
 /** Las cinco estrellas de prioridad. */
@@ -188,7 +184,7 @@ export function Tareas({ usuario, onCerrar, onIrAlLead, leads, plantillas, onCam
   /** Abierto por defecto cuando hay algo que hacer: si no, no se entera. */
   const [panelVenc, setPanelVenc] = useState(true);
 
-  const hoy = hoyIso();
+  const hoy = diaLocal();
   const vencidos = useMemo(() => (leads ? leadsVencidos(leads) : []), [leads]);
   const hayVenc = Boolean(leads && plantillas);
 
@@ -357,7 +353,15 @@ export function Tareas({ usuario, onCerrar, onIrAlLead, leads, plantillas, onCam
                 <span className="campo-label">Prioridad</span>
                 <Estrellas valor={prioridad} onElegir={setPrioridad} />
                 <span className="campo-label">Vence</span>
-                <input type="date" value={fin} onChange={(e) => setFin(e.target.value)} />
+                {/* Día y mes, como en el alta y en la agenda: el año de un
+                    vencimiento se deduce hacia adelante y el icono del
+                    navegador era lo único de la pantalla fuera de los tokens. */}
+                <CampoDia
+                  valor={fin}
+                  titulo="Cuándo vence la tarea"
+                  preferir="futuro"
+                  onCambiar={setFin}
+                />
                 <button
                   type="button"
                   className={`reunion-check ${notifica ? 'reunion-check-on' : ''}`}
@@ -441,10 +445,11 @@ export function Tareas({ usuario, onCerrar, onIrAlLead, leads, plantillas, onCam
                       <span className="campo-label">Prioridad</span>
                       <Estrellas valor={t.prioridad} onElegir={(v) => void guardar(t.id, { prioridad: v })} />
                       <span className="campo-label">Vence</span>
-                      <input
-                        type="date"
-                        value={String(t.fin ?? '').slice(0, 10)}
-                        onChange={(e) => void guardar(t.id, { fin: e.target.value || null })}
+                      <CampoDia
+                        valor={String(t.fin ?? '').slice(0, 10)}
+                        titulo="Cuándo vence la tarea"
+                        preferir="futuro"
+                        onCambiar={(iso) => void guardar(t.id, { fin: iso || null })}
                       />
                       <button
                         type="button"

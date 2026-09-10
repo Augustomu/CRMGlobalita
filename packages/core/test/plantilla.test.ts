@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   SIN_ALCANCE,
+  sacarElDestacado,
   conCuenta,
   sinCuenta,
   escribirAlcance,
@@ -249,4 +250,46 @@ test('§7.9 · el chip aparece cuando el nombre no nombra el paso', () => {
   assert.equal(nombraElPaso('R0 · Reinvitación', 'R0-recontacto'), false);
   assert.equal(nombraElPaso('', 'R2'), false);
   assert.equal(nombraElPaso('R2 · algo', ''), false);
+});
+
+// --------------------------------------- la × del chip destacado (familia 6 #5)
+//
+// El incidente: la × llamaba a `sinCuenta()`, que con un alcance por casa
+// devuelve el alcance INTACTO a propósito. La × no hacía nada y Augusto no
+// pudo sacar dos mensajes destacados «en todo Globalita».
+//
+// Esto lo fija por los dos lados. El de abajo importa tanto como el de arriba:
+// `sinCuenta` TIENE que seguir devolviendo el alcance por casa sin tocar —hay
+// un assert que lo exige— así que sin este test nada impide que alguien
+// «arregle» `sinCuenta` y la × vuelva a no hacer nada.
+test('§8.4 · la × saca el destacado entero cuando el alcance es por casa', () => {
+  assert.deepEqual(sacarElDestacado({ tipo: 'casa', casa: 'globalita' }, 'AL'), SIN_ALCANCE);
+  assert.deepEqual(sacarElDestacado({ tipo: 'casa', casa: 'seng' }, 'ED'), SIN_ALCANCE);
+  // Y da igual qué cuenta se apriete: no hay término medio en un alcance de casa.
+  assert.deepEqual(sacarElDestacado({ tipo: 'casa', casa: 'globalita' }, 'ZZZ'), SIN_ALCANCE);
+});
+
+test('§8.4 · con alcance por cuentas saca sólo la suya', () => {
+  assert.deepEqual(sacarElDestacado({ tipo: 'cuentas', cuentas: ['AL', 'ED'] }, 'AL'), {
+    tipo: 'cuentas',
+    cuentas: ['ED'],
+  });
+  // La última que queda deja el destacado sin alcance, que es no estar destacado.
+  assert.deepEqual(sacarElDestacado({ tipo: 'cuentas', cuentas: ['AL'] }, 'AL'), SIN_ALCANCE);
+});
+
+test('§8.4 · con alcance «todas» quedan las demás, no se pierde todo', () => {
+  assert.deepEqual(sacarElDestacado({ tipo: 'todas' }, 'AL', ['AL', 'ED', 'DL']), {
+    tipo: 'cuentas',
+    cuentas: ['ED', 'DL'],
+  });
+});
+
+test('§8.4 · sacar de lo que no está destacado no rompe nada', () => {
+  assert.deepEqual(sacarElDestacado(SIN_ALCANCE, 'AL'), SIN_ALCANCE);
+  // Una cuenta que no está en la lista deja la lista igual.
+  assert.deepEqual(sacarElDestacado({ tipo: 'cuentas', cuentas: ['ED'] }, 'AL'), {
+    tipo: 'cuentas',
+    cuentas: ['ED'],
+  });
 });

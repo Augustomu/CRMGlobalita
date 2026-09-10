@@ -3,6 +3,7 @@ import { COLUMNA_WA } from '@crm/core/anchos';
 import { useAncho } from '../../lib/useAncho';
 import { conDias, ultimoTexto, type MensajeChat } from '@crm/core/chat';
 import { paraWhatsApp } from '@crm/core/telefono';
+import { diaLocal } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
 
 interface ChatRecord {
@@ -47,11 +48,6 @@ function porUltimoMensaje<T extends { mensajes: MensajeChat[] | null; updated?: 
     return String(ultimo?.en ?? c.updated ?? '');
   };
   return [...chats].sort((a, b) => (cuando(a) < cuando(b) ? 1 : cuando(a) > cuando(b) ? -1 : 0));
-}
-
-function hoyIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function hora(iso: string): string {
@@ -117,7 +113,7 @@ export function WaPersonal({ onIrAlLead }: Props) {
   const [borrador, setBorrador] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const hoy = hoyIso();
+  const hoy = diaLocal();
 
   const recargar = useCallback(async () => {
     try {

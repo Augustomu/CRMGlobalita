@@ -1,6 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { anioDe, ddmm, ddmmaaaa, diaLocal, diasDelMes, fechaDeDiaMes } from '../src/fecha.ts';
+import {
+  anioDe,
+  cuandoEs,
+  ddmm,
+  ddmmaa,
+  ddmmaaaa,
+  diaLocal,
+  diasDelMes,
+  diasEntre,
+  fechaDeDiaMes,
+} from '../src/fecha.ts';
 
 // §7.2 (vencidos de la columna 1), §7.6 (la columna de hoy en la agenda) y
 // §5.4 (la espera de recontacto): las tres cuentan días, y las tres los contaban
@@ -92,4 +102,65 @@ test('lo que no es una fecha se rechaza', () => {
   assert.equal(anioDe(12, 0, '2026-01-01'), null);
   assert.equal(anioDe(NaN, 5, '2026-01-01'), null);
   assert.equal(anioDe(1.5, 5, '2026-01-01'), null);
+});
+
+// §7.2 · La resta de días y cómo se dice.
+//
+// El bug que cierra este bloque: la misma cuenta estaba escrita cuatro veces y
+// dos de las copias ya no coincidían. Para el día de mañana la lista decía
+// «mañana» y Vencimientos decía «en 1 días» — sin el caso de ±1 y con el
+// plural roto. Las dos pantallas están una al lado de la otra.
+test('los días se restan por el día, no por la hora', () => {
+  assert.equal(diasEntre('2026-09-10', '2026-09-15'), 5);
+  assert.equal(diasEntre('2026-09-15', '2026-09-10'), -5);
+  assert.equal(diasEntre('2026-09-10', '2026-09-10'), 0);
+
+  // Con la hora adentro: dos momentos del MISMO día son cero días, no uno.
+  // Sin cortar el ISO, 23:00 menos 01:00 da 0,92 y Math.round lo manda a 1.
+  assert.equal(diasEntre('2026-09-10T01:00:00Z', '2026-09-10T23:00:00Z'), 0);
+
+  // Y el cambio de mes y el año bisiesto se cuentan solos.
+  assert.equal(diasEntre('2026-08-31', '2026-09-01'), 1);
+  assert.equal(diasEntre('2024-02-28', '2024-03-01'), 2);
+  assert.equal(diasEntre('2026-02-28', '2026-03-01'), 1);
+});
+
+test('lo que no es una fecha da cero y no NaN', () => {
+  // NaN se propaga callado: `en NaN días` es lo que vería el usuario.
+  assert.equal(diasEntre('', '2026-09-10'), 0);
+  assert.equal(diasEntre('2026-09-10', ''), 0);
+  assert.equal(diasEntre('cualquier cosa', '2026-09-10'), 0);
+});
+
+test('un día de diferencia se dice «mañana», nunca «en 1 días»', () => {
+  const hoy = '2026-09-10';
+  assert.equal(cuandoEs('2026-09-10', hoy), 'hoy');
+  assert.equal(cuandoEs('2026-09-11', hoy), 'mañana');
+  assert.equal(cuandoEs('2026-09-09', hoy), 'ayer');
+  assert.equal(cuandoEs('2026-09-15', hoy), 'en 5 días');
+  assert.equal(cuandoEs('2026-09-05', hoy), 'hace 5 días');
+});
+
+test('el plural no se rompe en ningún caso', () => {
+  // Los ±1 los toman «mañana» y «ayer», pero la regla del plural tiene que
+  // valer igual: si alguien saca esos dos casos, esto lo agarra.
+  const hoy = '2026-09-10';
+  for (const s of [cuandoEs('2026-09-12', hoy), cuandoEs('2026-09-08', hoy)]) {
+    assert.ok(s.endsWith(' días'), s);
+  }
+  // Y la hora no cambia lo que se dice: la fecha viene con hora en varias
+  // pantallas y «hoy» tiene que seguir siendo «hoy».
+  assert.equal(cuandoEs('2026-09-10T22:00:00Z', hoy), 'hoy');
+});
+
+// El año de dos cifras existía dos veces fuera de core, y las dos copias se
+// habían saltado el guard de largo que ddmm sí tiene.
+test('«dd/mm/aa» no inventa nada con un ISO incompleto', () => {
+  assert.equal(ddmmaa('2026-09-08'), '08/09/26');
+  assert.equal(ddmmaa('2026-09-08T14:30:00Z'), '08/09/26');
+  // Esto es lo que devolvía «undefined/09» en la copia de ProyectosDelLead.
+  assert.equal(ddmmaa('2026-09'), '');
+  assert.equal(ddmmaa(''), '');
+  assert.equal(ddmmaa(null), '');
+  assert.equal(ddmmaa(undefined), '');
 });

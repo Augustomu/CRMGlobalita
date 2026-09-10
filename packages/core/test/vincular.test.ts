@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   comoSeCompara,
   leadsParecidos,
+  palabrasDelNombre,
+  palabrasEnComun,
   personasSinLead,
   quienEsDelTitulo,
 } from '../src/vincular.ts';
@@ -170,4 +172,26 @@ test('§7.6 · el original no se toca', () => {
 
 test('§7.6 · comparar ignora tildes, mayúsculas y espacios de más', () => {
   assert.equal(comoSeCompara('  Julio   FERRÁN '), 'julio ferran');
+});
+
+// §7.6 · El apellido compuesto. Los nombres entran por dos puertas —el
+// calendario y la exportación de contactos— y cada una escribe el guión a su
+// manera. Partiendo sólo por el espacio, «Marcelo-Carneiro» quedaba como una
+// palabra sola que no coincidía con nada.
+test('§7.6 · el guión no esconde un apellido', () => {
+  assert.deepEqual([...palabrasDelNombre('Marcelo-Carneiro')], ['marcelo', 'carneiro']);
+  assert.deepEqual([...palabrasDelNombre('Marcelo Carneiro')], ['marcelo', 'carneiro']);
+  assert.equal(palabrasEnComun('Marcelo-Carneiro', 'Marcelo Carneiro'), 2);
+
+  // Y el punto de la abreviatura tampoco.
+  assert.equal(palabrasEnComun('Ana M. Ferreira', 'Ferreira, Ana'), 2);
+});
+
+test('§7.6 · compartir palabras es simétrico salvo por cuál se cuenta', () => {
+  assert.equal(palabrasEnComun('Brenno Silva', 'Silva'), 1);
+  assert.equal(palabrasEnComun('Silva', 'Brenno Silva'), 1);
+  assert.equal(palabrasEnComun('Brenno', 'Marcela'), 0);
+  // Sin nada comparable no hay parecido, y no explota.
+  assert.equal(palabrasEnComun('', 'Brenno'), 0);
+  assert.equal(palabrasEnComun('de', 'de la Cruz'), 0);
 });

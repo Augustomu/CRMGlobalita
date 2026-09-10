@@ -35,6 +35,18 @@ export function ddmm(iso: string | null | undefined): string {
   return s.length >= 10 ? `${s.slice(8, 10)}/${s.slice(5, 7)}` : '';
 }
 
+/**
+ * «dd/mm/aa», para paneles angostos donde el año importa pero no entran cuatro
+ * cifras. Existe porque si no, la pantalla que lo necesita se escribe su propio
+ * formateador —y con él se lleva la trampa de arriba: las dos copias que había
+ * partían el texto sin el guard de largo, así que con un ISO incompleto
+ * («2026-09») devolvían «undefined/09» en vez de nada.
+ */
+export function ddmmaa(iso: string | null | undefined): string {
+  const s = String(iso ?? '');
+  return s.length >= 10 ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(2, 4)}` : '';
+}
+
 /** «dd/mm/aaaa», para cuando el año importa. */
 export function ddmmaaaa(iso: string | null | undefined): string {
   const s = String(iso ?? '');
@@ -114,4 +126,48 @@ export function fechaDeDiaMes(
   const anio = anioDe(dia, mes, hoy, preferir);
   if (anio === null) return '';
   return `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+}
+
+/**
+ * Cuántos días hay de una fecha a la otra. Negativo si `hasta` ya pasó.
+ *
+ * Estaba escrita cuatro veces —`proyecto.ts` en privado, y a mano en
+ * Vencimientos, la lista de contactos y el envío de mensajes— y es la mitad
+ * de la que faltaba: `fecha.ts` sabía decir qué día es hoy y cómo se escribe
+ * un día, pero no sabía restar dos. Sin eso, cada pantalla que necesitaba
+ * «cuántos días faltan» no tenía de dónde tomarlo y lo volvía a escribir.
+ *
+ * Corta el ISO a diez caracteres antes de parsear: con la hora adentro, dos
+ * fechas del mismo día separadas por unas horas dan una diferencia de 0,9 y
+ * `Math.round` la manda a 1.
+ */
+export function diasEntre(desde: string, hasta: string): number {
+  const a = Date.parse(String(desde ?? '').slice(0, 10));
+  const b = Date.parse(String(hasta ?? '').slice(0, 10));
+  if (Number.isNaN(a) || Number.isNaN(b)) return 0;
+  return Math.round((b - a) / 86_400_000);
+}
+
+/**
+ * Cómo se dice una fecha respecto de hoy: «hoy», «mañana», «ayer»,
+ * «hace 3 días», «en 5 días».
+ *
+ * POR QUÉ ESTÁ ACÁ. Vivía en dos pantallas con el mismo propósito y ya habían
+ * divergido: la lista decía «mañana» y Vencimientos, para el mismo día, decía
+ * «en 1 días» —con el plural roto— porque su copia no tenía los casos de ±1.
+ * El comentario de Vencimientos afirmaba «igual que en la lista» y no lo era.
+ * Dos funciones que nadie mira juntas se separan solas; una sola con tests no
+ * puede.
+ *
+ * Devuelve «hoy» pelado. La pantalla que quiera decir «vence hoy» le pone el
+ * verbo adelante: el tiempo verbal es de cada pantalla, la cuenta de días no.
+ */
+export function cuandoEs(fecha: string, hoy: string): string {
+  const dias = diasEntre(hoy, fecha);
+  if (dias === 0) return 'hoy';
+  if (dias === 1) return 'mañana';
+  if (dias === -1) return 'ayer';
+  const n = Math.abs(dias);
+  const plural = n === 1 ? 'día' : 'días';
+  return dias < 0 ? `hace ${n} ${plural}` : `en ${n} ${plural}`;
 }

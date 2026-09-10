@@ -8,6 +8,7 @@ import {
 import { decidirAlta } from '@crm/core/dedupe';
 import { diaLocal } from '@crm/core/fecha';
 import { NOMBRE_CASA } from '@crm/core/proyecto';
+import { CampoDia } from '../../ui/CampoDia';
 import { pb } from '../../lib/pocketbase';
 import type { CuentaRecord, PerfilRecord } from '../../lib/types';
 
@@ -296,10 +297,15 @@ export function NuevoLead({ cuenta, asignado, nombre, onCerrar, onCreado }: Prop
           <div className="alta-fila">
             <label className="campo alta-corto">
               <span className="campo-label">Próximo contacto</span>
-              <input
-                type="date"
-                value={a.proximo_contacto ?? ''}
-                onChange={set('proximo_contacto')}
+              {/* Día y mes, sin año y sin el icono del navegador. Augusto lo
+                  pidió nombrando esta pantalla: «en la parte de nueva y
+                  próximo contacto». El año lo deduce `core/fecha.ts` hacia
+                  adelante, que es lo que corresponde a algo por hacer. */}
+              <CampoDia
+                valor={a.proximo_contacto ?? ''}
+                titulo="Cuándo hay que volver a escribirle"
+                preferir="futuro"
+                onCambiar={(iso) => setA((v) => ({ ...v, proximo_contacto: iso }))}
               />
             </label>
             {/* El país decide el idioma del mensaje (§5.6). Se muestra acá

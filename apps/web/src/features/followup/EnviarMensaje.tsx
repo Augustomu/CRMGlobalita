@@ -13,7 +13,7 @@ import {
   estaDestacadaPara, resolverParaPaso, type Plantilla } from '@crm/core/plantilla';
 import { casaDeLinea } from '@crm/core/proyecto';
 import type { Canal, Idioma, Paso } from '@crm/core/tipos';
-import { diaLocal } from '@crm/core/fecha';
+import { diaLocal, diasEntre } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
 import type { EnvioRecord, LeadRecord, PlantillaRecord } from '../../lib/types';
 
@@ -361,9 +361,7 @@ export function EnviarMensaje({
           ? {
               paso,
               fecha: plan.proximo_contacto_propuesto,
-              dias: Math.round(
-                (Date.parse(plan.proximo_contacto_propuesto) - Date.parse(HOY)) / 86_400_000,
-              ),
+              dias: diasEntre(HOY, plan.proximo_contacto_propuesto),
             }
           : null,
       );
