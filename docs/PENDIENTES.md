@@ -291,6 +291,45 @@ Lo demás:
 
 ---
 
+### La limpieza de demo y la auditoría del archivo — 09/09 noche
+
+- [x] ✅ **Los datos de demo se fueron: 43 registros.** 12 tareas, 11
+      actividades, 4 entrantes, 11 chats personales de mentira, el usuario de
+      demo y los 2 leads de prueba del alta manual con sus perfiles.
+      Herramienta: `packages/db/recuperacion/limpiar-demo.mjs` — simulacro por
+      defecto, borra sólo con `--aplicar`.
+- [x] ⚠️ **Y esto NO fue «borrar todo lo del seed», a propósito.** El seed
+      corrió a las 21:18 del 08/09 y en ese mismo minuto nacieron cosas que hoy
+      son reales. Un borrado por fecha se llevaba medio CRM:
+
+      | Nació en el seed | Por qué NO se toca |
+      |---|---|
+      | `cuenta` AL, DL, FR, ED | tienen **171 leads reales** colgando |
+      | `plantilla` ×12 | **8 están editadas**: son los mensajes que viene escribiendo, en es y pt |
+      | `regla` ×4 | suyas, incluida «Lead nuevo de Brasil a Francisco» |
+      | `etiqueta` ×15 | su vocabulario: «Compras SP», «MX Norte», «PIV», «Parceria» |
+      | `lista_invitacion` ×13 | configuración de listas por cuenta |
+
+      El script tiene además un freno: si un lead de prueba tuviera reuniones o
+      envíos, no toca nada. No los tenían.
+
+- [x] ✅ **Auditado el archivo que pasó Augusto: los 248 contactos están.**
+      Ninguno falta como persona.
+- [ ] ❓ **PERO sólo 77 de los 248 son leads. Los otros 171 son perfiles
+      sueltos**, y un perfil sin lead **no aparece en la columna 1**: para el que
+      mira la pantalla, «no está».
+      No es una pérdida —el dato está entero— sino una decisión que falta:
+      **un lead es la relación con UNA cuenta**, y el CSV no dice cuál. Los 240
+      leads de hoy salieron del calendario y por eso tienen cuenta; estos son
+      contactos del teléfono, que pueden ser prospectos o no.
+      Son los mismos que en el bloque 10 figuran como **«teléfonos huérfanos»**,
+      y el camino previsto para ellos es «Conectar un teléfono» desde la ficha.
+      **Hace falta que Augusto diga qué son**: si son prospectos de una cuenta
+      concreta se crean los leads en lote; si no, se quedan como perfiles y el
+      teléfono se engancha cuando aparezca el lead.
+
+---
+
 ### Tanda 2 · Que la agenda se pueda manejar
 
 - [ ] **Arrastrar cualquier evento, incluidos los de Google.** Textual:
