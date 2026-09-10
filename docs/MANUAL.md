@@ -279,7 +279,7 @@ Las dos casas, hoy:
 | `pagina_actual` | int | hasta dónde llegó el script. **Dato de la automatización: se muestra, no se edita a mano** (→ §10.4) |
 | `perfiles_por_pagina` | int | 25 en Sales Navigator |
 
-Derivados: `restantes = (paginas_total − pagina_actual) × perfiles_por_pagina`; estado `agotada` (sin páginas), `en uso` (la de mayor prioridad con páginas), `en espera`.
+Derivados: `restantes = (paginas_total − pagina_actual) × perfiles_por_pagina`; estado **`sin medir`** (`paginas_total` en 0: nadie midió cuántas hay), `agotada` (se terminó), `en uso` (la de mayor prioridad con páginas), `en espera`.
 
 **La URL se arma, no se guarda.** De una búsqueda guardada se anota el
 `savedSearchId` y nada más. La dirección que uno copia del navegador trae
@@ -287,10 +287,44 @@ Derivados: `restantes = (paginas_total − pagina_actual) × perfiles_por_pagina
 cambian en cada visita y no identifican la búsqueda; guardarlos es guardar algo
 que envejece mal. La regla vive en `core/invitacion.ts`.
 
-`paginas_total` en 0 deja la lista **agotada**, y eso es correcto: una lista
-cuyo tamaño nadie midió todavía no puede prometer invitaciones. El número sale
-de mirar la búsqueda en Sales Navigator; hasta entonces la lista está cargada
-pero no entra en la cola.
+**`paginas_total` en 0 quiere decir «no se sabe», no «se terminó».** Que la
+lista no entre en la cola es correcto —una lista cuyo tamaño nadie midió no
+puede prometer invitaciones— pero el estado que se muestra es **`sin medir`** y
+no `agotada`. Las dos salen del mismo `pagina_actual >= paginas_total`, y
+confundirlas cambia lo que uno va a hacer: `agotada` manda a cargar listas
+nuevas, `sin medir` manda a medir las que ya están. El 10/09 se cargaron las 22
+búsquedas guardadas reales y las 22 figuraban agotadas.
+
+**El total se DESCUBRE, no se tipea.** Sales Navigator escribe arriba de la
+lista cuántos resultados tiene la búsqueda —«About 1,234 results»,
+«Aproximadamente 1.234 resultados»— y de ahí sale el total dividiendo por
+`perfiles_por_pagina`. Lo mide `node apps/worker/src/medir.ts <ABREV>` (→
+§8.1.2). Tipear los números a mano se hace mal una vez y además envejece solo:
+una búsqueda guardada crece.
+
+Tres cosas que la regla tiene que respetar, y que viven en `core/invitacion.ts`
+con sus tests:
+
+1. **El separador de miles no es el mismo en los tres idiomas.** En inglés es la
+   coma y en castellano y portugués el punto, así que «1.234» vale 1234 en una
+   cuenta y sería 1,234 en la otra. Leerlo con `parseFloat` convierte
+   «1.234 resultados» en **1**: la lista queda con una página, figura medida, y
+   nadie tiene por qué sospechar. No se adivina el idioma — se mira la forma:
+   un separador seguido de grupos de exactamente tres dígitos es de miles.
+2. **Cuando no se puede leer, se dice que NO SE SABE.** No 0 —que significa «sin
+   medir» y encima se ve igual que «agotada»— ni un número aproximado, que hace
+   prometer invitaciones que no existen. La lista se queda como estaba.
+3. **El paginado tiene tope.** Sales Navigator corta alrededor de las 100
+   páginas aunque la búsqueda diga más resultados (hipótesis, todavía sin
+   verificar contra el DOM real). Se topea ahí y se avisa: una búsqueda que no
+   entra se arregla con más filtros, no cargando otra lista.
+
+**Y el total se puede escribir a mano** desde §7.3, sobre la lista que figura
+`sin medir`. No es un atajo: el DOM de LinkedIn cambia sin avisar, y el día que
+`medir` devuelva «no se pudo leer» —que es lo correcto que devuelva— sin esta
+salida las listas vuelven a 0 y no sale ninguna invitación hasta que alguien
+arregle un selector. Un descubrimiento automático sin salida manual es un punto
+único de falla. Lo que sigue sin editarse es `pagina_actual` (→ §10.4).
 
 Las listas se reordenan con **flechas, no con drag**: son 2–3 por cuenta, el drag no ahorra pasos y las flechas ya son accesibles por teclado y touch (→ §10.5).
 
@@ -689,6 +723,26 @@ el de Sales Navigator, y el id del lead (§8.3).
 
 **Zona horaria**: la base guarda en UTC, así que una reunión de las 18:00 en México vuelve como las 00:00 del día siguiente. Si se lee el texto crudo, la agenda miente por un día y una reunión que ya pasó figura como futura. Todo pasa por `enSuZona()` (→ D23).
 
+**A quién se invita, y qué pasa cuando no hay a quién.** Los destinatarios se
+eligen al confirmar y valen sólo para esa reunión (el principal se guarda en la
+ficha si estaba vacía; las copias no). El evento se arma con
+`invitadosDelEvento(elegidos, lead)`: **mandan los elegidos**, y los correos de
+la ficha son el respaldo para cuando se vuelve a abrir el evento sin pasar por
+el cuadro.
+
+Un lead puede no tener correo en ningún lado —los teléfonos entraron por dos
+exportaciones de Google Contacts de 19 columnas y **ninguna trae correo** (§10);
+al 10/09/2026 son 11 leads—. En ese caso **el panel de Reunión lo dice al
+abrirse y ofrece cargarlo ahí mismo** (`avisoSinInvitado()`), en vez de que la
+falta aparezca recién en el cuadro de confirmación. El correo se guarda por el
+mismo camino que el chip de Email de la ficha, con su deshacer y su permiso
+(§6.2): el panel lo pide, no lo guarda por su cuenta.
+
+Sin correo el evento **se crea igual, pero sólo en el calendario propio**. Eso
+no se esconde: el link de respaldo de Calendar lo avisa antes de abrirse, porque
+un evento sin invitado se ve idéntico a uno bien mandado hasta que la persona no
+aparece.
+
 ### 5.12 De lead a proyecto
 
 Es **manual y explícito**, desde la ficha del lead (columna 2) → acciones rápidas → grupo **Control de proyectos**:
@@ -1050,7 +1104,9 @@ en el camino se perdían el idioma y el alcance ya elegidos.
 
 Columna izquierda con tres pestañas; columna derecha fija. Arriba de todo, un botón global **en marcha / todo en pausa**.
 
-**Invitaciones** — las 10 cuentas. Cada fila: abreviatura, **por qué no está invitando** (o «le toca» con cuántas salen), resumen de listas, cupo diario editable, avance semanal. Se despliega y muestra sus listas con prioridad (flechas para reordenar), última página vista (dato de la automatización, no editable), perfiles restantes estimados y chip *agotada / en uso / en espera*.
+**Invitaciones** — las 10 cuentas. Cada fila: abreviatura, **por qué no está invitando** (o «le toca» con cuántas salen), resumen de listas, cupo diario editable, avance semanal. Se despliega y muestra sus listas con prioridad (flechas para reordenar), última página vista (dato de la automatización, no editable), perfiles restantes estimados y chip *sin medir / agotada / en uso / en espera*.
+
+**«Sin medir» tiene su propio chip y su propio tono**, y no el de «agotada»: las dos salen del mismo `pagina_actual >= paginas_total` y no significan lo mismo (→ §3.4). Sobre la lista que figura sin medir, el **total sí se escribe a mano** —el único campo editable de la lista además de la prioridad— y el resumen recuerda el comando que lo mide solo (§8.1.2). El manual está segundo y en voz baja porque lo normal es medir; existe porque el DOM de LinkedIn cambia sin avisar, y un descubrimiento automático sin salida manual es un punto único de falla.
 
 Debajo, **Ritmo de la corrida**: los números que gobiernan el proceso de invitaciones (§8.1.1), editables. Se guardan en `configuracion` con clave `invitaciones` y los lee el worker.
 
@@ -1223,6 +1279,28 @@ Sidebar. Lista de plantillas con nombre, texto por idioma (ES/PT/EN), estrella d
   Nada se borra: los perfiles absorbidos quedan marcados con `fusionado_en`, y
   los separados son perfiles nuevos.
 
+  **La bandeja dice qué está mostrando, y qué no puede mostrar.** Lee los
+  perfiles que tienen `posible_duplicado_de` puesto y **no busca por su cuenta**,
+  así que un cero no significa «no hay duplicados» sino «nadie marcó ninguno».
+  Encima del contenido —y en el estado vacío, que es donde importa— va el texto
+  que arma `avisoDeDeteccion()` (`core/dedupe.ts`): cuántos hay marcados, hasta
+  cuándo, y **cuántos perfiles el detector no puede ver**.
+
+  Un perfil es invisible para el detector cuando no tiene ninguno de los cuatro
+  datos con los que se puede confirmar una coincidencia —`slug`, `urn`,
+  `telefono`, `empresa` (`sinConQueConfirmar()`)—, porque las tres reglas del
+  detector necesitan alguno. Al 10/09/2026 son **60 de 410 perfiles vivos**.
+  Sobre ésos la bandeja no afirma nada, ni a favor ni en contra.
+
+  No hay columna de «cuándo se marcó»: la fecha que se muestra es el `updated`
+  más nuevo de los perfiles marcados, o sea un techo. Por eso el texto dice
+  *hasta el*, y no *marcado el*.
+
+  **Volver a correr el detector no es lo mismo que refrescar la bandeja.**
+  `detectar-duplicados.mjs` propone; las marcas que no vuelve a proponer **ya no
+  se borran solas** —hacen falta `--aplicar --limpiar-marcas`—, porque una marca
+  también la puede haber puesto una persona a mano y el script no distingue.
+
 ### 7.11 Control de proyectos
 
 Dos pestañas — **Proyectos** y **Reuniones** — y una regla que atraviesa todo: **la sección entera es de solo lectura para cualquier rol**. Se edita en la ficha del lead; acá se mira. El header lo declara con una pastilla.
@@ -1393,6 +1471,44 @@ que un proceso muere a la mitad, y nadie se entera.
 texto de R0 sale del repositorio de mensajes, §5.2, y falta decidir si va con
 nota), no maneja el caso en que LinkedIn exige el correo para poder invitar —el
 perfil se saltea—, no cancela (§5.4) y no corre solo: se dispara a mano.
+
+### 8.1.2 Medir las listas
+
+`node apps/worker/src/medir.ts <ABREV>` — una navegación por lista, **sin
+invitar a nadie**. Abre la primera página de cada búsqueda de esa cuenta que
+esté `sin medir`, lee del encabezado cuántos resultados tiene y guarda el total
+de páginas (§3.4). Con `--simular` dice qué haría sin abrir Chrome; con
+`--todas` vuelve a medir también las que ya tienen total, porque una búsqueda
+guardada crece y el número de hace un mes dice lo de hace un mes.
+
+**Por qué es un comando y no un paso de la corrida.** Con `paginas_total` en 0
+la lista no entra en la cola y el worker calcula **0 invitaciones** por más cupo
+que sobre. Era el último bloqueante para que saliera la primera invitación de
+las 22 búsquedas cargadas el 10/09.
+
+**Corre con las mismas reglas que invitar**, y por los mismos motivos: un solo
+proceso del worker a la vez, la pausa general, el freno de la cuenta, la franja
+horaria y el perfil de Chrome se chequean **antes de abrir nada**; después va
+una lista por navegación, con la espera de arranque, la espera sorteada entre
+una y otra, las pausas media y larga cuando caen y el reinicio del navegador
+cuando toca — los mismos números configurables de §7.3. Abrir LinkedIn para
+medir es abrir LinkedIn.
+
+Las dos cosas que **no** exige, y a propósito: no pide señal previa de la sesión
+—la escribe cuando LinkedIn contesta, igual que `vincular`— ni material en las
+listas, que es justamente lo que viene a resolver.
+
+**Cuando no puede leer el encabezado no escribe nada** y lo dice, con el texto
+que sí encontró en la página para poder comparar. Una lista que sigue `sin
+medir` es un problema que se ve; una lista con un total inventado es un problema
+que se cree. Ahí entra la carga a mano de §7.3.
+
+Los selectores del encabezado **no están verificados** contra el DOM real:
+`globalita-automation` nunca lo leyó —contaba filas, no resultados— así que no
+hay ni siquiera un selector viejo que haya estado en producción. Por eso la
+búsqueda va al revés: se juntan todos los textos cortos de la página que digan
+«resultados» / «results» y se le pregunta a la regla cuál se puede leer. La
+primera corrida hay que mirarla.
 
 ### 8.2 WhatsApp
 

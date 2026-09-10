@@ -2,6 +2,7 @@
 //
 //   node packages/db/recuperacion/detectar-duplicados.mjs            # simulacro
 //   node packages/db/recuperacion/detectar-duplicados.mjs --aplicar
+//   ... --aplicar --limpiar-marcas   # ademas BORRA las marcas que ya no propone
 //
 // Despues de importar de dos fuentes distintas quedan perfiles de la misma
 // persona por duplicado: el Calendar trae nombre + LinkedIn + cuenta pero sin
@@ -25,7 +26,7 @@
 // que enterrarla entre falsos positivos.
 
 import { entrar } from './entrar.mjs';
-import { huella } from '../../core/src/dedupe.ts';
+import { huella, sinConQueConfirmar } from '../../core/src/dedupe.ts';
 
 const APLICAR = process.argv.includes('--aplicar');
 const pb = await entrar();
@@ -187,6 +188,20 @@ for (const [m, n] of Object.entries(porMotivo).sort((a, b) => b[1] - a[1])) {
   console.log(`  ${String(n).padStart(4)}  ${m}`);
 }
 
+// LO QUE ESTE SCRIPT NO PUEDE VER, dicho por el propio script.
+//
+// Las tres reglas de arriba necesitan teléfono, empresa, slug o urn. Un perfil
+// que no tiene ninguno de los cuatro no puede caer en ningún grupo, y no
+// decirlo hace que un "0 grupos" se lea como "no hay duplicados". La cuenta la
+// hace `sinConQueConfirmar()` en core, que es la misma que usa la bandeja: dos
+// definiciones de "con qué se confirma" se desincronizan a la primera.
+const ciegos = perfiles.filter(sinConQueConfirmar);
+console.log(
+  `\nFuera de alcance: ${ciegos.length} de ${perfiles.length} perfiles vivos no tienen`,
+  'con qué confirmarse (ni LinkedIn, ni empresa, ni teléfono).',
+);
+console.log('Sobre ésos este script no dice nada, ni a favor ni en contra.');
+
 const mapa = new Map(perfiles.map((p) => [p.id, p]));
 console.log('\nDetalle:');
 for (const [, g] of grupos) {
@@ -208,14 +223,38 @@ if (!APLICAR) {
 // ----------------------------------------------------------------- escritura
 const enGrupos = new Set([...grupos.values()].flatMap((g) => [...g.ids]));
 
-// Las marcas viejas de perfiles que ya no estan en ningun grupo se borran: si
-// no, la bandeja arrastra para siempre lo que una corrida anterior propuso.
+// LAS MARCAS VIEJAS YA NO SE BORRAN SOLAS, y esto cambio el 10/09/2026.
+//
+// La idea original era razonable: si no, la bandeja arrastra para siempre lo
+// que una corrida anterior propuso. Pero las marcas no las pone solo este
+// script. Los tres perfiles de Herik los emparento una persona a mano el 09/09
+// —no los encuentra ninguna de las tres reglas de aca, porque ninguno tiene
+// slug y solo uno tiene telefono— y estaban esperando en la bandeja.
+//
+// Medido antes de tocar nada: una corrida con --aplicar sobre la base del
+// 10/09 encuentra 0 grupos y borraba las 3 marcas. O sea que el script que
+// existe para LLENAR la bandeja la vaciaba, y en silencio.
+//
+// Ahora hay que pedirlo. Es la primera regla del CLAUDE.md: los borrados los
+// pide Augusto, y una marca puesta a mano es trabajo de una persona.
+const LIMPIAR = process.argv.includes('--limpiar-marcas');
+const sobrantes = perfiles.filter(
+  (p) => !enGrupos.has(p.id) && (p.posible_duplicado_de ?? []).length,
+);
+
 let limpiados = 0;
-for (const p of perfiles) {
-  if (enGrupos.has(p.id)) continue;
-  if (!(p.posible_duplicado_de ?? []).length) continue;
-  await pb.collection('perfil').update(p.id, { posible_duplicado_de: [] });
-  limpiados++;
+if (LIMPIAR) {
+  for (const p of sobrantes) {
+    await pb.collection('perfil').update(p.id, { posible_duplicado_de: [] });
+    limpiados++;
+  }
+} else if (sobrantes.length) {
+  console.log('\n' + '-'.repeat(70));
+  console.log(`SE DEJAN COMO ESTAN ${sobrantes.length} marcas que esta corrida no vuelve a`);
+  console.log('proponer. Puede ser que alguien las haya puesto a mano:');
+  for (const p of sobrantes) console.log(`    ${p.id}  ${p.nombre}`);
+  console.log('Para borrarlas igual: --aplicar --limpiar-marcas');
+  console.log('-'.repeat(70));
 }
 
 let marcados = 0;

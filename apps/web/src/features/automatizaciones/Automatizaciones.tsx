@@ -8,9 +8,11 @@ import {
   resumenDeCuentas,
   resumenDeListas,
   salidasDeHoy,
+  sinMedir,
   vuelvenALaCola,
   type ConfigCancelacion,
   type CuentaInvitacion,
+  type EstadoLista,
   type ListaInvitacion,
 } from '@crm/core/invitacion';
 import {
@@ -256,6 +258,27 @@ export function Automatizaciones() {
     ).catch(() => void recargar());
   }
 
+  /**
+   * El total de páginas, escrito a mano (§3.4).
+   *
+   * **La salida manual del descubrimiento automático.** Lo normal es que el
+   * total lo mida `node apps/worker/src/medir.ts <ABREV>`, que lee el
+   * encabezado de Sales Navigator. Pero LinkedIn cambia su HTML sin avisar, y
+   * el día que lo cambie ese comando va a devolver «no se pudo leer» — con
+   * razón, porque inventar un número sería peor. Sin este campo, ese día las
+   * listas vuelven a quedar en 0 y no sale ninguna invitación hasta que alguien
+   * arregle un selector. Un descubrimiento automático sin salida manual es un
+   * punto único de falla.
+   *
+   * Es `paginas` y NO `pagina`: el total, no por dónde va la corrida. Ese otro
+   * sigue sin editarse (§10.4).
+   */
+  async function cambiarPaginas(lista: ListaInvitacion, paginas: number) {
+    const total = Math.max(0, Math.floor(paginas) || 0);
+    setListas((ls) => ls.map((l) => (l.id === lista.id ? { ...l, paginas: total } : l)));
+    await pb.collection('lista_invitacion').update(lista.id, { paginas: total }).catch(() => void recargar());
+  }
+
   async function cambiarCupo(c: CuentaRecord, cupo: number) {
     setCuentas((cs) => cs.map((x) => (x.id === c.id ? { ...x, cupo_diario: cupo } : x)));
     await pb.collection('cuenta').update(c.id, { cupo_diario: cupo }).catch(() => void recargar());
@@ -310,6 +333,7 @@ export function Automatizaciones() {
               </div>
               {cuentas.map((c) => {
                 const mias = enPrioridad(listasPorCuenta.get(c.id) ?? []);
+                const faltanMedir = sinMedir(mias).length;
                 // POR QUÉ NO SE MUESTRA EL ESTADO DE LA SESIÓN Y SÍ EL FRENO.
                 //
                 // Acá decía «activa» / «sesión caída» / «sin vincular», deducido
@@ -383,6 +407,7 @@ export function Automatizaciones() {
                               indice={i}
                               estado={estado}
                               onMover={(d) => void cambiarOrden(l, d)}
+                              onPaginas={(n) => void cambiarPaginas(l, n)}
                             />
                           );
                         })}
@@ -392,6 +417,21 @@ export function Automatizaciones() {
                           agota pasa a la siguiente. El cupo de la cuenta manda sobre cuántos perfiles
                           saca por día.
                         </span>
+                        {/* §3.4 · «Sin medir» no es «agotada»: es una lista a la
+                            que le falta un paso, y el paso tiene dos caminos.
+                            El manual está segundo y en voz baja porque lo normal
+                            es medir; pero existe, porque el DOM de LinkedIn
+                            cambia sin avisar y un descubrimiento automático sin
+                            salida manual es un punto único de falla. */}
+                        {faltanMedir > 0 && (
+                          <span className="auto-nota">
+                            <b>{faltanMedir} sin medir.</b> Nadie contó todavía cuántas
+                            páginas tienen, así que no entran en la cola. Para medirlas:{' '}
+                            <code>node apps/worker/src/medir.ts {c.abrev}</code> — abre cada búsqueda
+                            y lee del encabezado cuántos resultados tiene. Si LinkedIn cambió la
+                            página y no se puede leer, el total se escribe acá a mano.
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -662,13 +702,20 @@ function ItemLista({
   indice,
   estado,
   onMover,
+  onPaginas,
 }: {
   lista: ListaInvitacion;
   indice: number;
-  estado: string;
+  estado: EstadoLista;
   onMover: (d: -1 | 1) => void;
+  onPaginas: (n: number) => void;
 }) {
-  const chip = estado === 'agotada' ? 'agotada' : estado === 'en uso' ? 'en uso' : 'en espera';
+  // El chip dice el estado TAL CUAL. Antes mapeaba a mano y dejaba afuera «sin
+  // medir», que caía en «en espera»: las 22 búsquedas reales figuraban
+  // esperando su turno cuando lo que les faltaba era que alguien las midiera.
+  // core ya distingue los cuatro estados; acá se muestran los cuatro.
+  const chip = estado;
+  const faltaMedir = estado === 'sin medir';
   return (
     <>
       <span className="auto-orden">
@@ -684,12 +731,29 @@ function ItemLista({
         <span>{lista.nombre}</span>
         <span className="campo-ayuda">{NOMBRE_FUENTE[lista.fuente]}</span>
       </span>
-      {/* Dato de la automatización: se muestra y no se edita. Moverlo a mano
-          re-invitaría a gente ya invitada o saltearía un tramo entero, y ninguna
-          de las dos cosas deja rastro hasta semanas después. */}
+      {/* `pagina` es dato de la automatización: se muestra y no se edita.
+          Moverlo a mano re-invitaría a gente ya invitada o saltearía un tramo
+          entero, y ninguna de las dos cosas deja rastro hasta semanas después.
+
+          El TOTAL es otra cosa. Mientras nadie lo midió se puede escribir acá:
+          es la salida manual de `medir.ts` para el día que LinkedIn cambie su
+          HTML. Una vez medido vuelve a ser texto — el número lo puso una
+          medición y no hay por qué invitar a pisarla sin motivo. */}
       <span className="auto-pagina tabular" title="Hasta acá llegó el script — no se edita">
         <b>{lista.pagina}</b>
-        <span className="campo-ayuda">/{lista.paginas}</span>
+        {faltaMedir ? (
+          <input
+            type="number"
+            min={0}
+            max={999}
+            value={lista.paginas || ''}
+            placeholder="?"
+            title="Cuántas páginas tiene la búsqueda. Lo mide `medir.ts`; acá se puede escribir a mano."
+            onChange={(e) => onPaginas(Number(e.target.value))}
+          />
+        ) : (
+          <span className="campo-ayuda">/{lista.paginas}</span>
+        )}
       </span>
       <span className="auto-restantes tabular">{restantes(lista)}</span>
       <span className="auto-der">

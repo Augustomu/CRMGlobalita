@@ -1,7 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  TOPE_DE_PAGINAS,
   estadoDeLista,
+  medidaDelEncabezado,
+  paginasParaResultados,
+  paraMedir,
+  resultadosDelEncabezado,
+  sePuedeMedirSola,
   sinMedir,
   laQueTrabaja,
   mover,
@@ -293,4 +299,149 @@ test('§3.4 · el resumen las cuenta aparte, y sólo si las hay', () => {
 
   // Con todas medidas no se menciona: un «· 0 sin medir» permanente es ruido.
   assert.ok(!resumenDeListas([lista({ id: 'b', paginas: 10 })]).includes('sin medir'));
+});
+
+// ===========================================================================
+// §3.4 · Medir: el total se DESCUBRE, no se tipea
+// ===========================================================================
+//
+// La otra mitad de «sin medir». Sales Navigator escribe arriba de la lista
+// cuántos resultados tiene la búsqueda, y de ahí sale el total de páginas.
+// Estos tests son sobre la REGLA: el texto entra como string y sale un número.
+// De qué elemento del DOM sale ese texto es cosa de `apps/worker/src/salesnav.ts`.
+
+test('§3.4 · el encabezado se lee en los tres idiomas de las cuentas', () => {
+  // Los formatos son los que sirve LinkedIn segun el idioma de la sesion: las
+  // cuentas estan en castellano, ingles y portugues segun a quien prospectan.
+  assert.equal(resultadosDelEncabezado('About 1,234 results'), 1234);
+  assert.equal(resultadosDelEncabezado('1,234 results'), 1234);
+  assert.equal(resultadosDelEncabezado('1 result'), 1);
+  assert.equal(resultadosDelEncabezado('Aproximadamente 1.234 resultados'), 1234);
+  assert.equal(resultadosDelEncabezado('Más de 2.500 resultados'), 2500);
+  assert.equal(resultadosDelEncabezado('Cerca de 1.234 resultados'), 1234); // portugués
+  assert.equal(resultadosDelEncabezado('Mais de 2.500 resultados'), 2500);
+  // El «+» de las búsquedas grandes, y el salto de línea del innerText.
+  assert.equal(resultadosDelEncabezado('About 1,000+ results'), 1000);
+  assert.equal(resultadosDelEncabezado('1,234\nresults'), 1234);
+  // Con el conteo en la mitad de una frase más larga.
+  assert.equal(resultadosDelEncabezado('Mostrando 1-25 de 1.234 resultados'), 1234);
+});
+
+// EL BUG QUE ESTE TEST EXISTE PARA QUE NO PASE.
+//
+// En inglés el separador de miles es la coma y en castellano y portugués es el
+// punto. El MISMO texto —«1.234»— vale 1234 en una cuenta y sería 1,234 en la
+// otra. Leerlo con `parseFloat`, que es lo que sale solo, convierte
+// «1.234 resultados» en 1: la lista queda con UNA página, figura medida, y
+// nadie tiene por qué sospechar. Es peor que no medir — una lista sin medir se
+// ve y se arregla; una lista mal medida se cree.
+test('§3.4 · el separador de miles no se confunde: «1.234» nunca es 1', () => {
+  assert.equal(resultadosDelEncabezado('Aproximadamente 1.234 resultados'), 1234);
+  assert.notEqual(resultadosDelEncabezado('Aproximadamente 1.234 resultados'), 1);
+  assert.equal(resultadosDelEncabezado('About 1,234 results'), 1234);
+  // Los dos estilos de agrupar, con dos grupos.
+  assert.equal(resultadosDelEncabezado('1.234.567 resultados'), 1234567);
+  assert.equal(resultadosDelEncabezado('1,234,567 results'), 1234567);
+  // El grupo de arranque puede tener 1, 2 o 3 dígitos.
+  assert.equal(resultadosDelEncabezado('12.345 resultados'), 12345);
+  assert.equal(resultadosDelEncabezado('123,456 results'), 123456);
+});
+
+test('§3.4 · lo que no se puede leer dice NO SE SABE, no 0 ni un número inventado', () => {
+  // `null` y no 0: 0 ya significa «sin medir», y encima se ve igual que
+  // «agotada». Y un número inventado hace prometer invitaciones que no existen.
+  assert.equal(resultadosDelEncabezado('Se cambió el DOM y acá no hay nada'), null);
+  assert.equal(resultadosDelEncabezado(''), null);
+  assert.equal(resultadosDelEncabezado(null), null);
+  assert.equal(resultadosDelEncabezado(undefined), null);
+  // Un número suelto sin la palabra no es un total: puede ser el de una página,
+  // el de un filtro o el de un badge.
+  assert.equal(resultadosDelEncabezado('1.234'), null);
+  assert.equal(resultadosDelEncabezado('Página 3 de 40'), null);
+  // Lo que NO tiene forma de miles no se interpreta: «1.5» no es 15 ni 1500.
+  assert.equal(resultadosDelEncabezado('1.5 resultados'), null);
+  assert.equal(resultadosDelEncabezado('12.34 results'), null);
+  assert.equal(resultadosDelEncabezado('2.5K results'), null);
+  // Los dos separadores a la vez: uno es de miles y el otro decimal, y cuál es
+  // cuál depende de un idioma que el texto no dice. No se tira una moneda.
+  assert.equal(resultadosDelEncabezado('1.234,56 resultados'), null);
+  assert.equal(resultadosDelEncabezado('1,234.56 results'), null);
+});
+
+test('§3.4 · una búsqueda vacía se lee como 0, y eso no es un error de lectura', () => {
+  // 0 leído de verdad ≠ no se pudo leer. La lista sigue sin entrar en la cola
+  // igual, pero el motivo es otro y hay que poder decirlo: los filtros de esa
+  // búsqueda no traen a nadie.
+  assert.equal(resultadosDelEncabezado('0 resultados'), 0);
+  assert.equal(resultadosDelEncabezado('0 results'), 0);
+  assert.equal(paginasParaResultados(0, 25), 0);
+  // Sin el dígito escrito NO es 0: «No results» puede ser una búsqueda vacía o
+  // una página que ni cargó, y eso no se adivina.
+  assert.equal(resultadosDelEncabezado('No results found'), null);
+  assert.equal(resultadosDelEncabezado('Sin resultados'), null);
+});
+
+test('§3.4 · de los resultados al total de páginas, con la última incompleta', () => {
+  assert.equal(paginasParaResultados(1234, 25), 50); // 49,36 → 50
+  assert.equal(paginasParaResultados(25, 25), 1);
+  assert.equal(paginasParaResultados(26, 25), 2); // la última va incompleta y cuenta
+  assert.equal(paginasParaResultados(1, 25), 1);
+  // Sin saber cuánto rinde una página no hay división posible: NO SE SABE.
+  // Devolver 0 sería decir «medida y vacía» de algo que nadie midió.
+  assert.equal(paginasParaResultados(1234, 0), null);
+  assert.equal(paginasParaResultados(1234, -25), null);
+  assert.equal(paginasParaResultados(-1, 25), null);
+  assert.equal(paginasParaResultados(Number.NaN, 25), null);
+});
+
+// Sales Navigator corta el paginado alrededor de las 100 páginas aunque la
+// búsqueda diga más resultados. NO ESTÁ VERIFICADO contra LinkedIn —está
+// anotado como hipótesis en `TOPE_DE_PAGINAS`— y se topea igual porque es el
+// error barato: sin tope la lista promete invitaciones que la plataforma no
+// entrega y la corrida navega páginas vacías.
+test('§3.4 · el paginado se topea, y el recorte no es silencioso', () => {
+  assert.equal(TOPE_DE_PAGINAS, 100);
+  // 2.500 a 25 por página son exactamente las 100: entra justo, no se recorta.
+  const justo = medidaDelEncabezado('Más de 2.500 resultados', 25);
+  assert.deepEqual(justo, { resultados: 2500, paginas: 100, topeado: false });
+  // Uno más y ya no entra: se guarda 100 y se dice que se recortó.
+  const pasado = medidaDelEncabezado('About 12,000 results', 25);
+  assert.deepEqual(pasado, { resultados: 12000, paginas: 100, topeado: true });
+});
+
+test('§3.4 · la medición entera, y el «no se sabe» que no toca nada', () => {
+  assert.deepEqual(medidaDelEncabezado('About 1,234 results', 25), {
+    resultados: 1234,
+    paginas: 50,
+    topeado: false,
+  });
+  // Encabezado ilegible → null. Quien llama NO escribe nada: una lista que
+  // sigue sin medir es un problema que se ve, una con un total inventado es un
+  // problema que se cree.
+  assert.equal(medidaDelEncabezado('el DOM cambió', 25), null);
+  assert.equal(medidaDelEncabezado('About 1,234 results', 0), null);
+});
+
+test('§3.4 · sólo se puede medir sola la que tiene a dónde ir', () => {
+  assert.equal(sePuedeMedirSola(lista({ id: 'a', origen_id: '1995468452' })), true);
+  // Sin `origen_id` no hay búsqueda a la que entrar.
+  assert.equal(sePuedeMedirSola(lista({ id: 'b' })), false);
+  // Un CSV no tiene encabezado que leer: el total lo sabe el archivo.
+  assert.equal(sePuedeMedirSola(lista({ id: 'c', fuente: 'csv', origen_id: 'marzo.csv' })), false);
+  assert.equal(sePuedeMedirSola(lista({ id: 'd', fuente: 'manual', origen_id: '1995468452' })), false);
+});
+
+test('§3.4 · a medir van las sin medir con dirección, en orden de prioridad', () => {
+  const listas = [
+    lista({ id: 'tercera', orden: 3, paginas: 0, origen_id: '1990990676' }),
+    lista({ id: 'medida', orden: 1, paginas: 40, origen_id: '1995468452' }),
+    lista({ id: 'primera', orden: 2, paginas: 0, origen_id: '1995468452' }),
+    lista({ id: 'csv', orden: 4, paginas: 0, fuente: 'csv', origen_id: 'marzo.csv' }),
+    lista({ id: 'huerfana', orden: 5, paginas: 0 }),
+  ];
+  // En orden porque una corrida se puede cortar en la mitad —por un aviso de
+  // LinkedIn, por la franja horaria— y lo que tiene que quedar medido primero
+  // es lo que se va a trabajar primero.
+  assert.deepEqual(paraMedir(listas).map((l) => l.id), ['primera', 'tercera']);
+  assert.deepEqual(paraMedir([]), []);
 });

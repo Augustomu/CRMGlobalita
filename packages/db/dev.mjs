@@ -11,6 +11,10 @@
 // El por que esta escrito en copias.mjs. Resumido: el 08/09/2026 se perdieron
 // 248 contactos y 298 reuniones importados, porque el --reset de entonces eran
 // cuatro lineas sin red.
+//
+// EL --seed SE NIEGA CON EL MISMO CRITERIO, desde el 10/09/2026. No borra, pero
+// crea ocho usuarios con la clave `demo12345` —uno administrador— y correrlo
+// sobre la base de trabajo deja esas ocho puertas abiertas.
 
 import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -18,6 +22,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {
   FRASE_PARA_BORRAR,
+  FRASE_PARA_SEMBRAR,
   copiar,
   copiasQueHay,
   carpetaDeCopias,
@@ -145,9 +150,71 @@ if (args.has('--reset')) {
   }
 }
 
+/*
+ * EL SEED DE DEMO NO CORRE SOBRE UNA BASE CON DATOS REALES.
+ *
+ * `--reset` ya se negaba con este mismo criterio; `--seed` no se negaba con
+ * ninguno, y es la otra mitad del mismo problema. El seed no borra, pero
+ * ESCRIBE, y lo que escribe son ocho usuarios con la clave `demo12345`:
+ *
+ *   pb_seed/1788600100_demo.js       Alberto (administrador), Sofia, Bruno, Vera
+ *   pb_seed/1788601000_control_demo.js  Ignacio, Renata
+ *   pb_seed/1788602000_partner.js       Alejandro, Nicolas
+ *
+ * Uno de ellos es administrador y esta `activo` y `verified`. Correr esto por
+ * error sobre la base de trabajo —o sobre una restaurada de una copia— deja
+ * ocho puertas abiertas con una clave que esta escrita en un repo publico.
+ * (El `demo@globalita.test` de pb_migrations/1788603500 es otra cosa y NO es
+ * el riesgo: nace `pendiente` y con una clave aleatoria de 40 caracteres.)
+ *
+ * El criterio es EL MISMO que el de `--reset`, no uno nuevo: `queHayAdentro()`
+ * cuenta como reales los leads cuya lista no es una de las que planta el seed,
+ * y ante la duda cuenta como real.
+ *
+ * La salida sana es la de siempre: otra carpeta, no esta base.
+ *
+ * Se chequea ACA ARRIBA, antes de `buscarEjecutable()` y de las migraciones:
+ * si la respuesta va a ser que no, no hay razon para haber tocado nada primero.
+ */
+if (args.has('--seed')) {
+  const hay = queHayAdentro(datos);
+
+  if (hay === null) {
+    console.error(
+      'No pude leer la base para saber que hay adentro, asi que NO corro el seed.\n' +
+        'El seed crea usuarios con clave conocida y no se escriben a ciegas.',
+    );
+    process.exit(1);
+  }
+
+  if (hay.existe && hay.reales > 0 && !args.has(FRASE_PARA_SEMBRAR)) {
+    console.error(
+      `\nNO corro el seed: esta base tiene ${hay.reales} leads que no son de demo.\n\n` +
+        `  perfiles ${hay.detalle.perfil}   leads ${hay.detalle.lead}   ` +
+        `reuniones ${hay.detalle.reunion}   usuarios ${hay.detalle.users}\n\n` +
+        'El seed crea ocho usuarios con la clave `demo12345`, uno de ellos\n' +
+        'administrador. Sobre una base de trabajo eso es una puerta abierta.\n\n' +
+        'Para tener los datos de demo SIN tocar esta base:\n\n' +
+        '   PB_DATOS=.pb/pb_data_demo node packages/db/dev.mjs --seed\n\n' +
+        'Si de verdad los queres acá:\n\n' +
+        `   node packages/db/dev.mjs --seed ${FRASE_PARA_SEMBRAR}\n`,
+    );
+    process.exit(1);
+  }
+}
+
 buscarEjecutable();
 migrar(migraciones);
-if (args.has('--seed')) migrar(semilla);
+
+if (args.has('--seed')) {
+  // Aun cuando el chequeo de arriba dejo pasar, se copia antes. Escribir
+  // tampoco es gratis: revertir un seed a mano es buscar 43 registros entre 26
+  // tablas, y ya hubo que hacerlo una vez (limpiar-demo.mjs).
+  const copia = copiar(pb, datos, 'antes-del-seed');
+  if (copia) console.log(`Copia guardada en ${copia}`);
+  migrar(semilla);
+}
+
 superusuarioLocal();
 
 console.log('\nPocketBase en http://127.0.0.1:8090/_/  (Ctrl+C para parar)\n');

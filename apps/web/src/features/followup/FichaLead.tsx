@@ -675,6 +675,12 @@ export function FichaLead({
           leads={leads}
           proximoContacto={valores.proximo_contacto}
           onProximoContacto={(f: string) => aplicar({ proximo_contacto: f }, 'Próximo contacto')}
+          // El correo se guarda por el MISMO camino que el chip de Email:
+          // `aplicar()`, con su deshacer. El panel de la reunión sólo lo pide.
+          // Sin permiso de ver correos no se ofrece cargarlo (§6.2).
+          onCorreo={
+            editable && veEmails ? (c: string) => aplicar({ email: c }, 'Email') : undefined
+          }
           refProximo={refProximo}
           onCambio={onGuardado}
         />

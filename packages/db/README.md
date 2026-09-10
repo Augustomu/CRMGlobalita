@@ -48,11 +48,31 @@ http://127.0.0.1:8090/_/ . Con `--seed` carga además los datos de demo.
 ## Los datos de demo
 
 ```
-node packages/db/dev.mjs --reset --seed
+PB_DATOS=.pb/pb_data_demo node packages/db/dev.mjs --seed
 ```
 
 Son inventados y sirven para mirar el diseño con la pantalla llena: 20 personas,
 21 leads, 13 proyectos y 32 reuniones, en `pb_seed/`.
+
+> ⚠️ **El seed se niega si la base ya tiene datos reales**, desde el 10/09/2026,
+> con el mismo criterio que `--reset` (`queHayAdentro()` en `copias.mjs`: son
+> reales los leads cuya lista no es una de las que planta el seed).
+>
+> No es por lo que el seed borra —no borra nada— sino por lo que **escribe**:
+> ocho usuarios con la clave `demo12345`, y uno de ellos es **administrador,
+> `activo` y `verified`. Esa clave está en un repositorio público. Correr el
+> seed por error sobre la base de trabajo deja ocho puertas abiertas, y no se
+> nota porque el seed no rompe nada.
+>
+> Por eso el ejemplo de arriba usa **otra carpeta**, que es la salida sana:
+> arrancar limpio moviendo, no pisando. Para insistir sobre la base que hay:
+> `node packages/db/dev.mjs --seed --si-quiero-datos-de-demo-aca` — y aun así se
+> copia antes.
+>
+> El `demo@globalita.test` de `pb_migrations/1788603500_usuario_de_demo.js` es
+> otra cosa y **no es este riesgo**: es una migración, corre en toda base nueva
+> —producción incluida— pero nace `pendiente` (no puede iniciar sesión) y con
+> una clave aleatoria de 40 caracteres que no queda escrita en ningún lado.
 
 - `1788600100_demo.js` — los siete casos del manual (§12): uno por cada
   combinación de los dos ejes de D17, más el nombre larguísimo que prueba el

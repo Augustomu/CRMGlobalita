@@ -1,7 +1,9 @@
 # @crm/worker
 
-El proceso que **hace** lo que el CRM planifica. Hoy hace una sola cosa: mandar
-las invitaciones de LinkedIn (§5.3, §8.1 del manual).
+El proceso que **hace** lo que el CRM planifica. Hoy hace tres cosas, y las tres
+son de LinkedIn (§5.3, §8.1 del manual): **vincular** (comprobar que la sesión
+está viva), **medir** (cuántas páginas tiene cada lista) e **invitar**. Las dos
+primeras existen porque sin ellas la tercera no puede arrancar nunca.
 
 Hasta que esto existió, el CRM registraba lo que se hacía a mano y nada más —
 era el bloqueante 8.2 de `docs/PENDIENTES.md`.
@@ -55,6 +57,38 @@ No es sólo un arranque: es la respuesta a «¿mis sesiones están vivas?», que
 lo que promete la pantalla de Cuentas conectadas. Se corre cuando uno quiera y
 cada vez refresca la señal, que dura 15 minutos (`core/sesion.ts`).
 
+**Lo segundo, cuando una lista figura «sin medir»:**
+
+```
+node apps/worker/src/medir.ts <ABREV>            # mide las listas sin medir
+node apps/worker/src/medir.ts <ABREV> --simular  # dice qué haría, sin abrir nada
+node apps/worker/src/medir.ts <ABREV> --todas    # remide también las ya medidas
+```
+
+Abre la primera página de cada búsqueda de esa cuenta, lee del encabezado
+cuántos resultados tiene —«About 1,234 results»— y guarda el total de páginas
+(§3.4). **No invita a nadie** y no toca `pagina`: sólo `paginas`.
+
+Hace falta porque con `paginas` en 0 la lista no entra en la cola y la corrida
+calcula **0 invitaciones** por más cupo que sobre. Las 22 búsquedas guardadas
+cargadas el 10/09 estaban todas así: era el último bloqueante para que saliera
+la primera invitación.
+
+**Corre con las mismas reglas que invitar**, porque abrir LinkedIn para medir es
+abrir LinkedIn: un solo proceso del worker, pausa general, freno de la cuenta,
+franja horaria y perfil de Chrome **antes de abrir nada**; después una lista por
+navegación con la espera de arranque, la espera sorteada, las pausas media y
+larga y el reinicio del navegador — los mismos números configurables de §7.3.
+
+**Cuando no puede leer el encabezado no escribe nada** y lo dice, con lo que sí
+encontró en la página. Ahí el total se carga a mano desde Automatizaciones, que
+es la salida que tiene que existir el día que LinkedIn cambie su HTML.
+
+⚠️ **Los selectores del encabezado son pistas sin verificar** (ver
+`src/salesnav.ts`), y el tope de 100 páginas del paginado de Sales Navigator es
+una **hipótesis** (`TOPE_DE_PAGINAS` en core). La primera corrida hay que
+mirarla.
+
 **Después, la corrida de verdad:**
 
 ```
@@ -93,8 +127,9 @@ Y en la base, cargado desde la pantalla de Automatizaciones:
   `snfl` de la sesión que las generó y envejecen mal. La dirección la arma
   `urlDeLista()` de `@crm/core/invitacion`; el worker sólo le agrega la página.
 - `lista_invitacion.paginas` — cuántas páginas tiene. Mientras esté en 0 la
-  lista figura agotada y no sale nada, que es lo correcto: una lista cuyo tamaño
-  nadie midió no puede prometer invitaciones.
+  lista figura **«sin medir»** —que no es lo mismo que «agotada»— y no sale
+  nada, que es lo correcto: una lista cuyo tamaño nadie midió no puede prometer
+  invitaciones. Lo llena `medir.ts`, o se escribe a mano en Automatizaciones.
 
 ### Chrome tiene que estar cerrado
 
@@ -107,10 +142,12 @@ corrida falla con un error de perfil en uso. Cerrarlo antes.
 | Archivo | Qué hace |
 |---|---|
 | `src/invitar.ts` | El orquestador. **No decide nada**: le pregunta a core y ejecuta. |
+| `src/vincular.ts` | Comprueba que la sesión está viva y escribe la señal. No invita. |
+| `src/medir.ts` | Mide cuántas páginas tiene cada lista sin medir. No invita. |
 | `src/seguridad.ts` | El chequeo previo. Junta los hechos —procesos corriendo, hora, estado de la cuenta— y le pregunta a core si se puede. |
 | `src/base.ts` | Lo único que habla con PocketBase: leer el estado, anotar la invitación, tocar la señal, escribir el freno. |
 | `src/navegador.ts` | Lo único que abre Chrome. Los gestos que hacen que la sesión no parezca un robot. |
-| `src/salesnav.ts` | Lo único que sabe del DOM de Sales Navigator: los botones, los carteles de bloqueo, la paginación. |
+| `src/salesnav.ts` | Lo único que sabe del DOM de Sales Navigator: los botones, los carteles de bloqueo, la paginación, el encabezado con los resultados. |
 
 **Ninguna regla de negocio vive acá.** El cupo, el ritmo, las pausas, el tope, la
 franja horaria y la gravedad de cada aviso están en `packages/core/src/invitar.ts`

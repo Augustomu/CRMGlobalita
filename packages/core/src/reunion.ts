@@ -130,6 +130,79 @@ export function descripcionEvento(slugLinkedIn: string, leadId: string): string 
   return lineas.join('\n');
 }
 
+/* ---------------------------------------------------------------------------
+ * A quién se invita, y qué pasa cuando no hay a quién (§5.11)
+ * ------------------------------------------------------------------------ */
+
+/** Los tres correos que puede tener un lead (§3.2). Viven en el lead, no en el perfil. */
+export interface CorreosDelLead {
+  email?: string | null;
+  email2?: string | null;
+  email3?: string | null;
+}
+
+/**
+ * Un correo sirve si tiene arroba y algo de cada lado. No se valida más que eso.
+ *
+ * Validar de más rechaza direcciones que existen —los TLD nuevos, los `+` de
+ * Gmail, los dominios de un solo carácter— y el costo de dejar pasar una mal
+ * escrita es que Google no la encuentre, que se ve enseguida. Estaba escrita
+ * dentro de `ConfirmarReunion.tsx`; vive acá porque ahora la usan dos pantallas.
+ */
+export function esCorreo(v: string): boolean {
+  const t = String(v ?? '').trim();
+  const i = t.indexOf('@');
+  return i > 0 && i < t.length - 1 && !t.includes(' ');
+}
+
+/** Los correos cargados, sin vacíos y sin repetidos, en el orden de la ficha. */
+export function correosDelLead(l: CorreosDelLead): string[] {
+  const vistos = new Set<string>();
+  const salida: string[] = [];
+  for (const c of [l.email, l.email2, l.email3]) {
+    const t = String(c ?? '').trim();
+    if (!t || vistos.has(t.toLowerCase())) continue;
+    vistos.add(t.toLowerCase());
+    salida.push(t);
+  }
+  return salida;
+}
+
+/**
+ * A quién se invita al evento de Google Calendar.
+ *
+ * Los `elegidos` son los que se tildaron al confirmar esa reunión y MANDAN: la
+ * reunión suele sumar gente que no es el lead, y el que se escribe ahí puede
+ * ser el primer correo que esa persona tiene en el CRM. Los de la ficha son el
+ * respaldo, para cuando se vuelve a abrir el evento sin pasar por el cuadro.
+ *
+ * POR QUÉ ES UNA FUNCIÓN Y NO UN `||` EN LA PANTALLA. El link de «crear evento»
+ * de Calendar leía `lead.email` directo, y ese valor es el que tenía la ficha
+ * ANTES de confirmar. Para los 11 leads sin correo eso significaba: escribís el
+ * correo en el cuadro, se guarda en la ficha, se guarda en la reunión — y el
+ * link que efectivamente crea el evento en Google se abre **sin invitado**. La
+ * reunión aparece en el calendario propio y la persona nunca se entera. No
+ * fallaba: no invitaba, y no lo decía.
+ */
+export function invitadosDelEvento(elegidos: string[], lead: CorreosDelLead): string[] {
+  const limpios = elegidos.map((e) => String(e ?? '').trim()).filter(Boolean);
+  return limpios.length ? limpios : correosDelLead(lead);
+}
+
+/**
+ * Qué decir cuando no hay a quién invitar, o `null` si sí lo hay.
+ *
+ * El caso no es raro y no se arregla solo: los teléfonos entraron por dos
+ * exportaciones de Google Contacts de 19 columnas y **ninguna es de correo**
+ * (§10). Un lead que nació de un contacto de WhatsApp no tiene correo en ningún
+ * lado, así que la pantalla tiene que pedirlo, no asumirlo.
+ */
+export function avisoSinInvitado(lead: CorreosDelLead): string | null {
+  return correosDelLead(lead).length
+    ? null
+    : 'Sin correo, el evento se crea sólo en tu calendario y la persona no recibe nada. Cargalo al confirmar.';
+}
+
 /** Fin de la reunión, a partir del inicio y la duración. */
 export function finDe(inicioIso: string, duracionMin: number): string {
   return new Date(Date.parse(inicioIso) + duracionMin * 60_000).toISOString();

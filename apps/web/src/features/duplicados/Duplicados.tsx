@@ -65,7 +65,7 @@ interface Props {
  * para que no desentone.
  */
 export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
-  const { grupos, cargando, error, recargar } = duplicados;
+  const { grupos, cargando, error, aviso, recargar } = duplicados;
   const [indice, setIndice] = useState(0);
   const [excluidos, setExcluidos] = useState<string[]>([]);
   /**
@@ -452,6 +452,14 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
               <span className="campo-ayuda">
                 Destildá el que no corresponda para dejarlo afuera de la fusión.
               </span>
+              {/* De dónde salió esta lista. Va acá y no sólo en el estado
+                  vacío: si la bandeja tiene un grupo, el punto ciego sigue
+                  existiendo igual. */}
+              {aviso && (
+                <span className="dup-alcance">
+                  {aviso.titulo}. {aviso.detalle}
+                </span>
+              )}
             </div>
 
             <div
@@ -649,16 +657,35 @@ export function Duplicados({ duplicados, onCerrar, onCambio }: Props) {
           </div>
         ) : (
           <div className="overlay-cuerpo overlay-final">
+            {/*
+             * LO QUE NO PUEDE DECIR ESTA PANTALLA: «no hay duplicados».
+             *
+             * La bandeja lee los perfiles con `posible_duplicado_de` puesto y
+             * no busca nada por su cuenta. Cuando decía «No hay duplicados
+             * pendientes» estaba afirmando algo que no midió: los tres perfiles
+             * de Herik existían hacía días y acá figuraba cero.
+             *
+             * Ahora el titular sale de `avisoDeDeteccion()` (core), que
+             * distingue «nadie marcó» de «no hay» y dice de qué tamaño es el
+             * punto ciego.
+             */}
             <span className="venc-nombre">
               {fusionados === 0 && separados === 0
-                ? 'No hay duplicados pendientes'
+                ? (aviso?.titulo ?? 'Nadie marcó ningún perfil como posible duplicado')
                 : `${fusionados} fusionados · ${separados} marcados como distintos`}
             </span>
-            <span className="campo-ayuda">
+            <span className={aviso?.ciego && fusionados === 0 && separados === 0 ? 'dup-ciego' : 'campo-ayuda'}>
               {fusionados === 0 && separados === 0
-                ? 'Ningún perfil está marcado como posible duplicado.'
+                ? (aviso?.detalle ?? 'Esta bandeja muestra lo marcado; no busca por su cuenta.')
                 : 'Los perfiles absorbidos quedan como rastro, apuntando al que sobrevivió.'}
             </span>
+            {fusionados === 0 && separados === 0 && aviso?.ciego && (
+              <span className="dup-alcance">
+                Para volver a buscar sobre toda la base está{' '}
+                <code>packages/db/recuperacion/detectar-duplicados.mjs</code> (simulacro por
+                defecto). Marca; no fusiona.
+              </span>
+            )}
           </div>
         )}
 

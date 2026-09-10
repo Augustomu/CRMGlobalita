@@ -95,6 +95,192 @@ export function sinMedir(listas: ListaInvitacion[]): ListaInvitacion[] {
   return listas.filter((l) => !(l.paginas > 0));
 }
 
+// ---------------------------------------------------------------------------
+// Medir: de «no se sabe» a un total (§3.4)
+// ---------------------------------------------------------------------------
+//
+// La otra mitad de `sinMedir`. Distinguir «nunca se midió» de «se terminó»
+// sirve para saber qué hay que ir a hacer; esto es lo que se va a hacer.
+//
+// EL TOTAL SE DESCUBRE, NO SE TIPEA. Sales Navigator escribe arriba de la lista
+// cuántos resultados tiene la búsqueda («About 1,234 results»), y de ahí sale el
+// total de páginas dividiendo por lo que rinde una página. Tipear 22 números a
+// mano se hace mal una vez y además envejece solo: una búsqueda guardada crece
+// sola, y el número escrito hace un mes sigue diciendo lo de hace un mes.
+//
+// ACÁ NO HAY NADA DE HTML. Estas funciones reciben un texto y devuelven un
+// número. De qué elemento de la página salió ese texto lo sabe
+// `apps/worker/src/salesnav.ts`, que es el único archivo con selectores — y
+// cuando LinkedIn cambie el DOM se cambia ahí y esta regla no se toca.
+
+/**
+ * Hasta dónde pagina Sales Navigator, diga lo que diga el encabezado.
+ *
+ * ⚠️ **HIPÓTESIS, no verificada contra LinkedIn.** Nadie de este lado pudo
+ * abrir Sales Navigator para contarlo. Lo que hay: la plataforma corta el
+ * paginado de una búsqueda alrededor de las 100 páginas (2.500 resultados a 25
+ * por página), y el repositorio viejo ya lo daba por cierto —
+ * `scan-saved-searches.js` tiene `MAX_PAGES_SANO = 100` y capa ahí «por
+ * seguridad»— pero eso es una precaución de ese script, no una medición.
+ * **Hay que verificarlo contra el DOM real la primera vez que se corra
+ * `medir`**, y si el tope resultara otro, se cambia este número y nada más.
+ *
+ * Se topea igual porque es el error barato. Si el tope real fuera más alto se
+ * pierden páginas, y eso se recupera subiendo el número acá. Si no se topeara y
+ * el tope existe, la lista promete invitaciones que la búsqueda no puede
+ * entregar: la corrida se pasaría las últimas páginas navegando a resultados
+ * vacíos, que es tráfico raro contra LinkedIn justo cuando no hace falta.
+ * `medidaDelEncabezado` avisa con `topeado` cuando el recorte pasó, así que no
+ * es un recorte silencioso.
+ */
+export const TOPE_DE_PAGINAS = 100;
+
+/**
+ * El número del encabezado, en los formatos que LinkedIn sirve de verdad.
+ *
+ * Los tres idiomas de las cuentas: «About 1,234 results», «Aproximadamente
+ * 1.234 resultados», «Cerca de 1.234 resultados», «Más de 2.500 resultados»,
+ * «1,234 results», «1 result».
+ *
+ * **EL SEPARADOR DE MILES ES LA TRAMPA.** En inglés es la coma y en castellano
+ * y portugués es el punto, así que el MISMO texto —«1.234»— vale 1234 en una
+ * cuenta y sería 1,234 en la otra. Leerlo con `parseFloat`, que es lo que sale
+ * solo, convierte «1.234 resultados» en **1**: la lista queda con una página,
+ * figura medida, y nadie tiene por qué sospechar. Eso es peor que no medir —
+ * una lista sin medir se ve y se va a arreglar; una lista mal medida se cree.
+ *
+ * NO SE ADIVINA EL IDIOMA, se mira la forma del número. Un conteo de resultados
+ * es entero, así que un separador seguido de exactamente tres dígitos, en
+ * grupos parejos, es un separador de miles y da igual cuál de los dos sea:
+ * «1.234» y «1,234» son los dos 1234. Lo que no tiene esa forma —«1.5», «12.34»,
+ * o los dos separadores a la vez— no se interpreta: se devuelve `null`.
+ */
+function comoEntero(token: string): number | null {
+  // `\s` de JavaScript ya cubre los espacios duros y finos (U+00A0, U+202F)
+  // que LinkedIn mete adentro de los números. Y un separador colgando al final
+  // viene de un «1.234, resultados».
+  const limpio = token.replace(/\s/g, '').replace(/[.,]+$/, '');
+  if (!limpio) return null;
+  if (/^[0-9]+$/.test(limpio)) return Number(limpio);
+
+  const conPunto = limpio.includes('.');
+  const conComa = limpio.includes(',');
+  // Los dos a la vez: uno es de miles y el otro es decimal. Cuál es cuál
+  // depende del idioma de la sesión, que este texto no dice. Un conteo no tiene
+  // decimales, así que esto no debería llegar nunca — y si llega, se contesta
+  // «no se sabe» en vez de tirar una moneda.
+  if (conPunto && conComa) return null;
+
+  // Miles de verdad: grupos de EXACTAMENTE tres. «1.234» sí, «1.5» no.
+  const patron = conPunto ? /^[0-9]{1,3}(?:\.[0-9]{3})+$/ : /^[0-9]{1,3}(?:,[0-9]{3})+$/;
+  if (!patron.test(limpio)) return null;
+  return Number(limpio.replace(/[.,]/g, ''));
+}
+
+/**
+ * El número pegado a la palabra «resultados», en cualquiera de los tres
+ * idiomas. El `+?` del medio come el «1,000+ results» de las búsquedas grandes.
+ *
+ * **La palabra es obligatoria.** Sin ella cualquier número suelto de la página
+ * —el de una página, el de un filtro, el de un badge— pasaría por total.
+ */
+const ENCABEZADO_DE_RESULTADOS = /([0-9][0-9.,\u00a0\u202f]*)\s*\+?\s*(?:resultados?|results?)\b/i;
+
+/**
+ * Cuántos resultados dice un encabezado. `null` = **NO SE SABE**.
+ *
+ * `null` y no 0, y la diferencia es toda la función. `0` ya significa otra
+ * cosa: es lo que hay hoy en las 22 listas y quiere decir «sin medir», que
+ * encima se ve igual que «agotada» (ver `sinMedir`). Y un número inventado es
+ * peor todavía: hace prometer invitaciones que no existen.
+ *
+ * `0` sí se devuelve cuando el encabezado dice 0 **con el número escrito**
+ * («0 resultados», «0 results»). Eso no es un fracaso de la lectura: es una
+ * búsqueda vacía, y quien llama tiene que poder distinguirla de un encabezado
+ * que no se entendió. Un «No results» sin dígito, en cambio, es `null`: puede
+ * ser una búsqueda vacía o una página que ni siquiera cargó, y no se adivina.
+ */
+export function resultadosDelEncabezado(texto: string | null | undefined): number | null {
+  const encontrado = ENCABEZADO_DE_RESULTADOS.exec(String(texto ?? ''));
+  if (!encontrado) return null;
+  return comoEntero(encontrado[1]);
+}
+
+/**
+ * De los resultados al total de páginas.
+ *
+ * `null` cuando no se puede: sin saber cuánto rinde una página no hay división
+ * posible, y devolver 0 sería decir «medida y vacía» de algo que nadie midió.
+ */
+export function paginasParaResultados(resultados: number, porPagina: number): number | null {
+  if (!Number.isFinite(resultados) || resultados < 0) return null;
+  const rinde = Math.floor(porPagina);
+  if (!Number.isFinite(rinde) || rinde <= 0) return null;
+  // La última página va incompleta y cuenta igual: 26 resultados son 2 páginas.
+  return Math.min(TOPE_DE_PAGINAS, Math.ceil(resultados / rinde));
+}
+
+export interface MedidaDeLista {
+  /** Lo que decía el encabezado. */
+  resultados: number;
+  /** El total que se guarda en `paginas`, ya topeado. */
+  paginas: number;
+  /**
+   * El tope de `TOPE_DE_PAGINAS` recortó: la búsqueda tiene más resultados de
+   * los que Sales Navigator deja paginar. Se dice en voz alta porque es la
+   * diferencia entre «la lista se agotó» y «la lista sigue teniendo gente que
+   * la plataforma no muestra», y lo segundo se arregla afinando los filtros de
+   * la búsqueda, no cargando otra lista.
+   */
+  topeado: boolean;
+}
+
+/**
+ * La medición entera: de un encabezado a lo que hay que guardar.
+ *
+ * `null` = no se pudo leer, y entonces **no se toca nada**. Una lista que sigue
+ * sin medir es un problema que se ve; una lista con un total inventado es un
+ * problema que se cree.
+ */
+export function medidaDelEncabezado(
+  texto: string | null | undefined,
+  porPagina: number,
+): MedidaDeLista | null {
+  const resultados = resultadosDelEncabezado(texto);
+  if (resultados === null) return null;
+  const paginas = paginasParaResultados(resultados, porPagina);
+  if (paginas === null) return null;
+  return {
+    resultados,
+    paginas,
+    topeado: Math.ceil(resultados / Math.floor(porPagina)) > TOPE_DE_PAGINAS,
+  };
+}
+
+/**
+ * Si a esta lista se le puede ir a mirar el total sola.
+ *
+ * Es tener a dónde ir: la misma dirección que usa la corrida. Un CSV importado
+ * no tiene encabezado que leer —el total lo sabe el archivo— y una lista de
+ * Sales Navigator sin `origen_id` tampoco: no hay búsqueda a la que entrar.
+ * Ésas se cargan a mano desde Automatizaciones, que es el camino que tiene que
+ * existir igual para cuando LinkedIn cambie el DOM.
+ */
+export function sePuedeMedirSola(l: ListaInvitacion): boolean {
+  return Boolean(urlDeLista(l.fuente, l.origen_id));
+}
+
+/**
+ * Las listas que le tocan a una corrida de medición, en orden de prioridad.
+ *
+ * En orden y no como vengan: una corrida se puede cortar en la mitad —por un
+ * aviso de LinkedIn, por la franja horaria— y lo que tiene que estar medido
+ * primero es lo que se va a trabajar primero.
+ */
+export function paraMedir(listas: ListaInvitacion[]): ListaInvitacion[] {
+  return enPrioridad(sinMedir(listas).filter(sePuedeMedirSola));
+}
+
 /**
  * Cuántos perfiles quedan por sacar de una lista.
  *
@@ -159,10 +345,13 @@ export function mover(
  * las hay: no son listas que se acabaron, son listas a las que les falta un
  * paso.
  *
- * ⚠️ Ese paso TODAVÍA NO SE PUEDE DAR. Falta leer del encabezado de Sales
- * Navigator cuántos resultados tiene la búsqueda —de ahí sale el total de
- * páginas— y no hay ningún comando que lo haga. Hoy el único camino es que
- * alguien escriba el número a mano. Está anotado en `docs/PENDIENTES.md` 8.4.
+ * Ese paso YA SE PUEDE DAR, y son dos caminos a propósito:
+ *
+ *   · `node apps/worker/src/medir.ts <ABREV>` abre la primera página de cada
+ *     lista sin medir y lee el total del encabezado (`medidaDelEncabezado`).
+ *   · Y el número se puede escribir a mano desde Automatizaciones, porque el
+ *     DOM de LinkedIn cambia sin avisar y un descubrimiento automático sin
+ *     salida manual es un punto único de falla.
  */
 export function resumenDeListas(listas: ListaInvitacion[]): string {
   if (!listas.length) return 'sin listas asignadas';

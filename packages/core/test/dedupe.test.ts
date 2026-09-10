@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  decidirAlta, extraerUrn, huella, identidad, normalizarSlug, normalizarTexto,
+  avisoDeDeteccion, DATOS_QUE_CONFIRMAN, decidirAlta, extraerUrn, huella, identidad,
+  normalizarSlug, normalizarTexto, sinConQueConfirmar,
 } from '../src/dedupe.ts';
 
 test('D02 · el slug sale igual de cualquier forma de URL pública', () => {
@@ -73,3 +74,54 @@ test('D02 · nada coincide: perfil nuevo', () => {
   assert.equal(r.accion, 'nuevo');
 });
 
+
+/* ---------------------------------------------------------------------------
+ * Hasta dónde llega el detector (D02, §7.10)
+ * ------------------------------------------------------------------------ */
+
+test('D02 · un perfil sin ninguno de los cuatro datos es invisible para el detector', () => {
+  assert.equal(sinConQueConfirmar({}), true);
+  assert.equal(sinConQueConfirmar({ slug: '', urn: '', telefono: '', empresa: '' }), true);
+  // Los espacios no son un dato: «  » no confirma nada.
+  assert.equal(sinConQueConfirmar({ telefono: '   ' }), true);
+  // Con cualquiera de los cuatro alcanza para que alguna de las tres reglas
+  // del detector pueda llegar a ese perfil.
+  for (const campo of DATOS_QUE_CONFIRMAN) {
+    assert.equal(sinConQueConfirmar({ [campo]: 'algo' }), false, campo);
+  }
+});
+
+test('D02 · la bandeja vacía dice que nadie marcó, no que no haya duplicados', () => {
+  // Los números son los de la base del 10/09/2026.
+  const a = avisoDeDeteccion({ vivos: 410, marcados: 0, invisibles: 60, ultima_marca: '' });
+  assert.equal(a.titulo, 'Nadie marcó ningún perfil como posible duplicado');
+  assert.equal(a.ciego, true);
+  assert.match(a.detalle, /no busca por su cuenta/);
+  assert.match(a.detalle, /410 perfiles vivos, 60 no tienen con qué confirmarse/);
+  // Lo que NO puede decir nunca: que está limpio.
+  assert.doesNotMatch(a.detalle, /limpi/i);
+});
+
+test('D02 · sin punto ciego no se inventa una advertencia', () => {
+  const a = avisoDeDeteccion({ vivos: 12, marcados: 0, invisibles: 0, ultima_marca: '' });
+  assert.equal(a.ciego, false);
+  assert.doesNotMatch(a.detalle, /perfiles vivos/);
+});
+
+test('D02 · con marcas dice cuántas y hasta cuándo, en singular y en plural', () => {
+  const uno = avisoDeDeteccion({
+    vivos: 410, marcados: 1, invisibles: 60, ultima_marca: '2026-09-10 04:33:17.696Z',
+  });
+  assert.equal(uno.titulo, '1 perfil marcado, hasta el 10/09/26');
+
+  const tres = avisoDeDeteccion({
+    vivos: 410, marcados: 3, invisibles: 60, ultima_marca: '2026-09-10 04:33:17.696Z',
+  });
+  assert.equal(tres.titulo, '3 perfiles marcados, hasta el 10/09/26');
+  assert.equal(tres.ciego, true);
+});
+
+test('D02 · sin fecha de marca no se inventa una', () => {
+  const a = avisoDeDeteccion({ vivos: 410, marcados: 3, invisibles: 0, ultima_marca: '' });
+  assert.equal(a.titulo, '3 perfiles marcados');
+});

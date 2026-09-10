@@ -1503,6 +1503,26 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .reunion-evento-falta { font-size: var(--txt-sm); color: var(--warning); }
 .reunion-evento-ayuda { font-size: var(--txt-sm); color: var(--hint); line-height: 1.45; text-wrap: pretty; }
 
+/* §5.11 · el lead sin correo: se dice al abrir el panel, no al confirmar.
+   Tinte claro + texto del mismo tono, como el resto del CRM. El par
+   --warning-light / --badge-await-text está medido en 6.59:1. */
+.reunion-sin-correo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 12px 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--warning-light);
+  border-left: 3px solid var(--warning);
+}
+.reunion-sin-correo-texto {
+  font-size: var(--txt-sm);
+  color: var(--badge-await-text);
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
 .reunion-cuerpo {
   display: grid;
   grid-template-columns: 216px minmax(0, 1fr);
@@ -1720,6 +1740,24 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
    No viene del prototipo: es posterior. Usa las mismas medidas que el resto
    (bordes .5px, radios 8/10px, la escala de texto) para que no desentone. */
 .dup-encabezado { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* De dónde salió lo que se ve: la bandeja muestra lo MARCADO, no lo que hay.
+   Va en --muted y no en --hint: es una frase entera que hay que poder leer, y
+   --hint sobre fondo claro no llega al piso (medido sobre --warning-light:
+   3.39:1). */
+.dup-alcance { font-size: var(--txt-sm); color: var(--muted); flex-basis: 100%; }
+
+/* El punto ciego del detector, cuando la bandeja está vacía. Tinte claro +
+   texto del mismo tono, que es el idioma del resto del CRM; el par
+   --warning-light / --badge-await-text ya está medido en 6.59:1. */
+.dup-ciego {
+  font-size: var(--txt-md);
+  color: var(--badge-await-text);
+  background: var(--warning-light);
+  border-radius: 8px;
+  padding: 6px 8px;
+  max-width: 52ch;
+}
 
 .dup-tarjetas { display: grid; gap: 8px; align-items: start; }
 
@@ -3681,6 +3719,21 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .auto-lista-nombre > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .auto-pagina { display: flex; align-items: baseline; justify-content: flex-end; gap: 2px; font-size: var(--txt-md); color: var(--text); }
 .auto-pagina b { font-weight: 600; }
+/* El total, cuando todavía nadie lo midió: la salida manual de `medir.ts`
+   (§3.4). Entra en los mismos 74px de la columna del prototipo. */
+.auto-pagina input {
+  width: 38px;
+  height: 20px;
+  padding: 0 4px;
+  border: .5px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--txt-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
 .auto-restantes { font-size: var(--txt-sm); color: var(--muted); text-align: right; white-space: nowrap; }
 .auto-chip {
   font-size: var(--txt-xs);
@@ -3693,6 +3746,10 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 }
 .auto-chip-agotada { background: var(--warning-light); color: var(--warning); }
 .auto-chip-en-uso { background: var(--accent-light); color: var(--accent); }
+/* «Sin medir» tiene tono propio y no el de «agotada» (§3.4): las dos salen del
+   mismo `0 >= 0` y no significan lo mismo — una se terminó, la otra nunca se
+   midió, y lo que hay que ir a hacer es distinto en cada caso. */
+.auto-chip-sin-medir { background: var(--info-light); color: var(--info); }
 .auto-chip-nota { font-size: var(--txt-micro); background: var(--info-light); color: var(--muted); }
 
 /* cancelacion */

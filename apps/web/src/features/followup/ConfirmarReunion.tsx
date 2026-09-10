@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { esCorreo } from '@crm/core/reunion';
 
 interface Props {
   /** Los mails que ya están en la ficha. */
@@ -8,13 +9,6 @@ interface Props {
   duracion: number;
   onEnviar: (destinatarios: string[]) => void;
   onCerrar: () => void;
-}
-
-/** Un mail sirve si tiene arroba y algo de cada lado. No se valida más que eso. */
-function esMail(v: string): boolean {
-  const t = v.trim();
-  const i = t.indexOf('@');
-  return i > 0 && i < t.length - 1 && !t.includes(' ');
 }
 
 /**
@@ -28,7 +22,7 @@ function esMail(v: string): boolean {
 export function ConfirmarReunion({ emails, fecha, hora, duracion, onEnviar, onCerrar }: Props) {
   const [mails, setMails] = useState<string[]>(() => [...emails.filter(Boolean), '', '']);
 
-  const validos = mails.filter(esMail).map((m) => m.trim());
+  const validos = mails.filter(esCorreo).map((m) => m.trim());
   const cuando =
     (fecha ? `${fecha.slice(8, 10)}/${fecha.slice(5, 7)}` : '') +
     (hora ? ` · ${hora}` : '') +

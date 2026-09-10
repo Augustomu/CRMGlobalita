@@ -292,6 +292,22 @@ export async function guardarPagina(pb: PocketBase, listaId: string, pagina: num
 }
 
 /**
+ * El total de páginas que se midió (§3.4). Lo escribe `medir.ts`.
+ *
+ * Es OTRO campo que `guardarPagina`, y confundirlos sería caro: `pagina` es por
+ * dónde va la corrida y `paginas` es cuánto hay. Pisar el primero con el
+ * segundo saltearía a todos los que quedaron sin mirar.
+ *
+ * **No se escribe un total que no se midió.** Si el encabezado no se pudo leer,
+ * quien llama no llama a esto: la lista se queda sin medir, que se ve en
+ * pantalla y se va a arreglar. Un 0 acá sería no hacer nada, y un número
+ * inventado sería peor que no hacer nada.
+ */
+export async function guardarMedida(pb: PocketBase, listaId: string, paginas: number): Promise<void> {
+  await pb.collection('lista_invitacion').update(listaId, { paginas });
+}
+
+/**
  * Escribir el freno que decidió core cuando LinkedIn avisó.
  *
  * La pausa general es la MISMA de §7.3, la que se ve en Automatizaciones. Un

@@ -15,7 +15,7 @@
 
 import type { Locator, Page } from 'playwright';
 import type { AvisoDeLinkedIn } from '@crm/core/invitar';
-import { urlDeLista, type ListaInvitacion } from '@crm/core/invitacion';
+import { resultadosDelEncabezado, urlDeLista, type ListaInvitacion } from '@crm/core/invitacion';
 import { dormir, moverElMouse } from './navegador.ts';
 
 /**
@@ -108,6 +108,108 @@ export async function esperarResultados(pagina: Page): Promise<boolean> {
 
 export function perfilesDeLaPagina(pagina: Page): Locator {
   return pagina.locator(PERFILES);
+}
+
+// ---------------------------------------------------------------------------
+// El encabezado que dice cuántos resultados tiene la búsqueda (§3.4)
+// ---------------------------------------------------------------------------
+
+export interface EncabezadoDeResultados {
+  /** Todos los textos de la página que dicen «… resultados», de arriba abajo. */
+  candidatos: string[];
+  /** El primero que core supo leer. `''` = ninguno. */
+  texto: string;
+  /** Lo que dijo core. **`null` = NO SE SABE**, y entonces no se guarda nada. */
+  resultados: number | null;
+  /**
+   * Los distintos números que dieron los candidatos. Más de uno quiere decir
+   * que en la página hay dos conteos —el de la búsqueda y el de otra cosa— y
+   * que el elegido puede no ser el que corresponde. Se muestra en la corrida
+   * para que se vea; no se decide solo cuál gana.
+   */
+  distintos: number[];
+}
+
+/**
+ * Cuántos resultados dice la búsqueda, leído de la página.
+ *
+ * ⚠️ **LOS SELECTORES SON PISTAS, NO ESTÁN VERIFICADOS.** No hay un `id` de
+ * LinkedIn confirmado para este encabezado: `scan-saved-searches.js` y
+ * `scan-listas-agent.js` de `globalita-automation` nunca lo leyeron —contaban
+ * filas, no resultados— así que ni siquiera hay un selector viejo que haya
+ * estado en producción. Los nombrados de abajo son de abril/mayo de 2026 y hay
+ * que **verificarlos contra el DOM real** la primera vez que se corra `medir`.
+ *
+ * POR ESO NO SE APUESTA A UN SELECTOR. La búsqueda va al revés: se juntan
+ * TODOS los textos cortos de la página que digan «resultados» / «results», y
+ * se le pregunta a core cuál se puede leer. Cuando LinkedIn renombre la clase
+ * —que lo va a hacer— esto sigue encontrando el texto; si además cambiara la
+ * frase, no encuentra nada y **lo dice**, que es lo que hace que el camino
+ * manual de Automatizaciones exista.
+ *
+ * El filtro de acá no es la regla: es sólo qué textos vale la pena mirar. Los
+ * formatos, el separador de miles y qué pasa cuando no se entiende están en
+ * `core/invitacion.ts` con sus tests.
+ */
+export async function resultadosDeLaBusqueda(pagina: Page): Promise<EncabezadoDeResultados> {
+  const candidatos = await pagina
+    .evaluate(() => {
+      // Sólo para filtrar candidatos: un texto corto con un número pegado a la
+      // palabra. Quién lo interpreta es core.
+      const parece = /[0-9][0-9.,\u00a0\u202f]*\s*\+?\s*(?:resultados?|results?)\b/i;
+
+      // Las pistas primero, por si alguna sigue viva. Si ninguna existe, el
+      // barrido de abajo lo encuentra igual.
+      const pistas = [
+        '[data-test-search-results-total]',
+        '.search-results__total',
+        '.search-results-container h2',
+        'header h1',
+        'header h2',
+      ];
+
+      const posibles: Element[] = [];
+      for (const sel of pistas) {
+        document.querySelectorAll(sel).forEach((e) => posibles.push(e));
+      }
+      // Y el barrido: cualquier elemento CHICO de la página. Se filtra por
+      // `textContent`, que es barato y no fuerza layout, antes de pedirle a
+      // nadie una medida.
+      document.querySelectorAll('h1, h2, h3, p, span, div, li').forEach((e) => posibles.push(e));
+
+      const porTexto = new Map<string, { texto: string; y: number }>();
+      for (const el of posibles) {
+        const texto = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        // 120 caracteres: el encabezado es una línea. Un texto largo que
+        // contiene la frase es un contenedor, y adentro está el elemento justo.
+        if (!texto || texto.length > 120 || !parece.test(texto)) continue;
+        if (porTexto.has(texto)) continue;
+        const r = (el as HTMLElement).getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) continue; // escondido
+        porTexto.set(texto, { texto, y: r.top });
+      }
+
+      // De arriba abajo y, a igual altura, el más corto: el más corto es el
+      // elemento que contiene el conteo y nada más.
+      return Array.from(porTexto.values())
+        .sort((a, b) => a.y - b.y || a.texto.length - b.texto.length)
+        .slice(0, 8)
+        .map((c) => c.texto);
+    })
+    .catch(() => [] as string[]);
+
+  const leidos: { texto: string; n: number }[] = [];
+  for (const texto of candidatos) {
+    const n = resultadosDelEncabezado(texto);
+    if (n !== null) leidos.push({ texto, n });
+  }
+
+  return {
+    candidatos,
+    texto: leidos[0]?.texto ?? '',
+    resultados: leidos.length ? leidos[0].n : null,
+    distintos: Array.from(new Set(leidos.map((c) => c.n))),
+  };
 }
 
 export interface DatosDelPerfil {

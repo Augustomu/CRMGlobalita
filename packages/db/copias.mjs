@@ -168,3 +168,13 @@ export function restaurar(pb, datos, nombre) {
 
 /** La frase que hay que escribir para borrar datos reales. */
 export const FRASE_PARA_BORRAR = '--si-quiero-borrar-datos-reales';
+
+/**
+ * La frase para sembrar datos de demo sobre una base que tiene datos reales.
+ *
+ * El seed no borra, pero escribe ocho usuarios con la clave `demo12345` —uno
+ * administrador—, así que sobre la base de trabajo es una puerta abierta. Es
+ * distinta de la de borrar a propósito: son dos permisos distintos y no tiene
+ * que alcanzar con haber tipeado uno.
+ */
+export const FRASE_PARA_SEMBRAR = '--si-quiero-datos-de-demo-aca';

@@ -1,3 +1,5 @@
+import { ddmmaa } from './fecha.ts';
+
 // Identidad de un perfil y detección de duplicados.
 // Implementa D02 (manual §14).
 
@@ -119,3 +121,101 @@ export function decidirAlta(entrante: IdentidadPerfil, conocidos: PerfilConocido
     : { accion: 'nuevo' };
 }
 
+
+/* ---------------------------------------------------------------------------
+ * Hasta dónde llega el detector (D02)
+ * ------------------------------------------------------------------------ */
+
+/**
+ * Los datos con los que se puede CONFIRMAR que dos perfiles son la misma
+ * persona.
+ *
+ * El detector (`packages/db/recuperacion/detectar-duplicados.mjs`) nunca marca
+ * por nombre solo: empareja por teléfono repetido, por huella nombre+empresa, o
+ * por un apellido que aparece en el slug de LinkedIn o en el correo del lead.
+ * Los tres caminos necesitan alguno de estos cuatro campos, y es a propósito —
+ * emparejar por nombre de pila daba 181 grupos y hay dos personas distintas
+ * compartiendo un teléfono.
+ *
+ * La consecuencia, que es lo que esto sirve para poder decir: un perfil que no
+ * tiene NINGUNO de los cuatro es invisible para el detector. No es que no tenga
+ * duplicados: es que no hay forma de saberlo. La bandeja tiene que decirlo,
+ * porque si no un cero se lee como «está todo limpio».
+ */
+export const DATOS_QUE_CONFIRMAN = ['slug', 'urn', 'telefono', 'empresa'] as const;
+
+export type DatoQueConfirma = (typeof DATOS_QUE_CONFIRMAN)[number];
+
+/** Un perfil que el detector no puede ver, porque no tiene con qué confirmarse. */
+export function sinConQueConfirmar(
+  p: Partial<Record<DatoQueConfirma, string | null | undefined>>,
+): boolean {
+  return DATOS_QUE_CONFIRMAN.every((campo) => !String(p[campo] ?? '').trim());
+}
+
+/** Lo que hay que contar para saber qué está mostrando la bandeja. */
+export interface ConteoDeteccion {
+  /** Perfiles no fusionados. */
+  vivos: number;
+  /** De ésos, los que tienen `posible_duplicado_de` puesto. */
+  marcados: number;
+  /** De ésos, los que `sinConQueConfirmar` deja fuera del alcance del detector. */
+  invisibles: number;
+  /**
+   * Lo más reciente que se tocó un perfil marcado, en ISO, o '' si no hay
+   * ninguno.
+   *
+   * Es el `updated` del perfil, no una fecha de marcado: no existe esa columna.
+   * O sea que es un TECHO —el perfil pudo editarse después de que se lo marcó—
+   * y por eso el texto dice «hasta el» y no «marcado el».
+   */
+  ultima_marca: string;
+}
+
+export interface AvisoDeteccion {
+  /** El titular: qué es exactamente lo que la bandeja está mostrando. */
+  titulo: string;
+  /** Los números detrás, para que el cero no se lea como «no hay duplicados». */
+  detalle: string;
+  /** Hay perfiles que el detector no puede ver. Se pinta como advertencia. */
+  ciego: boolean;
+}
+
+/**
+ * Qué tiene que decir la bandeja de Duplicados sobre sí misma (D02, §7.10).
+ *
+ * POR QUÉ EXISTE. La pantalla lee los perfiles con `posible_duplicado_de`
+ * puesto y no busca nada por su cuenta, así que «0 duplicados» quiere decir
+ * «nadie marcó ninguno», que no es lo mismo. El 09/09 los tres perfiles de
+ * Herik existían hacía días y la bandeja decía cero.
+ *
+ * Se eligió decirlo en vez de volver a correr el detector: medido contra la
+ * base del 10/09, una corrida nueva encuentra **0 grupos** y además BORRA las
+ * marcas que no vuelve a proponer — o sea que se llevaría puesto el único
+ * grupo pendiente, que lo marcó una persona a mano.
+ */
+export function avisoDeDeteccion(c: ConteoDeteccion): AvisoDeteccion {
+  const alcance =
+    c.invisibles > 0
+      ? ` De los ${c.vivos} perfiles vivos, ${c.invisibles} no tienen con qué confirmarse` +
+        ' —ni LinkedIn, ni empresa, ni teléfono—, así que el detector no puede verlos.'
+      : '';
+
+  if (c.marcados === 0) {
+    return {
+      titulo: 'Nadie marcó ningún perfil como posible duplicado',
+      detalle:
+        'Esta bandeja muestra lo marcado; no busca por su cuenta.' +
+        alcance +
+        ' Cero acá no quiere decir que no haya duplicados.',
+      ciego: c.invisibles > 0,
+    };
+  }
+
+  const cuando = c.ultima_marca ? `, hasta el ${ddmmaa(c.ultima_marca)}` : '';
+  return {
+    titulo: `${c.marcados} ${c.marcados === 1 ? 'perfil marcado' : 'perfiles marcados'}${cuando}`,
+    detalle: 'Es lo marcado; la bandeja no busca por su cuenta.' + alcance,
+    ciego: c.invisibles > 0,
+  };
+}

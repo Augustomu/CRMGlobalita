@@ -211,6 +211,9 @@ const PAREJAS = [
   ['.campo-dia select', '.campo-dia-vacio', 'el día y el mes sin elegir'],
   ['.agenda-cabeza-cuantas', null, 'el contador del día'],
   ['.agenda-ahora-reloj', null, 'el reloj de la línea de ahora'],
+  // 10/09 · los dos carteles que dicen lo que falta, y por eso hay que leerlos.
+  ['.dup-ciego', null, 'el punto ciego del detector de duplicados'],
+  ['.reunion-sin-correo', '.reunion-sin-correo-texto', 'el aviso de que el lead no tiene correo'],
 ];
 
 {

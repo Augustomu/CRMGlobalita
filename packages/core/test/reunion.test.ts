@@ -4,6 +4,7 @@ import {
   AVISOS_POR_DEFECTO, descripcionEvento, finDe, momentosDeAviso, primeraReunion,
   tituloEvento, verBloque,  enSuZona, bloqueDelEvento, horaEnLaColumna, carriles,
   porUltimaReunion, tonoDeUltimaReunion,
+  avisoSinInvitado, correosDelLead, invitadosDelEvento,
 } from '../src/reunion.ts';
 
 // ------------------------------- §7.2: el color de la última reunión
@@ -244,4 +245,45 @@ test('§7.6 · el reparto vuelve en el orden en que se pasaron los bloques', () 
 
 test('§7.6 · sin bloques no hay reparto', () => {
   assert.deepEqual(carriles([]), []);
+});
+
+/* ---------------------------------------------------------------------------
+ * §5.11 · a quién se invita, y qué pasa cuando no hay a quién
+ * ------------------------------------------------------------------------ */
+
+test('§5.11 · los correos de la ficha salen en orden, sin vacíos ni repetidos', () => {
+  assert.deepEqual(
+    correosDelLead({ email: ' herik.marques@hotmail.com ', email2: '', email3: 'HERIK.MARQUES@hotmail.com' }),
+    ['herik.marques@hotmail.com'],
+  );
+  assert.deepEqual(correosDelLead({}), []);
+  assert.deepEqual(
+    correosDelLead({ email: 'a@x.com', email2: 'b@x.com', email3: 'c@x.com' }),
+    ['a@x.com', 'b@x.com', 'c@x.com'],
+  );
+});
+
+test('§5.11 · el invitado del evento es el que se eligió al confirmar, no el de la ficha', () => {
+  // El caso que estaba roto: la ficha no tenía correo y el link se abría sin
+  // invitado aunque se acabara de escribir uno en el cuadro de confirmación.
+  assert.deepEqual(invitadosDelEvento(['nuevo@empresa.com'], {}), ['nuevo@empresa.com']);
+  // El elegido gana incluso cuando la ficha ya tenía otro: la reunión puede ser
+  // con el jefe y no con el lead.
+  assert.deepEqual(
+    invitadosDelEvento(['jefe@empresa.com'], { email: 'lead@empresa.com' }),
+    ['jefe@empresa.com'],
+  );
+  // Sin elegidos —volver a abrir el evento desde el botón— vale la ficha.
+  assert.deepEqual(invitadosDelEvento([], { email: 'lead@empresa.com' }), ['lead@empresa.com']);
+  assert.deepEqual(invitadosDelEvento(['  ', ''], { email: 'lead@empresa.com' }), ['lead@empresa.com']);
+});
+
+test('§5.11 · sin ningún correo no hay a quién invitar, y se dice', () => {
+  const aviso = avisoSinInvitado({});
+  assert.ok(aviso);
+  assert.match(aviso, /no recibe nada/);
+  assert.equal(avisoSinInvitado({ email: '   ' }), aviso);
+  // Con correo no se avisa nada: un cartel permanente deja de leerse.
+  assert.equal(avisoSinInvitado({ email: 'lead@empresa.com' }), null);
+  assert.equal(avisoSinInvitado({ email3: 'lead@empresa.com' }), null);
 });

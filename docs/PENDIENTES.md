@@ -42,7 +42,7 @@ de memoria.
 | 7 · Agenda y Calendar | **7 de 7** |
 | 8 · Integraciones y worker | 1 de 7 |
 | 9 · Producción | 1 de 8 |
-| 10 · Los datos | **7 de 10** |
+| 10 · Los datos | **10 de 12** |
 | 11 · Las copias | **3 de 4** |
 
 **Los bloques 0 a 7 están cerrados.** Lo que queda no es de programar: el
@@ -95,8 +95,46 @@ La base anterior quedó guardada en el servidor como `data.db.antes-de-migrar`.
       no sólo instalado: `/etc/cron.d/crm-globalita-github` lo dispara a las 03:30
       —quince minutos después del backup local, para que no se pisen— y una corrida
       a mano dejó tres `.tar.gz` en el VPS y las copias en `globalita-data`.
-- [ ] 🧹 **El usuario de demo ya no está en producción**: se fue con la base
+- [x] ✅ **El usuario de demo ya no está en producción**: se fue con la base
       limpia. Si alguna migración del seed lo recrea en una base nueva, borrarlo.
+
+      **Revisado el 10/09, y el riesgo estaba en otro lado del que decía acá.**
+
+      `demo@globalita.test` lo crea `pb_migrations/1788603500_usuario_de_demo.js`
+      —una **migración**, no el seed, así que sí corre en toda base nueva,
+      producción incluida—. Pero **no es una clave conocida**: nace `pendiente`
+      (no puede iniciar sesión, no ve nada) y con
+      `$security.randomString(40)`, que no queda escrita en ningún lado. La
+      migración además chequea si ya existe antes de crearlo. Esa parte del
+      pendiente estaba equivocada.
+
+      ⚠️ **Lo que sí es una puerta abierta es el SEED**, y son ocho, no uno:
+
+      | Archivo | Usuarios con `demo12345` |
+      |---|---|
+      | `pb_seed/1788600100_demo.js` | Alberto (**administrador**), Sofía, Bruno, Vera |
+      | `pb_seed/1788601000_control_demo.js` | Ignacio, Renata |
+      | `pb_seed/1788602000_partner.js` | Alejandro, Nicolás |
+
+      Alberto queda `administrador`, `activo` y `verified`. La clave está
+      escrita en un repositorio **público** (§13.4). Y `--seed` no tenía ninguna
+      guarda: sobre esta base —240 leads reales— corría y creaba los ocho.
+
+      **HECHO: `--seed` se niega con el MISMO criterio que `--reset`**
+      (`queHayAdentro()` de `copias.mjs`: son reales los leads cuya lista no es
+      una de las que planta el seed). Probado corriéndolo de verdad contra la
+      base de trabajo: dice «NO corro el seed: esta base tiene 240 leads que no
+      son de demo», sale 1 y **no toca nada** —el chequeo va antes de las
+      migraciones—. Insistir pide `--si-quiero-datos-de-demo-aca`, que es una
+      frase distinta de la de borrar a propósito, y aun así copia antes. La
+      salida sana sigue siendo otra carpeta: `PB_DATOS=.pb/pb_data_demo`.
+      `packages/db/README.md` actualizado en la misma tanda.
+
+      🧹 **Producción**: local ya está limpio (1 usuario, el de Augusto). Allá
+      hay que ver si `demo@globalita.test` está —lo recrea la migración— y
+      **borrarlo lo hace Augusto**. No es urgente: no tiene clave usable ni
+      puede entrar. Los ocho del seed **no** están en producción, porque
+      `pb_seed/` no se despliega (`deploy/README.md:71`).
 
 ---
 
@@ -270,7 +308,7 @@ van** —el caso donde el «dale» por escrito alcanza, según la familia 12—:
       sin teléfono. Se les puso `posible_duplicado_de` apuntándose entre sí, así
       que **la bandeja de Duplicados ya muestra el grupo**. Fusionar lo hace
       Augusto: unir mal junta a dos personas distintas y no se puede deshacer.
-- [ ] ⚠️ **Y esto destapó algo de la bandeja: sólo muestra lo que alguien marcó
+- [x] ✅ **Y esto destapó algo de la bandeja: sólo muestra lo que alguien marcó
       antes.** `useDuplicados` lee los perfiles con `posible_duplicado_de`
       puesto; **no busca nada por su cuenta**. Que la bandeja diga cero no
       quiere decir que no haya duplicados: quiere decir que nadie los marcó.
@@ -284,6 +322,60 @@ van** —el caso donde el «dale» por escrito alcanza, según la familia 12—:
       esos 77. Hace falta decidir qué hacer con ese resto — no automatizarlo a
       ciegas, pero tampoco dejar que la bandeja en cero se lea como «está todo
       limpio».
+
+      **HECHO EL 10/09: la bandeja lo dice. Se eligió decirlo, no re-detectar.**
+
+      Se midió antes de decidir, contra `.pb/pb_data/data.db` en sólo lectura:
+
+      | | |
+      |---|---|
+      | perfiles vivos | **410** |
+      | marcados hoy | **3** (los tres de Herik, un solo grupo, del 10/09 04:33) |
+      | grupos que encuentra una corrida NUEVA del detector | **0** |
+      | perfiles que el detector **no puede ver** | **60 de 410** |
+
+      **Y ahí apareció por qué (a) —volver a correr el detector— era la peor de
+      las tres.** No es que proponga cientos: propone **cero**, y encima el
+      script **borraba** las marcas que no vuelve a proponer. Las tres de Herik
+      las puso una persona a mano el 09/09 —ninguno tiene slug y sólo uno tiene
+      teléfono, así que no las encuentra ninguna de las tres reglas—, o sea que
+      el script que existe para llenar la bandeja la habría vaciado, en
+      silencio. **Arreglado también**: limpiar marcas ahora se pide con
+      `--aplicar --limpiar-marcas`, y sin eso lista las que deja en pie.
+
+      **(b) —que la pantalla busque en vivo— tampoco servía**, y por el mismo
+      motivo: la regla es lo que limita, no el momento en que se corre. Una
+      búsqueda en vivo con la regla de hoy también da cero, o sea que **haría
+      desaparecer el grupo de Herik de la bandeja**. Y con una regla más laxa
+      —sólo el nombre— da 38 grupos / 69 pares que nadie confirmó. Además
+      obligaría a traer los 410 perfiles al navegador, teléfonos incluidos, que
+      es justo lo que §6.2 evita.
+
+      **Lo que se hizo (c).** `avisoDeDeteccion()` en `core/dedupe.ts` (con 5
+      tests que citan D02) arma el texto y la bandeja lo muestra arriba del
+      contenido y en el estado vacío. Donde antes decía «No hay duplicados
+      pendientes» ahora dice **«Nadie marcó ningún perfil como posible
+      duplicado»**, con los 60 de 410 y sin la palabra «limpio». Los dos números
+      los cuenta el servidor (`totalItems`): no viaja ni un teléfono al
+      navegador para contarlos.
+
+      **«Invisible» tiene definición, y una sola**: `sinConQueConfirmar()` — sin
+      `slug`, sin `urn`, sin `telefono` y sin `empresa` ninguna de las tres
+      reglas del detector puede llegar a ese perfil. La usan la bandeja **y** el
+      detector, que ahora imprime el mismo número al final de cada corrida.
+
+      **Lo que quedó sin hacer, a propósito**: no hay columna de «cuándo se
+      marcó», así que la fecha que muestra la pantalla es el `updated` más nuevo
+      de los marcados —un techo, porque el perfil pudo editarse después—. El
+      texto dice *hasta el* y no *marcado el*. Agregar la columna es una
+      migración y no cambia nada para las 3 marcas que ya existen, así que se
+      anota en vez de hacerse.
+      ❓ **Y el punto ciego sigue siendo una decisión tuya**: 60 perfiles sobre
+      los que el CRM no afirma nada. Ejemplo concreto encontrado al medir: hay
+      **dos «Pablo Alvarado»** vivos (`5co9ncqd4zblsji` y `o9pj1ulyipvz7ef`),
+      los dos Gerente en México, con teléfonos distintos y sin lead. Pueden ser
+      la misma persona con dos números o dos personas. **No se marcaron ni se
+      fusionaron**: eso lo decidís vos.
 
 **Lo que se suma al plan** (no está hecho):
 
@@ -1027,8 +1119,7 @@ página de revisión.
       sesión se usa desde el Chrome que ya está abierto en su máquina.
 - [x] ✅ **8.4 · Las listas de prospección.** Augusto las pasó el 10/09 en un
       documento. **22 búsquedas guardadas cargadas** con su `savedSearchId`, en seis
-      cuentas. Falta una sola cosa para que sirvan: el conteo de páginas de cada
-      una (`paginas` está en 0, así que figuran agotadas y la cola calcula 0).
+      cuentas.
       **10/09, decidido: el avance se reseteó y el total se va a DESCUBRIR.**
       Augusto: *«quiero que todas las páginas se reseteen porque tenemos que volver
       a hacer el enrich, saber si respondieron, cuántos mensajes»*. `pagina` quedó
@@ -1036,6 +1127,24 @@ página de revisión.
       tipear: Sales Navigator muestra la cantidad de resultados arriba de la lista,
       así que sale de ahí. Tipear 22 números a mano se hace mal una vez y envejece
       solo — una búsqueda guardada crece.
+      **Hecho el 10/09, las dos mitades:**
+      · La regla en `core/invitacion.ts` (`resultadosDelEncabezado`,
+      `paginasParaResultados`, `medidaDelEncabezado`, `paraMedir`) con 9 tests que
+      citan §3.4. Aguanta los formatos de los tres idiomas y **no confunde el
+      separador de miles** —en inglés coma, en castellano y portugués punto—, que es
+      el error que convierte «1.234 resultados» en 1 y deja la lista con una página
+      pareciendo medida. Cuando no se puede leer devuelve **null**, no 0 ni un
+      número aproximado.
+      · El lector del DOM en `apps/worker/src/salesnav.ts` y el comando
+      `node apps/worker/src/medir.ts <ABREV>` (§8.1.2), que abre la primera página
+      de cada lista sin medir con las mismas reglas de ritmo que `invitar`.
+      · Y la salida manual: el total se escribe a mano desde Automatizaciones sobre
+      la lista que figura «sin medir».
+      ⚠️ **Sin correr contra LinkedIn.** Los selectores del encabezado son pistas
+      —`globalita-automation` nunca leyó ese texto, contaba filas— y el tope de 100
+      páginas del paginado de Sales Navigator está anotado como **hipótesis** en
+      `TOPE_DE_PAGINAS`. La primera corrida la tiene que hacer Augusto y hay que
+      mirarla: `node apps/worker/src/medir.ts <ABREV> --simular` primero.
 - [ ] 🔒 **8.5 · WhatsApp con Baileys.** Una sola cuenta, según Augusto.
       **El número ya está decidido**: lo pasó el 10/09 y quedó en `.env` como
       `WA_NUMERO` (no en el repo: es público). Ya no bloquea.
@@ -1137,6 +1246,11 @@ página de revisión.
       🧹 **Producción tiene el usuario de demo** (`demo@globalita.test`, pendiente):
       lo recrea una migración del seed en cada base nueva. Local ya está limpio;
       allá lo borra Augusto.
+      **Precisado el 10/09**: no es «una migración del seed», es una migración a
+      secas (`1788603500_usuario_de_demo.js`), y **no tiene clave conocida** —es
+      aleatoria de 40 caracteres y el usuario nace `pendiente`—. El riesgo de la
+      clave `demo12345` es del seed, que no se despliega; está resuelto arriba,
+      en el bloque «0 quater».
       ❓ **Y sólo tiene 2 cuentas, AC y DP.** Local tiene 9. Las otras siete se
       crearon localmente y no viajan en ninguna migración. Hay que decidir si van.
 - [x] ✅ **9.6 · El backup del VPS corre, y se probó restaurándolo — 10/09.**
@@ -1206,10 +1320,48 @@ Contado contra la base, no de memoria.
       sin lead** y **166 leads no tienen teléfono**. Eso se cruza a mano desde
       el chip de Teléfono, porque el cruce automático por nombre exacto ya se
       agotó y adivinar de más junta a dos personas distintas.
-- [ ] ⚠️ **Los leads de WhatsApp no tienen correo, y no lo tienen en ningún
+- [x] ✅ **Los leads de WhatsApp no tienen correo, y no lo tienen en ningún
       lado.** Los dos CSV son exports de Google Contacts de 19 columnas y ninguna
       es de correo: son nombre, teléfono, organización y notas. No se perdió al
       importar, nunca estuvo. Sale de otra exportación o del scan de LinkedIn.
+
+      **Medido el 10/09 y qué se rompía de verdad.** Hoy son **11 leads de 240
+      sin ningún correo** (`email`, `email2` y `email3` vacíos), los 11 en R1
+      «contestó» y con reunión. Ninguno de esos 11 tiene teléfono todavía: el
+      cruce engancha teléfonos a leads que ya venían del calendario **con**
+      correo. Los que van a nacer sin correo son los que salgan de los **167
+      perfiles con teléfono y sin lead**.
+
+      Se revisaron los tres candidatos y el que fallaba no era el que parecía:
+
+      - **La ficha: NO estaba rota.** El chip de Email vacío ya se toca y se
+        escribe.
+      - **El envío de mail: no existe.** No hay canal de correo al lead; los
+        únicos mails que manda el CRM son los de alta de usuario.
+      - **La invitación de reunión: rota, y en silencio.** `ConfirmarReunion` sí
+        pedía el correo, pero recién **al final** —después de elegir día, hora y
+        duración—. Y el link de respaldo de Google Calendar, el que se abre
+        cuando el servidor no pudo escribir el evento, leía `lead.email`
+        **directo de la prop**: el valor de antes de confirmar. O sea que uno
+        escribía el correo, se guardaba en la ficha y en la reunión, y **el
+        evento se creaba sin invitado**. La reunión aparecía en el calendario
+        propio y la persona no se enteraba nunca. No fallaba: no invitaba.
+        Lo mismo el botón «volver a abrir el evento», para los 11.
+
+      **Arreglado.** `invitadosDelEvento(elegidos, lead)` en `core/reunion.ts`
+      —los elegidos mandan, la ficha es el respaldo— y el panel de Reunión
+      **dice al abrirse** que falta el correo y lo deja cargar ahí mismo
+      (`avisoSinInvitado()`), como hace `ConectarTelefono` con el teléfono. Se
+      guarda por el mismo `aplicar()` que el chip de Email, con deshacer y con
+      el permiso de §6.2; sin ese permiso se avisa pero no se ofrece. El botón
+      de volver a abrir el evento ahora dice en su tooltip que va **sin
+      invitado**. 8 tests nuevos citando §5.11, y §5.11 actualizado.
+      De paso, `esMail()` —que vivía suelto dentro de `ConfirmarReunion.tsx`—
+      pasó a `core/reunion.ts` como `esCorreo()`: ahora lo usan las dos
+      pantallas en vez de ser dos copias esperando divergir.
+
+      🔎 **Lo que sigue faltando es el dato, no la pantalla**: de dónde salen los
+      correos de esos leads. El CRM ahora lo pide bien; nadie lo puede inventar.
 - [x] ✅ **Limpieza de demo**: 12 tareas del seed, 11 actividades, y 2 leads de
       prueba míos («Prueba Alta 41577», «Nueva Persona 09271»).
       **Hecho el 09/09: 43 registros, con `limpiar-demo.mjs`. No se tocaron cuentas, plantillas, reglas ni etiquetas.**

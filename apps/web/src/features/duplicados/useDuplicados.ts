@@ -1,7 +1,27 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { LeadDelPerfil } from '@crm/core/fusion';
+import {
+  avisoDeDeteccion,
+  DATOS_QUE_CONFIRMAN,
+  type AvisoDeteccion,
+} from '@crm/core/dedupe';
 import { pb } from '../../lib/pocketbase';
 import type { PerfilRecord, UsuarioRecord } from '../../lib/types';
+
+/** Los perfiles marcados y sin fusionar: es lo único que la bandeja muestra. */
+const FILTRO_MARCADOS =
+  'posible_duplicado_de != null && posible_duplicado_de != "[]" && fusionado_en = ""';
+
+/**
+ * El filtro de los que el detector NO puede ver, armado con la MISMA lista de
+ * campos que usa `sinConQueConfirmar()`.
+ *
+ * Se genera y no se escribe a mano para que no haya dos definiciones de «con
+ * qué se confirma un perfil»: agregar un cuarto dato en `core` y olvidarse de
+ * este filtro es la familia 7 del registro.
+ */
+const FILTRO_INVISIBLES =
+  `fusionado_en = "" && ` + DATOS_QUE_CONFIRMAN.map((c) => `${c} = ""`).join(' && ');
 
 /** Un perfil marcado, con lo que el detector anotó. */
 export interface PerfilMarcado extends PerfilRecord {
@@ -66,10 +86,18 @@ export function useDuplicados(usuario: UsuarioRecord | null) {
   const [grupos, setGrupos] = useState<GrupoDuplicado[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Qué está mostrando la bandeja, y qué no puede mostrar.
+   *
+   * Sin esto, «0 duplicados» se lee como «está todo limpio» y no es lo que
+   * dice: es que nadie marcó ninguno.
+   */
+  const [aviso, setAviso] = useState<AvisoDeteccion | null>(null);
 
   const recargar = useCallback(async () => {
     if (!usuario) {
       setGrupos([]);
+      setAviso(null);
       setCargando(false);
       return;
     }
@@ -78,9 +106,44 @@ export function useDuplicados(usuario: UsuarioRecord | null) {
       // TEXTO, no del array, asi que "[]" cuenta como 2 y devolvia tambien los
       // perfiles ya resueltos — 354 en vez de 149.
       const marcados = await pb.collection('perfil').getFullList<PerfilMarcado>({
-        filter: 'posible_duplicado_de != null && posible_duplicado_de != "[]" && fusionado_en = ""',
+        filter: FILTRO_MARCADOS,
         sort: 'created',
       });
+
+      /*
+       * Los dos números del aviso los cuenta el SERVIDOR.
+       *
+       * Se piden con `getList(1, 1)` y se lee `totalItems`: así no viaja ni un
+       * teléfono al navegador para contar cuántos hay. Traerse los 410 perfiles
+       * para contarlos acá sería pasarle datos de contacto a un usuario que
+       * quizá no tiene el permiso de verlos (§6.2).
+       */
+      // El aviso es secundario: si estas dos cuentas fallan, la bandeja
+      // igual tiene que mostrar los grupos. Por eso van con su propio catch y
+      // no adentro del try grande.
+      const cuantos = (filtro: string) =>
+        pb
+          .collection('perfil')
+          .getList(1, 1, { filter: filtro, fields: 'id' })
+          .then((r) => r.totalItems)
+          .catch(() => null);
+
+      const [vivos, invisibles] = await Promise.all([
+        cuantos('fusionado_en = ""'),
+        cuantos(FILTRO_INVISIBLES),
+      ]);
+      setAviso(
+        vivos === null || invisibles === null
+          ? null
+          : avisoDeDeteccion({
+              vivos,
+              marcados: marcados.length,
+              invisibles,
+              // No hay columna de «cuándo se marcó», así que se usa el `updated`
+              // del perfil, que es un techo. El texto lo dice: «hasta el».
+              ultima_marca: marcados.reduce((m, p) => (p.updated > m ? p.updated : m), ''),
+            }),
+      );
 
       const armados = agruparPorConexion(marcados);
 
@@ -139,5 +202,5 @@ export function useDuplicados(usuario: UsuarioRecord | null) {
     void recargar();
   }, [recargar]);
 
-  return { grupos, cargando, error, recargar };
+  return { grupos, cargando, error, aviso, recargar };
 }

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type RefObject } from 'react';
 import { NOMBRE_ESTADO_REUNION,
+  avisoSinInvitado, correosDelLead, esCorreo,
   DURACION_DEFECTO, descripcionEvento, enMinutos, enSuZona, filasPorHora, finDe, hhmm,
-  mensajeDeHorarios, tituloEvento, tramoDeLaHora, tramosDelDia,
+  invitadosDelEvento, mensajeDeHorarios, tituloEvento, tramoDeLaHora, tramosDelDia,
   type EstadoReunion, type EventoDelDia,
 } from '@crm/core/reunion';
 import { cargaPorDia, estadoDelDia, fechaConCupo } from '@crm/core/carga';
@@ -66,6 +67,16 @@ interface Props {
   /** Vive en el lead, pero se edita acá: es la misma decisión que la reunión. */
   proximoContacto: string;
   onProximoContacto: (fecha: string) => void;
+  /**
+   * Guardar el correo principal del lead, cuando no tiene ninguno.
+   *
+   * Lo escribe la ficha con su propio `aplicar()` —el mismo camino que el chip
+   * de Email, con su deshacer y su permiso—, así que esto no es un segundo
+   * lugar donde se guarda el correo: es un segundo lugar donde se PIDE, que es
+   * justo donde hace falta. Sin la prop no se ofrece cargarlo, sólo se avisa;
+   * es lo que pasa cuando el usuario no puede ver correos (§6.2).
+   */
+  onCorreo?: (correo: string) => void;
   /** Todos los leads, para saber cuantos caen cada dia. */
   leads?: { proximo_contacto?: string | null }[];
   refProximo?: RefObject<HTMLButtonElement>;
@@ -85,7 +96,7 @@ interface Props {
  */
 export function FechaReunion({
   lead, usuario, editable, proximoContacto, onProximoContacto, refProximo, onCambio,
-  leads = [],
+  onCorreo, leads = [],
 }: Props) {
   const [reuniones, setReuniones] = useState<ReunionRecord[]>([]);
   /**
@@ -341,8 +352,18 @@ export function FechaReunion({
     if (!tramos.some((t) => t.label === hora && t.libre)) setHora(null);
   }, [tramos, hora]);
 
-  /** Link de "crear evento" de Google Calendar, ya armado. */
-  function linkCalendar(inicioIso: string, min: number): string {
+  /**
+   * Link de "crear evento" de Google Calendar, ya armado.
+   *
+   * `elegidos` son los destinatarios que se acaban de tildar al confirmar.
+   * ANTES ESTE LINK LEÍA `lead.email` DIRECTO y por eso podía crear el evento
+   * sin invitado: cuando la ficha no tenía correo —hoy 11 leads— uno lo
+   * escribía en el cuadro de confirmación, se guardaba en la ficha y en la
+   * reunión, pero acá seguía valiendo la prop vieja, que estaba vacía. El
+   * evento se creaba sólo en el calendario propio. Quién va invitado lo decide
+   * `invitadosDelEvento()` en core.
+   */
+  function linkCalendar(inicioIso: string, min: number, elegidos: string[] = []): string {
     const fmt = (iso: string) => iso.replace(/[-:]/g, '').replace(/\.\d{3}/, '');
     const params = new URLSearchParams({
       action: 'TEMPLATE',
@@ -351,8 +372,19 @@ export function FechaReunion({
       dates: `${fmt(inicioIso)}/${fmt(finDe(inicioIso, min))}`,
       ctz: ZONA,
     });
-    if (lead.email) params.set('add', lead.email);
+    for (const quien of invitadosDelEvento(elegidos, lead)) params.append('add', quien);
     return `https://calendar.google.com/calendar/render?${params}`;
+  }
+
+  /** Si no hay a quién invitar, se dice antes de confirmar (§5.11). */
+  const sinInvitado = avisoSinInvitado(lead);
+  const [correoNuevo, setCorreoNuevo] = useState('');
+
+  function guardarCorreo() {
+    const c = correoNuevo.trim();
+    if (!esCorreo(c) || !onCorreo) return;
+    onCorreo(c);
+    setCorreoNuevo('');
   }
 
   async function confirmar(destinatarios: string[]) {
@@ -397,7 +429,9 @@ export function FechaReunion({
       // pudo, se abre el link armado: la reunión nunca queda sin forma de
       // llegar al calendario.
       const conEstado = await pb.collection('reunion').getOne(creada.id).catch(() => null);
-      if (conEstado?.sync !== 'ok') window.open(linkCalendar(inicio, duracion), '_blank');
+      if (conEstado?.sync !== 'ok') {
+        window.open(linkCalendar(inicio, duracion, destinatarios), '_blank');
+      }
       setDia(null);
       setHora(null);
       await recargar();
@@ -554,7 +588,14 @@ export function FechaReunion({
             href={proxima ? linkCalendar(proxima.inicio, proxima.duracion_min) : linkCalendar(new Date().toISOString(), duracion)}
             target="_blank"
             rel="noreferrer"
-            title="Volver a abrir el evento en Google Calendar"
+            // Este link arma el evento con los correos de la ficha. Si no hay
+            // ninguno el evento se crea igual, pero sin invitado, y el botón
+            // tiene que decirlo antes de abrirse — no después, en Google.
+            title={
+              sinInvitado
+                ? 'Abrir el evento en Google Calendar — sin invitado: el lead no tiene correo'
+                : `Volver a abrir el evento en Google Calendar (invita a ${correosDelLead(lead)[0]})`
+            }
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
               <rect x="5" y="2.5" width="12" height="9" rx="1.6" />
@@ -727,6 +768,49 @@ export function FechaReunion({
               ficha», que era lo único accionable de los cuatro renglones. Si
               hace falta vuelve como un icono al lado del botón de agendar, no
               como un párrafo. */}
+
+          {/*
+           * EL LEAD SIN CORREO, DICHO ANTES Y NO DESPUÉS.
+           *
+           * Los teléfonos entraron por dos exportaciones de Google Contacts de
+           * 19 columnas y ninguna trae correo (§10), así que un lead que nació
+           * de un contacto de WhatsApp no tiene ninguno en ningún lado. Sin
+           * esto, la falta aparecía recién en el cuadro de confirmación —o sea
+           * después de elegir día, hora y duración— y el link de respaldo de
+           * Calendar creaba el evento sin invitado, sin decirlo.
+           *
+           * Es el mismo trato que el teléfono vacío: se dice qué falta y se
+           * ofrece cargarlo en el lugar donde se descubre, no en otro.
+           */}
+          {sinInvitado && (
+            <div className="reunion-sin-correo">
+              <span className="reunion-sin-correo-texto">{sinInvitado}</span>
+              {onCorreo && editable && (
+                <div className="conectar-mano-fila">
+                  <input
+                    className="conectar-mano-campo"
+                    value={correoNuevo}
+                    placeholder="nombre@empresa.com"
+                    onChange={(e) => setCorreoNuevo(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        guardarCorreo();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="boton-mini"
+                    disabled={!esCorreo(correoNuevo)}
+                    onClick={guardarCorreo}
+                  >
+                    guardar
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="reunion-cuerpo">
             <div className="reunion-mes">
