@@ -330,7 +330,12 @@ export function CuentasConectadas({
         { method: 'POST', body: { abrev } },
       );
       if (r?.ok) {
-        if (!r.ya_estaba) setPedidoEn(new Date().toISOString());
+        // SIEMPRE, incluso si ya estaba corriendo. `pedidoEn` es «lo pediste
+        // recién», no «se lanzó un proceso»: sin esto, apretar Vincular sobre
+        // una sesión ya prendida dejaba el panel mostrando el estado viejo y
+        // parecía que no hacía nada. Augusto: «cuando quiero tocar vincular
+        // nuevamente no me aparece el QR, tengo que cerrar todo y abrirlo».
+        setPedidoEn(new Date().toISOString());
         return;
       }
       setErrorWa(r?.error ?? 'El servidor no pudo prender la sesión.');
@@ -693,7 +698,10 @@ export function CuentasConectadas({
                   </details>
                 )}
 
-                <div className="cc-fila">
+                {/* Botonera propia y no `cc-fila`: esa es la fila de la tabla
+                    de arriba, con sus columnas fijas, y acá metía los dos
+                    botones en un ancho que no les daba — se superponían. */}
+                <div className="cc-qr-botones">
                   {/* Reintentar sólo cuando de verdad no hay nadie emitiendo.
                       Con un proceso vivo, apretar de nuevo levanta un segundo
                       que pelea por la misma credencial y los dos se

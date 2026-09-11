@@ -5676,6 +5676,18 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   align-items: center;
   gap: 8px;
 }
+/* Los botones del panel del QR.
+   Van en su propia fila y no en `.cc-fila`: esa tiene las columnas de la tabla
+   de sesiones —pastilla, nombre, estado, detalle, boton— y metia los dos
+   botones de aca en un ancho que no les daba, uno encima del otro. */
+.cc-qr-botones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 /* Lo que dijo el worker cuando no hay código.
    Cerrado por defecto: es la salida cruda de un proceso, y quien sólo quiere
    escanear un QR no tiene por qué verla. Pero cuando algo falla es lo único

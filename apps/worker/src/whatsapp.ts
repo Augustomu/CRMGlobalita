@@ -91,6 +91,28 @@ function carpetaDeSesion(abrev: string): string {
 }
 
 /**
+ * La credencial va en una SUBCARPETA, y el resto de la casa no se toca.
+ *
+ * POR QUE, y costó una tarde. Cuando la credencial muere hay que borrarla —si
+ * no, Baileys falla igual la próxima vez y el síntoma parece de red—. Eso se
+ * hacía con un `rmSync` de la carpeta entera, y adentro de esa carpeta vivían
+ * también **el turno y el diario**.
+ *
+ * O sea que justo cuando algo salía mal se borraban las dos cosas que sirven
+ * para entender qué pasó y para impedir que arranque un segundo proceso. El
+ * 11/09 eso terminó en dos sesiones peleando por la misma credencial,
+ * deslogueándose entre ellas en un bucle, con la carpeta vacía y sin una línea
+ * de log: exactamente el estado en el que es imposible saber nada.
+ *
+ * Ahora se borra `cred/` y nada más.
+ */
+function carpetaDeCredencial(casa: string): string {
+  const dir = join(casa, 'cred');
+  mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+/**
  * Una sola sesión por cuenta, y la que llega segunda se va.
  *
  * POR QUE. Baileys guarda la credencial en archivos. Dos procesos sobre la
@@ -202,11 +224,12 @@ async function vincular(abrev: string): Promise<number> {
   const pb = await entrar();
   const cuenta = await buscarCuenta(pb, abrev);
   const esperado = String(process.env.WA_NUMERO ?? '').trim();
-  const dir = carpetaDeSesion(abrev);
+  const casa = carpetaDeSesion(abrev);
+  const cred = carpetaDeCredencial(casa);
 
-  tomarElTurno(dir, abrev);
+  tomarElTurno(casa, abrev);
 
-  decir(`${abrev}: credencial en ${dir}`);
+  decir(`${abrev}: credencial en ${cred}`);
   if (esperado) decir(`  se espera el número ${numeroTapado(esperado)} (WA_NUMERO del .env)`);
   else decir('  ⚠ WA_NUMERO no está en el entorno: no voy a poder avisarte si escaneás con el teléfono equivocado.');
 
@@ -215,7 +238,7 @@ async function vincular(abrev: string): Promise<number> {
   let salida = 1;
 
   while (!listo) {
-    const { state, saveCreds } = await useMultiFileAuthState(dir);
+    const { state, saveCreds } = await useMultiFileAuthState(cred);
     const sock: WASocket = baileys({
       auth: state,
       // El QR se dibuja acá abajo con la librería, no con el de Baileys: el
@@ -311,7 +334,8 @@ async function vincular(abrev: string): Promise<number> {
     if (hayQueDescartarLaCredencial(que.motivo)) {
       // La credencial murió: dejarla obliga a Baileys a fallar igual la próxima
       // vez, y el síntoma parece de red.
-      if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
+      // SOLO `cred/`: el turno y el diario viven en la casa y no se tocan.
+      if (existsSync(cred)) rmSync(cred, { recursive: true, force: true });
       decir('  Credencial borrada: la próxima vuelta pide un QR nuevo.');
     }
 
