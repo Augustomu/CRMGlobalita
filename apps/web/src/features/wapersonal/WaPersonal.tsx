@@ -366,19 +366,26 @@ export function WaPersonal({ onIrAlLead }: Props) {
             title="Sólo los que no leíste"
             onClick={() => alternar('sin_leer')}
           >
+            {/* CON SU NOMBRE, no sólo el número.
+                Augusto, 11/09: *«el emoji de 55, no sé para qué sirve»*. Y
+                tenía razón: un icono de persona con un 55 al lado no dice
+                «cincuenta y cinco que no están en el CRM» — no lo dice ni
+                aunque uno lo piense. Un filtro cuyo criterio hay que adivinar
+                es un filtro que no se usa. */}
             <span aria-hidden="true">●</span>
             <span className="tabular">{chats.filter((c) => c.no_leido).length}</span>
+            <span>sin leer</span>
           </button>
           <button
             type="button"
             className={`wap-filtro ${filtros.has('no_agendados') ? 'wap-filtro-on' : ''}`}
-            title="Sólo los números que no existen como lead en el CRM"
+            title="Sólo los que todavía no existen como lead en el CRM"
             onClick={() => alternar('no_agendados')}
           >
-            <span aria-hidden="true">👤</span>
             <span className="tabular">
               {chats.filter((c) => !telefonosEnLaBase.has(ultimosOcho(c.telefono))).length}
             </span>
+            <span>sin lead</span>
           </button>
           {/* Sin conteo suelto. Cada interruptor ya trae el suyo, y un «5 de 5»
               al lado no dice de qué: hay que deducir a cuál de los dos se

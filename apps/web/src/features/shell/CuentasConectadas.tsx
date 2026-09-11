@@ -242,9 +242,16 @@ export function CuentasConectadas({
   /** 7.4 · El traído del histórico: puede tardar, así que se avisa mientras. */
   const [trayendo, setTrayendo] = useState(false);
   const [historico, setHistorico] = useState<string | null>(null);
-  /** El resultado de traer la agenda de Google, para poder decirlo. */
-  const [trayendoAgenda, setTrayendoAgenda] = useState(false);
-  const [agenda, setAgenda] = useState<string | null>(null);
+  /**
+   * Ya no hay botón de agenda: se trae al conectar la cuenta.
+   *
+   * Estuvo como botón y estaba mal pensado, igual que el del histórico:
+   * conectar una cuenta y que los chats sigan mostrando números hasta acordarse
+   * de apretar otra cosa es pedirle a la persona que sepa cómo funciona esto
+   * por dentro. Conectar una cuenta de Google ES pedir que se usen sus
+   * contactos. El resultado llega en el aviso de la vuelta (`avisoGoogle`).
+   */
+  const agenda: string | null = null;
   /** Reuniones futuras que todavía no llegaron al calendario. La consecuencia. */
   const [sinSincronizar, setSinSincronizar] = useState(0);
 
@@ -369,48 +376,6 @@ export function CuentasConectadas({
       setGoogleFallo(err instanceof Error ? err.message : 'No se pudo traer el histórico.');
     } finally {
       setTrayendo(false);
-    }
-  }
-
-  /**
-   * Traer la agenda de Google y completar los nombres que faltan.
-   *
-   * Es un botón y no algo automático porque recorre la agenda entera y escribe
-   * sobre chats y perfiles: conviene que alguien lo dispare sabiendo qué va a
-   * pasar, y no que ocurra solo al abrir una pantalla.
-   *
-   * Se puede apretar las veces que haga falta: sólo completa lo que está
-   * vacío, así que correrlo dos veces no hace nada la segunda.
-   */
-  async function traerAgenda() {
-    setTrayendoAgenda(true);
-    setAgenda(null);
-    setGoogleFallo(null);
-    try {
-      const r = await pb.send<{
-        ok?: boolean;
-        cuentas?: number;
-        contactos?: number;
-        fallos?: string[];
-        chats?: number;
-        perfiles?: number;
-        error?: string;
-      }>('/api/google/contactos', { method: 'POST', body: {} });
-
-      // Los fallos se dicen AUNQUE haya salido bien: si una de tres cuentas no
-      // se pudo leer, el resultado es parcial y hay que saberlo. Un «listo» que
-      // esconde un error es un «listo» que miente.
-      const parcial = r?.fallos?.length ? ` ⚠ ${r.fallos.join(' · ')}` : '';
-      setAgenda(
-        r?.ok
-          ? `${r.contactos ?? 0} contactos de ${r.cuentas ?? 1} cuenta(s) · ` +
-              `${r.chats ?? 0} chats y ${r.perfiles ?? 0} perfiles con nombre nuevo.${parcial}`
-          : (r?.error ?? 'No se pudo leer la agenda.'),
-      );
-    } catch (err) {
-      setGoogleFallo(err instanceof Error ? err.message : 'No se pudo leer la agenda.');
-    } finally {
-      setTrayendoAgenda(false);
     }
   }
 
@@ -738,19 +703,20 @@ export function CuentasConectadas({
           {(google?.cuentas ?? [])
             .filter((c) => !c.principal && c.conectada)
             .map((c) => (
-              <div key={c.id} className="cc-fila">
+              <div key={c.id} className="cc-fila cc-fila-google">
                 <span className="pastilla">ag</span>
                 <span className="cc-perfil">{c.email || 'sin correo'}</span>
                 <span className="cc-estado cc-ok">
                   <span className="cc-punto cc-punto-ok" />
                   conectada
                 </span>
-                <span className="cc-detalle">sólo agenda</span>
-                <span className="cc-acciones" />
+                <span className="cc-acciones">
+                  <span className="campo-ayuda">sólo agenda</span>
+                </span>
               </div>
             ))}
 
-          <div className="cc-fila">
+          <div className="cc-fila cc-fila-google">
             <span className="pastilla">cal</span>
             <span className="cc-perfil">
               {google?.conectado
@@ -827,20 +793,6 @@ export function CuentasConectadas({
               </button>
             )}
 
-            {/* La agenda. Va al lado del histórico porque las dos traen algo de
-                Google hacia el CRM, y las dos se disparan a mano por la misma
-                razón: recorren todo y escriben. */}
-            {google?.conectado && !confirmarCorte && (
-              <button
-                type="button"
-                className="boton-mini"
-                disabled={trayendoAgenda}
-                title="Leer tus contactos de Google y completar el nombre de los chats y perfiles que sólo tienen el número. No pisa ningún nombre que ya esté."
-                onClick={() => void traerAgenda()}
-              >
-                {trayendoAgenda ? 'leyendo…' : 'Sincronizar contactos'}
-              </button>
-            )}
 
             {google?.conectado &&
               (confirmarCorte ? (

@@ -6766,8 +6766,11 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   cursor: pointer;
   font-family: inherit;
 }
-.wap-chat:hover .wap-accion { border-color: var(--border); background: var(--surface); }
-.wap-accion:hover { color: var(--accent); border-color: var(--accent-br); background: var(--accent-light); }
+/* SIN RECUADRO. Antes la fila, al pasar por encima, le dibujaba un borde y un
+   fondo a este icono: con una flecha suelta se leia como boton, pero con el
+   icono dibujado queda un circulo de mas alrededor. Augusto lo pidio sacar el
+   11/09. El hover cambia el COLOR, que alcanza para que se vea que se toca. */
+.wap-accion:hover { color: var(--accent); }
 .wap-accion-fu:hover { color: var(--accent); }
 .wap-accion:disabled { opacity: .35; cursor: default; }
 
@@ -7206,3 +7209,14 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 }
 /* El icono de «abrir en otra aplicacion» de la fila del chat. */
 .wap-accion svg { width: 13px; height: 13px; display: block; }
+
+/* La fila de Google: su propia grilla.
+   `.cc-fila` tiene cinco columnas pensadas para LinkedIn y WhatsApp —pastilla,
+   nombre, estado, detalle, un boton—. La de Google tiene un CORREO, que es
+   largo, y dos o tres botones: la ultima columna se comia el ancho y el correo
+   salia como «cuenta...». Aca el correo manda y los botones se acomodan
+   despues, envolviendo si hace falta. */
+.cc-fila-google {
+  grid-template-columns: 42px minmax(140px, 1fr) auto auto;
+}
+.cc-fila-google .cc-perfil { min-width: 0; }

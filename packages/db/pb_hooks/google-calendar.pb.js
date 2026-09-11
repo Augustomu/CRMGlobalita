@@ -169,11 +169,37 @@ routerAdd('GET', '/api/google/callback', (e) => {
   if (!fila.get('calendario')) fila.set('calendario', 'primary');
   $app.save(fila);
 
+  /*
+   * LA AGENDA SE TRAE ACA MISMO, sin que nadie apriete nada.
+   *
+   * Estuvo como boton —«Sincronizar contactos»— y estaba mal pensado, igual
+   * que el del historico: conectar una cuenta y que los chats sigan mostrando
+   * numeros hasta acordarse de apretar otra cosa es pedirle a la persona que
+   * sepa como funciona esto por dentro. Augusto lo dijo el 11/09: *«sincronizar
+   * contactos tiene que ser ya confirmado, no tiene que haber un boton para
+   * eso»*.
+   *
+   * Conectar una cuenta de Google ES pedir que se usen sus contactos.
+   *
+   * Si falla, la conexion ya quedo guardada: no se pierde por esto.
+   */
+  let nombres = '';
+  try {
+    const a = require(`${__hooks}/agenda.js`);
+    const contactos = a.traerAgenda(res.json.access_token);
+    const r = a.ponerNombres(contactos);
+    nombres = ', ' + contactos.length + ' contactos leidos (' + r.chats + ' chats y ' + r.perfiles + ' perfiles con nombre)';
+    $app.logger().info('google-callback', 'contactos', contactos.length, 'chats', r.chats, 'perfiles', r.perfiles);
+  } catch (err) {
+    $app.logger().error('google-callback', 'contactos', String(err));
+    nombres = ', pero no se pudo leer la agenda: ' + String(err);
+  }
+
   // Una cuenta conectada SOLO PARA LEER no trae el calendario: no es la que
   // escribe las reuniones y traerle un ano de eventos seria llenar la agenda
   // con el calendario personal de alguien.
   if (!fila.get('principal')) {
-    return volver('cuenta conectada: ' + (email || 'sin correo'));
+    return volver('cuenta conectada: ' + (email || 'sin correo') + nombres);
   }
 
   // Y se trae el historico ACA MISMO, sin que nadie apriete nada.
