@@ -50,6 +50,37 @@ function telefonoDelJid(jid: string | undefined): string {
 }
 
 /**
+ * El teléfono del que escribió, cuando WhatsApp lo da.
+ *
+ * NO SIEMPRE LO DA, y eso rompió el primer entrante real. WhatsApp está
+ * migrando a los **LID** —`140166408724554@lid`—, un identificador interno que
+ * **no es un número de teléfono**: es la forma de no revelar el número de
+ * alguien que escribe desde una comunidad o con la privacidad activada.
+ *
+ * Tomarlo como teléfono deja un «·4554» que no es de nadie, no cruza con
+ * ningún perfil y ensucia la base. Así que:
+ *
+ *   1. Si el JID es `@s.whatsapp.net`, ese ES el número.
+ *   2. Si es un LID, WhatsApp a veces manda el número aparte (`senderPn`).
+ *   3. Si no está en ninguno, se devuelve vacío: **el chat se guarda igual**
+ *      —con el nombre que manda WhatsApp— pero sin inventar un teléfono.
+ *      Un campo vacío es honesto; un número falso cruza mal para siempre.
+ */
+export function telefonoDeQuienEscribe(key: Record<string, unknown> | null | undefined): string {
+  const k = (key ?? {}) as Record<string, unknown>;
+  const jid = String(k.remoteJid ?? '');
+
+  if (jid.endsWith('@s.whatsapp.net')) return telefonoDelJid(jid);
+
+  for (const alterno of ['senderPn', 'remoteJidAlt', 'participantPn']) {
+    const v = String(k[alterno] ?? '');
+    if (v.endsWith('@s.whatsapp.net')) return telefonoDelJid(v);
+  }
+
+  return '';
+}
+
+/**
  * El texto de un mensaje, venga en el formato que venga.
  *
  * WhatsApp tiene una decena de formas de decir «texto»: el mensaje simple, el
@@ -158,7 +189,7 @@ export async function guardarEntrante(
     await pb.collection('mensaje').create({
       lead: r.lead_id,
       canal: 'whatsapp',
-      quien: 'ellos',
+      quien: 'in',
       texto: e.texto,
       enviado_en: e.recibidoEn,
     });
@@ -184,12 +215,29 @@ export async function guardarEntrante(
   //
   // Vacío es el valor correcto: quién es lo decide una PERSONA con los botones
   // de §5.8, y hasta que eso pase el CRM no tiene por qué haber elegido.
-  const previos = await pb
-    .collection('chat_personal')
-    .getFullList<{ id: string; mensajes?: unknown }>({ filter: `telefono = "${e164}"` })
-    .catch(() => [] as { id: string; mensajes?: unknown }[]);
+  // Cuando WhatsApp no dio el número (un LID), el hilo se busca por nombre: es
+  // lo único que hay. Buscar por `telefono = ""` juntaría en una sola
+  // conversación a todos los que escribieron sin número, que son personas
+  // distintas.
+  const porDonde = e164
+    ? `telefono = "${e164}"`
+    : e.nombre
+      ? `telefono = "" && nombre = "${e.nombre.replace(/"/g, '')}"`
+      : null;
 
-  const nuevo = { quien: 'ellos', texto: e.texto, cuando: e.recibidoEn };
+  const previos = porDonde
+    ? await pb
+        .collection('chat_personal')
+        .getFullList<{ id: string; mensajes?: unknown }>({ filter: porDonde })
+        .catch(() => [] as { id: string; mensajes?: unknown }[])
+    : [];
+
+  // La forma la manda `MensajeChat` de core: quien es 'in'/'out' y la fecha
+  // se llama `en`. El 11/09 esto decia { quien: 'ellos', cuando: ... } y la
+  // pantalla no mostraba nada: los mensajes estaban guardados con una forma
+  // que nadie sabe leer. Es la familia 6 del registro —programar contra el
+  // modelo imaginado en vez de contra el que existe— y va por la octava vez.
+  const nuevo = { quien: 'in', texto: e.texto, en: e.recibidoEn };
 
   if (previos.length) {
     const anteriores = Array.isArray(previos[0]!.mensajes) ? previos[0]!.mensajes : [];
@@ -253,8 +301,11 @@ export function escuchar(
           // un grupo no tiene uno. Meterlo crearía un «lead» que es un grupo.
           if (jid.endsWith('@g.us') || jid.endsWith('@broadcast')) continue;
 
-          const telefono = telefonoDelJid(jid);
-          if (!telefono) continue;
+          // Puede venir vacío si WhatsApp mandó un LID y no el número. No se
+          // descarta el mensaje por eso: se guarda con el nombre y sin
+          // teléfono, que es la verdad. Descartarlo sería perder un mensaje
+          // real por un dato que WhatsApp decidió no dar.
+          const telefono = telefonoDeQuienEscribe(m.key as Record<string, unknown> | null);
 
           const texto = textoDelMensaje(m.message as Record<string, unknown> | null);
           if (!texto) continue;
@@ -272,7 +323,7 @@ export function escuchar(
 
           // El teléfono tapado y el texto recortado: este log se lee en
           // pantalla y se pega en mensajes.
-          decir(`  ← ${telefono.slice(-4).padStart(7, '·')} · ${que}`);
+          decir(`  ← ${telefono ? "···" + telefono.slice(-4) : (m.pushName ?? "sin número")} · ${que}`);
         } catch (err) {
           // Un mensaje que falla no puede cortar la escucha: el próximo tiene
           // que entrar igual. Pero se dice, para que no se descubra dentro de
