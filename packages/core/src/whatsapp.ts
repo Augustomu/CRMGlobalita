@@ -313,7 +313,12 @@ export function comoSeVeLaSesionWa(
     (ahora.getTime() - emitido) / 1000 <= SEGUNDOS_QR_VIGENTE;
 
   if (estado === 'activa') {
-    const numero = String(fila.wa_numero ?? '').trim();
+    // TAPADO, tambien acá. El número salía entero en la fila de Cuentas
+    // conectadas, y esa pantalla se fotografía para pedir ayuda —Augusto mandó
+    // dos capturas de ella el 11/09—. Un teléfono real en una captura es un
+    // teléfono real en cualquier lado al que llegue esa captura. Los últimos
+    // cuatro alcanzan para reconocer cuál es.
+    const numero = numeroTapado(String(fila.wa_numero ?? '').trim());
     return {
       estado,
       qr_vigente: false,

@@ -665,7 +665,18 @@ export function CuentasConectadas({
                        es peor que ninguno: se escanea, no pasa nada, y parece
                        que WhatsApp está roto. La vigencia la decide
                        `core/whatsapp.ts`, que sabe cuánto dura. */
-                    <span>{paso ? paso.titular : 'esperando el código'}</span>
+                    <span className={paso?.paso === 'conectada' ? 'cc-qr-listo' : undefined}>
+                      {/* Cuando ya está vinculada, el panel tiene que DECIRLO.
+                          Un recuadro que sigue hablando de códigos después de
+                          escanear se lee como que no funcionó — y eso fue
+                          exactamente lo que pasó el 11/09: la sesión estaba
+                          viva y la pantalla seguía en «renovando el código». */}
+                      {paso?.paso === 'conectada'
+                        ? `✓ ${paso.titular}`
+                        : paso
+                          ? paso.titular
+                          : 'esperando el código'}
+                    </span>
                   )}
                 </div>
 

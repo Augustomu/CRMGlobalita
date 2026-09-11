@@ -126,6 +126,15 @@ test('§8.2 · con señal fresca está activa y no hay nada que hacer', () => {
   assert.equal(v.que_hacer, '');
 });
 
+test('§8.2 · la fila de una sesión conectada NO muestra el número entero', () => {
+  // Esta pantalla se fotografía para pedir ayuda: Augusto mandó dos capturas
+  // de ella el 11/09. Un teléfono real en una captura es un teléfono real en
+  // cualquier lado al que llegue esa captura.
+  const v = comoSeVeLaSesionWa({ ultima_senal_wa: HACE(1), wa_numero: '5491133334444' });
+  assert.ok(!v.titular.includes('5491133334444'), 'el número entero no puede estar en la fila');
+  assert.ok(v.titular.includes('4444'), 'pero los últimos cuatro sí, para reconocer cuál es');
+});
+
 test('§8.2 · el QR caduca: uno viejo no se escanea, se pide otro', () => {
   const ahora = new Date('2026-09-10T12:00:00.000Z');
   const enSegundos = (s: number) => new Date(ahora.getTime() - s * 1000).toISOString();

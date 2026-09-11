@@ -5676,6 +5676,14 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   align-items: center;
   gap: 8px;
 }
+/* Vinculada. Es el unico estado del panel que es una buena noticia, y tiene
+   que verse distinto del resto: los demas son grises porque dicen «espera» o
+   «falta algo». */
+.cc-qr-listo {
+  color: var(--success);
+  font-weight: 600;
+}
+
 /* Los botones del panel del QR.
    Van en su propia fila y no en `.cc-fila`: esa tiene las columnas de la tabla
    de sesiones —pastilla, nombre, estado, detalle, boton— y metia los dos
