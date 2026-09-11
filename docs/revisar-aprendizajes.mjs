@@ -99,7 +99,7 @@ function contraste(a, b) {
 // perfectamente puede no dar en noche. El agujero se encontró a mano; queda
 // tapado acá para no depender de que alguien se acuerde.
 // ---------------------------------------------------------------------------
-const tokensCss = leer('apps/web/public/design-tokens.css');
+const tokensCss = leer('apps/web/src/design-tokens.css');
 
 /** Los tokens declarados dentro del bloque de un tema. */
 function tokensDelTema(selector) {

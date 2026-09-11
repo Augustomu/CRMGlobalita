@@ -165,6 +165,8 @@ async function candidatosPorTelefono(
 
 export interface Entrante {
   telefono: string;
+  /** El identificador de la conversacion en WhatsApp. Ver migracion 1788720000. */
+  jid?: string;
   texto: string;
   recibidoEn: string;
   nombre: string;
@@ -285,11 +287,17 @@ export async function guardarEntrante(
   // lo único que hay. Buscar por `telefono = ""` juntaría en una sola
   // conversación a todos los que escribieron sin número, que son personas
   // distintas.
-  const porDonde = e164
-    ? `telefono = "${e164}"`
-    : e.nombre
-      ? `telefono = "" && nombre = "${e.nombre.replace(/"/g, '')}"`
-      : null;
+  // PRIMERO POR JID, que es lo único que WhatsApp garantiza único; el teléfono
+  // queda de respaldo para los chats que se guardaron antes de que existiera.
+  // Sin esto, un mensaje nuevo creaba una conversación aparte de la que ya
+  // tenía el historial de esa misma persona.
+  const porDonde = e.jid
+    ? `wa_jid = "${e.jid}"` + (e164 ? ` || (wa_jid = "" && telefono = "${e164}")` : '')
+    : e164
+      ? `telefono = "${e164}"`
+      : e.nombre
+        ? `telefono = "" && nombre = "${e.nombre.replace(/"/g, '')}"`
+        : null;
 
   const previos = porDonde
     ? await pb
@@ -308,12 +316,20 @@ export async function guardarEntrante(
   if (previos.length) {
     const anteriores = Array.isArray(previos[0]!.mensajes) ? previos[0]!.mensajes : [];
     await pb.collection('chat_personal').update(previos[0]!.id, {
-      mensajes: [...anteriores, nuevo],
+      // Recortado, igual que el historial: el campo admite 500 KB y una
+      // conversación de dos meses los rozó.
+      mensajes: recortarChat([...anteriores, nuevo] as never) as unknown as typeof anteriores,
       no_leido: true,
+      // Se completa el JID si el chat es de antes de que existiera.
+      ...(e.jid ? { wa_jid: e.jid } : {}),
     });
   } else {
     await pb.collection('chat_personal').create({
       cuenta: cuentaId,
+      // EL JID TAMBIEN ACA. El historial lo guardaba y los mensajes nuevos no,
+      // así que un chat creado por un mensaje nuevo quedaba sin identidad y no
+      // se podía pegar después con el resto de su conversación.
+      wa_jid: e.jid || '',
       telefono: e164,
       nombre: e.nombre || '',
       mensajes: [nuevo],
@@ -725,6 +741,7 @@ export function escuchar(
             recibidoEn: cuando,
             // El de la agenda primero; el que eligió el otro, de respaldo.
             nombre: nombres.get(jid) || m.pushName || '',
+            jid,
           });
 
           // Y la foto, si este chat todavía no tiene. Va después de guardar el

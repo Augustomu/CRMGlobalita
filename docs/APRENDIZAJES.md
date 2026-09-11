@@ -226,7 +226,7 @@ busca lo declarado al nivel del archivo y avisa si un handler lo usa.
 
 ## 6 · Programar contra el modelo imaginado, no contra los datos
 
-> **7 veces.** El que más se repite de los que **no** se pueden automatizar —
+> **10 veces.** El que más se repite de los que **no** se pueden automatizar —
 > y el único que ya se cometió dos veces **con el mismo campo**.
 
 **El problema.** Escribir una regla contra cómo uno cree que son los datos, y
@@ -240,10 +240,24 @@ no contra cómo son.
 | 4 | Que `updated` sirve para ordenar chats por hora | `updated` es cuándo se tocó la fila, y marcar leído la toca: los chats salían 08:12, 11:24, 17:40, 10:45 |
 | 5 | Que la × del chip sacaba el chip | Llamaba a `sinCuenta()`, que con un alcance por casa devuelve el alcance **intacto**, a propósito. La × no hacía nada |
 | 6 | Que los huecos libres se calculan sobre lo que se ve | Se calculaban sobre los eventos **filtrados**: con el filtro en «BR» aparecía «2 h libre» encima de una reunión de AL |
-| 7 | Que `lead.updated` sirve para «últimos editados» | **Es `updated` otra vez, el mismo campo del #4.** `updated` es cuándo se tocó la fila, y la toca una importación, la sincronización de Google o cualquier script. El 09/09 la barra de accesos rápidos quedó clavada en «Jorge, Marcelo y Fabio» a las 20:09, 16:54 y 16:53: las tres filas que tocó el importador, no los tres leads que abrió Augusto. Lo reportó él, no un chequeo |
+| 8 | Que `chat_personal.tipo` aceptaba «sin_clasificar» | Es un select de DOS valores: «personal» y «trabajo». PocketBase rechazaba la fila entera, así que **los mensajes de WhatsApp llegaban y la pantalla quedaba vacía**. Lo reportó Augusto tres veces antes de que yo mirara el esquema || 9 | Que un mensaje se guarda como `{quien:'ellos', cuando}` | `MensajeChat` de core dice `{quien:'in'|'out', en}`. Ni el campo de la fecha ni el valor coincidían: la pantalla recibía objetos que no entiende y no dibujaba nada. **El mismo día que el #8, y sin abrir `core/chat.ts` ninguna de las dos veces** || 10 | Que un teléfono de WhatsApp hay que normalizarlo con el país | Un JID **ya viene en E.164**. Un mexicano quedó guardado como `545215523036183`: el 54 de Argentina pegado a un número que ya tenía su 52. Como se prospecta en México y Brasil, **rompía a casi todos** || 7 | Que `lead.updated` sirve para «últimos editados» | **Es `updated` otra vez, el mismo campo del #4.** `updated` es cuándo se tocó la fila, y la toca una importación, la sincronización de Google o cualquier script. El 09/09 la barra de accesos rápidos quedó clavada en «Jorge, Marcelo y Fabio» a las 20:09, 16:54 y 16:53: las tres filas que tocó el importador, no los tres leads que abrió Augusto. Lo reportó él, no un chequeo |
 
-**De dónde vino.** De implementar sin consultar la base primero. Los siete se
+| 8 | Que `chat_personal.tipo` aceptaba «sin_clasificar» | Es un select de DOS valores: «personal» y «trabajo». PocketBase rechazaba la fila entera, así que **los mensajes de WhatsApp llegaban y la pantalla quedaba vacía**. Augusto lo reportó tres veces antes de que yo mirara el esquema |
+| 9 | Que un mensaje se guarda como `{quien:'ellos', cuando}` | `MensajeChat` de core dice `{quien:'in'\|'out', en}`. Ni el campo de la fecha ni el valor coincidían: la pantalla recibía objetos que no entiende y no dibujaba nada. **El mismo día que el #8, y sin abrir `core/chat.ts` ninguna de las dos veces** |
+| 10 | Que a un teléfono de WhatsApp hay que ponerle el país | Un JID **ya viene en E.164**. Un mexicano quedó guardado como `545215523036183`: el 54 de Argentina pegado a un número que ya tenía su 52. Como se prospecta en México y Brasil, **rompía a casi todos** |
+
+**De dónde vino.** De implementar sin consultar la base primero. Los diez se
 habrían visto con una consulta de treinta segundos.
+
+**El 11/09 volvió tres veces en dos horas**, las tres en el mismo archivo nuevo
+y las tres por no abrir el esquema que ya estaba escrito a dos carpetas de
+distancia. La regla que faltaba no es «mirar los datos» —ésa ya estaba— sino
+**mirar los datos ANTES de escribir cada campo, no después del primer error**.
+
+**El chequeo que sí se puede automatizar.** `node docs/revisar-campos.mjs`
+compara lo que el worker escribe contra el esquema real de PocketBase: campos
+que no existen, y valores fuera de un `select`. Es lo único de esta familia que
+una máquina puede ver, y cubre los casos 8 y 10.
 
 **Y el 7 agrega algo que el 4 ya había enseñado y no alcanzó.** Las dos veces
 fue `updated`, y las dos veces el error fue el mismo: **confundir «cuándo

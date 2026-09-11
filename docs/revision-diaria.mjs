@@ -63,6 +63,7 @@ decir(`\n=== REVISION DIARIA DEL CRM · ${new Date().toISOString()} ===`);
 paso('tests de core', process.execPath, ['--test', 'packages/core/test/*.test.ts']);
 paso('dependencias en una sola direccion', process.execPath, ['docs/revisar-dependencias.mjs']);
 paso('errores del registro', process.execPath, ['docs/revisar-aprendizajes.mjs']);
+paso('campos contra el esquema', process.execPath, ['docs/revisar-campos.mjs']);
 
 /**
  * La base, y la copia más nueva.

@@ -734,6 +734,15 @@ export function CuentasConectadas({
                   : ''}
             </span>
 
+            {/* TODOS LOS BOTONES EN UNA CAJA PROPIA.
+                `.cc-fila` es una grilla de cinco columnas fijas —pastilla,
+                nombre, estado, detalle, botón— y acá hay cuatro botones
+                metiéndose en la última. El 11/09 se veían superpuestos y con el
+                texto cortado («Conectar otra cuent»). Van en un flex que
+                envuelve: la grilla les da una celda, y ellos se acomodan
+                adentro. */}
+            <span className="cc-acciones">
+
             {/* Sin credenciales en el servidor el botón no puede hacer nada:
                 en vez de uno que falla, se dice qué falta. */}
             {google && !google.servidor_listo && (
@@ -824,6 +833,7 @@ export function CuentasConectadas({
                   Desconectar
                 </button>
               ))}
+            </span>
           </div>
 
           {(googleFallo || avisoGoogle || historico || agenda) && (
