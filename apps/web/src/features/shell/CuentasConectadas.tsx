@@ -759,17 +759,24 @@ export function CuentasConectadas({
                 {yendoAGoogle ? 'yendo…' : 'Conectar'}
               </button>
             )}
-            {/* 7.4 · El histórico. Sólo cuando está conectada: sin cuenta no
-                hay de dónde traerlo. */}
-            {google?.conectado && !confirmarCorte && (
+            {/* EL HISTORICO SOLO APARECE SI FALLO.
+                Augusto, 11/09: *«traer histórico debería desaparecer, porque
+                automáticamente cuando se conecta siempre tiene que traer el
+                histórico»*. Tiene razón, y ya era así: la vuelta de Google lo
+                trae sola. El botón sobraba en el 99% de los casos y ocupaba el
+                lugar del que sí hace falta.
+                Queda para el 1%: si esa vez falló —Google lento, demasiados
+                eventos— la conexión igual quedó guardada, y sin este botón la
+                única salida sería desconectar y volver a conectar. */}
+            {google?.conectado && !confirmarCorte && Boolean(sinSincronizar) && (
               <button
                 type="button"
                 className="boton-mini"
                 disabled={trayendo}
-                title="Traer los eventos del calendario de los últimos ~400 días, para que la agenda muestre el día completo y no sólo las reuniones del CRM"
+                title="Volver a traer los eventos del calendario. Al conectar se traen solos; esto es para reintentar si esa vez falló."
                 onClick={() => void traerHistorico()}
               >
-                {trayendo ? 'trayendo…' : 'Traer el histórico'}
+                {trayendo ? 'trayendo…' : 'Reintentar el histórico'}
               </button>
             )}
 

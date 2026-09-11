@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { COLUMNA_WA } from '@crm/core/anchos';
 import { useAncho } from '../../lib/useAncho';
 import { conDias, ultimoTexto, type MensajeChat } from '@crm/core/chat';
@@ -124,6 +124,39 @@ export function WaPersonal({ onIrAlLead }: Props) {
   const [copiado, setCopiado] = useState<string | null>(null);
 
   /**
+   * El hilo arranca ABAJO, en el último mensaje.
+   *
+   * Pedido el 11/09: *«que por default aparezca en el último mensaje»*. Es lo
+   * que hace cualquier chat, y con 400 mensajes por conversación abrir uno y
+   * caer en un «hola» de hace dos meses obliga a rodar la rueda hasta abajo
+   * cada vez.
+   *
+   * `auto` y no `smooth` al abrir: la animación de dos meses de mensajes se ve
+   * como un tirón. El botón de bajar sí va suave, porque ahí uno mira.
+   */
+  const cajaHilo = useRef<HTMLDivElement | null>(null);
+  const [lejosDelFondo, setLejosDelFondo] = useState(false);
+
+  function alFondo(suave = false) {
+    const c = cajaHilo.current;
+    if (!c) return;
+    c.scrollTo({ top: c.scrollHeight, behavior: suave ? 'smooth' : 'auto' });
+  }
+
+  /**
+   * Si uno se fue para arriba, aparece el botón de volver.
+   *
+   * El umbral son 200px y no 0: con el botón apareciendo al primer píxel de
+   * scroll, cualquier rueda sin querer lo prende y apaga. 200 es «me fui a
+   * buscar algo», que es cuando sirve.
+   */
+  function mirarSiLlegoAlFondo() {
+    const c = cajaHilo.current;
+    if (!c) return;
+    setLejosDelFondo(c.scrollHeight - c.scrollTop - c.clientHeight > 200);
+  }
+
+  /**
    * Copiar el teléfono al portapapeles.
    *
    * El «✓ copiado» dura dos segundos: sin confirmación uno aprieta dos veces
@@ -195,6 +228,19 @@ export function WaPersonal({ onIrAlLead }: Props) {
 
   const activo = chats.find((c) => c.id === sel) ?? chats[0] ?? null;
   const hilo = useMemo(() => conDias(activo?.mensajes ?? [], hoy), [activo, hoy]);
+
+  /**
+   * Al cambiar de chat, al fondo.
+   *
+   * Va en un `useEffect` y no en el `onClick` de la fila porque el hilo se
+   * dibuja DESPUÉS de elegir: en el clic todavía está la conversación anterior
+   * y bajar ahí bajaría la de antes.
+   */
+  useEffect(() => {
+    alFondo();
+    setLejosDelFondo(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activo?.id, hilo.length]);
 
   // Los que YA se rutearon solos: se avisa, no se pide nada.
   const visibles = useMemo(() => {
@@ -498,7 +544,7 @@ export function WaPersonal({ onIrAlLead }: Props) {
 
         {error && <div className="aviso-error">{error}</div>}
 
-        <div className="wap-burbujas">
+        <div className="wap-burbujas" ref={cajaHilo} onScroll={mirarSiLlegoAlFondo}>
           {hilo.map((i, n) =>
             i.tipo === 'dia' ? (
               <div key={n} className="wap-dia">
@@ -515,6 +561,21 @@ export function WaPersonal({ onIrAlLead }: Props) {
           )}
           {!hilo.length && <p className="vacio">Elegí un chat.</p>}
         </div>
+
+        {/* Volver al último mensaje. Aparece sólo si uno se fue para arriba:
+            un botón permanente que la mitad del tiempo no hace nada ocupa
+            lugar sobre la conversación, que es lo que se está leyendo. */}
+        {lejosDelFondo && (
+          <button
+            type="button"
+            className="wap-bajar"
+            title="Ir al último mensaje"
+            aria-label="Ir al último mensaje"
+            onClick={() => alFondo(true)}
+          >
+            ⌄
+          </button>
+        )}
 
         <div className="wap-escribir">
           <textarea

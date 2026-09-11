@@ -4131,7 +4131,7 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   white-space: nowrap;
 }
 
-.wap-hilo { min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; }
+.wap-hilo { position: relative; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; }
 .wap-hilo-header {
   display: flex;
   align-items: center;
@@ -7073,3 +7073,27 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   text-underline-offset: 2px;
   text-decoration-thickness: 1px;
 }
+
+/* El boton de volver al ultimo mensaje, como el de WhatsApp.
+   Flota sobre el hilo, arriba del cuadro de escribir. Aparece solo cuando uno
+   se fue para arriba: uno permanente que la mitad del tiempo no hace nada
+   ocupa lugar sobre la conversacion, que es lo que se esta leyendo. */
+.wap-bajar {
+  position: absolute;
+  right: 18px;
+  bottom: 74px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: .5px solid var(--wa-borde);
+  background: var(--wa-burbuja-in);
+  color: var(--muted);
+  font-size: var(--txt-lg);
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgb(0 0 0 / .16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wap-bajar:hover { background: var(--accent); color: var(--text); }
