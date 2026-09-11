@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { pb } from '../../lib/pocketbase';
 import { useEscape } from '../../lib/useEscape';
 import {
@@ -6,7 +6,7 @@ import {
   NOMBRE_ESTADO_SESION,
   porQueNingunaSesion,
 } from '@crm/core/sesion';
-import { comoSeVeLaSesionWa, numeroTapado } from '@crm/core/whatsapp';
+import { comoSeVeLaSesionWa, comoVaElVinculo, numeroTapado } from '@crm/core/whatsapp';
 import { CodigoQr } from './CodigoQr';
 
 /**
@@ -44,6 +44,8 @@ interface CuentaRecord {
   /** Por qué no está viva, y con qué número quedó vinculada. */
   wa_motivo?: string;
   wa_numero?: string;
+  /** Si esta cuenta usa WhatsApp. Hoy una sola de las nueve (§8.2). */
+  wa_habilitado?: boolean;
 }
 
 /**
@@ -90,8 +92,47 @@ export function CuentasConectadas({
   const [cuentas, setCuentas] = useState<CuentaRecord[]>([]);
   const [cola, setCola] = useState<EnCola[]>([]);
   const [cargando, setCargando] = useState(true);
-  /** Qué cuenta tiene el QR abierto. `nueva` es vincular otro número. */
+  /** Qué cuenta tiene el panel del QR abierto. */
   const [qr, setQr] = useState<string | null>(null);
+  /**
+   * Cuándo se apretó «Vincular», en esta pantalla y en este momento.
+   *
+   * NO va a la base a propósito: es de esta pestaña. Guardarlo haría que una
+   * pestaña abierta desde ayer contara como un pedido recién hecho, y la
+   * pantalla diría «prendiendo la sesión» sobre un proceso que no existe.
+   */
+  const [pedidoEn, setPedidoEn] = useState<string | null>(null);
+  const [errorWa, setErrorWa] = useState<string | null>(null);
+  const [eligiendoCuenta, setEligiendoCuenta] = useState(false);
+  /** Para llevar la vista al panel: con Google abajo, el QR quedaba fuera de cuadro. */
+  const panelQr = useRef<HTMLDivElement | null>(null);
+  /**
+   * Un reloj de un segundo, sólo mientras el panel está abierto.
+   *
+   * El estado del vínculo depende del TIEMPO —el QR vigente vence al minuto, el
+   * pedido deja de contar a los 25 segundos— y sin esto la pantalla se queda
+   * congelada en el último valor que calculó. Es un segundo y sólo cuando hay
+   * un panel abierto: no hay nada que recalcular con el panel cerrado.
+   */
+  const [tic, setTic] = useState(0);
+  useEffect(() => {
+    if (!qr) return;
+    const t = setInterval(() => setTic((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [qr]);
+
+  /**
+   * Llevar la vista al panel cuando se abre.
+   *
+   * El panel se dibuja al final del cuerpo, debajo de LinkedIn y de Google. Con
+   * nueve cuentas arriba quedaba **fuera de cuadro**: se apretaba «Vincular»,
+   * pasaba algo nueve filas más abajo, y desde donde estaba el dedo eso se ve
+   * igual que un botón que no hace nada.
+   */
+  useEffect(() => {
+    if (!qr) return;
+    panelQr.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [qr]);
 
   const [google, setGoogle] = useState<EstadoGoogle | null>(null);
   const [googleFallo, setGoogleFallo] = useState<string | null>(null);
@@ -232,6 +273,60 @@ export function CuentasConectadas({
     }
   }
 
+  /**
+   * Abrir el panel del QR **y prender la sesión**.
+   *
+   * Las dos cosas juntas, porque separadas es lo que estaba mal: el panel se
+   * abría solo y esperaba un código que nadie estaba emitiendo. El QR no lo
+   * puede generar el navegador —lo emite Baileys, del lado del worker— así que
+   * abrir el panel sin prender nada es abrir una sala de espera vacía.
+   *
+   * Si el servidor contesta 404 es que el worker no está al lado (el CRM
+   * publicado en el VPS, por ejemplo). Ahí no se inventa nada: se dice que hay
+   * que correr el comando a mano, que sigue funcionando igual.
+   */
+  async function abrirVinculo(abrev: string) {
+    setQr(abrev);
+    setErrorWa(null);
+    setEligiendoCuenta(false);
+    try {
+      const r = await pb.send<{ ok?: boolean; ya_estaba?: boolean; error?: string }>(
+        '/api/wa/vincular',
+        { method: 'POST', body: { abrev } },
+      );
+      if (r?.ok) {
+        if (!r.ya_estaba) setPedidoEn(new Date().toISOString());
+        return;
+      }
+      setErrorWa(r?.error ?? 'El servidor no pudo prender la sesión.');
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      setErrorWa(
+        status === 404
+          ? 'Este CRM no tiene el worker al lado, así que no puede prender la sesión solo. ' +
+              'Corré en una terminal: node apps/worker/src/whatsapp.ts vincular ' +
+              abrev +
+              ' — el código aparece acá igual.'
+          : err instanceof Error
+            ? err.message
+            : 'No se pudo hablar con el servidor.',
+      );
+    }
+  }
+
+  /** Sumar una cuenta a WhatsApp. Es un dato de la cuenta, no de esta pantalla. */
+  async function habilitarWhatsapp(c: CuentaRecord) {
+    setErrorWa(null);
+    try {
+      await pb.collection('cuenta').update(c.id, { wa_habilitado: true });
+      setCuentas((cs) => cs.map((x) => (x.id === c.id ? { ...x, wa_habilitado: true } : x)));
+      setEligiendoCuenta(false);
+      await abrirVinculo(c.abrev);
+    } catch (err) {
+      setErrorWa(err instanceof Error ? err.message : 'No se pudo habilitar la cuenta.');
+    }
+  }
+
   /** Cuántos envíos espera cada cuenta. */
   const pendientes = useMemo(() => {
     const m = new Map<string, number>();
@@ -252,8 +347,12 @@ export function CuentasConectadas({
     [cuentas],
   );
 
+  /** Las que usan WhatsApp, y las que podrían sumarse. */
+  const conWhatsapp = useMemo(() => cuentas.filter((c) => c.wa_habilitado), [cuentas]);
+  const sinWhatsapp = useMemo(() => cuentas.filter((c) => !c.wa_habilitado), [cuentas]);
+
   const activasLi = [...estadoLi.values()].filter((e) => e === 'activa').length;
-  const activasWa = [...estadoWa.values()].filter((e) => e === 'activa').length;
+  const activasWa = conWhatsapp.filter((c) => estadoWa.get(c.id) === 'activa').length;
   const explicacion = porQueNingunaSesion(HAY_WORKER, cuentas.length);
 
   /**
@@ -263,7 +362,13 @@ export function CuentasConectadas({
    * frenada, está esperando su turno, que es otra cosa.
    */
   const frenados = cuentas
-    .filter((c) => estadoLi.get(c.id) !== 'activa' || estadoWa.get(c.id) !== 'activa')
+    .filter(
+      (c) =>
+        estadoLi.get(c.id) !== 'activa' ||
+        // WhatsApp sólo frena a las cuentas que lo usan: una cuenta sin
+        // WhatsApp no tiene nada esperando por ese lado.
+        (c.wa_habilitado && estadoWa.get(c.id) !== 'activa'),
+    )
     .reduce((a, c) => a + (pendientes.get(c.id) ?? 0), 0);
 
   return (
@@ -274,7 +379,7 @@ export function CuentasConectadas({
           <span className="campo-ayuda tabular">
             {cargando
               ? 'leyendo…'
-              : `${activasLi} LinkedIn · ${activasWa}/${cuentas.length} WhatsApp`}
+              : `${activasLi}/${cuentas.length} LinkedIn · ${activasWa}/${conWhatsapp.length} WhatsApp`}
           </span>
           <div className="barra" />
           <button type="button" className="boton-icono-26" title="Cerrar" onClick={onCerrar}>
@@ -311,37 +416,77 @@ export function CuentasConectadas({
             );
           })}
 
+          {/* --------------------------------------------------- WhatsApp
+
+              UNA FILA, NO NUEVE. Antes esta sección dibujaba una fila por
+              cuenta, cada una con su «Vincular», y las nueve en rojo. Eso decía
+              que hay nueve sesiones de WhatsApp pendientes, y no es cierto:
+              Augusto lo aclaró el 11/09 —«el resto no tiene cuentas de
+              WhatsApp, mi cuenta de WhatsApp es la única que voy a utilizar».
+              Ocho filas que nunca se van a poner verdes tapan la única que
+              importa. Cuál cuenta usa WhatsApp es un dato de la cuenta
+              (`wa_habilitado`), no algo escrito acá. */}
           <div className="cc-seccion">
             <span className="campo-label">WhatsApp</span>
             <span className="campo-ayuda">Baileys</span>
-            <button
-              type="button"
-              className="boton-mini al-final"
-              onClick={() => setQr('un número nuevo')}
-            >
-              Vincular otro número
-            </button>
+            {sinWhatsapp.length > 0 && (
+              <button
+                type="button"
+                className="boton-mini al-final"
+                title="Sumar otra cuenta a WhatsApp"
+                onClick={() => setEligiendoCuenta((v) => !v)}
+              >
+                Vincular otro número
+              </button>
+            )}
           </div>
-          {cuentas.map((c) => {
+
+          {eligiendoCuenta && (
+            <div className="cc-fila cc-nota">
+              <span className="campo-ayuda">¿De qué cuenta?</span>
+              {sinWhatsapp.map((c) => (
+                <button
+                  key={`sumar-${c.id}`}
+                  type="button"
+                  className="boton-mini"
+                  onClick={() => void habilitarWhatsapp(c)}
+                >
+                  {c.abrev}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {conWhatsapp.length === 0 && (
+            <div className="cc-fila cc-nota">
+              <span className="cc-estado">
+                Ninguna cuenta usa WhatsApp todavía. Se suma con «Vincular otro número».
+              </span>
+            </div>
+          )}
+
+          {conWhatsapp.map((c) => {
             const estado = estadoWa.get(c.id) ?? 'sin_vincular';
             const viva = estado === 'activa';
             const espera = pendientes.get(c.id) ?? 0;
             return (
               <div key={`wa-${c.id}`} className="cc-fila">
                 <span className="pastilla">{c.abrev}</span>
-                <span className="cc-perfil">{c.nombre_perfil || 'sin nombre cargado'}</span>
+                <span className="cc-perfil">
+                  {c.wa_numero ? numeroTapado(c.wa_numero) : c.nombre_perfil || 'sin nombre cargado'}
+                </span>
                 <span className={viva ? 'cc-estado cc-ok' : 'cc-estado cc-mal'}>
                   <span className={viva ? 'cc-punto cc-punto-ok' : 'cc-punto cc-punto-mal'} />
                   {viva ? 'conectada' : NOMBRE_ESTADO_SESION[estado]}
                 </span>
                 <span className="cc-detalle">
-                  {viva ? '' : `${espera} ${espera === 1 ? 'frenado' : 'frenados'}`}
+                  {viva ? '' : espera ? `${espera} ${espera === 1 ? 'frenado' : 'frenados'}` : ''}
                 </span>
                 <button
                   type="button"
                   className={viva ? 'boton-mini' : 'boton-principal'}
                   title={viva ? 'Volver a vincular este número' : 'Vincular este número'}
-                  onClick={() => setQr(c.abrev)}
+                  onClick={() => void abrirVinculo(c.abrev)}
                 >
                   {viva ? 'QR' : 'Vincular'}
                 </button>
@@ -458,12 +603,18 @@ export function CuentasConectadas({
 
           {qr && (() => {
             // La cuenta que se está vinculando, y lo que core dice de ella.
+            // `tic` no se usa acá: está para que este bloque se recalcule cada
+            // segundo, porque todo lo de abajo depende de la hora.
+            void tic;
             const suya = cuentas.find((c) => c.abrev === qr) ?? null;
             const lectura = suya ? comoSeVeLaSesionWa(suya) : null;
             const vigente = Boolean(lectura?.qr_vigente && suya?.qr_wa);
+            // En qué punto va el vínculo. La diferencia que importa es entre
+            // «esperá, ya viene» y «no hay ningún proceso del otro lado».
+            const paso = suya ? comoVaElVinculo(suya, pedidoEn) : null;
 
             return (
-              <div className="cc-qr-panel">
+              <div className="cc-qr-panel" ref={panelQr}>
                 <span className="campo-label">Vincular {qr}</span>
 
                 <div className="cc-qr-caja">
@@ -474,23 +625,19 @@ export function CuentasConectadas({
                        es peor que ninguno: se escanea, no pasa nada, y parece
                        que WhatsApp está roto. La vigencia la decide
                        `core/whatsapp.ts`, que sabe cuánto dura. */
-                    <span>
-                      {suya?.qr_wa ? 'el código venció' : 'esperando el código'}
-                      <br />
-                      corré: whatsapp.ts vincular {qr}
-                    </span>
+                    <span>{paso ? paso.titular : 'esperando el código'}</span>
                   )}
                 </div>
 
-                {vigente ? (
+                {/* El renglón de estado sale de core y dice en qué punto va:
+                    conectada, escaneá, prendiendo, o no hay nadie del otro
+                    lado. Ese último es el que faltaba y el que hacía que el
+                    botón pareciera roto. */}
+                {paso && (
                   <span className="campo-ayuda">
-                    Escaneá desde WhatsApp &gt; Dispositivos vinculados. Se renueva solo cada menos
-                    de un minuto: no hace falta recargar.
-                  </span>
-                ) : (
-                  <span className="campo-ayuda">
-                    El código lo emite la sesión de Baileys, que corre en el worker. Mientras ese
-                    proceso no esté abierto no hay nada que escanear.
+                    {vigente
+                      ? 'Escaneá desde WhatsApp > Dispositivos vinculados. Se renueva solo cada menos de un minuto: no hace falta recargar.'
+                      : paso.que_hacer || paso.titular}
                   </span>
                 )}
 
@@ -499,11 +646,27 @@ export function CuentasConectadas({
                     Vinculado antes con {numeroTapado(suya.wa_numero)}.
                   </span>
                 )}
-                {lectura?.que_hacer && <span className="campo-ayuda">{lectura.que_hacer}</span>}
 
-                <button type="button" className="boton-mini" onClick={() => setQr(null)}>
-                  Cerrar
-                </button>
+                {errorWa && <span className="cc-estado cc-mal">{errorWa}</span>}
+
+                <div className="cc-fila">
+                  {/* Reintentar sólo cuando de verdad no hay nadie emitiendo.
+                      Con un proceso vivo, apretar de nuevo levanta un segundo
+                      que pelea por la misma credencial y los dos se
+                      desloguean. */}
+                  {paso?.hay_que_prender && (
+                    <button
+                      type="button"
+                      className="boton-principal"
+                      onClick={() => void abrirVinculo(qr)}
+                    >
+                      Prender la sesión
+                    </button>
+                  )}
+                  <button type="button" className="boton-mini" onClick={() => setQr(null)}>
+                    Cerrar
+                  </button>
+                </div>
               </div>
             );
           })()}

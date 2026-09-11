@@ -363,6 +363,117 @@ export function comoSeVeLaSesionWa(
 }
 
 /**
+ * Cuánto se le da a la sesión recién prendida para escribir el primer QR.
+ *
+ * Baileys tarda unos segundos en levantar el socket y pedirle un código a
+ * WhatsApp. Medido contra la corrida real: entre 4 y 12 segundos. 25 deja
+ * margen para una máquina cargada sin que la pantalla se quede diciendo
+ * «prendiendo» cuando en realidad el proceso se murió al arrancar.
+ */
+export const SEGUNDOS_PARA_EL_PRIMER_QR = 25;
+
+/**
+ * Cuánto puede pasar entre un QR y el siguiente antes de dar por muerto el
+ * proceso. Baileys rota el código cada menos de un minuto, así que si pasaron
+ * dos vueltas sin uno nuevo, del otro lado no hay nadie.
+ */
+const SEGUNDOS_SIN_QR_ES_MUERTO = SEGUNDOS_QR_VIGENTE * 2;
+
+export type PasoDeVinculo = 'conectada' | 'escanear' | 'prendiendo' | 'apagada';
+
+export interface Vinculo {
+  paso: PasoDeVinculo;
+  /** Si hay que pedirle al servidor que prenda la sesión. */
+  hay_que_prender: boolean;
+  titular: string;
+  que_hacer: string;
+}
+
+/**
+ * En qué punto está el vínculo de WhatsApp, mirado desde la pantalla (§8.2).
+ *
+ * POR QUÉ HACE FALTA ADEMÁS DE `comoSeVeLaSesionWa`. Esa dice cómo ESTÁ la
+ * sesión —para la tabla de estados—; esta dice QUÉ FALTA PARA VINCULARLA, que
+ * es otra pregunta y tiene una respuesta más: *«no hay ningún proceso del otro
+ * lado, hay que prenderlo»*. Sin distinguirlas, apretar «Vincular» abría un
+ * panel que decía «esperando el código» para siempre, porque nadie había
+ * prendido la sesión — y desde la pantalla eso se ve igual que un botón roto.
+ * Augusto lo dijo así el 11/09: *«toco el botón de vincular y no hace nada»*.
+ *
+ * NO HAY FORMA DE VER EL PROCESO DESDE EL NAVEGADOR, así que se deduce de lo
+ * que el proceso deja escrito: si hay un QR reciente, alguien lo está
+ * emitiendo; si hay señal fresca, está conectado; si no hay ninguna de las dos,
+ * no hay nadie.
+ *
+ * @param pedidoEn cuándo se apretó el botón en esta pantalla. No está en la
+ *   base a propósito: es de esta pantalla y de este momento, y guardarlo haría
+ *   que una pestaña vieja contara como pedido nuevo.
+ */
+export function comoVaElVinculo(
+  fila: SesionWaEnLaBase,
+  pedidoEn: string | null = null,
+  ahora: Date = new Date(),
+): Vinculo {
+  const lectura = comoSeVeLaSesionWa(fila, ahora);
+
+  if (lectura.estado === 'activa') {
+    return {
+      paso: 'conectada',
+      hay_que_prender: false,
+      titular: lectura.titular,
+      que_hacer: '',
+    };
+  }
+
+  if (lectura.qr_vigente) {
+    return {
+      paso: 'escanear',
+      hay_que_prender: false,
+      titular: 'escaneá el código',
+      que_hacer: lectura.que_hacer,
+    };
+  }
+
+  const segundosDesde = (v: string | null | undefined): number => {
+    const s = String(v ?? '').trim();
+    if (!s) return Infinity;
+    const t = new Date(s.replace(' ', 'T')).getTime();
+    if (!Number.isFinite(t)) return Infinity;
+    return (ahora.getTime() - t) / 1000;
+  };
+
+  // Hubo un QR hace poco pero ya venció: el proceso está vivo y rotando el
+  // código. Es esperar, no volver a prender — prender de nuevo sería un segundo
+  // proceso peleando por la misma credencial.
+  const desdeElQr = segundosDesde(fila.qr_wa_desde);
+  if (desdeElQr <= SEGUNDOS_SIN_QR_ES_MUERTO) {
+    return {
+      paso: 'prendiendo',
+      hay_que_prender: false,
+      titular: 'renovando el código',
+      que_hacer: 'El código se renueva solo cada menos de un minuto. No cierres esto.',
+    };
+  }
+
+  // Se apretó el botón recién y todavía no llegó el primer QR.
+  if (segundosDesde(pedidoEn) <= SEGUNDOS_PARA_EL_PRIMER_QR) {
+    return {
+      paso: 'prendiendo',
+      hay_que_prender: false,
+      titular: 'prendiendo la sesión',
+      que_hacer: 'Tarda unos segundos en pedirle el código a WhatsApp.',
+    };
+  }
+
+  return {
+    paso: 'apagada',
+    hay_que_prender: true,
+    titular: lectura.titular,
+    que_hacer: lectura.que_hacer,
+  };
+}
+
+/**
  * Si el número que se vinculó es el que se esperaba.
  *
  * Existe porque el QR lo escanea una persona con un teléfono en la mano, y

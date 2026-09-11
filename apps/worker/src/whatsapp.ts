@@ -22,7 +22,7 @@
  * sesión de WhatsApp no se respalda: se vuelve a vincular. Copiarla a un lugar
  * versionado es peor que perderla.
  */
-import { mkdirSync, existsSync, rmSync } from 'node:fs';
+import { mkdirSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import baileys, { Browsers, useMultiFileAuthState, type WASocket } from '@whiskeysockets/baileys';
@@ -56,7 +56,66 @@ function carpetaDeSesion(abrev: string): string {
   return dir;
 }
 
-/** Lo que Baileys llama `id`: «5491161902745:12@s.whatsapp.net». */
+/**
+ * Una sola sesión por cuenta, y la que llega segunda se va.
+ *
+ * POR QUE. Baileys guarda la credencial en archivos. Dos procesos sobre la
+ * misma carpeta se pisan los `creds.update` y **se desloguean entre ellos**:
+ * queda una sesión muerta, un QR que no aparece y la sospecha de que WhatsApp
+ * se rompió. Antes esto no podía pasar porque el comando lo tipeaba una
+ * persona; desde el 11/09 lo lanza un botón, y un botón se aprieta dos veces.
+ *
+ * Es el mismo agujero que en `globalita-automation` dejó cuatro escaneos
+ * corriendo a la vez y le costó un aviso de LinkedIn a Francisco el 12/05.
+ *
+ * EL PID SE COMPRUEBA, no se cree. Un archivo de turno que quedó de un proceso
+ * que murió mal bloquearía la cuenta para siempre; `process.kill(pid, 0)` no
+ * manda ninguna señal, sólo pregunta si ese proceso existe.
+ */
+function tomarElTurno(dir: string, abrev: string): void {
+  const turno = join(dir, 'turno.pid');
+
+  if (existsSync(turno)) {
+    const previo = Number(readFileSync(turno, 'utf8').trim());
+    if (Number.isInteger(previo) && previo > 0 && previo !== process.pid) {
+      let vivo = true;
+      try {
+        process.kill(previo, 0);
+      } catch {
+        vivo = false;
+      }
+      if (vivo) {
+        throw new NoSePuede(
+          `Ya hay una sesión de WhatsApp de ${abrev} corriendo (proceso ${previo}).\n` +
+            'Dos sesiones sobre la misma credencial se desloguean entre ellas, así que no arranco.\n' +
+            'Cortá esa con Ctrl+C, o esperá a que el QR aparezca solo: el que ya está corriendo lo emite.',
+        );
+      }
+      decir(`  (el turno era del proceso ${previo}, que ya no está: lo tomo yo)`);
+    }
+  }
+
+  writeFileSync(turno, String(process.pid), 'utf8');
+
+  // Al salir se suelta, para que el próximo no tenga que comprobar el PID.
+  // `exit` no admite trabajo asíncrono, así que el borrado es sincrónico.
+  const soltar = () => {
+    try {
+      if (existsSync(turno) && readFileSync(turno, 'utf8').trim() === String(process.pid)) {
+        rmSync(turno, { force: true });
+      }
+    } catch {
+      // Si no se puede borrar, el próximo arranque comprueba el PID y sigue.
+    }
+  };
+  process.once('exit', soltar);
+  process.once('SIGINT', () => {
+    soltar();
+    process.exit(0);
+  });
+}
+
+/** Lo que Baileys llama `id`: «5491133334444:12@s.whatsapp.net». */
 function numeroDelJid(jid: string | undefined): string {
   return String(jid ?? '').split(':')[0]?.split('@')[0] ?? '';
 }
@@ -110,6 +169,8 @@ async function vincular(abrev: string): Promise<number> {
   const cuenta = await buscarCuenta(pb, abrev);
   const esperado = String(process.env.WA_NUMERO ?? '').trim();
   const dir = carpetaDeSesion(abrev);
+
+  tomarElTurno(dir, abrev);
 
   decir(`${abrev}: credencial en ${dir}`);
   if (esperado) decir(`  se espera el número ${numeroTapado(esperado)} (WA_NUMERO del .env)`);

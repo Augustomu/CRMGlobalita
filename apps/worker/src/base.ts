@@ -47,6 +47,35 @@ function preguntar(texto: string): Promise<string> {
 }
 
 export async function entrar(): Promise<PocketBase> {
+  /*
+   * PB_TOKEN: cuando al worker lo lanza el CRM y no una persona.
+   *
+   * Desde el 11/09 el botón «Vincular» de Cuentas conectadas prende la sesión
+   * de WhatsApp sola (§8.2). Ese proceso no tiene terminal donde preguntar, y
+   * tampoco puede llevar la clave de Augusto en una variable de entorno: el
+   * hook le pasa un token del usuario que apretó el botón, que caduca solo.
+   *
+   * Va ANTES que todo lo demás: si hay token, no se pregunta nada.
+   */
+  const token = String(process.env.PB_TOKEN ?? '').trim();
+  if (token) {
+    const conToken = new PocketBase(PB_URL);
+    conToken.autoCancellation(false);
+    conToken.authStore.save(token, null);
+    try {
+      // Trae el usuario y, de paso, comprueba que el token todavía vale. Sin
+      // esto, un token vencido se descubre recién en la primera escritura, que
+      // puede ser media hora después.
+      await conToken.collection(PB_COL).authRefresh();
+    } catch (e) {
+      throw new Error(
+        'El PB_TOKEN no sirve: ' + ((e as Error)?.message || String(e)) + '. ' +
+          'Volvé a apretar «Vincular» en Cuentas conectadas.',
+      );
+    }
+    return conToken;
+  }
+
   // El usuario de demo YA NO EXISTE. `alberto@globalita.test` / `demo12345`
   // eran del seed, y el seed se limpió: hoy la base local tiene una sola
   // cuenta, la de Augusto. Se dejan como último recurso —por si alguien

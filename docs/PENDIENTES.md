@@ -40,7 +40,7 @@ de memoria.
 | 5 · Usuarios | **3 de 3** |
 | 6 · WA Personal | **3 de 3** |
 | 7 · Agenda y Calendar | **7 de 7** |
-| 8 · Integraciones y worker | 1 de 7 |
+| 8 · Integraciones y worker | 1 de 8 |
 | 9 · Producción | 1 de 8 |
 | 10 · Los datos | **10 de 12** |
 | 11 · Las copias | **3 de 4** |
@@ -1182,6 +1182,50 @@ página de revisión.
       el CRM la traiga** (es el camino de vuelta, el que puede hacer eco) ·
       cancelarla de los dos lados · y que el `syncToken` sobreviva a todo eso
       sin volver a pedir los 5.000 eventos.
+
+### 8.8 · «Sin leer» de LinkedIn, llenado por el worker
+
+- [ ] **La solapa existe y está vacía porque nadie escribe los flags.** Pedido
+      el 11/09: *«sumemos la funcionalidad de sin leer: abrir la cuenta de Sales
+      Navigator y la de LinkedIn normal, filtrar por los mensajes sin leer y
+      mostrarlo en la tab sin leer, así con todas las cuentas conectadas»*.
+
+      **La mitad de la pantalla ya está hecha.** La columna 1 tiene la subsolapa
+      «Sin leer» (`App.tsx:390`) con su contador, y filtra por `lead.sin_leer_li`
+      / `lead.sin_leer_wa` — dos flags, uno por canal (§D05 del manual). Hoy sólo
+      los escribe la importación de CSV. **Falta quién los ponga en true.**
+
+      **El escáner ya existe y está probado**, en el repositorio viejo:
+      `globalita-automation/scan-unread-agent.js` (1.596 líneas), con
+      `scripts/scan-unread-all.js` para las cuatro cuentas y
+      `scripts/migrar-unread-a-pb.js` para volcarlo a la base. Hay una rama
+      `feat/scan-unread-sales-nav`. No hay que inventarlo: hay que **portarlo** a
+      `apps/worker/src/sinleer.ts` con las reglas de ritmo de §7.3, y que escriba
+      en la base en vez de en `unread-messages.json`.
+
+      💎 **Y ese JSON tiene 26 conversaciones sin leer del 10/05/2026** —
+      Francisco 14, Alejandro 6, Edith 5, David 1— con nombre, último mensaje,
+      `chat_url` y `perfil_url`. Son prospectos que escribieron y nunca fueron
+      contestados. Están viejas, pero son datos reales que hoy no están en el
+      CRM.
+
+      ⚠️ **Falta la mitad que pidió Augusto:** el script viejo abre **sólo** el
+      inbox de Sales Navigator (`linkedin.com/sales/inbox`); `MESSAGING_URL` es
+      un alias del mismo. El LinkedIn normal —`linkedin.com/messaging`— **no se
+      mira**. Se sacó porque mostraba menos hilos de Sales Nav, pero al revés
+      también pasa: una conversación con un contacto de 1er grado que nunca pasó
+      por Sales Nav sólo está en el inbox clásico. Hay que abrir **los dos** y
+      unir por perfil.
+
+      🔴 **La regla que no se puede romper.** `rules--unread-no-tocar.md`:
+      **abrir una conversación sin leer la marca como leída**, y el prospecto ve
+      «leyó y no me contestó». Es irreversible desde su lado. El flag sin leer
+      es lo único que dice «esto todavía no lo vio un humano».
+      Para el listado no hace falta abrir nada: el badge está en la fila.
+      El script viejo sí abre el hilo para traer el texto, y lo compensa con
+      «Marcar como no leído» — y **aborta si ese paso falla** (E045). Si se
+      porta el enriquecimiento, se porta con el aborto incluido; si no, se trae
+      sólo lo que se ve en la fila, que ya alcanza para llenar la solapa.
 
 ---
 

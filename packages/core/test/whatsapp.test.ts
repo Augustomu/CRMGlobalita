@@ -6,6 +6,7 @@ import {
   SEGUNDOS_QR_VIGENTE,
   TOPE_DE_REINTENTOS,
   comoSeVeLaSesionWa,
+  comoVaElVinculo,
   esElNumeroEsperado,
   esperaDeReintento,
   hayQueDescartarLaCredencial,
@@ -153,23 +154,116 @@ test('§8.2 · un motivo desconocido no rompe la pantalla', () => {
 test('§8.2 · se detecta si se escaneó con el teléfono equivocado', () => {
   // El QR lo escanea una persona y nada le impide usar el teléfono de al lado.
   // Si eso pasa y nadie mira, se descubre el día que sale un mensaje.
-  assert.equal(esElNumeroEsperado('5491161902745', '5491161902745'), true);
-  assert.equal(esElNumeroEsperado('+54 9 11 6190-2745', '5491161902745'), true);
+  assert.equal(esElNumeroEsperado('5491133334444', '5491133334444'), true);
+  assert.equal(esElNumeroEsperado('+54 9 11 3333-4444', '5491133334444'), true);
   // WhatsApp devuelve el número con el 9 de Argentina; el guardado puede no traerlo.
-  assert.equal(esElNumeroEsperado('5491161902745', '541161902745'), true);
+  assert.equal(esElNumeroEsperado('5491133334444', '541133334444'), true);
 
-  assert.equal(esElNumeroEsperado('5491155550000', '5491161902745'), false);
-  assert.equal(esElNumeroEsperado('', '5491161902745'), false);
-  assert.equal(esElNumeroEsperado('5491161902745', ''), false);
+  assert.equal(esElNumeroEsperado('5491155550000', '5491133334444'), false);
+  assert.equal(esElNumeroEsperado('', '5491133334444'), false);
+  assert.equal(esElNumeroEsperado('5491133334444', ''), false);
 });
 
 test('§8.2 · el número se tapa antes de escribirlo en ningún lado', () => {
   // `CRMGlobalita` es un repositorio PÚBLICO y las salidas de la terminal se
   // pegan en mensajes. Los últimos cuatro alcanzan para reconocerlo.
-  const tapado = numeroTapado('5491161902745');
-  assert.equal(tapado, '···2745');
-  assert.ok(!tapado.includes('549116190'), 'no puede quedar el número entero');
+  const tapado = numeroTapado('5491133334444');
+  assert.equal(tapado, '···4444');
+  assert.ok(!tapado.includes('549113333'), 'no puede quedar el número entero');
 
   assert.equal(numeroTapado(''), '');
   assert.equal(numeroTapado('12'), '··');
+});
+
+// ------------------------------------------------- en qué punto va el vínculo
+
+// El 11/09 Augusto apretó «Vincular» y escribió: «toco el botón de vincular y
+// no hace nada». No estaba roto: no había ningún proceso de Baileys del otro
+// lado, así que el panel decía «esperando el código» para siempre. Desde la
+// pantalla eso se ve exactamente igual que un botón que no anda.
+//
+// De ahí sale esta regla: distinguir «esperá» de «no hay nadie, hay que
+// prender la sesión», que es la única de las dos que se puede accionar.
+
+test('§8.2 · sin proceso del otro lado, el vínculo dice que hay que prender', () => {
+  const v = comoVaElVinculo({}, null, new Date('2026-09-11T10:00:00Z'));
+  assert.equal(v.paso, 'apagada');
+  assert.equal(v.hay_que_prender, true);
+});
+
+test('§8.2 · recién pedido y todavía sin QR: se espera, no se prende de nuevo', () => {
+  // Prender dos veces son dos procesos peleando por la misma credencial, y
+  // «dos sesiones compartiendo credenciales se desloguean entre ellas».
+  const ahora = new Date('2026-09-11T10:00:10Z');
+  const v = comoVaElVinculo({}, '2026-09-11T10:00:00Z', ahora);
+  assert.equal(v.paso, 'prendiendo');
+  assert.equal(v.hay_que_prender, false);
+});
+
+test('§8.2 · si el pedido ya tiene rato y no llegó ningún QR, se vuelve a prender', () => {
+  // El proceso se murió al arrancar. Quedarse en «prendiendo» para siempre es
+  // el bug que esto viene a arreglar.
+  const ahora = new Date('2026-09-11T10:01:00Z');
+  const v = comoVaElVinculo({}, '2026-09-11T10:00:00Z', ahora);
+  assert.equal(v.paso, 'apagada');
+  assert.equal(v.hay_que_prender, true);
+});
+
+test('§8.2 · con un QR vigente hay que escanear, no prender', () => {
+  const ahora = new Date('2026-09-11T10:00:30Z');
+  const v = comoVaElVinculo(
+    { qr_wa: '2@abc', qr_wa_desde: '2026-09-11T10:00:00Z' },
+    null,
+    ahora,
+  );
+  assert.equal(v.paso, 'escanear');
+  assert.equal(v.hay_que_prender, false);
+});
+
+test('§8.2 · un QR vencido hace poco es el proceso rotando el código, no un proceso muerto', () => {
+  // Baileys renueva el código cada menos de un minuto. Entre uno y otro hay un
+  // hueco en el que no hay nada vigente — y ahí NO hay que prender nada.
+  const ahora = new Date('2026-09-11T10:01:20Z');
+  const v = comoVaElVinculo(
+    { qr_wa: '2@abc', qr_wa_desde: '2026-09-11T10:00:00Z' },
+    null,
+    ahora,
+  );
+  assert.equal(v.paso, 'prendiendo');
+  assert.equal(v.hay_que_prender, false);
+});
+
+test('§8.2 · un QR de hace rato sí es un proceso muerto', () => {
+  const ahora = new Date('2026-09-11T10:10:00Z');
+  const v = comoVaElVinculo(
+    { qr_wa: '2@abc', qr_wa_desde: '2026-09-11T10:00:00Z' },
+    null,
+    ahora,
+  );
+  assert.equal(v.paso, 'apagada');
+  assert.equal(v.hay_que_prender, true);
+});
+
+test('§8.2 · conectada no ofrece prender nada', () => {
+  const ahora = new Date('2026-09-11T10:00:30Z');
+  const v = comoVaElVinculo(
+    { ultima_senal_wa: '2026-09-11T10:00:00Z', wa_numero: '5491133334444' },
+    null,
+    ahora,
+  );
+  assert.equal(v.paso, 'conectada');
+  assert.equal(v.hay_que_prender, false);
+  assert.equal(v.que_hacer, '');
+});
+
+test('§8.2 · una fecha rota no deja el vínculo colgado en «prendiendo»', () => {
+  // El caso que se cuela: si la fecha no parsea, `ahora - NaN` es NaN y NaN no
+  // es mayor que nada, así que el camino de «muerto» no se toma nunca.
+  const v = comoVaElVinculo(
+    { qr_wa: '2@abc', qr_wa_desde: 'cualquier cosa' },
+    'tampoco una fecha',
+    new Date('2026-09-11T10:00:00Z'),
+  );
+  assert.equal(v.paso, 'apagada');
+  assert.equal(v.hay_que_prender, true);
 });

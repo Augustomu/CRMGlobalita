@@ -249,6 +249,22 @@ spawn(exe, ['serve', '--dir', datos, '--migrationsDir', migraciones, '--hooksDir
      * de mas.
      */
     CHROME_LOCAL: process.env.CHROME_LOCAL ?? '1',
+    /*
+     * Habilita /api/wa/vincular, que prende la sesion de WhatsApp del worker.
+     *
+     * Mismo criterio que CHROME_LOCAL: solo tiene sentido donde el worker esta
+     * al lado. El QR de WhatsApp no lo puede emitir el navegador —lo emite
+     * Baileys, que es un proceso de Node— asi que sin esto el boton «Vincular»
+     * abre un panel que espera un codigo que nadie va a escribir. Es
+     * exactamente lo que pasaba, y lo que Augusto describio el 11/09 como
+     * «toco el boton de vincular y no hace nada».
+     *
+     * CRM_RAIZ va junto: el hook necesita saber donde esta el repositorio para
+     * poder lanzar apps/worker/src/whatsapp.ts. PocketBase no corre
+     * necesariamente desde la raiz.
+     */
+    WORKER_LOCAL: process.env.WORKER_LOCAL ?? '1',
+    CRM_RAIZ: process.env.CRM_RAIZ || raiz,
     // Sin valor por defecto A PROPOSITO. Antes venia 'crm@globalita.test', un
     // dominio inventado, y eso terminaba siendo el remitente real de los
     // correos: el From no coincidia con la casilla autenticada y el servidor
