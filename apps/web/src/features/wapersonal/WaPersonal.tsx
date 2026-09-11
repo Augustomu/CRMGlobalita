@@ -106,7 +106,7 @@ function corto(tel: string): string {
 }
 
 /**
- *  ya no se usa: se iba a la ficha despues de «Mover a FU», y ese
+ * `onIrAlLead` ya no se usa: se iba a la ficha después de «Mover a FU», y ese
  * boton se fue el 11/09. Se deja en las props para no tocar quien la llama.
  */
 interface Props {
@@ -203,6 +203,8 @@ export function WaPersonal(_props: Props) {
   const [sel, setSel] = useState<string | null>(null);
   const [borrador, setBorrador] = useState('');
   const [emojisAbiertos, setEmojisAbiertos] = useState(false);
+  /** Lo que se escribió en el buscador de la lista de chats. */
+  const [busca, setBusca] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const hoy = diaLocal();
@@ -269,8 +271,20 @@ export function WaPersonal(_props: Props) {
     if (filtros.has('no_agendados')) {
       v = v.filter((c) => !telefonosEnLaBase.has(ultimosOcho(c.telefono)));
     }
+    // La búsqueda mira nombre Y teléfono: a veces uno se acuerda de la cara y a
+    // veces del número. Del teléfono se comparan sólo los dígitos, porque el
+    // mismo número está escrito de cinco formas según de dónde vino.
+    const q = busca.trim().toLowerCase();
+    if (q) {
+      const soloDigitos = q.replace(/\D/g, '');
+      v = v.filter(
+        (c) =>
+          comoSeLlama(c).toLowerCase().includes(q) ||
+          (soloDigitos.length >= 3 && String(c.telefono ?? '').includes(soloDigitos)),
+      );
+    }
     return v;
-  }, [chats, filtros, telefonosEnLaBase]);
+  }, [chats, filtros, telefonosEnLaBase, busca]);
 
   const alternar = (f: FiltroChat) =>
     setFiltros((s) => {
@@ -334,6 +348,18 @@ export function WaPersonal(_props: Props) {
               describía un criterio que ya no existe — lo que queda acá es todo
               lo que NO es un lead, no sólo lo personal. */}
           <span className="campo-ayuda tabular">{chats.length} chats</span>
+          {/* EL BUSCADOR, donde estaba el conteo. Con 56 conversaciones ya no
+              alcanza con recorrer la lista, y va a haber más. Busca por nombre
+              y por teléfono: a veces uno se acuerda de la cara y a veces del
+              número. */}
+          <input
+            className="wap-buscar"
+            type="search"
+            value={busca}
+            placeholder="Buscar"
+            aria-label="Buscar en los chats"
+            onChange={(e) => setBusca(e.target.value)}
+          />
         </div>
 
         {/*
@@ -474,7 +500,20 @@ export function WaPersonal(_props: Props) {
                   <span className="wap-chat-acciones" onClick={(ev) => ev.stopPropagation()}>
                     <a
                       className="wap-accion"
-                      href={`https://wa.me/${String(c.telefono ?? '').replace(/\D/g, '')}`}
+                      /*
+                        DIRECTO A LA APLICACIÓN, sin la página de por medio.
+
+                        `wa.me` abre una página de WhatsApp que pregunta si uno
+                        quiere abrir la aplicación: dos clics y una pestaña
+                        nueva para llegar a un chat. Augusto lo pidió sacar el
+                        11/09 — *«¿podremos eliminarla y que directo vaya al
+                        chat y lo abra?»*.
+
+                        `whatsapp://` es el enlace que entiende la aplicación
+                        instalada. En esta máquina lo está, que es donde corre
+                        el CRM.
+                      */
+                      href={`whatsapp://send?phone=${String(c.telefono ?? '').replace(/\D/g, '')}`}
                       target="_blank"
                       rel="noreferrer"
                       title="Abrir esta conversación en WhatsApp"
@@ -586,6 +625,24 @@ export function WaPersonal(_props: Props) {
               onElegir={(e) => setBorrador((b) => b + e)}
             />
           )}
+          {/* ADJUNTAR: el «+» de WhatsApp.
+              Está APAGADO y lo dice, en vez de no estar. Mandar un archivo por
+              WhatsApp desde una automatización es lo que más rápido hace que
+              bloqueen un número, y toda esa parte —la cola de envíos, el tope
+              diario— todavía no existe (§8.5b). Un botón que no se puede
+              apretar y explica por qué es más honesto que un hueco. */}
+          <button
+            type="button"
+            className="wap-icono"
+            title="Adjuntar un documento o una foto. Todavía no: mandar archivos necesita la cola de envíos (§8.5b)."
+            aria-label="Adjuntar"
+            disabled
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+            </svg>
+          </button>
+
           <button
             type="button"
             className="wap-icono"
@@ -593,7 +650,14 @@ export function WaPersonal(_props: Props) {
             aria-label="Emojis"
             onClick={() => setEmojisAbiertos((v) => !v)}
           >
-            ☺
+            {/* La carita, dibujada. El carácter ☺ lo dibuja cada sistema a su
+                manera y en Windows sale una carita negra sólida. */}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+              <circle cx="12" cy="12" r="9" />
+              <circle cx="9" cy="10" r="1" fill="currentColor" stroke="none" />
+              <circle cx="15" cy="10" r="1" fill="currentColor" stroke="none" />
+              <path d="M8.5 14.5a4.5 4.5 0 0 0 7 0" strokeLinecap="round" />
+            </svg>
           </button>
           <textarea
             value={borrador}
@@ -606,11 +670,35 @@ export function WaPersonal(_props: Props) {
               }
             }}
           />
-          <button type="button" className="wap-enviar" title="Enviar" disabled={!activo} onClick={() => void enviar()}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
-              <path d="M4 12l16-8-6 16-2-6-8-2z" />
-            </svg>
-          </button>
+          {/* EL MICRÓFONO CUANDO NO HAY NADA ESCRITO, y el avión cuando sí —
+              como WhatsApp. El micrófono está apagado por lo mismo que el «+»:
+              grabar es fácil, MANDAR el audio es §8.5b. */}
+          {borrador.trim() ? (
+            <button
+              type="button"
+              className="wap-enviar"
+              title="Enviar"
+              disabled={!activo}
+              onClick={() => void enviar()}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                <path d="M4 12l16-8-6 16-2-6-8-2z" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="wap-icono"
+              title="Grabar un audio. Todavía no: mandar audios necesita la cola de envíos (§8.5b)."
+              aria-label="Grabar audio"
+              disabled
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                <rect x="9" y="3" width="6" height="11" rx="3" />
+                <path d="M5 11a7 7 0 0 0 14 0M12 18v3" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
     </section>

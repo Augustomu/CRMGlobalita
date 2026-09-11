@@ -141,15 +141,17 @@ export function CuentasConectadas({
    * del teléfono.
    */
   async function desvincular(abrev: string) {
-    const c = cuentas.find((x) => x.abrev === abrev);
-    if (!c) return;
     setErrorWa(null);
     setConfirmarBaja(null);
     try {
-      await pb.collection('cuenta').update(c.id, { wa_motivo: 'desvincular' });
+      await pb.send('/api/wa/desvincular', { method: 'POST', body: { abrev } });
       setQr(null);
+      // La fila se actualiza sola por la suscripción, pero se pide igual: la
+      // suscripción es el camino rápido, no la garantía.
+      const fresca = await pb.collection('cuenta').getFullList<CuentaRecord>({ sort: 'slot' });
+      setCuentas(fresca);
     } catch (err) {
-      setErrorWa(err instanceof Error ? err.message : 'No se pudo pedir la baja.');
+      setErrorWa(err instanceof Error ? err.message : 'No se pudo desvincular.');
     }
   }
   /** Para llevar la vista al panel: con Google abajo, el QR quedaba fuera de cuadro. */

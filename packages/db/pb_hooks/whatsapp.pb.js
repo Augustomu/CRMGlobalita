@@ -78,6 +78,75 @@ routerAdd(
   $apis.requireAuth(),
 );
 
+// Desvincular, sin depender de que haya un worker escuchando.
+//
+// POR QUE. La primera versión escribía `wa_motivo = 'desvincular'` y esperaba
+// que el worker lo viera. Funciona cuando el worker está CONECTADO — pero si
+// está en el bucle de reconexión, la escucha todavía no arrancó y el pedido se
+// queda ahí: Augusto apretó y «no hace nada, todo sigue igual». Es la tercera
+// vez que algo depende de que otro proceso esté en el estado correcto, y las
+// tres veces salió mal.
+//
+// Esto borra la credencial y limpia el estado desde acá, que es lo único que
+// de verdad garantiza que el próximo «Vincular» pida un QR nuevo. Y deja
+// escrito el pedido igual: si hay un worker conectado, además hace el `logout`
+// contra WhatsApp, que es lo que saca el dispositivo del teléfono.
+routerAdd(
+  'POST',
+  '/api/wa/desvincular',
+  (e) => {
+    if (!String($os.getenv('WORKER_LOCAL') || '')) {
+      return e.json(404, { error: 'no disponible' });
+    }
+
+    const cuerpo = new DynamicModel({ abrev: '' });
+    e.bindBody(cuerpo);
+    const abrev = String(cuerpo.abrev || '').trim().toUpperCase();
+    if (!/^[A-Z]{2,4}$/.test(abrev)) {
+      return e.json(400, { error: 'Abreviatura inválida.' });
+    }
+
+    let cuenta;
+    try {
+      cuenta = $app.findRecordsByFilter('cuenta', 'abrev = {:a}', '', 1, 0, { a: abrev })[0];
+    } catch (err) {
+      return e.json(500, { error: 'No se pudo leer la cuenta: ' + String(err) });
+    }
+    if (!cuenta) return e.json(404, { error: 'No hay ninguna cuenta «' + abrev + '».' });
+
+    // 1. El pedido, para el worker que esté conectado: hace el logout de
+    //    verdad y sale.
+    cuenta.set('wa_motivo', 'desvincular');
+    $app.save(cuenta);
+
+    // 2. La credencial, que es lo que hace que no haga falta escanear. Se borra
+    //    acá y no se delega: es lo único que garantiza el QR nuevo.
+    const base =
+      String($os.getenv('WA_SESION_DIR') || '') ||
+      (String($os.getenv('USERPROFILE') || '') || String($os.getenv('HOME') || '')) +
+        '/.globalita-wa';
+    const cred = base + '/' + abrev.toLowerCase() + '/cred';
+    let borrada = false;
+    try {
+      $os.removeAll(cred);
+      borrada = true;
+    } catch (err) {
+      $app.logger().error('wa-desvincular', 'cred', String(err));
+    }
+
+    // 3. Y el estado, para que la pantalla no muestre una sesión que ya no está.
+    cuenta.set('ultima_senal_wa', '');
+    cuenta.set('qr_wa', '');
+    cuenta.set('qr_wa_desde', '');
+    cuenta.set('wa_motivo', 'desvinculado');
+    $app.save(cuenta);
+
+    $app.logger().info('wa-desvincular', 'cuenta', abrev, 'credencial', borrada);
+    return e.json(200, { ok: true, credencial_borrada: borrada });
+  },
+  $apis.requireAuth(),
+);
+
 routerAdd(
   'POST',
   '/api/wa/vincular',

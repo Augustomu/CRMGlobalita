@@ -5708,7 +5708,12 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
      LinkedIn, WhatsApp como Google». Con anchos distintos por seccion el ojo
      no puede recorrer la columna de estados de arriba abajo, que es para lo
      que se abre esta pantalla. */
-  grid-template-columns: 44px minmax(0, 1fr) 112px minmax(0, 92px) max-content;
+  /* EL NOMBRE NO SE ESTIRA. Con `1fr` ocupaba todo lo que sobraba y dejaba un
+     hueco enorme entre el nombre y el estado — Augusto lo marco en rojo el
+     11/09. El espacio flexible va a la columna del detalle, que casi siempre
+     esta vacia, asi que los estados quedan pegados a los nombres y las
+     acciones contra el borde derecho. */
+  grid-template-columns: 44px minmax(120px, 210px) 112px minmax(0, 1fr) max-content;
   gap: 8px;
   align-items: center;
   padding: 7px 2px;
@@ -7215,3 +7220,20 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 /* El icono de «abrir en otra aplicacion» de la fila del chat. */
 .wap-accion svg { width: 13px; height: 13px; display: block; }
 
+
+/* El buscador de la lista de chats, con la misma pinta que el resto de los
+   campos del CRM: mismo borde, mismo radio, mismo tamano de letra. Antes no
+   habia ninguno y con 56 conversaciones ya no alcanza con recorrer la lista. */
+.wap-buscar {
+  flex: 1;
+  min-width: 0;
+  margin-left: 8px;
+  padding: 4px 10px;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--txt-sm);
+  font-family: inherit;
+}
+.wap-buscar:focus { outline: none; border-color: var(--accent-br); }
