@@ -241,6 +241,15 @@ export function CuentasConectadas({
   const [googleFallo, setGoogleFallo] = useState<string | null>(null);
   const [yendoAGoogle, setYendoAGoogle] = useState(false);
   const [confirmarCorte, setConfirmarCorte] = useState(false);
+  /**
+   * Qué cuenta de lectura se está por soltar, y cuál se está por poner de
+   * calendario. Son dos estados y no uno: son dos preguntas distintas sobre la
+   * misma fila, y un solo estado obligaría a inventar un tercer valor para
+   * decir cuál de las dos se preguntó.
+   */
+  const [soltarCuenta, setSoltarCuenta] = useState<string | null>(null);
+  const [pasarCalendario, setPasarCalendario] = useState<string | null>(null);
+  const [moviendo, setMoviendo] = useState(false);
   /** 7.4 · El traído del histórico: puede tardar, así que se avisa mientras. */
   const [trayendo, setTrayendo] = useState(false);
   const [historico, setHistorico] = useState<string | null>(null);
@@ -378,6 +387,61 @@ export function CuentasConectadas({
       setGoogleFallo(err instanceof Error ? err.message : 'No se pudo traer el histórico.');
     } finally {
       setTrayendo(false);
+    }
+  }
+
+  /**
+   * Soltar UNA cuenta de lectura. La del calendario tiene la suya, arriba.
+   *
+   * Hasta el 11/09 el único botón que existía desconectaba siempre la del
+   * calendario: Augusto conectó una segunda, quedó mal, y lo único que podía
+   * apretar apagaba la que estaba bien.
+   */
+  async function soltarLaCuenta(id: string) {
+    setMoviendo(true);
+    setGoogleFallo(null);
+    try {
+      await pb.send('/api/google/desconectar', { method: 'POST', body: { id } });
+      setSoltarCuenta(null);
+      // Se relee el estado entero en vez de retocar la fila a mano: quién es
+      // la del calendario cambia en DOS filas a la vez, y media pantalla al
+      // día es peor que una desactualizada entera.
+      const fresco = await pb.send<EstadoGoogle>('/api/google/estado', {});
+      setGoogle(fresco);
+    } catch (err) {
+      setGoogleFallo(err instanceof Error ? err.message : 'No se pudo desconectar.');
+    } finally {
+      setMoviendo(false);
+    }
+  }
+
+  /**
+   * Cuál cuenta escribe las reuniones.
+   *
+   * LO QUE CAMBIA Y LO QUE NO: de acá en adelante las reuniones nuevas van al
+   * calendario de la cuenta elegida. Las que ya están creadas se quedan donde
+   * nacieron — moverlas sería borrarlas de un lado y crearlas del otro, y
+   * ninguna de las dos mitades se puede deshacer si la otra falla.
+   *
+   * Existe porque la alternativa era desconectar las dos y volver a conectarlas
+   * EN ORDEN, porque la primera que entra se queda con el calendario. Un orden
+   * que hay que saber de antemano no es una interfaz.
+   */
+  async function ponerDeCalendario(id: string) {
+    setMoviendo(true);
+    setGoogleFallo(null);
+    try {
+      await pb.send('/api/google/calendario', { method: 'POST', body: { id } });
+      setPasarCalendario(null);
+      // Se relee el estado entero en vez de retocar la fila a mano: quién es
+      // la del calendario cambia en DOS filas a la vez, y media pantalla al
+      // día es peor que una desactualizada entera.
+      const fresco = await pb.send<EstadoGoogle>('/api/google/estado', {});
+      setGoogle(fresco);
+    } catch (err) {
+      setGoogleFallo(err instanceof Error ? err.message : 'No se pudo cambiar el calendario.');
+    } finally {
+      setMoviendo(false);
     }
   }
 
@@ -715,13 +779,72 @@ export function CuentasConectadas({
             .map((c) => (
               <div key={c.id} className="cc-fila">
                 <span className="pastilla">ag</span>
+                {/* SIN CORREO YA NO DEBERIA PASAR: hasta el 11/09 el callback
+                    lo pedía a /oauth2/v2/userinfo, que necesita un permiso que
+                    no pedimos, y el rescate estaba adentro de la sincronización
+                    del calendario — por la que una cuenta de sólo lectura no
+                    pasa nunca. Se dejó el texto igual porque si vuelve a pasar
+                    hay que verlo, no esconderlo. */}
                 <span className="cc-perfil">{c.email || 'sin correo'}</span>
                 <span className="cc-estado cc-ok">
                   <span className="cc-punto cc-punto-ok" />
                   conectada
                 </span>
+                {/* La cuarta columna existe en la grilla. Sin nada adentro
+                    quedaba el hueco que Augusto marcó el 11/09. */}
+                <span className="cc-detalle">sólo agenda</span>
                 <span className="cc-acciones">
-                  <span className="campo-ayuda">sólo agenda</span>
+                  {pasarCalendario === c.id ? (
+                    <>
+                      <span className="campo-ayuda">
+                        Las reuniones nuevas van a ir a esta cuenta. Las ya creadas se quedan donde están.
+                      </span>
+                      <button
+                        type="button"
+                        className="boton-mini"
+                        disabled={moviendo}
+                        onClick={() => void ponerDeCalendario(c.id)}
+                      >
+                        {moviendo ? 'cambiando…' : 'Sí, usar esta'}
+                      </button>
+                      <button type="button" className="boton-mini" onClick={() => setPasarCalendario(null)}>
+                        Cancelar
+                      </button>
+                    </>
+                  ) : soltarCuenta === c.id ? (
+                    <>
+                      <button
+                        type="button"
+                        className="boton-mini-peligro"
+                        disabled={moviendo}
+                        onClick={() => void soltarLaCuenta(c.id)}
+                      >
+                        {moviendo ? 'soltando…' : 'Sí, desconectar'}
+                      </button>
+                      <button type="button" className="boton-mini" onClick={() => setSoltarCuenta(null)}>
+                        Cancelar
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="boton-mini"
+                        title="Que las reuniones del CRM se escriban en el calendario de esta cuenta. Las ya creadas se quedan donde están."
+                        onClick={() => setPasarCalendario(c.id)}
+                      >
+                        Usar para el calendario
+                      </button>
+                      <button
+                        type="button"
+                        className="boton-mini"
+                        title="Dejar de leer la agenda de contactos de esta cuenta. Los nombres ya puestos se quedan."
+                        onClick={() => setSoltarCuenta(c.id)}
+                      >
+                        Desconectar
+                      </button>
+                    </>
+                  )}
                 </span>
               </div>
             ))}
