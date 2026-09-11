@@ -352,6 +352,18 @@ export async function guardarHistorial(
   mensajes: MensajeCrudo[],
   dias: number = DIAS_DE_HISTORIAL,
   ahora: Date = new Date(),
+  /**
+   * Cómo se llama cada uno en la agenda del teléfono: JID → nombre.
+   *
+   * Augusto, 11/09: *«las personas que tengo en WhatsApp ya las tengo
+   * agendadas a la mayoría, por qué no me lo mostrás tal cual»*. Tenía razón:
+   * lo que se guardaba era `pushName`, que es el nombre que **el otro** eligió
+   * para sí mismo, no el que vos le pusiste. Así que un contacto guardado como
+   * «Juan Contador» aparecía como «Juancito» o vacío.
+   *
+   * WhatsApp manda la agenda junto con el historial, y esto es esa agenda.
+   */
+  nombres: Map<string, string> = new Map(),
 ): Promise<ResumenHistorial> {
   const r: ResumenHistorial = { mirados: 0, guardados: 0, viejos: 0, chats: 0 };
 
@@ -375,9 +387,19 @@ export async function guardarHistorial(
     if (!texto) continue;
 
     const tel = telefonoDeQuienEscribe(m.key as Record<string, unknown> | null);
-    const clave = tel || `nombre:${m.pushName ?? jid}`;
 
-    if (!porChat.has(clave)) porChat.set(clave, { nombre: m.pushName ?? '', tel, ms: [] });
+    // EL DE LA AGENDA PRIMERO. `pushName` es el nombre que el otro eligió para
+    // sí mismo; el de la agenda es el que le puso Augusto, y es el que
+    // reconoce al abrir la pantalla. Sólo se cae al `pushName` cuando el
+    // contacto no está guardado.
+    const nombre = nombres.get(jid) || (tel ? nombres.get(`${tel}@s.whatsapp.net`) : '') || m.pushName || '';
+    const clave = tel || `nombre:${nombre || jid}`;
+
+    if (!porChat.has(clave)) porChat.set(clave, { nombre, tel, ms: [] });
+    // Si una tanda posterior trae el nombre de la agenda y la primera no lo
+    // tenía, se completa: el historial llega desordenado.
+    else if (nombre && !porChat.get(clave)!.nombre) porChat.get(clave)!.nombre = nombre;
+
     porChat.get(clave)!.ms.push({
       // Del historial vienen los dos lados. `fromMe` dice cuál es cuál.
       quien: m.key?.fromMe ? 'out' : 'in',
@@ -447,16 +469,88 @@ export function escuchar(
    * nada falle en varios minutos de sincronización.
    */
   const dias = Number(process.env.WA_HISTORIAL_DIAS ?? 0) || 0;
+  /*
+   * La agenda del teléfono: cómo se llama cada uno para Augusto.
+   *
+   * Se acumula acá y no se guarda en ningún lado: es una tabla de traducción
+   * para esta corrida. WhatsApp manda los contactos en tandas, mezclados con
+   * los mensajes y sin garantía de orden, así que hay que ir juntándolos.
+   */
+  const nombres = new Map<string, string>();
+  const anotarNombres = (cs: { id?: string | null; name?: string | null; notify?: string | null }[] | undefined) => {
+    for (const c of cs ?? []) {
+      const id = String(c?.id ?? '');
+      // `name` es el de la agenda. `notify` es el que eligió el otro: sirve de
+      // respaldo, pero nunca pisa al de la agenda.
+      const n = String(c?.name ?? '').trim() || String(c?.notify ?? '').trim();
+      if (id && n && !nombres.has(id)) nombres.set(id, n);
+    }
+  };
+  //  es el unico evento de contactos que Baileys 7 expone con
+  // tipo. Los de la sincronizacion inicial vienen dentro de
+  // , que se lee mas abajo.
+  sock.ev.on('contacts.upsert', anotarNombres);
+
+  /*
+   * Desvincular desde el CRM.
+   *
+   * POR QUE NO ALCANZA CON MATAR EL PROCESO. La sesión no vive sólo acá: el
+   * teléfono la tiene anotada como un dispositivo vinculado. Matar el worker
+   * deja ese dispositivo colgado en la lista del teléfono y la credencial en
+   * el disco — y el próximo «Vincular» reconecta con la misma, sin QR y sin
+   * historial. `sock.logout()` la da de baja de los dos lados, que es lo que
+   * uno espera cuando aprieta Desvincular.
+   *
+   * SE ESCUCHA DE LA BASE porque el que aprieta el botón es el navegador y
+   * esto es otro proceso. La pantalla escribe `wa_motivo = 'desvincular'` y el
+   * worker lo ve por la suscripción en vivo que PocketBase ya ofrece: sin
+   * puertos abiertos ni una forma nueva de hablarle a este proceso.
+   */
+  void pb
+    .collection('cuenta')
+    .subscribe(cuentaId, (e) => {
+      if (String(e.record?.wa_motivo ?? '') !== 'desvincular') return;
+      void (async () => {
+        decir('');
+        decir('  Pidieron desvincular desde el CRM.');
+        try {
+          await sock.logout();
+          decir('  ✓ dado de baja también en el teléfono.');
+        } catch (err) {
+          decir(`  ! WhatsApp no aceptó la baja: ${(err as Error)?.message ?? String(err)}`);
+          decir('    Sacalo a mano desde el teléfono: Dispositivos vinculados.');
+        }
+        // El estado queda limpio para que la pantalla no muestre una sesión
+        // que ya no existe. La credencial la borra `vincular` al ver que la
+        // conexión cerró con «desvinculado», que es lo que WhatsApp manda.
+        await pb
+          .collection('cuenta')
+          .update(cuentaId, { ultima_senal_wa: '', qr_wa: '', qr_wa_desde: '', wa_motivo: 'desvinculado' })
+          .catch(() => undefined);
+        decir('  Listo. Apretá «Vincular» cuando quieras y va a pedir un QR nuevo.');
+        process.exit(0);
+      })();
+    })
+    .catch(() => {
+      // Sin suscripción el worker anda igual; sólo no se puede desvincular
+      // desde la pantalla. Se dice para que no se descubra apretando el botón.
+      decir('  (no pude escuchar el pedido de desvincular: usá el teléfono)');
+    });
+
   if (dias > 0) {
     let total = 0;
     sock.ev.on('messaging-history.set', (h) => {
       void (async () => {
         try {
+          // Los contactos de ESTA tanda, antes de usarlos.
+          anotarNombres(h.contacts as { id?: string; name?: string; notify?: string }[] | undefined);
           const r = await guardarHistorial(
             pb,
             cuentaId,
             (h.messages ?? []) as MensajeCrudo[],
             dias,
+            new Date(),
+            nombres,
           );
           total += r.guardados;
           decir(

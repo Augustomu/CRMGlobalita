@@ -158,7 +158,7 @@ routerAdd(
     // Windows.
     const pasar = ['PATH', 'Path', 'SystemRoot', 'windir', 'TEMP', 'TMP',
                    'HOME', 'USERPROFILE', 'HOMEDRIVE', 'HOMEPATH',
-                   'PB_URL', 'PB_COL', 'WA_NUMERO', 'WA_PAIS', 'WA_SESION_DIR'];
+                   'PB_URL', 'PB_COL', 'WA_NUMERO', 'WA_PAIS', 'WA_SESION_DIR', 'WA_HISTORIAL_DIAS'];
     const entorno = [];
     for (const k of pasar) {
       const v = String($os.getenv(k) || '');

@@ -113,6 +113,35 @@ export function CuentasConectadas({
    */
   const [diario, setDiario] = useState<string>('');
   const [eligiendoCuenta, setEligiendoCuenta] = useState(false);
+  /**
+   * Qué cuenta está por desvincularse, esperando confirmación.
+   *
+   * Se pregunta porque desvincular **no se deshace apretando de nuevo**: hay
+   * que tener el teléfono a mano para escanear otro QR. No es como cerrar un
+   * panel.
+   */
+  const [confirmarBaja, setConfirmarBaja] = useState<string | null>(null);
+
+  /**
+   * Pedir la baja. Lo ejecuta el worker, no esta pantalla.
+   *
+   * El navegador no puede hablarle a WhatsApp ni al proceso que sostiene la
+   * sesión. Escribe el pedido en la cuenta y el worker —que está escuchando esa
+   * fila— hace el `logout` de verdad, que es lo que saca el dispositivo también
+   * del teléfono.
+   */
+  async function desvincular(abrev: string) {
+    const c = cuentas.find((x) => x.abrev === abrev);
+    if (!c) return;
+    setErrorWa(null);
+    setConfirmarBaja(null);
+    try {
+      await pb.collection('cuenta').update(c.id, { wa_motivo: 'desvincular' });
+      setQr(null);
+    } catch (err) {
+      setErrorWa(err instanceof Error ? err.message : 'No se pudo pedir la baja.');
+    }
+  }
   /** Para llevar la vista al panel: con Google abajo, el QR quedaba fuera de cuadro. */
   const panelQr = useRef<HTMLDivElement | null>(null);
   /**
@@ -497,6 +526,25 @@ export function CuentasConectadas({
             </div>
           )}
 
+          {confirmarBaja && (
+            <div className="cc-fila cc-nota">
+              <span className="cc-estado">
+                Se cierra la sesión de {confirmarBaja} y el dispositivo sale del teléfono. Para
+                volver hay que escanear un QR nuevo.
+              </span>
+              <button
+                type="button"
+                className="boton-principal"
+                onClick={() => void desvincular(confirmarBaja)}
+              >
+                Desvincular
+              </button>
+              <button type="button" className="boton-mini" onClick={() => setConfirmarBaja(null)}>
+                Dejarlo como está
+              </button>
+            </div>
+          )}
+
           {conWhatsapp.length === 0 && (
             <div className="cc-fila cc-nota">
               <span className="cc-estado">
@@ -522,6 +570,19 @@ export function CuentasConectadas({
                 <span className="cc-detalle">
                   {viva ? '' : espera ? `${espera} ${espera === 1 ? 'frenado' : 'frenados'}` : ''}
                 </span>
+                {/* Desvincular sólo aparece con la sesión viva: sobre una
+                    caída no hay nada que dar de baja, y un botón que no hace
+                    nada es peor que no tenerlo. */}
+                {viva && (
+                  <button
+                    type="button"
+                    className="boton-mini"
+                    title="Cerrar la sesión y sacar el dispositivo del teléfono"
+                    onClick={() => setConfirmarBaja(c.abrev)}
+                  >
+                    Desvincular
+                  </button>
+                )}
                 <button
                   type="button"
                   className={viva ? 'boton-mini' : 'boton-principal'}
