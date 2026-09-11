@@ -365,9 +365,18 @@ export function App() {
             <button
               type="button"
               className={`tab ${seccion === 'wapersonal' ? 'tab-on' : 'tab-off'}`}
+              /* EL ICONO EN VEZ DEL NOMBRE. Pedido el 11/09: «en vez de nombre
+                 pongámosle un emoji de WhatsApp». Es la única solapa que se
+                 reconoce por su marca sin leer nada, así que el nombre no
+                 agrega.
+                 El `title` y el `aria-label` SI dicen el nombre: sin eso, la
+                 solapa es un dibujo sin texto para quien usa lector de
+                 pantalla, y una adivinanza para quien recién entra. */
+              title="WA Personal"
+              aria-label="WA Personal"
               onClick={() => irA(() => setSeccion('wapersonal'))}
             >
-              WA Personal
+              <span className="tab-emoji" aria-hidden="true">💬</span>
             </button>
           )}
           {puedeUsuario(usuario, 'usuarios') && (

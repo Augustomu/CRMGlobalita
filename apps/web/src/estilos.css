@@ -7184,3 +7184,14 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 .wap-icono:hover { background: var(--accent-light); color: var(--text); }
 .wap-icono:disabled { opacity: .4; cursor: default; }
 .wap-icono:disabled:hover { background: none; color: var(--muted); }
+
+/* El icono de la solapa de WhatsApp.
+   En color y no en gris —es la unica excepcion a la regla de los emojis
+   monocromo— porque aca el emoji ES la etiqueta: en gris se pierde entre las
+   otras solapas, que si tienen texto. */
+.tab-emoji {
+  font-size: var(--txt-lg);
+  line-height: 1;
+  display: inline-block;
+  vertical-align: -2px;
+}
