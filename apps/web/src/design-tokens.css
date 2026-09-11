@@ -80,7 +80,14 @@
   --wa-borde: rgb(0 0 0 / .08);
   /* La capsula: la barra de escribir y la de buscar. Se levanta del panel. */
   --wa-campo: #FFFFFF;
-  --wa-campo-hint: #667781;
+  /* El gris del texto de ejemplo. NO es el #667781 de WhatsApp: sobre la
+     capsula gris del buscador da 4.14:1 y no llega al minimo legible.
+     Oscurecido hasta 5.52:1 ahi y 4.78:1 sobre la barra blanca. */
+  --wa-campo-hint: #54656F;
+  /* El panel de la lista de chats: blanco, como en WhatsApp. */
+  --wa-panel: #FFFFFF;
+  /* Y la capsula del buscador, gris encima del panel blanco. */
+  --wa-buscador: #F0F2F5;
   /* Lo que va ENCIMA del verde de WhatsApp. No cambia con el tema porque el
      verde tampoco: estuvo en --surface y en oscuro daba una flecha casi negra
      sobre verde. */
@@ -143,6 +150,8 @@
   --wa-hora: #8696A0;
   --wa-borde: rgb(255 255 255 / .06);
   --wa-campo: #2A3942;
+  --wa-panel: #111B21;
+  --wa-buscador: #202C33;
   --wa-sobre-verde: #FFFFFF;
   /* No es el #8696A0 de WhatsApp: sobre #2A3942 da 3.88:1 y no llega al
      minimo legible. Aclarado hasta 5.31:1. */
@@ -195,6 +204,8 @@
   --wa-hora: #8696A0;
   --wa-borde: rgb(255 255 255 / .06);
   --wa-campo: #2A3942;
+  --wa-panel: #111B21;
+  --wa-buscador: #202C33;
   --wa-sobre-verde: #FFFFFF;
   /* No es el #8696A0 de WhatsApp: sobre #2A3942 da 3.88:1 y no llega al
      minimo legible. Aclarado hasta 5.31:1. */

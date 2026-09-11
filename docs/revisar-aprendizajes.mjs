@@ -242,6 +242,7 @@ const PAREJAS = [
   ['.wap-caja', '.wap-escribir textarea', 'lo que se escribe en la barra'],
   ['.wap-caja', '.wap-caja .wap-icono', 'los iconos de la barra de escribir'],
   ['.wap-buscador', '.wap-buscar', 'lo que se escribe en el buscador'],
+  ['.wap-col', '.wap-chat-nombre', 'el nombre de un chat sobre el panel blanco'],
   ['.wap-buscador', '.wap-buscar::placeholder', 'el texto de ejemplo del buscador'],
   ['.wap-buscador', '.wap-buscador svg', 'la lupa del buscador'],
 ];

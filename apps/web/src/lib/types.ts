@@ -43,20 +43,16 @@ export interface CuentaRecord {
   abrev: string;
   nombre_perfil: string;
   slot: number;
-  /**
-   * NO LEER ESTOS DOS. Son columnas del seed de demo: dicen «activa» en cinco
-   * cuentas que no tienen ninguna sesión detrás, y nada las actualiza.
+  /*
+   * ACA ESTABAN `estado_sesion` y `sesion_wa`, y se fueron el 11/09.
    *
-   * El estado se deduce de la señal con `estadoDeSesion()` de
-   * `@crm/core/sesion`. Quedan declaradas porque las columnas siguen en la
-   * base —borrarlas es una migración destructiva y esa decisión es de Augusto,
-   * anotada en PENDIENTES— pero ningún código las lee.
+   * Decian «activa» en cinco cuentas que no tenian ninguna sesion detras: eran
+   * valores de la semilla de demo que nadie volvia a tocar, y el CRM los creia.
+   * El estado se deduce de la señal real con `estadoDeSesion()` de
+   * `@crm/core/sesion`, que es lo que hacen las dos lineas de abajo.
    *
-   * @deprecated Usar `ultima_senal_li` / `ultima_senal_wa` con `estadoDeSesion`.
+   * Augusto autorizo sacarlas: «eliminalas entonces». Migracion 1788750000.
    */
-  estado_sesion: 'activa' | 'caida' | 'sin_vincular';
-  /** @deprecated Ídem: usar `ultima_senal_wa` con `estadoDeSesion`. */
-  sesion_wa: 'activa' | 'caida' | 'sin_vincular';
   /** Cuándo respondió por última vez cada sesión. Lo escribe el worker. */
   ultima_senal_li: string | null;
   ultima_senal_wa: string | null;

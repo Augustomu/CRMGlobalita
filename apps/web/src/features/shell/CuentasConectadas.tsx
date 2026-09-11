@@ -33,8 +33,6 @@ interface CuentaRecord {
   abrev: string;
   nombre_perfil: string;
   slot: number;
-  estado_sesion: string;
-  sesion_wa: string;
   /** Cuándo respondió la sesión por última vez. Lo escribe el worker. */
   ultima_senal_li: string;
   ultima_senal_wa: string;
@@ -73,6 +71,26 @@ interface EnCola {
  * calendario de la persona y vive en una colección con todas las reglas en
  * `null` (§8.3). El servidor contesta sí o no.
  */
+/**
+ * El símbolo de apagar. Uno solo, usado por LinkedIn, WhatsApp y Google.
+ *
+ * DIBUJADO Y NO UN EMOJI: cada sistema operativo dibuja el emoji a su manera y
+ * con su propio alto, así que tres filas seguidas no quedarían parejas — que es
+ * justo el problema que este cambio viene a arreglar.
+ *
+ * Está acá arriba y no repetido en cada fila porque es literalmente la misma
+ * acción en las tres secciones; tres copias del mismo dibujo se desincronizan
+ * en cuanto alguien toca una.
+ */
+function IconoApagar() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M12 3v9" strokeLinecap="round" />
+      <path d="M7.5 6.5a7 7 0 1 0 9 0" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 interface CuentaGoogle {
   id: string;
   email: string;
@@ -250,6 +268,8 @@ export function CuentasConectadas({
   const [soltarCuenta, setSoltarCuenta] = useState<string | null>(null);
   const [pasarCalendario, setPasarCalendario] = useState<string | null>(null);
   const [moviendo, setMoviendo] = useState(false);
+  /** Qué cuenta de LinkedIn se está comprobando ahora mismo. */
+  const [ligando, setLigando] = useState<string | null>(null);
   /** 7.4 · El traído del histórico: puede tardar, así que se avisa mientras. */
   const [trayendo, setTrayendo] = useState(false);
   const [historico, setHistorico] = useState<string | null>(null);
@@ -445,6 +465,31 @@ export function CuentasConectadas({
     }
   }
 
+  /**
+   * Abrir Chrome y comprobar la sesión de LinkedIn de una cuenta.
+   *
+   * El worker tarda entre diez y treinta segundos y no contesta cuando
+   * termina: abre el navegador y navega. Por eso acá se avisa qué está pasando
+   * en vez de dejar el botón girando hasta que alguien se canse.
+   */
+  async function ligarLinkedin(abrev: string) {
+    setLigando(abrev);
+    setGoogleFallo(null);
+    try {
+      const r = await pb.send<{ aviso?: string }>('/api/li/vincular', {
+        method: 'POST',
+        body: { abrev },
+      });
+      setGoogleFallo(r?.aviso ?? 'Abriendo Chrome…');
+    } catch (err) {
+      setGoogleFallo(err instanceof Error ? err.message : 'No se pudo abrir el navegador.');
+    } finally {
+      // No se espera al worker: lo que sigue pasa en la ventana de Chrome, y
+      // el estado de la fila se actualiza cuando el worker escribe la señal.
+      setTimeout(() => setLigando(null), 3000);
+    }
+  }
+
   async function desconectarGoogle() {
     setGoogleFallo(null);
     try {
@@ -608,16 +653,36 @@ export function CuentasConectadas({
                   <span className={viva ? 'cc-punto cc-punto-ok' : 'cc-punto cc-punto-mal'} />
                   {NOMBRE_ESTADO_SESION[estado]}
                 </span>
-                {/* La sesión de LinkedIn no se recupera con un QR: hay que
-                    volver a loguearla desde el worker. Por eso acá no hay
-                    botón, y decirlo es mejor que poner uno que no haga nada. */}
+                {/* LA COLA SOLO SE DICE CUANDO HAY ALGO EN ELLA.
+                    Decía «0 en cola esperando» en las nueve cuentas: un cero
+                    que no informa nada, ocupando el lugar del único botón que
+                    se puede apretar desde acá. Augusto lo marcó el 11/09. */}
                 <span className="cc-detalle">
-                  {viva ? '' : `${pendientes.get(c.id) ?? 0} en cola esperando`}
+                  {!viva && (pendientes.get(c.id) ?? 0) > 0
+                    ? `${pendientes.get(c.id)} en cola esperando`
+                    : ''}
                 </span>
-                {/* Vacía, pero presente: sin la quinta celda la fila de
-                    LinkedIn tiene cuatro y las otras cinco, y los estados
-                    dejan de estar en la misma columna. */}
-                <span className="cc-acciones" />
+                <span className="cc-acciones">
+                  {/* ABRE CHROME Y MIRA SI LA SESIÓN ESTÁ INICIADA.
+                      No es un QR como el de WhatsApp: LinkedIn no tiene. Abre
+                      el navegador con el perfil de esta cuenta y comprueba; si
+                      está caída, se inicia sesión a mano en esa misma ventana.
+                      Chrome tiene que estar cerrado — Playwright no puede tomar
+                      un perfil que ya está abierto en otra ventana. */}
+                  <button
+                    type="button"
+                    className={viva ? 'boton-mini' : 'boton-principal'}
+                    disabled={ligando === c.abrev}
+                    title={
+                      viva
+                        ? 'Volver a comprobar la sesión de LinkedIn. Abre Chrome con el perfil de esta cuenta.'
+                        : 'Abrir Chrome con el perfil de esta cuenta y comprobar la sesión. Chrome tiene que estar cerrado.'
+                    }
+                    onClick={() => void ligarLinkedin(c.abrev)}
+                  >
+                    {ligando === c.abrev ? 'abriendo…' : viva ? 'Comprobar' : 'Vincular'}
+                  </button>
+                </span>
               </div>
             );
           })}
@@ -724,11 +789,12 @@ export function CuentasConectadas({
                     {viva && (
                       <button
                         type="button"
-                        className="boton-mini"
-                        title="Cerrar la sesión y sacar el dispositivo del teléfono"
+                        className="cc-icono cc-icono-peligro"
+                        title="Desvincular: cierra la sesión y saca el dispositivo del teléfono"
+                        aria-label="Desvincular WhatsApp"
                         onClick={() => setConfirmarBaja(c.abrev)}
                       >
-                        Desvincular
+                        <IconoApagar />
                       </button>
                     )}
                     <button
@@ -855,11 +921,7 @@ export function CuentasConectadas({
                         aria-label="Desconectar esta cuenta"
                         onClick={() => setSoltarCuenta(c.id)}
                       >
-                        {/* El símbolo de apagar: se lee sin leyenda. */}
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
-                          <path d="M12 3v9" strokeLinecap="round" />
-                          <path d="M7.5 6.5a7 7 0 1 0 9 0" strokeLinecap="round" />
-                        </svg>
+                        <IconoApagar />
                       </button>
                     </>
                   )}
@@ -966,11 +1028,12 @@ export function CuentasConectadas({
               ) : (
                 <button
                   type="button"
-                  className="boton-mini"
-                  title="Deja de escribir en tu calendario. Los eventos ya creados quedan donde están."
+                  className="cc-icono cc-icono-peligro"
+                  title="Desconectar: deja de escribir en tu calendario. Los eventos ya creados quedan donde están."
+                  aria-label="Desconectar el calendario"
                   onClick={() => setConfirmarCorte(true)}
                 >
-                  Desconectar
+                  <IconoApagar />
                 </button>
               ))}
             </span>

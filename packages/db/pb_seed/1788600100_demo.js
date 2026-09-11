@@ -72,19 +72,21 @@ migrate(
     // observador limitado a un negocio.
     const slots = [
       ['AL', 'Alberto Cordoba', 'activa', 'activa', 'inversiones'],
-      ['DL', 'Diego Lamas', 'activa', 'activa', 'ia'],
-      ['FR', 'Franco Ruiz', 'activa', 'activa', 'ia'],
-      ['ED', 'Elena Duarte', 'activa', 'activa', 'ia'],
-      ['AU', 'Augusto Unzaga', 'activa', 'activa', 'ia'],
-      ['AMU', 'A. M. Unzaga', 'activa', 'caida', 'ia'],
+      ['DL', 'Diego Lamas', 'ia'],
+      ['FR', 'Franco Ruiz', 'ia'],
+      ['ED', 'Elena Duarte', 'ia'],
+      ['AU', 'Augusto Unzaga', 'ia'],
+      ['AMU', 'A. M. Unzaga', 'ia'],
     ];
-    slots.forEach(([abrev, nombre_perfil, estado_sesion, sesion_wa, linea_negocio], i) => {
+    // SIN estado de sesion. Estas dos columnas se fueron el 11/09 y la semilla
+    // era donde nacio el problema: decian «activa» en cinco cuentas sin que
+    // hubiera ninguna sesion viva, y el CRM las creia. Hoy el estado se calcula
+    // a partir de la ultima senal real (core/sesion.ts).
+    slots.forEach(([abrev, nombre_perfil, linea_negocio], i) => {
       cuentas[abrev] = nuevo('cuenta', {
         abrev,
         nombre_perfil,
         slot: i + 1,
-        estado_sesion,
-        sesion_wa,
         linea_negocio,
         cupo_diario: 40,
         objetivo_semanal: 200,

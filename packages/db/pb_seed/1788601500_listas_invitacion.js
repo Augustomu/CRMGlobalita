@@ -57,23 +57,18 @@ migrate(
       app.save(r);
     }
 
-    // En el prototipo AMU aparece con «sesión caída» en Invitaciones y sale en
-    // cero. En el seed base AMU tenia caido solo WhatsApp, y asi la pantalla
-    // nunca mostraba el caso de la cuenta frenada — que es el aviso que existe
-    // justamente para que nadie se entere tarde.
-    const amu = porAbrev['AMU'];
-    if (amu) {
-      amu.set('estado_sesion', 'caida');
-      app.save(amu);
-    }
+    /*
+     * ACA LA SEMILLA PONIA `estado_sesion = caida` en AMU, para que la pantalla
+     * de Invitaciones mostrara el caso de la cuenta frenada.
+     *
+     * Esa columna se fue el 11/09 (migracion 1788750000) y esto era justo el
+     * motivo: una sesion «caida» escrita a mano que nada volvia a tocar. El
+     * estado ahora se deduce de `ultima_senal_li`, asi que para que AMU aparezca
+     * frenada alcanza con NO escribirle senal — que es lo que pasa sola.
+     */
   },
 
   (app) => {
     for (const l of app.findAllRecords('lista_invitacion')) app.delete(l);
-    try {
-      const amu = app.findFirstRecordByFilter('cuenta', "abrev = 'AMU'");
-      amu.set('estado_sesion', 'activa');
-      app.save(amu);
-    } catch (_) {}
   },
 );

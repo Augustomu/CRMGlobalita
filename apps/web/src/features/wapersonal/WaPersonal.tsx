@@ -512,9 +512,18 @@ export function WaPersonal(_props: Props) {
                     dígitos— para que las dos cosas no puedan discrepar.
                   */}
                   <span className="wap-chat-nombre">
-                    {telefonosEnLaBase.has(ultimosOcho(c.telefono))
-                      ? comoSeLlama(c)
-                      : String(c.telefono ?? '').trim() || comoSeLlama(c)}
+                    {/*
+                      SIN NOMBRE Y SIN NÚMERO se dice, no se deja en blanco.
+                      Una de las 56 conversaciones importadas no trae ninguno de
+                      los dos: es la que junta a varias personas en un solo
+                      hilo, y WhatsApp la manda así. Una fila vacía parece un
+                      error de dibujo; ésta tiene nombre y salida.
+                    */}
+                    {comoSeLlama(c) || String(c.telefono ?? '').trim()
+                      ? telefonosEnLaBase.has(ultimosOcho(c.telefono))
+                        ? comoSeLlama(c)
+                        : String(c.telefono ?? '').trim() || comoSeLlama(c)
+                      : 'conversación sin identificar'}
                   </span>
                   {/*
                     LAS FLECHAS VAN ACÁ, pegadas al nombre, y la hora se fue al
@@ -581,7 +590,7 @@ export function WaPersonal(_props: Props) {
                   muestra el teléfono cuando el contacto no está agendado, y
                   dos veces el mismo dato ocupa el lugar del último mensaje.
                 */}
-                {String(c.telefono ?? '').trim() && (
+                {String(c.telefono ?? '').trim() && comoSeLlama(c) && (
                     <span className="wap-chat-tel" onClick={(ev) => ev.stopPropagation()}>
                       <span className="tabular">{c.telefono}</span>
                       <button
