@@ -910,3 +910,19 @@ function traerHistorico(cuenta, desdeIso, hastaIso) {
 }
 
 module.exports.traerHistorico = traerHistorico;
+
+/*
+ * LO QUE USAN LOS OTROS HOOKS, y que hasta el 11/09 no estaba exportado.
+ *
+ * `contactos.pb.js` llama `g.accessToken(...)` desde el 11/09 y esa linea
+ * nunca pudo correr: el modulo no lo exportaba, asi que cada intento moria con
+ * «g.accessToken is not a function» — dentro de un try que lo contaba como si
+ * lo hubiera dicho Google. La agenda tenia DOS bloqueos a la vez y los dos se
+ * veian igual desde la pantalla.
+ *
+ * `GOOGLE_API` sale por lo mismo: el id de un calendario ES la direccion de
+ * correo de su dueno, asi que sirve para saber con que cuenta quedo conectada
+ * una sesion sin pedir el alcance "email".
+ */
+module.exports.accessToken = accessToken;
+module.exports.GOOGLE_API = GOOGLE_API;

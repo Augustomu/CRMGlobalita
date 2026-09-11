@@ -4199,40 +4199,70 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   font-size: var(--txt-xs);
   color: var(--wa-hora);
 }
+/* LA BARRA DE ESCRIBIR.
+   UNA SOLA CAPSULA con todo adentro: el «+», la carita, el campo y el
+   microfono. Augusto mando la captura del WhatsApp real el 11/09 —«la de
+   escribir... no coincide, y esta un poco pequena, aumentaria el tamano de
+   alto»— y lo que no coincidia era la estructura: aca eran cuatro cajas
+   sueltas en una fila y alla es una sola barra que los contiene.
+   La altura sube de 44 a 46 y ahora la fija la capsula, no el textarea: asi el
+   campo crece con el texto sin que la barra cambie de forma. */
 .wap-escribir {
   position: relative;
-  padding: 10px 14px;
+  padding: 8px 12px 12px;
   border-top: .5px solid var(--border);
+  background: var(--wa-fondo);
   display: flex;
   gap: 8px;
   align-items: flex-end;
 }
+.wap-caja {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: calc(46px * var(--escala-texto));
+  padding: 0 6px;
+  border-radius: 24px;
+  background: var(--wa-campo);
+  border: .5px solid var(--wa-borde);
+  transition: box-shadow 150ms ease-out;
+}
+.wap-caja:focus-within { box-shadow: 0 0 0 1.5px var(--accent); }
 .wap-escribir textarea {
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
-  min-height: 44px;
-  padding: 8px 10px;
-  border: .5px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg);
-  color: var(--text);
+  /* Un renglon de arranque. Crece hasta cinco y despues rueda: una barra que
+     se come media conversacion tapa lo que uno esta contestando. */
+  height: calc(22px * var(--escala-texto));
+  max-height: calc(110px * var(--escala-texto));
+  padding: 0 6px;
+  border: none;
+  background: none;
+  color: var(--wa-texto);
   font-size: var(--txt-base);
-  line-height: 1.5;
+  line-height: calc(22px * var(--escala-texto));
   font-family: inherit;
-  resize: vertical;
+  resize: none;
   outline: none;
-  transition: border-color 150ms ease-out;
+  overflow-y: auto;
 }
-.wap-escribir textarea:focus { border-color: var(--accent); }
+.wap-escribir textarea::placeholder { color: var(--wa-campo-hint); }
+/* Los iconos de adentro de la capsula toman el gris de la capsula, no el del
+   CRM: --muted esta calculado contra --surface y aca el fondo es otro. */
+.wap-caja .wap-icono { color: var(--wa-campo-hint); }
+.wap-caja .wap-icono:hover { background: var(--wa-borde); color: var(--wa-texto); }
+.wap-caja .wap-icono:disabled:hover { background: none; color: var(--wa-campo-hint); }
 .wap-enviar {
-  width: 28px;
-  height: 28px;
+  width: calc(38px * var(--escala-texto));
+  height: calc(38px * var(--escala-texto));
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: 50%;
   border: none;
   background: var(--brand-whatsapp);
-  color: var(--surface);
+  color: var(--wa-sobre-verde);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -4242,7 +4272,7 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 }
 .wap-enviar:hover { opacity: .85; }
 .wap-enviar:disabled { opacity: .4; cursor: not-allowed; }
-.wap-enviar svg { width: 13px; height: 13px; }
+.wap-enviar svg { width: 17px; height: 17px; }
 
 /* ---------- Base compartida (§7.5, BaseCompartida.dc.html) ---------- */
 .bc {
@@ -7118,9 +7148,11 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
    hay pesan entre 200 KB y 2 MB y varias se traen los dibujos de un CDN. */
 .emo {
   position: absolute;
-  bottom: 58px;
+  /* Arriba de la barra, sea cual sea su alto. Estaba en 58px fijos, medidos
+     contra una barra que despues cambio de alto. */
+  bottom: calc(100% + 6px);
   left: 12px;
-  width: 330px;
+  width: 352px;
   max-height: 340px;
   display: flex;
   flex-direction: column;
@@ -7137,21 +7169,29 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   padding: 6px 8px 0;
   border-bottom: .5px solid var(--border);
 }
+/* LOS EMOJIS NO SE MIDEN CON LA ESCALA DEL TEXTO.
+   Estaban en --txt-md y --txt-lg, o sea 12 y 13 pixeles, que es la escala del
+   prototipo — y esa escala es para TEXTO, que se lee de corrido. Un emoji es
+   un blanco al que hay que apuntar y una figura que hay que distinguir de otra
+   parecida: a 13px no se separa una carita de otra. Augusto lo reporto el
+   11/09 como «no se ven los emojis», y era literal.
+   Van a tamano de icono, en color, y con la caja fija para que dos emoji que
+   cada sistema dibuja distinto no muevan la grilla. */
 .emo-tab {
   flex: 1;
   border: none;
   background: none;
-  padding: 4px 0 6px;
-  font-size: var(--txt-md);
+  padding: 5px 0 7px;
+  font-size: 19px;
+  line-height: 1;
   cursor: pointer;
   border-bottom: 2px solid transparent;
-  filter: grayscale(1);
-  opacity: .7;
+  opacity: .55;
+  transition: opacity 120ms ease-out;
 }
 .emo-tab:hover { opacity: 1; }
 .emo-tab-on {
   border-bottom-color: var(--accent);
-  filter: none;
   opacity: 1;
 }
 .emo-busca {
@@ -7165,7 +7205,7 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 }
 .emo-grilla {
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
+  grid-template-columns: repeat(8, 1fr);
   gap: 2px;
   padding: 0 8px 8px;
   overflow-y: auto;
@@ -7174,9 +7214,10 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 .emo-uno {
   border: none;
   background: none;
-  padding: 3px 0;
-  font-size: var(--txt-lg);
-  line-height: 1.4;
+  padding: 0;
+  height: 36px;
+  font-size: 24px;
+  line-height: 36px;
   cursor: pointer;
   border-radius: 6px;
 }
@@ -7221,19 +7262,45 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 .wap-accion svg { width: 13px; height: 13px; display: block; }
 
 
-/* El buscador de la lista de chats, con la misma pinta que el resto de los
-   campos del CRM: mismo borde, mismo radio, mismo tamano de letra. Antes no
-   habia ninguno y con 56 conversaciones ya no alcanza con recorrer la lista. */
+/* El buscador de la lista de chats.
+   CON LA FORMA DEL DE WHATSAPP: una capsula con la lupa adentro, no un campo
+   con borde. Augusto mando la captura del real el 11/09 —«la estetica del
+   buscador sigue siendo diferente»— y la diferencia no era el color: era que
+   ahi el icono va DENTRO del campo y el campo es una capsula.
+   La lupa no es decoracion: es lo que hace que se lea como buscador antes de
+   leer el texto de ejemplo. */
+.wap-buscador {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: calc(34px * var(--escala-texto));
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--wa-campo);
+  border: .5px solid var(--wa-borde);
+  transition: box-shadow 150ms ease-out;
+}
+.wap-buscador:focus-within { box-shadow: 0 0 0 1.5px var(--accent); }
+.wap-buscador svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: var(--wa-campo-hint);
+}
 .wap-buscar {
   flex: 1;
   min-width: 0;
-  margin-left: 8px;
-  padding: 4px 10px;
-  border: .5px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg);
-  color: var(--text);
-  font-size: var(--txt-sm);
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--wa-texto);
+  font-size: var(--txt-base);
   font-family: inherit;
 }
-.wap-buscar:focus { outline: none; border-color: var(--accent-br); }
+.wap-buscar::placeholder { color: var(--wa-campo-hint); }
+.wap-buscar:focus { outline: none; }
+/* La × que Chrome dibuja en un type=search: en la capsula queda como un
+   segundo boton sin explicar, al lado de uno que si esta explicado. */
+.wap-buscar::-webkit-search-cancel-button { -webkit-appearance: none; }

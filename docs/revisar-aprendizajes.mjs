@@ -236,6 +236,14 @@ const PAREJAS = [
   // 10/09 · los dos carteles que dicen lo que falta, y por eso hay que leerlos.
   ['.dup-ciego', null, 'el punto ciego del detector de duplicados'],
   ['.reunion-sin-correo', '.reunion-sin-correo-texto', 'el aviso de que el lead no tiene correo'],
+  // 11/09 · la capsula de WhatsApp. Es un fondo NUEVO —ni --surface ni --bg—
+  // asi que ninguno de los grises ya medidos vale sobre el. El de ejemplo en
+  // oscuro tuvo que aclararse: el de WhatsApp (#8696A0) da 3.88:1 y no llega.
+  ['.wap-caja', '.wap-escribir textarea', 'lo que se escribe en la barra'],
+  ['.wap-caja', '.wap-caja .wap-icono', 'los iconos de la barra de escribir'],
+  ['.wap-buscador', '.wap-buscar', 'lo que se escribe en el buscador'],
+  ['.wap-buscador', '.wap-buscar::placeholder', 'el texto de ejemplo del buscador'],
+  ['.wap-buscador', '.wap-buscador svg', 'la lupa del buscador'],
 ];
 
 {
@@ -319,12 +327,36 @@ const PAREJAS = [
 // D · Fuera del sistema de diseño
 // ===========================================================================
 const ESCALA = new Set([9, 10, 11, 12, 13, 14, 17]);
+
+/*
+ * LAS REGLAS QUE DIBUJAN UN GLIFO, NO TEXTO.
+ *
+ * La escala de arriba sale del prototipo y es para texto que se lee de corrido.
+ * Un emoji no es eso: es una figura que hay que distinguir de otra parecida y
+ * un blanco al que hay que apuntar con el mouse. A 13px —el tamaño más grande
+ * de la escala— no se separa una carita de otra, y el 11/09 Augusto reportó
+ * exactamente eso: «no se ven los emojis». El tamaño de un emoji es el de un
+ * icono, no el de una palabra.
+ *
+ * Va POR NOMBRE, no como un escape general: una tercera regla que quiera salirse
+ * de la escala vuelve a saltar, que es para lo que existe este chequeo.
+ */
+const GLIFOS = new Set(['.emo-tab', '.emo-uno']);
 // Sobre el texto SIN comentarios: un comentario que explica un bug de color
 // tiene los hex del bug adentro, y contarlos como código es un falso aviso.
+let selectorActual = '';
 sinComentarios(estilos).split('\n').forEach((limpia, i) => {
+  // De qué regla es esta línea. Hace falta para la excepción de los glifos: sin
+  // el selector, la única salida sería un escape general.
+  const abre = limpia.indexOf('{');
+  if (abre > 0) selectorActual = limpia.slice(0, abre).trim();
+  else if (limpia.includes('}')) selectorActual = '';
 
   for (const m of limpia.matchAll(/font-size:\s*([0-9.]+)px/g)) {
-    if (!ESCALA.has(Number(m[1]))) {
+    const esGlifo = selectorActual
+      .split(',')
+      .some((s) => GLIFOS.has(s.trim()));
+    if (!esGlifo && !ESCALA.has(Number(m[1]))) {
       anotar('D', `font-size ${m[1]}px fuera de la escala 9/10/11/12/13/14/17 (línea ${i + 1})`);
     }
   }

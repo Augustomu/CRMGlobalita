@@ -115,3 +115,117 @@ export function nombresQueFaltan(
 
   return salida;
 }
+/**
+ * Por qué falló la lectura de la agenda (§5.7).
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * POR QUÉ ES UNA REGLA Y NO UN `if` EN EL HOOK. El 11/09, Google contestó esto
+ * al conectar una cuenta:
+ *
+ *   HTTP 403 — People API has not been used in project 000000000000 before or
+ *   it is disabled.
+ *
+ * y el hook lo leyó como «403, entonces le falta el permiso: desconectala y
+ * volvé a conectarla». Es un 403, sí, pero de otra cosa: la API está APAGADA en
+ * el proyecto de Google Cloud. Desconectar y volver a conectar no la prende, y
+ * la persona puede repetirlo diez veces sin que cambie nada — que es exactamente
+ * lo que pasó, tres veces reportado como «los contactos siguen sin agendarse».
+ *
+ * Las dos causas se parecen en el número y no se parecen en NADA más: una se
+ * arregla en el navegador de quien usa el CRM, la otra en la consola de Google
+ * Cloud del proyecto. Decir la equivocada no es un detalle de redacción: manda
+ * a la persona a repetir para siempre algo que no puede funcionar.
+ *
+ * Por eso la distinción vive acá, con sus tests, y no adentro de un `catch`.
+ */
+export type CausaAgenda =
+  /** La API de contactos está apagada en el proyecto de Google Cloud. */
+  | 'api_apagada'
+  /** La cuenta está conectada, pero sin el permiso de leer contactos. */
+  | 'sin_permiso'
+  /** El permiso venció o fue revocado desde la cuenta de Google. */
+  | 'permiso_vencido'
+  /** Cualquier otra. Se muestra el texto de Google tal cual. */
+  | 'otra';
+
+export interface FalloDeLaAgenda {
+  causa: CausaAgenda;
+  /** Qué hay que hacer, en una frase, sin jerga. */
+  que_hacer: string;
+  /** A dónde ir, si hay un lugar concreto. Vacío cuando no lo hay. */
+  enlace: string;
+}
+
+/** El enlace que Google mete en el mensaje cuando la API está apagada. */
+function enlaceDeLaConsola(mensaje: string): string {
+  const m = /https:\/\/console\.(?:developers|cloud)\.google\.com\/[^\s"'<>)]+/.exec(mensaje);
+  // Google termina la oración pegada al enlace: «…?project=123 then retry.»
+  return m ? m[0].replace(/[.,;]+$/, '') : '';
+}
+
+/**
+ * Traduce lo que contestó Google a qué hay que hacer.
+ *
+ * EL ORDEN DE LAS PREGUNTAS ES LA REGLA. «API apagada» se mira PRIMERO, antes
+ * que el permiso: los dos son 403 y el mensaje de la API apagada es el más
+ * específico de los dos. Al revés, la más genérica se queda con todos los casos
+ * y nadie se entera nunca de que hay un interruptor sin prender.
+ */
+export function porQueFalloLaAgenda(mensaje: string): FalloDeLaAgenda {
+  const t = String(mensaje ?? '');
+  const b = t.toLowerCase();
+
+  // La API apagada. Google lo dice de tres formas según por dónde entre el
+  // pedido, y las tres traen el enlace a la pantalla donde se prende.
+  if (
+    b.includes('has not been used in project') ||
+    b.includes('accessnotconfigured') ||
+    b.includes('service_disabled') ||
+    (b.includes('people api') && b.includes('disabled'))
+  ) {
+    const enlace = enlaceDeLaConsola(t);
+    return {
+      causa: 'api_apagada',
+      que_hacer:
+        'La agenda de Google está apagada en el proyecto: hay que prender la People API una vez, ' +
+        'en la consola de Google Cloud. No se arregla desconectando y volviendo a conectar la cuenta. ' +
+        'Después de prenderla, Google tarda un par de minutos.',
+      enlace: enlace || 'https://console.cloud.google.com/apis/library/people.googleapis.com',
+    };
+  }
+
+  // El permiso que falta. Pasa con una cuenta conectada ANTES de que el CRM
+  // pidiera leer contactos: el permiso viejo no lo incluye.
+  if (
+    b.includes('insufficient authentication scopes') ||
+    b.includes('access_token_scope_insufficient') ||
+    b.includes('insufficient permission')
+  ) {
+    return {
+      causa: 'sin_permiso',
+      que_hacer:
+        'Esta cuenta se conectó antes de que el CRM pidiera leer la agenda, así que su permiso no ' +
+        'la incluye. Desconectala y volvé a conectarla: es una sola vez.',
+      enlace: '',
+    };
+  }
+
+  // El permiso revocado o vencido. Google contesta 401 con invalid_grant.
+  if (b.includes('invalid_grant') || b.includes('unauthorized_client') || /\b401\b/.test(b)) {
+    return {
+      causa: 'permiso_vencido',
+      que_hacer:
+        'Google dejó de aceptar el permiso de esta cuenta —lo revocaron, o venció. Volvé a conectarla.',
+      enlace: '',
+    };
+  }
+
+  return {
+    causa: 'otra',
+    // Sin inventar un diagnóstico: se muestra lo que dijo Google, que es lo
+    // único cierto que hay. Una explicación amable e inventada es peor que el
+    // texto crudo, porque manda a buscar donde no está.
+    que_hacer: t.trim() || 'Google no dijo por qué.',
+    enlace: '',
+  };
+}

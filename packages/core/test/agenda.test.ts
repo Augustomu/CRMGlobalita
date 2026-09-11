@@ -4,6 +4,7 @@ import {
   colaDelTelefono,
   indiceDeLaAgenda,
   nombresQueFaltan,
+  porQueFalloLaAgenda,
   type ContactoDeAgenda,
 } from '../src/agenda.ts';
 
@@ -102,4 +103,75 @@ test('§5.7 · una fila sin teléfono no recibe nombre de nadie', () => {
 test('§5.7 · una agenda vacía no produce ninguna escritura', () => {
   const r = nombresQueFaltan([{ id: 'a', telefono: '5511987654321' }], indiceDeLaAgenda([]));
   assert.deepEqual(r, []);
+});
+
+// §5.7 · Por qué falló la agenda, y qué hay que hacer.
+//
+// De dónde salieron estos mensajes: son los que contestó Google de verdad el
+// 11/09, copiados del registro de PocketBase. El número de proyecto está
+// cambiado a mano porque este repositorio es público.
+
+test('§5.7 · un 403 de API apagada NO se lee como permiso faltante', () => {
+  // ESTE ES EL CASO QUE COSTÓ TRES REPORTES. El hook decía «desconectala y
+  // volvé a conectarla» y Augusto lo hizo, y los contactos seguían sin
+  // aparecer, porque el interruptor está en otro lado.
+  const real =
+    'Error: HTTP 403 — People API has not been used in project 111122223333 before or it is ' +
+    'disabled. Enable it by visiting ' +
+    'https://console.developers.google.com/apis/api/people.googleapis.com/overview?project=111122223333 ' +
+    'then retry. If you enabled this API recently, wait a few minutes for the action to propagate.';
+
+  const r = porQueFalloLaAgenda(real);
+  assert.equal(r.causa, 'api_apagada');
+  // Y dice explícitamente que reconectar NO sirve: sin eso, «403» al lado de
+  // una cuenta de Google lleva solo a volver a conectarla.
+  assert.ok(/no se arregla desconectando/i.test(r.que_hacer));
+});
+
+test('§5.7 · y trae el enlace exacto, sin el punto de la oración pegado', () => {
+  const real =
+    'HTTP 403 — People API has not been used in project 111122223333 before or it is disabled. ' +
+    'Enable it by visiting ' +
+    'https://console.developers.google.com/apis/api/people.googleapis.com/overview?project=111122223333 ' +
+    'then retry.';
+  const r = porQueFalloLaAgenda(real);
+  assert.equal(
+    r.enlace,
+    'https://console.developers.google.com/apis/api/people.googleapis.com/overview?project=111122223333',
+  );
+});
+
+test('§5.7 · sin enlace en el texto, igual se dice a dónde ir', () => {
+  // Google también contesta la forma corta, sin la URL. Mandar a «la consola de
+  // Google Cloud» sin decir a qué pantalla es mandar a buscar.
+  const r = porQueFalloLaAgenda('{"error":{"status":"PERMISSION_DENIED","reason":"SERVICE_DISABLED"}}');
+  assert.equal(r.causa, 'api_apagada');
+  assert.ok(r.enlace.startsWith('https://console.cloud.google.com/'));
+});
+
+test('§5.7 · el permiso que falta SÍ se arregla reconectando', () => {
+  const r = porQueFalloLaAgenda('HTTP 403 — Request had insufficient authentication scopes.');
+  assert.equal(r.causa, 'sin_permiso');
+  assert.ok(/volvé a conectarla/i.test(r.que_hacer));
+  assert.equal(r.enlace, '', 'no hay ninguna pantalla de Google a la que mandar');
+});
+
+test('§5.7 · el permiso revocado se distingue del que nunca estuvo', () => {
+  // Los dos terminan en «volvé a conectarla», pero no son lo mismo y la causa
+  // se usa para contar: si esto pasa seguido, algo está revocando el permiso.
+  const r = porQueFalloLaAgenda('HTTP 401 — {"error":"invalid_grant"}');
+  assert.equal(r.causa, 'permiso_vencido');
+});
+
+test('§5.7 · lo que no se reconoce se muestra tal cual, sin inventar', () => {
+  // Una explicación amable e inventada es peor que el texto crudo: manda a
+  // buscar donde no está.
+  const r = porQueFalloLaAgenda('HTTP 500 — backend error');
+  assert.equal(r.causa, 'otra');
+  assert.equal(r.que_hacer, 'HTTP 500 — backend error');
+});
+
+test('§5.7 · sin mensaje no se rompe', () => {
+  assert.equal(porQueFalloLaAgenda('').causa, 'otra');
+  assert.ok(porQueFalloLaAgenda('').que_hacer.length > 0, 'siempre dice algo');
 });

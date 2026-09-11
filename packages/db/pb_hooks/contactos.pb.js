@@ -63,16 +63,19 @@ routerAdd(
         const suyos = a.traerAgenda(token);
         for (const x of suyos) contactos.push(x);
       } catch (err) {
-        // El caso más común y el que hay que saber distinguir: el permiso de
-        // contactos es NUEVO, así que una cuenta conectada antes del 11/09 no
-        // lo tiene. Google contesta 403 y hay que volver a conectar UNA vez.
-        const m = String(err);
-        fallos.push(
-          quien +
-            (m.indexOf('403') >= 0
-              ? ': conectada pero sin permiso para leer la agenda. Desconectala y volvé a conectarla.'
-              : ': ' + m),
-        );
+        /*
+         * QUÉ SALIÓ MAL LO DECIDE CORE, no este catch.
+         *
+         * Acá decía: «403 ⇒ le falta el permiso, desconectala y volvé a
+         * conectarla». El 11/09 Google contestó un 403 de OTRA cosa —la People
+         * API apagada en el proyecto— y esta línea mandó a Augusto a
+         * reconectar una cuenta que ya estaba bien. Tres reportes del mismo
+         * síntoma salieron de acá.
+         *
+         * La distinción vive en core/agenda.ts porQueFalloLaAgenda,
+         * con sus tests y con el mensaje real de Google adentro.
+         */
+        fallos.push(a.comoSeCuentaElFallo(quien, String(err)));
       }
     }
 

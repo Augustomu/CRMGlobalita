@@ -131,3 +131,89 @@ function ponerNombres(contactos) {
 }
 
 module.exports = { traerAgenda, ponerNombres };
+
+/**
+ * Por que fallo la agenda. Copia de `core/agenda.ts porQueFalloLaAgenda`.
+ *
+ * ESTA COPIA EXISTE porque los hooks de PocketBase corren en su propio runtime
+ * y no alcanzan `packages/core`. La decision —y sus tests— viven alla; si se
+ * toca una, se tocan las dos en la misma tanda.
+ *
+ * LO QUE DECIDE, y por que importa: el 11/09 Google contesto «HTTP 403 — People
+ * API has not been used in project ... or it is disabled» y este archivo lo
+ * leyo como «le falta el permiso, desconectala y volve a conectarla». Augusto
+ * lo hizo, y los contactos siguieron sin aparecer, porque el interruptor esta
+ * en la consola de Google Cloud. Tres reportes del mismo sintoma salieron de
+ * ese diagnostico equivocado.
+ */
+function porQueFalloLaAgenda(mensaje) {
+  const t = String(mensaje == null ? '' : mensaje);
+  const b = t.toLowerCase();
+
+  const enlaceDeLaConsola = () => {
+    const m = /https:\/\/console\.(?:developers|cloud)\.google\.com\/[^\s"'<>)]+/.exec(t);
+    return m ? m[0].replace(/[.,;]+$/, '') : '';
+  };
+
+  // La API apagada se mira PRIMERO: los dos son 403 y este mensaje es el mas
+  // especifico. Al reves, el generico se queda con todos los casos y nadie se
+  // entera nunca de que hay un interruptor sin prender.
+  if (
+    b.indexOf('has not been used in project') >= 0 ||
+    b.indexOf('accessnotconfigured') >= 0 ||
+    b.indexOf('service_disabled') >= 0 ||
+    (b.indexOf('people api') >= 0 && b.indexOf('disabled') >= 0)
+  ) {
+    return {
+      causa: 'api_apagada',
+      que_hacer:
+        'La agenda de Google esta apagada en el proyecto: hay que prender la People API una vez, ' +
+        'en la consola de Google Cloud. No se arregla desconectando y volviendo a conectar la cuenta. ' +
+        'Despues de prenderla, Google tarda un par de minutos.',
+      enlace: enlaceDeLaConsola() || 'https://console.cloud.google.com/apis/library/people.googleapis.com',
+    };
+  }
+
+  if (
+    b.indexOf('insufficient authentication scopes') >= 0 ||
+    b.indexOf('access_token_scope_insufficient') >= 0 ||
+    b.indexOf('insufficient permission') >= 0
+  ) {
+    return {
+      causa: 'sin_permiso',
+      que_hacer:
+        'Esta cuenta se conecto antes de que el CRM pidiera leer la agenda, asi que su permiso no ' +
+        'la incluye. Desconectala y volve a conectarla: es una sola vez.',
+      enlace: '',
+    };
+  }
+
+  if (b.indexOf('invalid_grant') >= 0 || b.indexOf('unauthorized_client') >= 0 || /\b401\b/.test(b)) {
+    return {
+      causa: 'permiso_vencido',
+      que_hacer:
+        'Google dejo de aceptar el permiso de esta cuenta —lo revocaron, o vencio. Volve a conectarla.',
+      enlace: '',
+    };
+  }
+
+  // Sin inventar un diagnostico: se muestra lo que dijo Google, que es lo unico
+  // cierto que hay.
+  return { causa: 'otra', que_hacer: t.trim() || 'Google no dijo por que.', enlace: '' };
+}
+
+module.exports.porQueFalloLaAgenda = porQueFalloLaAgenda;
+
+/**
+ * El mismo fallo, en UN renglon para mostrar.
+ *
+ * Junta el quien, el que hacer y el enlace. Esta aca y no en cada llamador
+ * porque los dos lugares que lo muestran —la vuelta de Google y el boton de
+ * reintentar— tienen que decir exactamente lo mismo.
+ */
+function comoSeCuentaElFallo(quien, mensaje) {
+  const r = porQueFalloLaAgenda(mensaje);
+  return quien + ': ' + r.que_hacer + (r.enlace ? ' → ' + r.enlace : '');
+}
+
+module.exports.comoSeCuentaElFallo = comoSeCuentaElFallo;

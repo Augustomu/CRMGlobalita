@@ -138,6 +138,34 @@ routerAdd('GET', '/api/google/callback', (e) => {
   } catch (_) {}
 
   /*
+   * Y SI ESO FALLO —que es siempre— el correo sale del CALENDARIO.
+   *
+   * /oauth2/v2/userinfo necesita el alcance "email", que no pedimos a
+   * proposito: agregarlo obligaria a que todos vuelvan a dar el consentimiento.
+   * Pero el id del calendario principal ES la direccion de correo de su dueno,
+   * y para eso ya tenemos permiso.
+   *
+   * Esto estaba resuelto y estaba en el lugar equivocado: adentro de
+   * `traerCambios`, que corre solo para la cuenta del calendario. Una cuenta
+   * conectada para leer la agenda no pasa por ahi nunca, asi que se quedaba en
+   * «sin correo» — y sin correo, dos cuentas conectadas son dos renglones
+   * iguales que no se pueden distinguir.
+   */
+  if (!email) {
+    try {
+      const cal = $http.send({
+        url: g.GOOGLE_API + '/calendars/primary',
+        headers: { Authorization: 'Bearer ' + res.json.access_token },
+        timeout: 15,
+      });
+      if (cal.statusCode === 200 && cal.json && cal.json.id) email = String(cal.json.id);
+    } catch (_) {
+      // Es un dato para mostrar. Que no se sepa el correo no invalida el
+      // permiso, que es lo que de verdad se vino a buscar.
+    }
+  }
+
+  /*
    * SI ESA CUENTA YA ESTABA CONECTADA, se actualiza la que hay y se tira la
    * fila nueva. Sin esto, conectar dos veces la misma cuenta choca contra el
    * índice único (usuario, email) y la vuelta termina en un error que no dice
@@ -192,7 +220,12 @@ routerAdd('GET', '/api/google/callback', (e) => {
     $app.logger().info('google-callback', 'contactos', contactos.length, 'chats', r.chats, 'perfiles', r.perfiles);
   } catch (err) {
     $app.logger().error('google-callback', 'contactos', String(err));
-    nombres = ', pero no se pudo leer la agenda: ' + String(err);
+    // QUE SALIO MAL LO DICE CORE. Un 403 de Google puede ser «falta el permiso»
+    // —se arregla reconectando— o «la People API esta apagada en el proyecto»,
+    // que no se arregla reconectando ni una sola vez. Ver
+    // core/agenda.ts porQueFalloLaAgenda.
+    nombres = ', pero no se pudo leer la agenda. ' +
+      require(`${__hooks}/agenda.js`).porQueFalloLaAgenda(String(err)).que_hacer;
   }
 
   // Una cuenta conectada SOLO PARA LEER no trae el calendario: no es la que
@@ -303,14 +336,103 @@ routerAdd(
   $apis.requireAuth(),
 );
 
+/*
+ * DESCONECTAR UNA CUENTA. Cual, lo dice `id`; sin `id`, la del calendario.
+ *
+ * Hasta el 11/09 desconectaba siempre la del calendario y no habia forma de
+ * soltar una de las otras: Augusto conecto una segunda, quedo mal, y el unico
+ * boton que existia apagaba la que estaba bien.
+ *
+ * NO SE PROMUEVE NINGUNA EN SU LUGAR. Si se va la del calendario y quedan
+ * otras, el CRM se queda sin calendario y lo dice. Elegir una sola cambiaria
+ * en silencio a que agenda van a parar las reuniones, que es justo la decision
+ * que no puede tomar un efecto secundario.
+ */
 routerAdd(
   'POST',
   '/api/google/desconectar',
   (e) => {
     const g = require(`${__hooks}/google.js`);
-    const fila = g.cuentaDe(e.auth.id);
+
+    const cuerpo = new DynamicModel({ id: '' });
+    e.bindBody(cuerpo);
+    const pedido = String(cuerpo.id || '');
+
+    let fila;
+    if (pedido) {
+      // El dueno se verifica SIEMPRE. Sin esto, un id ajeno en el cuerpo del
+      // pedido desconecta el Google de otra persona.
+      try {
+        fila = $app.findRecordById('google_cuenta', pedido);
+      } catch (_) {
+        return e.json(404, { error: 'Esa cuenta no existe.' });
+      }
+      if (String(fila.get('usuario')) !== String(e.auth.id)) {
+        return e.json(404, { error: 'Esa cuenta no existe.' });
+      }
+    } else {
+      fila = g.cuentaDe(e.auth.id);
+    }
+
     if (fila) $app.delete(fila);
     return e.json(200, { conectado: false });
+  },
+  $apis.requireAuth(),
+);
+
+/*
+ * CUAL DE LAS CUENTAS ES LA DEL CALENDARIO.
+ *
+ * Existe porque la alternativa era peor. Augusto queria que las reuniones se
+ * escriban en la cuenta de trabajo y el CRM tenia la personal: para cambiarlo
+ * habia que desconectar las dos y volver a conectarlas EN ORDEN, porque la
+ * primera que entra se queda con el calendario. Un orden que hay que saber de
+ * antemano no es una interfaz.
+ *
+ * LO QUE CAMBIA Y LO QUE NO: de aca en adelante las reuniones nuevas se
+ * escriben en la cuenta elegida. Las que ya estan creadas siguen en el
+ * calendario donde nacieron — moverlas seria borrarlas de un lado y crearlas
+ * del otro, y ninguna de las dos mitades es reversible si la otra falla.
+ *
+ * El `sync_token` de la que deja de ser principal se tira: esta atado a una
+ * ventana de fechas pedida con otro alcance y reusarlo trae cambios de menos.
+ */
+routerAdd(
+  'POST',
+  '/api/google/calendario',
+  (e) => {
+    const g = require(`${__hooks}/google.js`);
+
+    const cuerpo = new DynamicModel({ id: '' });
+    e.bindBody(cuerpo);
+    const pedido = String(cuerpo.id || '');
+    if (!pedido) return e.json(400, { error: 'Falta decir cual cuenta.' });
+
+    let nueva;
+    try {
+      nueva = $app.findRecordById('google_cuenta', pedido);
+    } catch (_) {
+      return e.json(404, { error: 'Esa cuenta no existe.' });
+    }
+    if (String(nueva.get('usuario')) !== String(e.auth.id)) {
+      return e.json(404, { error: 'Esa cuenta no existe.' });
+    }
+    if (!nueva.get('refresh_token')) {
+      return e.json(400, { error: 'Esa cuenta no esta conectada.' });
+    }
+
+    const todas = g.cuentasDe(e.auth.id);
+    for (let i = 0; i < todas.length; i++) {
+      const f = todas[i];
+      const esLaNueva = f.id === nueva.id;
+      if (Boolean(f.get('principal')) === esLaNueva) continue;
+      f.set('principal', esLaNueva);
+      if (esLaNueva) f.set('sync_token', '');
+      $app.save(f);
+    }
+
+    $app.logger().info('google-calendario', 'ahora', String(nueva.get('email') || nueva.id));
+    return e.json(200, { ok: true, email: String(nueva.get('email') || '') });
   },
   $apis.requireAuth(),
 );

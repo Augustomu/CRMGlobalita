@@ -31,17 +31,26 @@ justamente el límite del chequeo: los colores nuevos daban 5.80:1, 6.19:1 y
 | 3 | Una regla vieja pisando a la nueva | **3** (14 reglas) | sí · C | cerrado |
 | 4 | Un control nuevo en vez del que ya existe | **6** | sí · D | **volvió** |
 | 5 | El scope de los handlers de PocketBase | **2** | sí · E | cerrado |
-| 6 | Programar contra el modelo imaginado | **7** | **no** | **volvió** |
+| 6 | Programar contra el modelo imaginado | **11** | **no** | **volvió** |
 | 7 | Pedir la misma cosa en dos lugares | **5** | no | práctica |
 | 8 | Decidir por el usuario | **5** | no | **volvió ×2** |
-| 9 | Trampas de las APIs | **3** | no | documentado |
+| 9 | Trampas de las APIs | **5** | no | documentado |
 | 10 | Datos reales en un repo público | **1** | parcial | cerrado |
 | 11 | No había dónde guardarlo | **1** (pedido 4 veces) | no | cerrado |
-| 12 | Aprobar una descripción no es aprobar una pantalla | **1** | no | **nuevo** |
+| 12 | Aprobar una descripción no es aprobar una pantalla | **2** | no | **volvió** |
+| 13 | Una regla aplicada fuera de donde vale | **2** | sí · D | **nueva** |
 
-**41 incidentes.** Los cuatro que se pueden mecanizar son los que más se
-repitieron: 17 de los 41. Pero el saldo de las últimas dos vueltas es al revés:
-de los 6 nuevos, **ninguno lo podía atajar un script**.
+**48 incidentes.** Los cuatro que se pueden mecanizar son los que más se
+repitieron: 19 de los 48. Pero el saldo de las últimas vueltas es al revés: de
+los 13 nuevos, **dos** los podía atajar un script — y uno de esos dos lo atajó
+de verdad, el mismo día (la familia 13).
+
+**Lo del 11/09 merece una línea aparte.** Tres de los siete nuevos estaban
+tapando lo mismo —la agenda de Google— al mismo tiempo, y desde la pantalla los
+tres se veían idénticos: «los contactos siguen sin agendarse». Augusto lo
+reportó **tres veces**. Cuando un síntoma vuelve por tercera vez, la pregunta
+ya no es «qué arreglo ahora» sino «cuántas causas distintas tiene esto»: la
+primera vez se arregló una de las tres y se dio por cerrado.
 
 ---
 
@@ -246,8 +255,17 @@ no contra cómo son.
 | 9 | Que un mensaje se guarda como `{quien:'ellos', cuando}` | `MensajeChat` de core dice `{quien:'in'\|'out', en}`. Ni el campo de la fecha ni el valor coincidían: la pantalla recibía objetos que no entiende y no dibujaba nada. **El mismo día que el #8, y sin abrir `core/chat.ts` ninguna de las dos veces** |
 | 10 | Que a un teléfono de WhatsApp hay que ponerle el país | Un JID **ya viene en E.164**. Un mexicano quedó guardado como `545215523036183`: el 54 de Argentina pegado a un número que ya tenía su 52. Como se prospecta en México y Brasil, **rompía a casi todos** |
 
-**De dónde vino.** De implementar sin consultar la base primero. Los diez se
-habrían visto con una consulta de treinta segundos.
+| 11 | Que `google.js` exportaba `accessToken` | **No lo exporta.** `contactos.pb.js` lo llamaba desde el 11/09 y esa línea nunca pudo correr: cada intento moría con «g.accessToken is not a function», adentro de un `try` que lo contaba como si lo hubiera dicho Google. El botón de reintentar los contactos **no pudo funcionar ni una vez**, y el error se mostraba como si fuera de la API |
+
+**De dónde vino.** De implementar sin consultar la base —o el módulo— primero.
+Los once se habrían visto con una consulta de treinta segundos: diez con un
+`SELECT`, y el once con un `grep "module.exports" google.js`.
+
+**El once tiene una vuelta propia.** No fue suponer cómo son los datos: fue
+suponer qué exporta un archivo que está en este mismo repositorio, a cuatro
+carpetas de distancia. El módulo tiene **cuatro** `module.exports` sueltos
+repartidos en 900 líneas además del objeto grande del medio, así que «está
+exportado» no se ve mirando el final. Desde el 11/09 lo mira `revisar-campos`.
 
 **El 11/09 volvió tres veces en dos horas**, las tres en el mismo archivo nuevo
 y las tres por no abrir el esquema que ya estaba escrito a dos carpetas de
@@ -346,8 +364,11 @@ falta escribirlo, es porque alguien iba a querer hacerlo.
 
 ## 9 · Trampas de las APIs
 
-> **3 veces.** No son errores de criterio: son cosas que la documentación no
+> **5 veces.** No son errores de criterio: son cosas que la documentación no
 > dice y se aprenden chocando. Quedan acá para no volver a chocar.
+>
+> El 4 y el 5 son del 11/09 y van juntos: **el mismo 403 leído mal, y el
+> arreglo del punto 2 puesto donde sólo pasaba la mitad de los casos.**
 
 1. **`singleEvents=true` sin `timeMax`.** Google expande los eventos
    recurrentes **al infinito**: traía 5.000 eventos cada cinco minutos y el
@@ -358,6 +379,21 @@ falta escribirlo, es porque alguien iba a querer hacerlo.
 3. **`UNION` suelto en una vista de PocketBase.** No puede deducir los campos:
    muere con «invalid identifier parts» y **la base no arranca**. Va envuelto
    en una subconsulta. PocketBase estuvo caído un minuto.
+4. **Un 403 de Google puede no ser un problema de permisos.** El 11/09
+   contestó: *«People API has not been used in project … before or it is
+   disabled»*. Es el **proyecto de Google Cloud** el que tiene la API apagada,
+   no la cuenta la que no dio permiso. El hook leía «403 ⇒ le falta el
+   permiso, desconectala y volvé a conectarla», y Augusto lo hizo — y no podía
+   cambiar nada, porque el interruptor está en otra pantalla y es de otra
+   persona. **Tres reportes del mismo síntoma salieron de ese diagnóstico.**
+   Ahora la distinción vive en `core/agenda.ts porQueFalloLaAgenda`, con siete
+   tests que llevan adentro el mensaje textual de Google.
+5. **El rescate del correo, puesto donde sólo pasa la mitad.** El punto 2 de
+   esta misma lista dice cómo se resuelve, y estaba resuelto — **adentro de
+   `traerCambios`**, que corre sólo para la cuenta del calendario. Una cuenta
+   conectada «sólo agenda» no pasa por ahí nunca: se quedaba en «sin correo»
+   para siempre, y dos cuentas conectadas eran dos renglones idénticos. Escribir
+   el aprendizaje no alcanza si el arreglo entra por un solo camino de dos.
 
 **Además, dos que conviene tener presentes:**
 
@@ -440,6 +476,49 @@ cartel, un contador, una insignia— el «dale» de una descripción no alcanza.
 se muestra antes, o entra apagado y se prende. Para lo que **cambia lo que ya
 está** —un color, un tamaño, una posición— el «dale» sirve, porque no hay nada
 nuevo peleando por el lugar.
+
+### El segundo, 11/09 · media función es cero función
+
+El worker de WhatsApp escuchaba los mensajes entrantes y los guardaba bien. La
+pantalla los leía **una sola vez**, al abrirse: no había ningún refresco, ni
+sondeo ni suscripción. Las dos mitades andaban y el circuito no existía.
+
+Augusto: *«no me muestra cuando me mandan un mensaje, demora en llegar el
+mensaje»*. Y desde acá se había dado por hecho, porque las dos piezas estaban
+escritas y cada una hacía lo suyo.
+
+**De dónde vino.** De revisar las piezas y no el recorrido. «El worker guarda»
+y «la pantalla lee» son dos oraciones verdaderas que juntas no hacen «el
+mensaje llega». Lo mismo que el envío: hoy el cuadro de escribir guarda el
+mensaje en la base y **no sale a ningún lado** — se ve mandado y no se mandó.
+Eso está anotado y a la vista en la pantalla, que es la diferencia entre una
+deuda y una mentira.
+
+---
+
+## 13 · Una regla aplicada fuera de donde vale
+
+> **2 veces, las dos el 11/09.** La única familia nueva que un chequeo **sí**
+> podía atajar — y de hecho atajó las dos, el mismo día, antes de commitear.
+
+**El problema.** Tomar una regla del sistema de diseño, que es cierta en su
+dominio, y aplicarla donde ese dominio no llega.
+
+| # | La regla | Dónde no valía |
+|---|---|---|
+| 1 | «Los tamaños de letra son 9, 10, 11, 12, 13, 14 y 17» | Sale del prototipo y es para **texto**, que se lee de corrido. Se aplicó a los emojis del selector: quedaron a **13px**, y a 13px no se distingue 😀 de 😃. Augusto lo reportó como «no se ven los emojis», y era literal. Un emoji no es una palabra: es una figura que hay que diferenciar de otra parecida, y un blanco al que hay que apuntar con el mouse |
+| 2 | «Ningún color suelto: todo por los tokens» | Cierta. Pero el token elegido fue `--surface`, que **cambia con el tema** — y estaba encima del verde de WhatsApp, que **no cambia**. En tema oscuro daba una flecha casi negra sobre verde. El token correcto es uno que tampoco cambie |
+
+**De dónde vino.** De aplicar la regla sin preguntarse de qué habla. Las dos
+reglas son buenas; ninguna de las dos habla de esto. Y las dos veces el error
+se ve igual: algo que técnicamente cumple el sistema de diseño y en pantalla
+está mal.
+
+**Cómo se resuelve.** La excepción va **por nombre**, no como escape general.
+El chequeo D ahora conoce dos reglas —`.emo-tab` y `.emo-uno`— que dibujan
+glifos y no texto, y cualquier tercera que se salga de la escala vuelve a
+saltar. Un `/* eslint-disable */` de CSS habría cerrado el aviso y abierto la
+puerta.
 
 ---
 

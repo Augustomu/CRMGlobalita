@@ -135,7 +135,12 @@ export function Emojis({ onElegir, onCerrar }: { onElegir: (e: string) => void; 
    */
   useEffect(() => {
     const afuera = (e: MouseEvent) => {
-      if (caja.current && !caja.current.contains(e.target as Node)) onCerrar();
+      const donde = e.target as HTMLElement | null;
+      // EL BOTON QUE LO ABRE NO CUENTA COMO «AFUERA». Sin esta línea el
+      // mousedown lo cierra y el click que viene después lo vuelve a abrir: el
+      // mismo botón que lo abre no lo puede cerrar nunca.
+      if (donde && donde.closest('[data-emojis="boton"]')) return;
+      if (caja.current && !caja.current.contains(donde)) onCerrar();
     };
     const esc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onCerrar();

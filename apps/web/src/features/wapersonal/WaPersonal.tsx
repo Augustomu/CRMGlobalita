@@ -20,16 +20,19 @@ interface ChatRecord {
 }
 
 /**
- * Los dos filtros de la columna de chats.
+ * El filtro de la columna de chats. Hoy hay uno solo.
  *
- * Son dos y son interruptores, no una lista de opciones: apagarlos ES «todos»,
- * así que un botón «todos» sería un tercero para decir lo mismo.
+ * Es un interruptor, no una lista de opciones: apagarlo ES «todos», así que un
+ * botón «todos» sería un segundo para decir lo mismo.
  *
  * «Personal» y «trabajo» estuvieron y se sacaron el 09/09: los de trabajo se
- * mueven a Follow-up, o sea que lo que queda acá ya es lo personal. Clasificar
- * a mano lo que la estructura ya separa es trabajo que no cambia nada.
+ * mueven a Follow-up, o sea que lo que queda acá ya es lo personal.
+ *
+ * «Sin lead» estuvo y se fue el 11/09, pedido por Augusto. La CUENTA que hacía
+ * —qué números ya existen como lead— se queda: es la que decide si en la fila
+ * va el nombre o el número, que es otra cosa y sigue haciendo falta.
  */
-type FiltroChat = 'sin_leer' | 'no_agendados';
+type FiltroChat = 'sin_leer';
 
 // La colección «entrante» sigue existiendo en la base: el worker va a escribir
 // ahí los mensajes de números desconocidos. Esta pantalla dejó de leerla el
@@ -206,6 +209,8 @@ export function WaPersonal(_props: Props) {
   /** Lo que se escribió en el buscador de la lista de chats. */
   const [busca, setBusca] = useState('');
   const [error, setError] = useState<string | null>(null);
+  /** Cuántas escrituras hay en vuelo. El sondeo no pisa una a medio camino. */
+  const escribiendo = useRef(0);
 
   const hoy = diaLocal();
 
@@ -246,6 +251,36 @@ export function WaPersonal(_props: Props) {
     void recargar();
   }, [recargar]);
 
+  /**
+   * Y se vuelve a leer sola, cada seis segundos.
+   *
+   * NO MIENTRAS LA PESTAÑA ESTA ESCONDIDA: una lista de chats que nadie mira no
+   * necesita estar al dia, y el CRM queda abierto todo el dia.
+   *
+   * NI MIENTRAS HAY UNA ESCRITURA EN VUELO. recargar() reemplaza la lista
+   * entera; si cae entre el cambio optimista —marcar leido— y su confirmacion,
+   * devuelve la fila al estado viejo y el punto parpadea.
+   */
+  useEffect(() => {
+    const tic = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      if (escribiendo.current > 0) return;
+      void recargar();
+    }, 6000);
+
+    // Al volver a la pestaña se lee ya mismo, sin esperar el siguiente tic: es
+    // justo cuando uno viene a ver si llego algo.
+    const alVolver = () => {
+      if (document.visibilityState === 'visible') void recargar();
+    };
+    document.addEventListener('visibilitychange', alVolver);
+
+    return () => {
+      clearInterval(tic);
+      document.removeEventListener('visibilitychange', alVolver);
+    };
+  }, [recargar]);
+
   const activo = chats.find((c) => c.id === sel) ?? chats[0] ?? null;
   const hilo = useMemo(() => conDias(activo?.mensajes ?? [], hoy), [activo, hoy]);
 
@@ -264,13 +299,8 @@ export function WaPersonal(_props: Props) {
 
   // Los que YA se rutearon solos: se avisa, no se pide nada.
   const visibles = useMemo(() => {
-    // Los filtros se acumulan: sin leer Y no agendados es una pregunta legítima
-    // —«¿a quién le debo respuesta que además no tengo cargado?»—.
     let v = chats;
     if (filtros.has('sin_leer')) v = v.filter((c) => c.no_leido);
-    if (filtros.has('no_agendados')) {
-      v = v.filter((c) => !telefonosEnLaBase.has(ultimosOcho(c.telefono)));
-    }
     // La búsqueda mira nombre Y teléfono: a veces uno se acuerda de la cara y a
     // veces del número. Del teléfono se comparan sólo los dígitos, porque el
     // mismo número está escrito de cinco formas según de dónde vino.
@@ -284,7 +314,7 @@ export function WaPersonal(_props: Props) {
       );
     }
     return v;
-  }, [chats, filtros, telefonosEnLaBase, busca]);
+  }, [chats, filtros, busca]);
 
   const alternar = (f: FiltroChat) =>
     setFiltros((s) => {
@@ -297,12 +327,14 @@ export function WaPersonal(_props: Props) {
   /** 6.3 · Devolverlo a «sin leer» para retomarlo más tarde. */
   async function marcarSinLeer(c: ChatRecord) {
     setMarcando(c.id);
+    escribiendo.current++;
     try {
       await pb.collection('chat_personal').update(c.id, { no_leido: true });
       setChats((v) => v.map((x) => (x.id === c.id ? { ...x, no_leido: true } : x)));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
+      escribiendo.current--;
       setMarcando(null);
     }
   }
@@ -319,11 +351,17 @@ export function WaPersonal(_props: Props) {
       { quien: 'out', texto: borrador.trim(), en: new Date().toISOString() },
     ];
     setBorrador('');
+    // La barra vuelve a un renglón. El alto lo puso el navegador al escribir,
+    // así que hay que sacarlo a mano: si no, queda alta y vacía.
+    const campo = document.querySelector<HTMLTextAreaElement>('.wap-caja textarea');
+    if (campo) campo.style.height = '';
     setChats((cs) => cs.map((c) => (c.id === activo.id ? { ...c, mensajes: nuevos, no_leido: false } : c)));
+    escribiendo.current++;
     await pb
       .collection('chat_personal')
       .update(activo.id, { mensajes: nuevos, no_leido: false })
-      .catch(() => void recargar());
+      .catch(() => void recargar())
+      .finally(() => { escribiendo.current--; });
   }
 
   async function elegir(c: ChatRecord) {
@@ -331,7 +369,12 @@ export function WaPersonal(_props: Props) {
     setBorrador('');
     if (c.no_leido) {
       setChats((cs) => cs.map((x) => (x.id === c.id ? { ...x, no_leido: false } : x)));
-      await pb.collection('chat_personal').update(c.id, { no_leido: false }).catch(() => void recargar());
+      escribiendo.current++;
+      await pb
+        .collection('chat_personal')
+        .update(c.id, { no_leido: false })
+        .catch(() => void recargar())
+        .finally(() => { escribiendo.current--; });
     }
   }
 
@@ -352,14 +395,24 @@ export function WaPersonal(_props: Props) {
               alcanza con recorrer la lista, y va a haber más. Busca por nombre
               y por teléfono: a veces uno se acuerda de la cara y a veces del
               número. */}
-          <input
-            className="wap-buscar"
-            type="search"
-            value={busca}
-            placeholder="Buscar"
-            aria-label="Buscar en los chats"
-            onChange={(e) => setBusca(e.target.value)}
-          />
+          {/* LA LUPA VA ADENTRO DEL CAMPO, que es lo que lo hace leerse como
+              buscador antes de leer el texto de ejemplo. Augusto mandó la
+              captura del de WhatsApp: es una cápsula con el icono adentro, no
+              un campo con borde al lado de un icono. */}
+          <span className="wap-buscador">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20 20l-3.5-3.5" strokeLinecap="round" />
+            </svg>
+            <input
+              className="wap-buscar"
+              type="search"
+              value={busca}
+              placeholder="Buscar un chat"
+              aria-label="Buscar en los chats"
+              onChange={(e) => setBusca(e.target.value)}
+            />
+          </span>
         </div>
 
         {/*
@@ -393,17 +446,6 @@ export function WaPersonal(_props: Props) {
             <span aria-hidden="true">●</span>
             <span className="tabular">{chats.filter((c) => c.no_leido).length}</span>
             <span>sin leer</span>
-          </button>
-          <button
-            type="button"
-            className={`wap-filtro ${filtros.has('no_agendados') ? 'wap-filtro-on' : ''}`}
-            title="Sólo los que todavía no existen como lead en el CRM"
-            onClick={() => alternar('no_agendados')}
-          >
-            <span className="tabular">
-              {chats.filter((c) => !telefonosEnLaBase.has(ultimosOcho(c.telefono))).length}
-            </span>
-            <span>sin lead</span>
           </button>
           {/* Sin conteo suelto. Cada interruptor ya trae el suyo, y un «5 de 5»
               al lado no dice de qué: hay que deducir a cuál de los dos se
@@ -516,7 +558,7 @@ export function WaPersonal(_props: Props) {
                       href={`whatsapp://send?phone=${String(c.telefono ?? '').replace(/\D/g, '')}`}
                       target="_blank"
                       rel="noreferrer"
-                      title="Abrir esta conversación en WhatsApp"
+                      title="Abrir esta conversación en WhatsApp. La primera vez Chrome pregunta si puede abrir la aplicación: tildá «Always allow» y no vuelve a preguntar."
                       aria-label="Abrir en WhatsApp"
                     >
                       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -631,6 +673,12 @@ export function WaPersonal(_props: Props) {
               bloqueen un número, y toda esa parte —la cola de envíos, el tope
               diario— todavía no existe (§8.5b). Un botón que no se puede
               apretar y explica por qué es más honesto que un hueco. */}
+          {/* TODO ADENTRO DE UNA SOLA CAPSULA: el «+», la carita, el campo y
+              el micrófono. Augusto mandó la captura del WhatsApp real el 11/09
+              —«la de escribir no coincide»— y lo que no coincidía era esto: acá
+              eran cuatro cajas sueltas en una fila y allá es una sola barra que
+              las contiene. */}
+          <div className="wap-caja">
           <button
             type="button"
             className="wap-icono"
@@ -648,6 +696,8 @@ export function WaPersonal(_props: Props) {
             className="wap-icono"
             title="Emojis"
             aria-label="Emojis"
+            aria-expanded={emojisAbiertos}
+            data-emojis="boton"
             onClick={() => setEmojisAbiertos((v) => !v)}
           >
             {/* La carita, dibujada. El carácter ☺ lo dibuja cada sistema a su
@@ -661,7 +711,17 @@ export function WaPersonal(_props: Props) {
           </button>
           <textarea
             value={borrador}
-            placeholder="Escribir mensaje…"
+            placeholder="Escribí un mensaje"
+            rows={1}
+            /* Crece con el texto, como en WhatsApp: se achica a un renglón y se
+               deja crecer hasta donde el CSS lo frena. Sin esto la barra tiene
+               un solo alto y un mensaje de cuatro renglones se lee por una
+               ventanita de uno. */
+            onInput={(e) => {
+              const t = e.currentTarget;
+              t.style.height = 'auto';
+              t.style.height = Math.min(t.scrollHeight, 110) + 'px';
+            }}
             onChange={(e) => setBorrador(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -699,6 +759,7 @@ export function WaPersonal(_props: Props) {
               </svg>
             </button>
           )}
+          </div>
         </div>
       </div>
     </section>

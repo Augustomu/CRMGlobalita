@@ -18,6 +18,11 @@
  * QUE COMPRUEBA:
  *   1. Que cada campo que el código escribe EXISTA en esa colección.
  *   2. Que los valores literales de un `select` estén entre los permitidos.
+ *   3. Que lo que un hook le pide a otro módulo, ese módulo lo EXPORTE. Es la
+ *      misma familia: el 11/09 `contactos.pb.js` llamaba `g.accessToken(...)`
+ *      y `google.js` no lo exportaba — el botón de reintentar los contactos
+ *      no pudo funcionar ni una vez, y el error se mostraba como si lo hubiera
+ *      dicho Google.
  *
  * QUE NO PUEDE VER: los valores que salen de una variable. `quien: q` puede ser
  * cualquier cosa en tiempo de ejecución, y eso lo cuida el tipo de TypeScript.
@@ -147,6 +152,110 @@ for (const ruta of [join(raiz, 'apps/worker/src'), join(raiz, 'apps/web/src')].f
           `${ruta.replace(raiz, '.')}: «${coleccion}.${nombre}» = "${lit[1]}" ` +
             `no está entre [${permitidos.join(', ')}]`,
         );
+      }
+    }
+  }
+}
+
+
+// ===========================================================================
+// 3 · Lo que un hook le PIDE a otro módulo, contra lo que ese módulo EXPORTA
+// ===========================================================================
+//
+// POR QUE EXISTE. El 11/09, `contactos.pb.js` llamaba `g.accessToken(...)` y
+// `google.js` no exporta `accessToken`. Cada intento moría con «g.accessToken
+// is not a function», adentro de un `try` que lo contaba como si el error lo
+// hubiera dicho Google. El botón de reintentar los contactos **no pudo
+// funcionar ni una vez** y nadie se enteró de por qué.
+//
+// Lo que lo hace difícil de ver a ojo: `google.js` tiene un objeto grande de
+// exports en el medio del archivo Y cuatro `module.exports.x = x` sueltos más
+// abajo, repartidos en 900 líneas. Mirar el final no alcanza.
+//
+// En PocketBase cada handler corre aislado, así que el require va ADENTRO y la
+// variable se llama distinto en cada archivo. Se sigue el nombre que se le puso
+// al require, no un nombre fijo.
+{
+  const carpetaHooks = join(raiz, 'packages/db/pb_hooks');
+  const hooks = existsSync(carpetaHooks)
+    ? readdirSync(carpetaHooks).filter((f) => f.endsWith('.js'))
+    : [];
+
+  /** Lo que un módulo exporta: el objeto grande y los sueltos de más abajo. */
+  const exportaDe = new Map();
+  for (const f of hooks) {
+    const txt = readFileSync(`${carpetaHooks}/${f}`, 'utf8');
+    const nombres = new Set();
+
+    // module.exports.loQueSea = ...
+    for (const m of txt.matchAll(/module\.exports\.([A-Za-z_$][\w$]*)\s*=/g)) {
+      nombres.add(m[1]);
+    }
+
+    // module.exports = { a, b, c: algo, ... } — se toman las claves del objeto.
+    const obj = /module\.exports\s*=\s*\{/.exec(txt);
+    if (obj) {
+      let i = obj.index + obj[0].length - 1;
+      let hondo = 0;
+      let fin = i;
+      for (; i < txt.length; i++) {
+        if (txt[i] === '{') hondo++;
+        else if (txt[i] === '}') { hondo--; if (hondo === 0) { fin = i; break; } }
+      }
+      const cuerpo = txt.slice(obj.index + obj[0].length, fin);
+      // Sólo el primer nivel: una clave anidada no es una exportación.
+      let nivel = 0;
+      let clave = '';
+      for (const ch of cuerpo) {
+        if (ch === '{' || ch === '[' || ch === '(') nivel++;
+        else if (ch === '}' || ch === ']' || ch === ')') nivel--;
+        else if (nivel === 0 && (ch === ',' || ch === ':')) {
+          const c = clave.trim();
+          if (/^[A-Za-z_$][\w$]*$/.test(c)) nombres.add(c);
+          clave = '';
+          continue;
+        }
+        if (nivel === 0) clave += ch;
+        if (nivel === 0 && ch === ':') clave = '';
+      }
+      const ultima = clave.trim();
+      if (/^[A-Za-z_$][\w$]*$/.test(ultima)) nombres.add(ultima);
+    }
+
+    exportaDe.set(f, nombres);
+  }
+
+  for (const f of hooks) {
+    const txt = readFileSync(`${carpetaHooks}/${f}`, 'utf8');
+
+    // const g = require(`${__hooks}/google.js`)  →  g apunta a google.js
+    const apunta = new Map();
+    for (const m of txt.matchAll(
+      /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*require\(`\$\{__hooks\}\/([\w.-]+)`\)/g,
+    )) {
+      apunta.set(m[1], m[2]);
+    }
+    // require(...).loQueSea — sin variable de por medio.
+    for (const m of txt.matchAll(
+      /require\(`\$\{__hooks\}\/([\w.-]+)`\)\.([A-Za-z_$][\w$]*)/g,
+    )) {
+      const tiene = exportaDe.get(m[1]);
+      if (tiene && !tiene.has(m[2])) {
+        problemas.push(`${f}: pide «${m[2]}» a ${m[1]}, que no lo exporta`);
+      }
+    }
+
+    for (const [alias, modulo] of apunta) {
+      const tiene = exportaDe.get(modulo);
+      if (!tiene) continue;
+      const uso = new RegExp(`\\b${alias}\\.([A-Za-z_$][\\w$]*)`, 'g');
+      const yaDicho = new Set();
+      for (const m of txt.matchAll(uso)) {
+        if (yaDicho.has(m[1])) continue;
+        yaDicho.add(m[1]);
+        if (!tiene.has(m[1])) {
+          problemas.push(`${f}: pide «${alias}.${m[1]}» a ${modulo}, que no lo exporta`);
+        }
       }
     }
   }
