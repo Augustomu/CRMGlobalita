@@ -54,19 +54,26 @@ Las variables duran lo que dure la ventana, así que después se corren los tres
 comandos sin volver a ponerlas. **Es la cuenta del CRM** (la de `localhost:5173`),
 no la del panel de PocketBase: esa es otra y va contra `_superusers`.
 
-Hay atajos en el `package.json` de la raíz, que son lo mismo escrito más corto:
+### Con `node`, no con `npm run`
 
-```powershell
-npm run li:vincular -- AL
-npm run li:medir -- AL --simular
-npm run li:invitar -- AL --simular
-npm run wa -- vincular AMU
-npm run wa:estado -- AMU
+En esta máquina **`npm run` no funciona desde PowerShell**. PowerShell trae la
+ejecución de scripts deshabilitada por defecto y `npm` en Windows es un
+`npm.ps1`, así que contesta:
+
+```
+npm : No se puede cargar el archivo C:\Program Files\nodejs\npm.ps1
+      porque la ejecución de scripts está deshabilitada en este sistema.
 ```
 
-⚠️ **Los atajos tampoco andan desde cualquier lado.** Parado adentro de
+`node` es un `.exe` y no pasa por esa política, así que **los comandos van con
+`node` directo**. Los hay igual como atajos en el `package.json` de la raíz
+(`li:vincular`, `li:medir`, `li:invitar`, `wa`, `wa:estado`), y sirven desde una
+terminal donde npm sí corra —cmd, Git Bash— o escribiendo `npm.cmd run …` en vez
+de `npm run …`, que saltea el `.ps1`.
+
+⚠️ Y los atajos **tampoco andan desde cualquier carpeta**: parado adentro de
 `apps/web/` o de `packages/core/`, npm resuelve al `package.json` de ESE
-workspace y contesta `Missing script`. El `cd` a la raíz no lo evita nada.
+workspace y contesta `Missing script`.
 
 **Lo primero, y una sola vez por cuenta antes de todo lo demás:**
 
