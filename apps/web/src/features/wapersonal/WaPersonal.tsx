@@ -13,6 +13,8 @@ interface ChatRecord {
   telefono: string;
   no_leido: boolean;
   mensajes: MensajeChat[] | null;
+  /** La foto de perfil que trajo el worker. Vacio = no hay. */
+  foto?: string;
 }
 
 /**
@@ -48,6 +50,25 @@ function porUltimoMensaje<T extends { mensajes: MensajeChat[] | null; updated?: 
     return String(ultimo?.en ?? c.updated ?? '');
   };
   return [...chats].sort((a, b) => (cuando(a) < cuando(b) ? 1 : cuando(a) > cuando(b) ? -1 : 0));
+}
+
+/**
+ * Las iniciales, para cuando no hay foto.
+ *
+ * Dos letras como mucho: tres empiezan a no entrar en el círculo. De un
+ * teléfono salen los últimos dos dígitos, que es lo único que lo distingue de
+ * otro teléfono a simple vista.
+ */
+function iniciales(de: string): string {
+  const s = String(de ?? '').trim();
+  if (!s) return '·';
+  if (/^\+?\d[\d\s-]*$/.test(s)) return s.replace(/\D/g, '').slice(-2);
+  return s
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0] ?? '')
+    .join('')
+    .toUpperCase();
 }
 
 function hora(iso: string): string {
@@ -100,6 +121,27 @@ export function WaPersonal({ onIrAlLead }: Props) {
   const [chats, setChats] = useState<ChatRecord[]>([]);
   const [filtros, setFiltros] = useState<Set<FiltroChat>>(new Set());
   const [marcando, setMarcando] = useState<string | null>(null);
+  /** Qué teléfono se acaba de copiar, para poder decirlo. */
+  const [copiado, setCopiado] = useState<string | null>(null);
+
+  /**
+   * Copiar el teléfono al portapapeles.
+   *
+   * El «✓ copiado» dura dos segundos: sin confirmación uno aprieta dos veces
+   * porque no sabe si funcionó, y el portapapeles no da ninguna señal propia.
+   */
+  async function copiar(tel: string) {
+    const n = String(tel ?? '').trim();
+    if (!n) return;
+    try {
+      await navigator.clipboard.writeText(n);
+      setCopiado(n);
+      setTimeout(() => setCopiado((v) => (v === n ? null : v)), 2000);
+    } catch {
+      // Sin permiso de portapapeles —pasa fuera de https— no hay nada que
+      // hacer desde acá. El número está a la vista para copiarlo a mano.
+    }
+  }
   /**
    * Los teléfonos que YA existen como lead.
    *
@@ -306,6 +348,29 @@ export function WaPersonal({ onIrAlLead }: Props) {
               {/* La marca de sin leer va a la IZQUIERDA, antes del nombre: es
                   lo primero que se busca al recorrer la lista. Y es el mismo
                   botón que lo devuelve a sin leer, no dos cosas distintas. */}
+              {/*
+                LA FOTO, o las iniciales.
+
+                La trae el worker de WhatsApp y la guarda en la base — no se
+                pide a la URL de WhatsApp desde acá, que vence en unas horas y
+                dejaría la lista llena de cuadros rotos.
+
+                Cuando no hay foto van las iniciales sobre un fondo tranquilo,
+                que es lo que hace WhatsApp: un espacio vacío del tamaño de una
+                foto se lee como que algo falló.
+              */}
+              {c.foto ? (
+                <img
+                  className="wap-foto"
+                  src={pb.files.getURL(c, c.foto, { thumb: '80x80' })}
+                  alt=""
+                  loading="lazy"
+                />
+              ) : (
+                <span className="wap-foto wap-foto-vacia" aria-hidden="true">
+                  {iniciales(c.nombre || c.telefono)}
+                </span>
+              )}
               <button
                 type="button"
                 className={`wap-punto-boton ${c.no_leido ? 'wap-punto-on' : ''}`}
@@ -369,6 +434,33 @@ export function WaPersonal({ onIrAlLead }: Props) {
                     </button>
                   </span>
                 </span>
+                {/*
+                  EL TELÉFONO DEBAJO DEL NOMBRE, con un botón para copiarlo.
+
+                  Pedido el 11/09: *«la foto y el teléfono abajo del nombre, con
+                  la opción de poder copiar el teléfono rápido»*. El número se
+                  copia para pegarlo en otro lado —una planilla, un mail, un
+                  mensaje— y hasta ahora había que seleccionarlo a mano de un
+                  renglón que además era el nombre.
+
+                  No se repite cuando el nombre YA es el número: arriba se
+                  muestra el teléfono cuando el contacto no está agendado, y
+                  dos veces el mismo dato ocupa el lugar del último mensaje.
+                */}
+                {String(c.telefono ?? '').trim() &&
+                  telefonosEnLaBase.has(ultimosOcho(c.telefono)) && (
+                    <span className="wap-chat-tel" onClick={(ev) => ev.stopPropagation()}>
+                      <span className="tabular">{c.telefono}</span>
+                      <button
+                        type="button"
+                        className="wap-copiar"
+                        title="Copiar el teléfono"
+                        onClick={() => void copiar(c.telefono)}
+                      >
+                        {copiado === c.telefono ? '✓ copiado' : 'copiar'}
+                      </button>
+                    </span>
+                  )}
                 <span className="wap-chat-ultimo">{ultimoTexto(c.mensajes ?? [])}</span>
               </div>
               <span className="wap-chat-hora tabular">

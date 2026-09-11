@@ -45,6 +45,7 @@
 import type { WASocket } from '@whiskeysockets/baileys';
 import { decidirRuteoEntrante, type PerfilConTelefono } from '@crm/core/ruteo';
 import { DIAS_DE_HISTORIAL, entraEnElHistorial } from '@crm/core/chat';
+import { existsSync, rmSync } from 'node:fs';
 import type PocketBase from 'pocketbase';
 
 /** El JID de WhatsApp: «5491133334444@s.whatsapp.net». */
@@ -167,6 +168,49 @@ export interface Entrante {
   texto: string;
   recibidoEn: string;
   nombre: string;
+}
+
+/**
+ * Baja la foto de perfil y la guarda en el chat.
+ *
+ * SE GUARDA EL ARCHIVO Y NO EL ENLACE. WhatsApp da la foto como una URL de su
+ * CDN **que vence en unas horas**: guardar el enlace es una línea menos de
+ * código y una lista llena de cuadros rotos al día siguiente.
+ *
+ * NO TIRA NUNCA. Una foto que no se pudo bajar no puede hacer que se pierda un
+ * mensaje: la conversación vale, la foto es decoración. Se intenta una vez y
+ * se sigue.
+ *
+ * Sólo se pide cuando el chat todavía no tiene una. Pedirla en cada mensaje
+ * serían cientos de consultas a WhatsApp por algo que casi nunca cambia — y
+ * cada consulta de más es una señal de más.
+ */
+async function traerLaFoto(
+  sock: WASocket,
+  pb: PocketBase,
+  chatId: string,
+  jid: string,
+): Promise<boolean> {
+  try {
+    const url = await sock.profilePictureUrl(jid, 'preview');
+    if (!url) return false;
+
+    const r = await fetch(url);
+    if (!r.ok) return false;
+    const bytes = new Uint8Array(await r.arrayBuffer());
+    // Una foto de perfil pesa decenas de KB. Algo de 2 MB no es una foto de
+    // perfil, y el campo la rechazaría igual: mejor no mandarla.
+    if (!bytes.length || bytes.length > 2_097_152) return false;
+
+    const form = new FormData();
+    form.append('foto', new Blob([bytes], { type: 'image/jpeg' }), 'perfil.jpg');
+    await pb.collection('chat_personal').update(chatId, form);
+    return true;
+  } catch {
+    // Sin foto, con la privacidad puesta, o WhatsApp que no contestó. Los tres
+    // dan lo mismo acá: no hay foto y no pasa nada.
+    return false;
+  }
 }
 
 /**
@@ -459,6 +503,8 @@ export function escuchar(
   cuentaId: string,
   pais: string,
   decir: (m: string) => void,
+  /** Dónde vive la credencial, para poder borrarla al desvincular. */
+  carpetaCred: string,
 ): void {
   /*
    * El historial, si se pidió traerlo.
@@ -517,9 +563,29 @@ export function escuchar(
           decir(`  ! WhatsApp no aceptó la baja: ${(err as Error)?.message ?? String(err)}`);
           decir('    Sacalo a mano desde el teléfono: Dispositivos vinculados.');
         }
-        // El estado queda limpio para que la pantalla no muestre una sesión
-        // que ya no existe. La credencial la borra `vincular` al ver que la
-        // conexión cerró con «desvinculado», que es lo que WhatsApp manda.
+        /*
+         * Y SE BORRA LA CREDENCIAL. Sin esto, desvincular no desvincula.
+         *
+         * Se probó el 11/09 contra la sesión real: `sock.logout()` cerró el
+         * socket, dijo que sí, y **la credencial del disco siguió sirviendo**.
+         * El siguiente «Vincular» reconectó con ella —sin QR, sin historial—
+         * y desde la pantalla se vio otra vez como que el botón no hace nada.
+         *
+         * La credencial es lo que hace que no haya que escanear. Si queda, no
+         * hay forma de pedir un código nuevo.
+         */
+        if (carpetaCred && existsSync(carpetaCred)) {
+          try {
+            rmSync(carpetaCred, { recursive: true, force: true });
+            decir('  ✓ credencial borrada: la próxima vez pide un QR nuevo.');
+          } catch (err) {
+            decir(`  ! no pude borrar la credencial: ${(err as Error)?.message ?? String(err)}`);
+            decir(`    Borrá a mano la carpeta: ${carpetaCred}`);
+          }
+        }
+
+        // El estado queda limpio para que la pantalla no muestre una sesión que
+        // ya no existe.
         await pb
           .collection('cuenta')
           .update(cuentaId, { ultima_senal_wa: '', qr_wa: '', qr_wa_desde: '', wa_motivo: 'desvinculado' })
@@ -626,8 +692,19 @@ export function escuchar(
             telefono,
             texto,
             recibidoEn: cuando,
-            nombre: m.pushName ?? '',
+            // El de la agenda primero; el que eligió el otro, de respaldo.
+            nombre: nombres.get(jid) || m.pushName || '',
           });
+
+          // Y la foto, si este chat todavía no tiene. Va después de guardar el
+          // mensaje: si WhatsApp tarda en contestar la foto, el mensaje ya está.
+          if (telefono) {
+            const ya = await pb
+              .collection('chat_personal')
+              .getFullList<{ id: string; foto?: string }>({ filter: `telefono = "${telefono}"` })
+              .catch(() => [] as { id: string; foto?: string }[]);
+            if (ya.length && !ya[0]!.foto) await traerLaFoto(sock, pb, ya[0]!.id, jid);
+          }
 
           // El teléfono tapado y el texto recortado: este log se lee en
           // pantalla y se pega en mensajes.

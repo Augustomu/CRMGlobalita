@@ -340,7 +340,7 @@ async function vincular(abrev: string): Promise<number> {
             // Y a partir de acá, escucha. Hasta el 11/09 la sesión sólo se
             // mantenía viva: WhatsApp conectado y nadie del otro lado. Augusto
             // lo notó apenas vinculó — «está conectado pero no veo mis chats».
-            escuchar(sock, pb, cuenta.id, process.env.WA_PAIS || 'Argentina', decir);
+            escuchar(sock, pb, cuenta.id, process.env.WA_PAIS || 'Argentina', decir, cred);
             decir('  Escuchando lo que entre. No contesta nada.');
             return;
           }
