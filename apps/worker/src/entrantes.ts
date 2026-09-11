@@ -165,23 +165,25 @@ export async function guardarEntrante(
     return `lead ${r.lead_id} → sin leer`;
   }
 
-  // Los otros tres casos van a `entrante`, que es la cola de WA Personal. Se
-  // guarda el ruteo que decidió core para que la pantalla muestre lo que ya se
-  // sabe —quién es, con qué cuenta habla— en vez de volver a decidirlo ahí.
-  await pb.collection('entrante').create({
-    cuenta: cuentaId,
-    telefono: e164,
-    texto: e.texto,
-    recibido_en: e.recibidoEn,
-    ruteo: r.accion,
-    candidatos: r.accion === 'ambiguo' ? r.candidatos : [],
-    resuelto: false,
-  });
-
-  // Y el chat en sí, que es lo que se lee en WA Personal. Un solo hilo por
+  // EL CHAT PRIMERO, el aviso después. El orden importa y se aprendió el
+  // 11/09: estaba al revés, la escritura del chat falló por un campo inválido,
+  // y quedaron tres avisos en la cola apuntando a una conversación que no
+  // existía. Los mensajes habían llegado y la pantalla estaba vacía.
+  //
+  // El chat es lo que se LEE; el aviso es metadata. Si algo va a fallar, que
+  // falle lo segundo.
+  //
+  // El chat en sí: un solo hilo por
   // teléfono: los mensajes se acumulan adentro, no se crea una fila por
-  // mensaje. `tipo` arranca en «sin_clasificar» — quién es lo decide una
-  // persona con los botones de §5.8.
+  // mensaje.
+  //
+  // `tipo` NO SE ESCRIBE, y ahí estaba el error del 11/09: el worker mandaba
+  // «sin_clasificar» y el campo sólo acepta «personal» o «trabajo», así que
+  // PocketBase rechazaba la fila entera. Los mensajes llegaban, el entrante se
+  // guardaba, y el chat —lo único que se ve en la pantalla— no.
+  //
+  // Vacío es el valor correcto: quién es lo decide una PERSONA con los botones
+  // de §5.8, y hasta que eso pase el CRM no tiene por qué haber elegido.
   const previos = await pb
     .collection('chat_personal')
     .getFullList<{ id: string; mensajes?: unknown }>({ filter: `telefono = "${e164}"` })
@@ -202,9 +204,21 @@ export async function guardarEntrante(
       nombre: e.nombre || '',
       mensajes: [nuevo],
       no_leido: true,
-      tipo: 'sin_clasificar',
     });
   }
+
+  // Y recién ahora el aviso en la cola de WA Personal, con el ruteo que decidió
+  // core: así la pantalla muestra lo que ya se sabe —quién es, con qué cuenta
+  // habla— en vez de volver a decidirlo.
+  await pb.collection('entrante').create({
+    cuenta: cuentaId,
+    telefono: e164,
+    texto: e.texto,
+    recibido_en: e.recibidoEn,
+    ruteo: r.accion,
+    candidatos: r.accion === 'ambiguo' ? r.candidatos : [],
+    resuelto: false,
+  });
 
   return `${r.accion} → WA Personal`;
 }
