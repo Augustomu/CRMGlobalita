@@ -15,3 +15,6 @@ packages/db/recuperacion/eventos-calendar.json
 # El prototipo vive SOLO en docs/_bundle/. Esta carpeta se regenera con
 # `node docs/desempacar.mjs` — dos copias en git se desincronizan solas.
 docs/prototipo/
+
+# Los logs de la revision diaria: se regeneran solos.
+.pb/revisiones/
