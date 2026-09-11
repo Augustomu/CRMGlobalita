@@ -29,17 +29,23 @@
  * NO CONTESTA NADA, y es a propósito. Recibir no puede hacer que WhatsApp
  * bloquee el número; mandar sí. Eso es §8.5b y es otra decisión.
  *
- * NO TRAE EL HISTORIAL. Baileys puede pedirle a WhatsApp todas las
- * conversaciones viejas al vincular. No se hace: este es el WhatsApp PERSONAL
- * de Augusto, y traerlo entero volcaría años de charlas privadas —familia,
- * amigos, médicos— adentro del CRM, donde las ve cualquiera que tenga acceso.
- * Se escucha lo que llega a partir de ahora. Si algún día hay que traer algo
- * viejo, que sea una decisión explícita y acotada, no el efecto colateral de
- * vincular un teléfono.
+ * EL HISTORIAL SE TRAE SOLO SI SE PIDE, y con un corte. `WA_HISTORIAL_DIAS`
+ * prende las dos cosas a la vez: que se pida el historial y cuántos días
+ * entran. Una sola perilla, para que no se pueda pedir el historial y
+ * olvidarse del límite.
+ *
+ * Apagado por default porque este es un WhatsApp PERSONAL: traerlo entero
+ * volcaría años de charlas privadas —familia, amigos, médicos— adentro del
+ * CRM, donde las ve cualquiera con acceso y de donde pasan a los backups.
+ *
+ * ⚠ WhatsApp manda el historial UNA SOLA VEZ, al vincular. A una sesión ya
+ * corriendo no se le puede pedir: hay que desvincular desde el teléfono y
+ * escanear de nuevo. Así que esta decisión se toma ANTES de escanear.
  */
 import type { WASocket } from '@whiskeysockets/baileys';
 import { decidirRuteoEntrante, type PerfilConTelefono } from '@crm/core/ruteo';
 import { normalizarTelefono } from '@crm/core/telefono';
+import { DIAS_DE_HISTORIAL, entraEnElHistorial } from '@crm/core/chat';
 import type PocketBase from 'pocketbase';
 
 /** El JID de WhatsApp: «5491133334444@s.whatsapp.net». */
@@ -272,6 +278,138 @@ export async function guardarEntrante(
 }
 
 /**
+ * El historial que WhatsApp manda al vincular (§8.2).
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * UNA SOLA OPORTUNIDAD. WhatsApp manda las conversaciones viejas **únicamente
+ * en el momento de vincular**, en tandas, por el evento `messaging-history.set`.
+ * A una sesión ya corriendo no se le puede pedir «mandame lo de los últimos dos
+ * meses»: hay que desvincular el dispositivo desde el teléfono y escanear otra
+ * vez. Por eso esto tiene que estar bien ANTES de que alguien escanee — si
+ * falla, el costo es volver a desvincular.
+ *
+ * QUE SE GUARDA Y QUE NO:
+ *   · Sólo lo de los últimos `DIAS_DE_HISTORIAL` días. El corte lo decide
+ *     `core/chat.ts` con sus tests.
+ *   · **Los dos lados de la conversación**, los que entraron y los que salieron.
+ *     Un historial con la mitad de los renglones no es un historial.
+ *   · Nada se marca como sin leer. Son mensajes viejos: si el historial
+ *     prendiera la marca, la bandeja aparecería con cientos de «nuevos» que
+ *     nadie dejó sin leer.
+ *   · Ni grupos ni difusiones.
+ *
+ * NO DUPLICA. Cada tanda puede repetir lo de la anterior, y el que ya llegó por
+ * `messages.upsert` también está. Se compara por texto y hora antes de sumar.
+ */
+export interface MensajeCrudo {
+  key?: { remoteJid?: string | null; fromMe?: boolean | null; id?: string | null } | null;
+  message?: unknown;
+  messageTimestamp?: number | Long | null;
+  pushName?: string | null;
+}
+type Long = { toNumber?: () => number; low?: number };
+
+function segundosDe(ts: MensajeCrudo['messageTimestamp']): number {
+  if (ts == null) return 0;
+  if (typeof ts === 'number') return ts;
+  const l = ts as Long;
+  if (typeof l.toNumber === 'function') return l.toNumber();
+  return Number(l.low ?? 0);
+}
+
+export interface ResumenHistorial {
+  mirados: number;
+  guardados: number;
+  viejos: number;
+  chats: number;
+}
+
+/**
+ * Vuelca una tanda de historial a la base. Devuelve qué hizo, para el log.
+ *
+ * Está separada de la suscripción para poder probarla sin WhatsApp: recibe
+ * mensajes crudos y no sabe nada de Baileys.
+ */
+export async function guardarHistorial(
+  pb: PocketBase,
+  cuentaId: string,
+  mensajes: MensajeCrudo[],
+  dias: number = DIAS_DE_HISTORIAL,
+  ahora: Date = new Date(),
+): Promise<ResumenHistorial> {
+  const r: ResumenHistorial = { mirados: 0, guardados: 0, viejos: 0, chats: 0 };
+
+  // Se agrupa por conversación antes de escribir: una sola lectura y una sola
+  // escritura por chat, en vez de una por mensaje. Con dos meses de historial
+  // la diferencia es entre decenas de escrituras y miles.
+  const porChat = new Map<string, { nombre: string; tel: string; ms: { quien: string; texto: string; en: string }[] }>();
+
+  for (const m of mensajes ?? []) {
+    r.mirados++;
+    const jid = String(m.key?.remoteJid ?? '');
+    if (!jid || jid.endsWith('@g.us') || jid.endsWith('@broadcast') || jid === 'status@broadcast') continue;
+
+    const seg = segundosDe(m.messageTimestamp);
+    if (!entraEnElHistorial(seg, dias, ahora)) {
+      r.viejos++;
+      continue;
+    }
+
+    const texto = textoDelMensaje(m.message as Record<string, unknown> | null);
+    if (!texto) continue;
+
+    const tel = telefonoDeQuienEscribe(m.key as Record<string, unknown> | null);
+    const clave = tel || `nombre:${m.pushName ?? jid}`;
+
+    if (!porChat.has(clave)) porChat.set(clave, { nombre: m.pushName ?? '', tel, ms: [] });
+    porChat.get(clave)!.ms.push({
+      // Del historial vienen los dos lados. `fromMe` dice cuál es cuál.
+      quien: m.key?.fromMe ? 'out' : 'in',
+      texto,
+      en: new Date(seg * 1000).toISOString(),
+    });
+  }
+
+  for (const [clave, c] of porChat) {
+    const filtro = c.tel
+      ? `telefono = "${c.tel}"`
+      : `telefono = "" && nombre = "${String(c.nombre).replace(/"/g, '')}"`;
+
+    const previos = await pb
+      .collection('chat_personal')
+      .getFullList<{ id: string; mensajes?: unknown }>({ filter: filtro })
+      .catch(() => [] as { id: string; mensajes?: unknown }[]);
+
+    const antes = previos.length && Array.isArray(previos[0]!.mensajes) ? (previos[0]!.mensajes as { texto?: string; en?: string }[]) : [];
+    const yaEstan = new Set(antes.map((m) => `${m.texto}·${m.en}`));
+
+    const suma = c.ms.filter((m) => !yaEstan.has(`${m.texto}·${m.en}`));
+    if (!suma.length) continue;
+
+    // Ordenados por hora: el historial llega en tandas y sin garantía de orden.
+    const todos = [...antes, ...suma].sort((a, b) => String(a.en ?? '').localeCompare(String(b.en ?? '')));
+
+    if (previos.length) {
+      // `no_leido` NO se toca: lo viejo no vuelve a estar sin leer.
+      await pb.collection('chat_personal').update(previos[0]!.id, { mensajes: todos });
+    } else {
+      await pb.collection('chat_personal').create({
+        cuenta: cuentaId,
+        telefono: c.tel,
+        nombre: c.nombre,
+        mensajes: todos,
+        no_leido: false,
+      });
+      r.chats++;
+    }
+    r.guardados += suma.length;
+    void clave;
+  }
+
+  return r;
+}
+
+/**
  * Engancha la escucha a una sesión ya abierta.
  *
  * Se llama desde `whatsapp.ts` una vez que la conexión está viva. No abre nada
@@ -284,6 +422,40 @@ export function escuchar(
   pais: string,
   decir: (m: string) => void,
 ): void {
+  /*
+   * El historial, si se pidió traerlo.
+   *
+   * Llega en tandas y sólo en la vinculación. Cada tanda se guarda apenas
+   * llega, no al final: si el proceso se corta en la mitad, lo que ya entró
+   * queda. Esperar a la última tanda para escribir sería apostar todo a que
+   * nada falle en varios minutos de sincronización.
+   */
+  const dias = Number(process.env.WA_HISTORIAL_DIAS ?? 0) || 0;
+  if (dias > 0) {
+    let total = 0;
+    sock.ev.on('messaging-history.set', (h) => {
+      void (async () => {
+        try {
+          const r = await guardarHistorial(
+            pb,
+            cuentaId,
+            (h.messages ?? []) as MensajeCrudo[],
+            dias,
+          );
+          total += r.guardados;
+          decir(
+            `  · historial: ${r.guardados} mensajes nuevos, ${r.chats} conversaciones` +
+              ` (miró ${r.mirados}, descartó ${r.viejos} por viejos) — van ${total}`,
+          );
+          if (h.isLatest) decir(`  · historial COMPLETO: ${total} mensajes de los últimos ${dias} días.`);
+        } catch (err) {
+          decir(`  ! el historial falló: ${(err as Error)?.message ?? String(err)}`);
+        }
+      })();
+    });
+    decir(`  Voy a traer el historial de los últimos ${dias} días.`);
+  }
+
   sock.ev.on('messages.upsert', (u) => {
     void (async () => {
       // `notify` son los que llegan ahora. `append` es historial que WhatsApp

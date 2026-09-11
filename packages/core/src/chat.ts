@@ -97,6 +97,47 @@ export function ultimoTexto(mensajes: MensajeChat[]): string {
  * `respondido` se desincroniza el día que alguien conteste desde el chat real
  * y el CRM no se entere. El último mensaje siempre dice la verdad.
  */
+/**
+ * Cuánto historial de WhatsApp se trae al vincular (§8.2).
+ *
+ * POR QUE HAY UN CORTE Y NO «TODO». WhatsApp manda el historial UNA SOLA VEZ,
+ * en el momento de vincular, y manda lo que quiere: pueden ser años. Este es el
+ * WhatsApp personal de Augusto, así que cada mes de más son conversaciones
+ * privadas que entran al CRM, a los backups y a GitHub.
+ *
+ * Dos meses es lo que pidió el 11/09 —*«dame los chats de los 2 meses y el
+ * historial por chat de los últimos 2 meses»*— y es configurable, porque
+ * alguien puede necesitar otro número. Lo que no es negociable es que haya un
+ * corte: «todo» no es una decisión, es la falta de una.
+ */
+export const DIAS_DE_HISTORIAL = 60;
+
+/**
+ * Si un mensaje del historial entra en la ventana que se decidió traer.
+ *
+ * Recibe el segundero de WhatsApp (segundos, no milisegundos — es la unidad de
+ * `messageTimestamp` y confundirlas da fechas de 1970 que pasan cualquier
+ * filtro «es viejo»).
+ *
+ * Un mensaje **sin fecha no entra**. No se puede saber si es de anteayer o de
+ * hace cuatro años, y ante la duda lo caro es meter de más: sacarlo después
+ * obliga a borrar, que en este proyecto no se hace solo.
+ */
+export function entraEnElHistorial(
+  segundos: number | null | undefined,
+  dias: number = DIAS_DE_HISTORIAL,
+  ahora: Date = new Date(),
+): boolean {
+  const s = Number(segundos);
+  if (!Number.isFinite(s) || s <= 0) return false;
+
+  const cuando = s * 1000;
+  // Una fecha en el futuro es un reloj mal puesto del otro lado, no un mensaje
+  // de mañana. Entra: es reciente, que es lo que importa.
+  const antiguedadEnDias = (ahora.getTime() - cuando) / 86400000;
+  return antiguedadEnDias <= Math.max(0, dias);
+}
+
 export type EstadoConversacion = 'sin_leer' | 'sin_responder' | 'respondido' | 'sin_mensajes';
 
 export function estadoDeConversacion(

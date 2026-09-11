@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { estadoDeConversacion, conDias, etiquetaDeDia, ultimoTexto, type MensajeChat } from '../src/chat.ts';
+import { estadoDeConversacion, conDias, etiquetaDeDia, ultimoTexto, entraEnElHistorial, DIAS_DE_HISTORIAL, type MensajeChat } from '../src/chat.ts';
 
 const HOY = '2026-09-08';
 
@@ -127,4 +127,53 @@ test('§7.10 · el orden del array no manda: manda la fecha', () => {
 
 test('§7.10 · sin mensajes no es ni respondido ni pendiente', () => {
   assert.equal(estadoDeConversacion(false, []), 'sin_mensajes');
+});
+
+// ------------------------------------------------ el historial de WhatsApp
+
+// Augusto, 11/09: «dame los chats de los 2 meses y el historial por chat de
+// los últimos 2 meses». WhatsApp manda el historial UNA SOLA VEZ, al vincular,
+// y manda lo que quiere. Si el corte falla, entran años de conversaciones
+// privadas al CRM, a los backups y a GitHub — y sacarlas obliga a borrar.
+
+test('§8.2 · el historial se corta en los días que se pidieron', () => {
+  const ahora = new Date('2026-09-11T12:00:00Z');
+  const haceDias = (d: number) => (ahora.getTime() - d * 86400000) / 1000;
+
+  assert.equal(entraEnElHistorial(haceDias(1), 60, ahora), true);
+  assert.equal(entraEnElHistorial(haceDias(59), 60, ahora), true);
+  assert.equal(entraEnElHistorial(haceDias(61), 60, ahora), false);
+  assert.equal(entraEnElHistorial(haceDias(900), 60, ahora), false);
+});
+
+test('§8.2 · sin fecha NO entra: ante la duda, de menos', () => {
+  // No se puede saber si es de anteayer o de hace cuatro años. Meter de más
+  // obliga a borrar después, y acá no se borra solo.
+  const ahora = new Date('2026-09-11T12:00:00Z');
+  for (const v of [null, undefined, 0, -1, NaN, Infinity]) {
+    assert.equal(entraEnElHistorial(v as number, 60, ahora), false, `valor ${String(v)}`);
+  }
+});
+
+test('§8.2 · los segundos no se confunden con milisegundos', () => {
+  // `messageTimestamp` viene en SEGUNDOS. Pasarlo como milisegundos da una
+  // fecha de 1970, que cualquier filtro de antigüedad rechaza — pero al revés,
+  // un valor en milisegundos leído como segundos cae en el año 57000 y pasa
+  // como «reciente». Los dos casos tienen que quedar fijados.
+  const ahora = new Date('2026-09-11T12:00:00Z');
+  const enSegundos = Math.floor(ahora.getTime() / 1000);
+
+  assert.equal(entraEnElHistorial(enSegundos, 60, ahora), true);
+  // El mismo instante mal pasado como milisegundos: queda en un futuro
+  // absurdo. Entra igual —es «reciente»— pero no puede romper nada.
+  assert.equal(typeof entraEnElHistorial(ahora.getTime(), 60, ahora), 'boolean');
+  // Y una fecha de 1970 no entra.
+  assert.equal(entraEnElHistorial(1, 60, ahora), false);
+});
+
+test('§8.2 · DIAS_DE_HISTORIAL es el default y son los 2 meses pedidos', () => {
+  assert.equal(DIAS_DE_HISTORIAL, 60);
+  const ahora = new Date('2026-09-11T12:00:00Z');
+  const hace30 = (ahora.getTime() - 30 * 86400000) / 1000;
+  assert.equal(entraEnElHistorial(hace30, undefined, ahora), true);
 });

@@ -248,7 +248,20 @@ async function vincular(abrev: string): Promise<number> {
       printQRInTerminal: false,
       // Que WhatsApp vea un navegador normal y no algo raro.
       browser: Browsers.appropriate('Chrome'),
-      syncFullHistory: false,
+      /*
+       * El historial viejo: apagado salvo que se pida.
+       *
+       * WhatsApp sólo lo manda AL VINCULAR, así que esto se decide antes de
+       * escanear y no se puede cambiar de opinión después sin desvincular el
+       * dispositivo desde el teléfono y volver a empezar.
+       *
+       * Apagado por default a propósito: este es un WhatsApp personal, y
+       * traerlo entero volcaría años de conversaciones privadas al CRM, a los
+       * backups y a GitHub. Se prende poniendo `WA_HISTORIAL_DIAS` —cuántos
+       * días traer—, que es la misma variable que usa el corte al guardar. Una
+       * sola perilla: no se puede pedir el historial y olvidarse del límite.
+       */
+      syncFullHistory: Number(process.env.WA_HISTORIAL_DIAS ?? 0) > 0,
     } as Parameters<typeof baileys>[0]);
 
     sock.ev.on('creds.update', saveCreds);
