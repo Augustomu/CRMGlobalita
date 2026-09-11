@@ -4,6 +4,25 @@
    Uso: <html class="tema-claro | tema-oscuro | tema-noche">. El boton del header
    cicla claro -> oscuro -> noche y persiste la eleccion en localStorage. */
 
+/* ─────────────────────────────────────────────────────────────────────────
+   LOS DOS COLORES QUE NO CAMBIAN CON EL TEMA, y por qué existen igual acá.
+
+   Un código QR tiene que ser oscuro sobre claro con harto contraste, en los
+   tres temas: con los colores invertidos la mitad de los teléfonos no lo lee,
+   y el que no lo lee no avisa — se queda mirando. Así que estos dos son del
+   CÓDIGO, no de la pantalla, y no se redefinen más abajo.
+
+   Están declarados como tokens de todas formas porque la regla 5 de CLAUDE.md
+   no admite colores sueltos, y una excepción escrita en un archivo de estilos
+   es una excepción que nadie va a encontrar. Acá se ve, dice por qué, y el
+   chequeo de `docs/revisar-aprendizajes.mjs` la acepta sin que haya que
+   enseñarle una salvedad.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  --qr-claro: #ffffff;
+  --qr-oscuro: #000000;
+}
+
 :root,
 .tema-claro {
   --bg: #F2EEE6;

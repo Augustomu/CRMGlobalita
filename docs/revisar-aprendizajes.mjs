@@ -117,6 +117,28 @@ const porTema = new Map(TEMAS.map((t) => [t, tokensDelTema('.tema-' + t)]));
 const tokens = porTema.get('claro');
 const definidos = new Set(tokens.keys());
 
+// Los tokens de `:root` PELADO también cuentan como definidos.
+//
+// `tokensDelTema` busca a propósito dentro de `.tema-claro`, `.tema-oscuro` y
+// `.tema-noche`, porque para medir contraste hace falta el valor DE CADA TEMA.
+// Pero hay tokens que no cambian con el tema y por eso se declaran una sola vez
+// en `:root` — los dos colores del código QR, que tiene que ser oscuro sobre
+// claro en los tres o la mitad de los teléfonos no lo lee.
+//
+// Sin esto el chequeo los daba por «fantasma»: usados y no definidos. Y la
+// salida obligaba a elegir entre repetir el mismo valor en los tres bloques —que
+// es justo lo que se desincroniza— o escribir el color suelto en el CSS, que es
+// lo que la regla 5 prohíbe. Ninguna de las dos era el arreglo.
+//
+// No entran en `porTema`: no tienen valor por tema y no se miden para contraste.
+//
+// El `:root` de acá es el PELADO. El bloque grande empieza con `:root,` seguido
+// de `.tema-claro`, así que la coma lo deja afuera de este patrón — que es lo
+// que se quiere: ése ya lo leyó `tokensDelTema`.
+for (const m of tokensCss.matchAll(/:root\s*\{([^}]*)\}/g)) {
+  for (const d of m[1].matchAll(/(--[\w-]+)\s*:/g)) definidos.add(d[1]);
+}
+
 const estilos = leer('apps/web/src/estilos.css');
 // Los tokens locales que declara la propia hoja.
 for (const m of sinComentarios(estilos).matchAll(/(--[\w-]+)\s*:/g)) definidos.add(m[1]);

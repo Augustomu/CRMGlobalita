@@ -6,6 +6,8 @@ import {
   NOMBRE_ESTADO_SESION,
   porQueNingunaSesion,
 } from '@crm/core/sesion';
+import { comoSeVeLaSesionWa, numeroTapado } from '@crm/core/whatsapp';
+import { CodigoQr } from './CodigoQr';
 
 /**
  * Cuentas conectadas (§7.10, §8.2). Portada de
@@ -36,16 +38,26 @@ interface CuentaRecord {
   /** Cuándo respondió la sesión por última vez. Lo escribe el worker. */
   ultima_senal_li: string;
   ultima_senal_wa: string;
+  /** El QR que emitió Baileys, y cuándo. Los escribe el worker (§8.2). */
+  qr_wa?: string;
+  qr_wa_desde?: string;
+  /** Por qué no está viva, y con qué número quedó vinculada. */
+  wa_motivo?: string;
+  wa_numero?: string;
 }
 
 /**
  * Si el proceso que sostiene las sesiones existe.
  *
- * Hoy no: `apps/worker/` está vacío. Está acá y no escondido en un `if` para
- * que el día que exista se cambie en un solo lugar — y para que se vea que la
- * pantalla no lo está adivinando.
+ * **Desde el 10/09 existe**: `apps/worker/` sabe vincular LinkedIn, medir las
+ * listas, invitar y vincular WhatsApp. Estuvo en `false` todo el tiempo que la
+ * carpeta estuvo vacía, y estaba acá arriba —y no escondido en un `if`— para
+ * que el día que existiera se cambiara en un solo lugar.
+ *
+ * Que exista NO quiere decir que esté corriendo. Eso lo dice la señal de cada
+ * cuenta, que es otra cosa y se mira por separado.
  */
-const HAY_WORKER = false;
+const HAY_WORKER = true;
 
 interface EnCola {
   cuenta: string;
@@ -90,6 +102,33 @@ export function CuentasConectadas({
   const [historico, setHistorico] = useState<string | null>(null);
   /** Reuniones futuras que todavía no llegaron al calendario. La consecuencia. */
   const [sinSincronizar, setSinSincronizar] = useState(0);
+
+  /**
+   * El QR llega SOLO, sin recargar.
+   *
+   * Baileys rota el código cada menos de un minuto y lo escribe en la cuenta.
+   * Sin esto habría que apretar F5 justo en la ventana buena — que es la peor
+   * forma posible de escanear algo que caduca. PocketBase avisa de cada cambio
+   * en `cuenta`; se actualiza sólo la fila que cambió.
+   *
+   * Si la suscripción no se puede abrir, la pantalla sigue andando con lo que
+   * cargó: es un canal de actualización, no la fuente.
+   */
+  useEffect(() => {
+    let vivo = true;
+    const prometida = pb
+      .collection('cuenta')
+      .subscribe<CuentaRecord>('*', (e) => {
+        if (!vivo || !e.record) return;
+        setCuentas((antes) => antes.map((c) => (c.id === e.record.id ? { ...c, ...e.record } : c)));
+      })
+      .catch(() => undefined);
+
+    return () => {
+      vivo = false;
+      void prometida.then(() => pb.collection('cuenta').unsubscribe('*')).catch(() => undefined);
+    };
+  }, []);
 
   useEffect(() => {
     let vivo = true;
@@ -417,28 +456,57 @@ export function CuentasConectadas({
             </div>
           )}
 
-          {qr && (
-            <div className="cc-qr-panel">
-              <span className="campo-label">Vincular {qr}</span>
-              <div className="cc-qr-caja">
-                {/* CLAUDE.md regla 6: lo que no se puede construir todavía se
-                    omite y se anota; no se inventa. El código lo emite la
-                    sesión de Baileys, que vive en el worker. */}
-                <span>
-                  el QR aparece acá
-                  <br />
-                  al conectar Baileys
-                </span>
+          {qr && (() => {
+            // La cuenta que se está vinculando, y lo que core dice de ella.
+            const suya = cuentas.find((c) => c.abrev === qr) ?? null;
+            const lectura = suya ? comoSeVeLaSesionWa(suya) : null;
+            const vigente = Boolean(lectura?.qr_vigente && suya?.qr_wa);
+
+            return (
+              <div className="cc-qr-panel">
+                <span className="campo-label">Vincular {qr}</span>
+
+                <div className="cc-qr-caja">
+                  {vigente ? (
+                    <CodigoQr texto={String(suya?.qr_wa ?? '')} />
+                  ) : (
+                    /* NO SE DIBUJA UN QR VENCIDO. Un código caducado a la vista
+                       es peor que ninguno: se escanea, no pasa nada, y parece
+                       que WhatsApp está roto. La vigencia la decide
+                       `core/whatsapp.ts`, que sabe cuánto dura. */
+                    <span>
+                      {suya?.qr_wa ? 'el código venció' : 'esperando el código'}
+                      <br />
+                      corré: whatsapp.ts vincular {qr}
+                    </span>
+                  )}
+                </div>
+
+                {vigente ? (
+                  <span className="campo-ayuda">
+                    Escaneá desde WhatsApp &gt; Dispositivos vinculados. Se renueva solo cada menos
+                    de un minuto: no hace falta recargar.
+                  </span>
+                ) : (
+                  <span className="campo-ayuda">
+                    El código lo emite la sesión de Baileys, que corre en el worker. Mientras ese
+                    proceso no esté abierto no hay nada que escanear.
+                  </span>
+                )}
+
+                {suya?.wa_numero && (
+                  <span className="campo-ayuda">
+                    Vinculado antes con {numeroTapado(suya.wa_numero)}.
+                  </span>
+                )}
+                {lectura?.que_hacer && <span className="campo-ayuda">{lectura.que_hacer}</span>}
+
+                <button type="button" className="boton-mini" onClick={() => setQr(null)}>
+                  Cerrar
+                </button>
               </div>
-              <span className="campo-ayuda">
-                Escaneá desde WhatsApp &gt; Dispositivos vinculados. La cola de esa cuenta arranca
-                sola al reconectar.
-              </span>
-              <button type="button" className="boton-mini" onClick={() => setQr(null)}>
-                Cerrar
-              </button>
-            </div>
-          )}
+            );
+          })()}
 
           {!cargando && !cuentas.length && <div className="cc-vacio">No hay cuentas cargadas.</div>}
         </div>

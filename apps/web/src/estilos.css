@@ -5676,9 +5676,12 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   align-items: center;
   gap: 8px;
 }
+/* La caja del QR. Crece para el código y se queda chica cuando no hay ninguno:
+   un recuadro grande y vacío se lee como un error de carga. El borde punteado es
+   del estado vacío —dice «acá va a aparecer algo»— y con el código puesto sobra. */
 .cc-qr-caja {
-  width: 140px;
-  height: 140px;
+  min-width: 140px;
+  min-height: 140px;
   border: .5px dashed var(--border);
   border-radius: 8px;
   display: flex;
@@ -5686,9 +5689,27 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   justify-content: center;
   text-align: center;
   font-size: var(--txt-sm);
-  color: var(--hint);
+  /* `--muted` y no `--hint`: sobre fondo claro `--hint` no llega a 4.5:1, y es
+     el error de contraste que más veces volvió en este proyecto. */
+  color: var(--muted);
   line-height: 1.5;
 }
+/* Con el código adentro, la caja deja de ser un marcador de lugar. */
+.cc-qr-caja:has(.cc-qr-svg) {
+  border-style: solid;
+  padding: 8px;
+}
+/* El QR va sobre claro SIEMPRE, también en tema oscuro y en noche: un código con
+   los colores invertidos no lo lee la mitad de los teléfonos, y el que no lo lee
+   no avisa — se queda mirando. El fondo es del código, no del tema, y por eso
+   `--qr-claro` es uno de los dos tokens que no se redefinen por tema. */
+.cc-qr-svg {
+  display: block;
+  background: var(--qr-claro);
+  border-radius: 4px;
+  line-height: 0;
+}
+.cc-qr-svg svg { display: block; width: 100%; height: auto; max-width: 220px; }
 /* La consecuencia, que es para lo que uno entra a esta pantalla. */
 .cc-resumen { font-size: var(--txt-md); color: var(--muted); line-height: 1.45; text-wrap: pretty; }
 .cc-resumen-alerta { color: var(--warning); font-weight: 500; }
