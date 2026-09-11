@@ -5,6 +5,7 @@ import { conDias, ultimoTexto, type MensajeChat } from '@crm/core/chat';
 import { paraWhatsApp } from '@crm/core/telefono';
 import { diaLocal, horaLocal } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
+import { Emojis } from './Emojis';
 
 interface ChatRecord {
   id: string;
@@ -185,6 +186,7 @@ export function WaPersonal({ onIrAlLead }: Props) {
   const [telefonosEnLaBase, setTelefonosEnLaBase] = useState<Set<string>>(new Set());
   const [sel, setSel] = useState<string | null>(null);
   const [borrador, setBorrador] = useState('');
+  const [emojisAbiertos, setEmojisAbiertos] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const hoy = diaLocal();
@@ -578,6 +580,23 @@ export function WaPersonal({ onIrAlLead }: Props) {
         )}
 
         <div className="wap-escribir">
+          {/* El selector de emojis, arriba del cuadro. Se abre y se cierra con
+              el mismo botón, como en WhatsApp. */}
+          {emojisAbiertos && (
+            <Emojis
+              onCerrar={() => setEmojisAbiertos(false)}
+              onElegir={(e) => setBorrador((b) => b + e)}
+            />
+          )}
+          <button
+            type="button"
+            className="wap-icono"
+            title="Emojis"
+            aria-label="Emojis"
+            onClick={() => setEmojisAbiertos((v) => !v)}
+          >
+            ☺
+          </button>
           <textarea
             value={borrador}
             placeholder="Escribir mensaje…"
