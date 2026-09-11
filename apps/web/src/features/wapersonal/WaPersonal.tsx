@@ -459,26 +459,33 @@ export function WaPersonal({ onIrAlLead }: Props) {
                     aplicación —abre el chat real de WhatsApp— y la horizontal
                     MUEVE de una lista a otra, dentro del CRM.
                   */}
+                  {/*
+                    UNA SOLA ACCIÓN: abrir la conversación en WhatsApp.
+
+                    «Mover a FU» se fue el 11/09, pedido por Augusto: *«el botón
+                    de mover a FU ya no estaría»*. Tenía razón y el motivo es
+                    del diseño nuevo — si alguien ya es lead, se le contesta
+                    desde donde está el lead, no desde acá; y si no lo es, esta
+                    pantalla es justamente donde tiene que quedarse.
+
+                    El icono es el de «abrir en otra aplicación» y no una
+                    flecha suelta: una flecha diagonal sola no dice a dónde
+                    lleva, y al lado de la que movía a Follow-up se confundían.
+                  */}
                   <span className="wap-chat-acciones" onClick={(ev) => ev.stopPropagation()}>
                     <a
                       className="wap-accion"
                       href={`https://wa.me/${String(c.telefono ?? '').replace(/\D/g, '')}`}
                       target="_blank"
                       rel="noreferrer"
-                      title="Abrir la conversación en WhatsApp"
+                      title="Abrir esta conversación en WhatsApp"
+                      aria-label="Abrir en WhatsApp"
                     >
-                      ↗
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M9.5 2.5H13v3.5M13 2.5 7.5 8" strokeLinecap="round" />
+                        <path d="M12 9.5V12a1.5 1.5 0 0 1-1.5 1.5h-6A1.5 1.5 0 0 1 3 12V6a1.5 1.5 0 0 1 1.5-1.5H7" strokeLinecap="round" />
+                      </svg>
                     </a>
-                    <button
-                      type="button"
-                      className="wap-accion wap-accion-fu"
-                      title="Mover a Follow-up: le crea un lead y entra en la cadencia"
-                      onClick={() => {
-                        void moverAFollowup(c.telefono, c.nombre, c.cuenta, undefined, c.id);
-                      }}
-                    >
-                      →
-                    </button>
                   </span>
                 </span>
                 {/*
@@ -494,8 +501,7 @@ export function WaPersonal({ onIrAlLead }: Props) {
                   muestra el teléfono cuando el contacto no está agendado, y
                   dos veces el mismo dato ocupa el lugar del último mensaje.
                 */}
-                {String(c.telefono ?? '').trim() &&
-                  telefonosEnLaBase.has(ultimosOcho(c.telefono)) && (
+                {String(c.telefono ?? '').trim() && (
                     <span className="wap-chat-tel" onClick={(ev) => ev.stopPropagation()}>
                       <span className="tabular">{c.telefono}</span>
                       <button

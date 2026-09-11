@@ -204,12 +204,32 @@ routerAdd(
   (e) => {
     const g = require(`${__hooks}/google.js`);
     const fila = g.cuentaDe(e.auth.id);
+
+    /*
+     * TODAS las cuentas, no sólo la del calendario.
+     *
+     * Desde el 11/09 una persona puede tener varias conectadas —para leer la
+     * agenda de todas— y la pantalla tiene que mostrarlas: Augusto conectó una
+     * segunda y no la veía por ningún lado, así que parecía que no había
+     * funcionado.
+     *
+     * El `refresh_token` NO SALE NUNCA de acá: es una llave permanente a la
+     * cuenta de una persona. Se responde el correo y si está conectada.
+     */
+    const todas = g.cuentasDe(e.auth.id).map((f) => ({
+      id: f.id,
+      email: f.get('email') || '',
+      principal: Boolean(f.get('principal')),
+      conectada: Boolean(f.get('refresh_token')),
+      calendario: f.get('calendario') || '',
+    }));
+
     return e.json(200, {
       servidor_listo: g.configurado(g.config()),
-      // Se responde sí o no. El refresh_token no sale nunca de acá.
       conectado: Boolean(fila && fila.get('refresh_token')),
       email: fila ? fila.get('email') : '',
       calendario: fila ? fila.get('calendario') : '',
+      cuentas: todas,
     });
   },
   $apis.requireAuth(),

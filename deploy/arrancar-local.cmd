@@ -27,5 +27,13 @@ rem La pantalla. Vite se llama directo con node, desde apps\web.
 cd apps\web
 start "CRM pantalla" /min node ..\..\node_modules\vite\bin\vite.js --port 5173
 
+rem  LA SESION DE WHATSAPP NO SE LANZA ACA, y es a proposito.
+rem
+rem  El worker necesita entrar a PocketBase, y desde un .cmd no hay forma de
+rem  darle credenciales sin dejar una clave escrita en un archivo. De eso se
+rem  encarga PocketBase: `pb_hooks/wa-vigia.pb.js` mira cada cinco minutos si la
+rem  sesion esta viva y la vuelve a prender sola, con un token que se genera en
+rem  el momento. Ver ese archivo.
+
 rem No abre el navegador: la tarea corre al iniciar sesion y una ventana que
 rem aparece sola es molesta. El CRM queda en http://localhost:5173/

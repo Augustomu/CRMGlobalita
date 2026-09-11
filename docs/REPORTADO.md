@@ -26,6 +26,9 @@ confirmación: la confirmación es que él lo vea andar.
 
 ## 🟡 Esperando confirmación
 
+*(el 11/09 Augusto dio por resueltos todos los anteriores: «el resto de los
+puntos tildado como resuelto». Lo que queda acá es lo que se arregló después.)*
+
 | # | Qué reportó | Qué se hizo |
 |---|---|---|
 | 1 | «toco el botón de vincular y no hace nada» | El botón prende el worker (`/api/wa/vincular`), el panel se lleva a la vista, y el worker deja un diario que la pantalla muestra |

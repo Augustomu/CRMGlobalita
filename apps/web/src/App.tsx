@@ -376,7 +376,19 @@ export function App() {
               aria-label="WA Personal"
               onClick={() => irA(() => setSeccion('wapersonal'))}
             >
-              <span className="tab-emoji" aria-hidden="true">💬</span>
+              {/* El teléfono adentro del globo: es la forma con la que se
+                  reconoce WhatsApp sin leer nada. Dibujado acá y no un emoji,
+                  porque un emoji lo dibuja cada sistema operativo a su manera
+                  y en Windows el globo de diálogo no se parece a nada. */}
+              <svg
+                className="tab-wa"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                fill="currentColor"
+              >
+                <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2Zm0 1.8a8.2 8.2 0 1 1-4.2 15.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 0 1 12 3.8Z" />
+                <path d="M9.3 7.3c-.2-.4-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.4-.3.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.7 2.8 4.3 3.8 2.1.8 2.6.7 3 .6.5 0 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.5-.3-1.6-.8c-.2-.1-.4-.1-.6.1l-.8 1c-.2.2-.3.2-.5.1-.3-.1-1.2-.4-2.2-1.4-.8-.7-1.4-1.6-1.5-1.8-.2-.3 0-.4.1-.5l.4-.5.2-.4v-.4l-.8-1.8Z" />
+              </svg>
             </button>
           )}
           {puedeUsuario(usuario, 'usuarios') && (

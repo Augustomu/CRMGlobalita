@@ -7195,3 +7195,14 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
   display: inline-block;
   vertical-align: -2px;
 }
+
+/* El logo de WhatsApp en la solapa: el telefono adentro del globo.
+   Dibujado y no un emoji — cada sistema operativo dibuja el emoji a su manera
+   y en Windows el globo de dialogo no se parece a nada. */
+.tab-wa {
+  width: 17px;
+  height: 17px;
+  display: block;
+}
+/* El icono de «abrir en otra aplicacion» de la fila del chat. */
+.wap-accion svg { width: 13px; height: 13px; display: block; }

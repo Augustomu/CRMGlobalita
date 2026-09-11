@@ -73,11 +73,21 @@ interface EnCola {
  * calendario de la persona y vive en una colección con todas las reglas en
  * `null` (§8.3). El servidor contesta sí o no.
  */
+interface CuentaGoogle {
+  id: string;
+  email: string;
+  principal: boolean;
+  conectada: boolean;
+  calendario: string;
+}
+
 interface EstadoGoogle {
   servidor_listo: boolean;
   conectado: boolean;
   email: string;
   calendario: string;
+  /** Todas las conectadas. La del calendario es la que tiene `principal`. */
+  cuentas?: CuentaGoogle[];
 }
 
 export function CuentasConectadas({
@@ -697,17 +707,54 @@ export function CuentasConectadas({
             );
           })}
 
-          {/* --------------------------------------------------- Google */}
+          {/* --------------------------------------------------- Google
+
+              GOOGLE, a secas. La misma conexión trae el calendario Y la agenda
+              de contactos, así que el título que nombra una sola de las dos
+              hace buscar la otra en otro lado.
+
+              El «+» va ACÁ, en el encabezado, y no en la fila de una cuenta:
+              conectar otra no es una acción SOBRE la que ya está. Es el mismo
+              lugar donde WhatsApp tiene «Vincular otro número». */}
           <div className="cc-seccion">
-            <span className="campo-label">Google Calendar</span>
-            <span className="campo-ayuda">una cuenta por persona, no por slot</span>
+            <span className="campo-label">Google</span>
+            <span className="campo-ayuda">calendario y agenda de contactos</span>
+            {google?.servidor_listo && google?.conectado && !confirmarCorte && (
+              <button
+                type="button"
+                className="boton-mini al-final"
+                disabled={yendoAGoogle}
+                title="Conectar otra cuenta de Google. Se lee también su agenda de contactos; el calendario donde se escriben las reuniones no cambia."
+                onClick={() => void conectarGoogle(true)}
+              >
+                + Otra cuenta
+              </button>
+            )}
           </div>
+
+          {/* Las cuentas de LEER: las que no son la del calendario. Cada una en
+              su fila, como LinkedIn y WhatsApp — sin esto Augusto conectó una
+              segunda y no la veía por ningún lado. */}
+          {(google?.cuentas ?? [])
+            .filter((c) => !c.principal && c.conectada)
+            .map((c) => (
+              <div key={c.id} className="cc-fila">
+                <span className="pastilla">ag</span>
+                <span className="cc-perfil">{c.email || 'sin correo'}</span>
+                <span className="cc-estado cc-ok">
+                  <span className="cc-punto cc-punto-ok" />
+                  conectada
+                </span>
+                <span className="cc-detalle">sólo agenda</span>
+                <span className="cc-acciones" />
+              </div>
+            ))}
 
           <div className="cc-fila">
             <span className="pastilla">cal</span>
             <span className="cc-perfil">
               {google?.conectado
-                ? google.email || 'conectada'
+                ? google.email || 'cuenta de Google'
                 : google?.servidor_listo === false
                   ? 'el servidor todavía no tiene las credenciales'
                   : 'tu calendario'}
@@ -780,23 +827,6 @@ export function CuentasConectadas({
               </button>
             )}
 
-            {/* Conectar OTRA cuenta de Google.
-                Los contactos de una persona están repartidos entre la cuenta de
-                trabajo y la personal, y «Traer los nombres» lee todas las
-                conectadas. La primera sigue siendo la del calendario: conectar
-                una segunda no cambia dónde se escriben las reuniones. */}
-            {google?.conectado && !confirmarCorte && (
-              <button
-                type="button"
-                className="boton-mini"
-                disabled={yendoAGoogle}
-                title="Conectar otra cuenta de Google para leer también su agenda de contactos. No cambia el calendario donde se escriben las reuniones."
-                onClick={() => void conectarGoogle(true)}
-              >
-                Conectar otra cuenta
-              </button>
-            )}
-
             {/* La agenda. Va al lado del histórico porque las dos traen algo de
                 Google hacia el CRM, y las dos se disparan a mano por la misma
                 razón: recorren todo y escriben. */}
@@ -808,7 +838,7 @@ export function CuentasConectadas({
                 title="Leer tus contactos de Google y completar el nombre de los chats y perfiles que sólo tienen el número. No pisa ningún nombre que ya esté."
                 onClick={() => void traerAgenda()}
               >
-                {trayendoAgenda ? 'leyendo la agenda…' : 'Traer los nombres'}
+                {trayendoAgenda ? 'leyendo…' : 'Sincronizar contactos'}
               </button>
             )}
 
