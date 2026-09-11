@@ -1217,6 +1217,45 @@ página de revisión.
       por Sales Nav sólo está en el inbox clásico. Hay que abrir **los dos** y
       unir por perfil.
 
+      ✅ **11/09 · LA REGLA QUE PIDIO AUGUSTO YA ESTA EN CORE.**
+      *«Lo que no quiero es que luego de hacer otro scan, como no encontró ese
+      lead en sin leer, lo borre de sin leer»*. `core/sinleer.ts` con 11 tests:
+      `marcasDelEscaneo()` **sólo puede devolver altas** —el tipo del valor es
+      `true`, no `boolean`, así que un apagado no compila—, `puedeSacarDeSinLeer()`
+      contesta que sólo una persona, `losQueYaNoAparecen()` devuelve una lista
+      **para mirar y no para borrar**, y `laCorridaEsCreible(0)` es `false`
+      porque cero filas no es «la bandeja está vacía» sino «no se pudo leer la
+      página». Falta conectarlo: el escáner todavía no existe.
+
+      🔴 **Lo que encontró la auditoría del 11/09** sobre
+      `globalita-automation/scan-unread-agent.js`, verificado línea por línea:
+      · **Abre el hilo y nunca lo devuelve a no leído.** `:423` hace el `goto`
+        —ahí LinkedIn marca leído, irreversible— y 270 líneas después, en `:641`,
+        hace `require('./lib/merge-mensajes')`, **un módulo que no existe ni
+        existió nunca en git**. El throw cae en el catch de `:702` y el
+        `marcarComoNoLeido` de `:693` no se ejecuta jamás.
+        El cron estaba en `enabled: true` cada 15 min y el dashboard pasa
+        `--enrich`. **Apagado el 11/09** (`globalita-automation@f760e134`); nada
+        estaba corriendo, así que el daño era latente.
+      · **`normalizeUrl` no está definida** y se usa en `:1431`, `:1462`, `:1482`.
+        Sólo se alcanza si algo clasifica `REUNION` o `INTERESADO` → `ReferenceError`
+        → **el JSON no se escribe**. Es por qué `unread-messages.json` quedó
+        congelado el 10/05 con 7 REUNION + 2 INTERESADO adentro.
+      · `marcarComoNoLeido` devuelve `true` aunque el click falle (`:336-338`).
+      · El menú «…» que abre puede ser **el de otra conversación**: toma el
+        primer match del DOM sin comparar contra el nombre (`:195-198`).
+      · Con 0 filas detectadas **borra la lista y marca todo «respondido»**
+        (`:1537-1569`). Es lo que `laCorridaEsCreible()` viene a impedir.
+      · `humanWaitAdaptive` devuelve una Promise y se pasa a `setTimeout` →
+        `NaN` → la pausa anti-detección es de 0 ms (`:616`).
+      · `headless: true` por defecto (`:1308`), que es de las señales más
+        baratas que LinkedIn tiene.
+      **Recomendación: portar y mejorar**, no reescribir. Se rescatan ~600
+      líneas de conocimiento del DOM —el detector de no leído con su
+      word-boundary, `message-content` en vez de `message-item`, las 11 formas
+      de leer una fecha, el patrón de lockfile de `scan-unread-all.js`— y se
+      reescriben las ~1000 de orquestación, estado y guardado.
+
       🔴 **La regla que no se puede romper.** `rules--unread-no-tocar.md`:
       **abrir una conversación sin leer la marca como leída**, y el prospecto ve
       «leyó y no me contestó». Es irreversible desde su lado. El flag sin leer
