@@ -2,6 +2,7 @@
 //
 // Es lo único de la conversación que tiene reglas. El resto —quién habla de qué
 // lado, el color de la burbuja— es presentación pura.
+import { diaDeInstante, horaLocal } from './fecha.ts';
 
 /** Solo WhatsApp informa entrega y lectura (§3.2). */
 export type Ack = 'enviado' | 'entregado' | 'leido';
@@ -27,8 +28,21 @@ export type ItemHilo =
 
 const HOY_AYER = ['hoy', 'ayer'];
 
+/**
+ * El día de un instante, EN LA ZONA DE QUIEN MIRA.
+ *
+ * Cortaba los diez primeros caracteres del ISO, que es el día UTC. Un mensaje
+ * de las 21:00 de México es del día siguiente en UTC, así que el separador
+ * «Ayer / Hoy» del hilo caía un día corrido. Encontrado el 11/09 junto con el
+ * de la hora.
+ *
+ * Las fechas que llegan ya en formato `AAAA-MM-DD` —«hoy», por ejemplo— se
+ * devuelven tal cual: no son instantes, son días, y convertirlas las correría.
+ */
 function soloFecha(iso: string): string {
-  return iso.slice(0, 10);
+  const s = String(iso ?? '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  return diaDeInstante(s) || s.slice(0, 10);
 }
 
 /** dd/mm, o «hoy» / «ayer» que es lo que uno lee sin traducir. */
@@ -71,7 +85,9 @@ export function conDias(mensajes: MensajeChat[], hoy: string): ItemHilo[] {
       tipo: 'mensaje',
       quien: m.quien,
       texto: m.texto,
-      hora: iso ? iso.slice(11, 16) : '',
+      // La hora, convertida a la zona de quien mira. Cortar el texto del ISO
+      // da la hora UTC: el 11/09 mostraba 17:05 donde WhatsApp decia 11:05.
+      hora: horaLocal(iso),
       ack: m.ack ?? null,
     });
   }

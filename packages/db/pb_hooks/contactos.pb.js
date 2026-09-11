@@ -35,52 +35,74 @@ routerAdd(
       return e.json(200, { ok: false, error: 'Falta configurar Google en el servidor.' });
     }
 
-    const fila = g.cuentaDe(e.auth.id);
-    if (!fila || !fila.get('refresh_token')) {
+    /*
+     * SE LEEN TODAS LAS CUENTAS CONECTADAS, no sólo la del calendario.
+     *
+     * Los contactos de una persona están repartidos: la cuenta de trabajo tiene
+     * los compañeros, la personal tiene los teléfonos. Pedirle que elija cuál
+     * leer es pedirle que sepa de antemano en cuál está cada número.
+     *
+     * Una que falla no corta a las demás: se anota y se sigue. Es lo contrario
+     * de lo que conviene en una escritura, pero acá el resultado de cada cuenta
+     * es independiente del de las otras.
+     */
+    const filas = g.cuentasDe(e.auth.id).filter((f) => f.get('refresh_token'));
+    if (!filas.length) {
       return e.json(200, {
         ok: false,
-        error: 'Tu cuenta de Google no está conectada. Conectala desde Cuentas conectadas.',
+        error: 'No hay ninguna cuenta de Google conectada. Conectala desde Cuentas conectadas.',
       });
     }
 
-    let token;
-    try {
-      token = g.accessToken(c, fila.get('refresh_token'));
-    } catch (err) {
-      return e.json(200, {
-        ok: false,
-        error:
-          'Google rechazó la conexión: ' + String(err) + '. ' +
-          'Si dice «invalid_grant», hay que volver a conectar la cuenta.',
-      });
+    const contactos = [];
+    const fallos = [];
+    for (const fila of filas) {
+      const quien = String(fila.get('email') || 'una cuenta');
+      try {
+        const token = g.accessToken(c, fila.get('refresh_token'));
+        const suyos = a.traerAgenda(token);
+        for (const x of suyos) contactos.push(x);
+      } catch (err) {
+        // El caso más común y el que hay que saber distinguir: el permiso de
+        // contactos es NUEVO, así que una cuenta conectada antes del 11/09 no
+        // lo tiene. Google contesta 403 y hay que volver a conectar UNA vez.
+        const m = String(err);
+        fallos.push(
+          quien +
+            (m.indexOf('403') >= 0
+              ? ': conectada pero sin permiso para leer la agenda. Desconectala y volvé a conectarla.'
+              : ': ' + m),
+        );
+      }
     }
 
-    let contactos;
-    try {
-      contactos = a.traerAgenda(token);
-    } catch (err) {
-      // El caso más común y el que hay que saber distinguir: el permiso de
-      // contactos es NUEVO, así que una cuenta conectada antes del 11/09 no lo
-      // tiene. Google contesta 403 y hay que volver a conectar UNA vez.
-      const m = String(err);
+    if (!contactos.length) {
       return e.json(200, {
         ok: false,
-        error:
-          m.indexOf('403') >= 0
-            ? 'Tu cuenta está conectada pero sin permiso para leer la agenda: es un permiso ' +
-              'nuevo. Desconectá Google y volvé a conectarlo — una sola vez.'
-            : 'No se pudo leer la agenda: ' + m,
+        error: fallos.length
+          ? fallos.join(' · ')
+          : 'Las cuentas conectadas no tienen ningún contacto con teléfono.',
       });
     }
 
     const r = a.ponerNombres(contactos);
     $app.logger().info(
       'google-contactos',
+      'cuentas', filas.length,
       'contactos', contactos.length,
       'chats', r.chats,
       'perfiles', r.perfiles,
     );
-    return e.json(200, { ok: true, contactos: contactos.length, ...r });
+    return e.json(200, {
+      ok: true,
+      cuentas: filas.length,
+      contactos: contactos.length,
+      // Los fallos se devuelven AUNQUE haya salido bien: si una de tres cuentas
+      // no se pudo leer, el resultado es parcial y quien lo mira tiene que
+      // saberlo. Un «listo» que esconde un error es un «listo» que miente.
+      fallos,
+      ...r,
+    });
   },
   $apis.requireAuth(),
 );

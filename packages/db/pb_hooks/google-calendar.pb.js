@@ -36,11 +36,31 @@ routerAdd(
     // completar el flujo a otro y quedarse con su calendario.
     const estado = $security.randomString(40);
 
-    let fila = g.cuentaDe(e.auth.id);
+    /*
+     * `?nueva=1` conecta OTRA cuenta de Google en vez de reemplazar la que hay.
+     *
+     * Pedido el 11/09: *«agregame un botón para conectar cuenta de Gmail
+     * nueva»*. La razón concreta: el calendario del CRM está en una cuenta y la
+     * agenda de contactos en otra, así que «Traer los nombres» leía la agenda
+     * equivocada.
+     *
+     * La fila nueva arranca SIN `principal`: el calendario sigue siendo el de
+     * la primera. Cambiar dónde se escriben las reuniones es otra decisión y no
+     * puede ser el efecto secundario de conectar una cuenta para leer contactos.
+     */
+    const nueva = String(e.request.url.query().get('nueva') || '') === '1';
+
+    let fila = nueva ? null : g.cuentaDe(e.auth.id);
     if (!fila) {
       fila = new Record($app.findCollectionByNameOrId('google_cuenta'));
       fila.set('usuario', e.auth.id);
       fila.set('calendario', 'primary');
+      // La primera es la del calendario. Las demás, no.
+      fila.set('principal', g.cuentasDe(e.auth.id).length === 0);
+      // El email se completa en la vuelta, cuando Google dice quién entró. Va
+      // un valor provisorio y único porque el índice es (usuario, email) y dos
+      // filas a medio conectar con el email vacío chocarían entre ellas.
+      fila.set('email', 'conectando-' + estado.slice(0, 10));
     }
     fila.set('estado_oauth', estado);
     $app.save(fila);
@@ -57,7 +77,10 @@ routerAdd(
         // Sin `prompt=consent`, la segunda vez NO lo manda y no queda forma de
         // escribir en el calendario sin la persona presente.
         access_type: 'offline',
-        prompt: 'consent',
+        // Para una cuenta NUEVA se pide además el selector: sin
+        // `select_account`, Google entra derecho con la sesión que ya está
+        // abierta en el navegador y termina reconectando la misma cuenta.
+        prompt: nueva ? 'consent select_account' : 'consent',
         state: estado,
       });
 
@@ -114,11 +137,44 @@ routerAdd('GET', '/api/google/callback', (e) => {
     if (quien.statusCode === 200 && quien.json) email = quien.json.email || '';
   } catch (_) {}
 
+  /*
+   * SI ESA CUENTA YA ESTABA CONECTADA, se actualiza la que hay y se tira la
+   * fila nueva. Sin esto, conectar dos veces la misma cuenta choca contra el
+   * índice único (usuario, email) y la vuelta termina en un error que no dice
+   * nada — cuando en realidad no pasó nada malo: ya estaba.
+   */
+  if (email) {
+    try {
+      const ya = $app.findFirstRecordByFilter(
+        'google_cuenta',
+        'usuario = {:u} && email = {:e}',
+        { u: fila.get('usuario'), e: email },
+      );
+      if (ya && ya.id !== fila.id) {
+        ya.set('refresh_token', res.json.refresh_token);
+        ya.set('estado_oauth', '');
+        $app.save(ya);
+        // La fila a medio conectar no queda dando vueltas.
+        try { $app.delete(fila); } catch (_) {}
+        return volver('esa cuenta ya estaba conectada, se renovo el permiso');
+      }
+    } catch (_) {
+      // No habia otra con ese email. Sigue el camino normal.
+    }
+  }
+
   fila.set('refresh_token', res.json.refresh_token);
   fila.set('email', email);
   fila.set('estado_oauth', ''); // se quema: un state sirve una sola vez
   if (!fila.get('calendario')) fila.set('calendario', 'primary');
   $app.save(fila);
+
+  // Una cuenta conectada SOLO PARA LEER no trae el calendario: no es la que
+  // escribe las reuniones y traerle un ano de eventos seria llenar la agenda
+  // con el calendario personal de alguien.
+  if (!fila.get('principal')) {
+    return volver('cuenta conectada: ' + (email || 'sin correo'));
+  }
 
   // Y se trae el historico ACA MISMO, sin que nadie apriete nada.
   //

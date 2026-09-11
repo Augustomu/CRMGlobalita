@@ -15,6 +15,55 @@
  * Recibe la fecha para poder testearlo: sin eso, el test dependería del reloj
  * de la máquina que lo corre.
  */
+/**
+ * La hora de un instante, **en la zona de quien está mirando**.
+ *
+ * POR QUE EXISTE. Las fechas de los mensajes de WhatsApp se guardan en UTC, que
+ * es lo correcto: un instante es un instante y la zona la pone quien lee. Pero
+ * la pantalla las mostraba **cortando el texto del ISO** —`slice(11, 16)`—, o
+ * sea la hora UTC tal cual. Augusto lo vio el 11/09 comparando el CRM con
+ * WhatsApp al lado: 17:05 contra 11:05. Seis horas, que es justo México.
+ *
+ * Cortar el texto es rápido y es la trampa: funciona si la máquina está en
+ * Londres y en ningún otro lado.
+ *
+ * Devuelve vacío cuando no hay fecha o no se puede leer. Una hora inventada en
+ * un chat es peor que un espacio en blanco: nadie duda de un renglón vacío.
+ */
+export function horaLocal(iso: string | null | undefined): string {
+  const s = String(iso ?? '').trim();
+  if (!s) return '';
+
+  // UNA FECHA SIN ZONA ES LOCAL, no UTC. Lo dice el estándar de JavaScript y
+  // es lo que hay que respetar: el CRM guarda algunas fechas —las reuniones—
+  // como hora local sin zona, y tratarlas como UTC las corría seis horas.
+  // Las de WhatsApp SÍ traen la Z, así que esas se convierten bien.
+  //
+  // Lo único que se normaliza es el espacio que PocketBase pone en vez de la T.
+  let t = s.replace(' ', 'T');
+
+  const d = new Date(t);
+  if (Number.isNaN(d.getTime())) return '';
+
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/**
+ * El día de un instante, en la zona de quien mira.
+ *
+ * Misma historia que `horaLocal`: cortar los diez primeros caracteres del ISO
+ * da el día UTC. Un mensaje de las 21:00 de México es del día siguiente en UTC,
+ * así que el separador «Ayer / Hoy» del chat caía un día corrido.
+ */
+export function diaDeInstante(iso: string | null | undefined): string {
+  const s = String(iso ?? '').trim();
+  if (!s) return '';
+
+  const d = new Date(s.replace(' ', 'T'));
+  if (Number.isNaN(d.getTime())) return '';
+  return diaLocal(d);
+}
+
 export function diaLocal(d: Date = new Date()): string {
   return [
     d.getFullYear(),

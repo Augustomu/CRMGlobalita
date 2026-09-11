@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   anioDe,
+  diaDeInstante,
+  horaLocal,
   cuandoEs,
   ddmm,
   ddmmaa,
@@ -163,4 +165,51 @@ test('«dd/mm/aa» no inventa nada con un ISO incompleto', () => {
   assert.equal(ddmmaa(''), '');
   assert.equal(ddmmaa(null), '');
   assert.equal(ddmmaa(undefined), '');
+});
+
+// ------------------------------------------------ la hora de quien mira
+
+// Augusto, 11/09, con el CRM y WhatsApp abiertos al lado: «el horario está mal,
+// no es la zona horaria correcta». El CRM decía 17:05 donde WhatsApp decía
+// 11:05 — seis horas, que es justo México.
+//
+// La causa: la hora se sacaba CORTANDO EL TEXTO del ISO, o sea la hora UTC tal
+// cual. Es rápido y funciona si la máquina está en Londres.
+
+test('§7.4 · la hora se convierte a la zona de la máquina, no se corta del texto', () => {
+  // 17:05 UTC. En México son las 11:05; en Buenos Aires, las 14:05. Lo que no
+  // puede pasar es que diga 17:05 en las dos.
+  const enUtc = '2026-09-11T17:05:00.000Z';
+  const salida = horaLocal(enUtc);
+
+  const esperado = new Date(enUtc);
+  const hhmm =
+    String(esperado.getHours()).padStart(2, '0') + ':' + String(esperado.getMinutes()).padStart(2, '0');
+  assert.equal(salida, hhmm);
+  assert.match(salida, /^\d{2}:\d{2}$/);
+});
+
+test('§7.4 · una fecha SIN ZONA es local, no UTC', () => {
+  // El CRM guarda algunas fechas —las reuniones— como hora local sin zona.
+  // Tratarlas como UTC las corria seis horas. Las de WhatsApp SI traen la Z.
+  assert.equal(horaLocal('2026-09-08T09:00:00'), '09:00');
+  // Y el espacio que pone PocketBase en vez de la T no cambia nada.
+  assert.equal(horaLocal('2026-09-08 09:00:00'), '09:00');
+});
+
+test('§7.4 · sin fecha no se inventa una hora', () => {
+  // Una hora inventada en un chat es peor que un espacio en blanco: de un
+  // renglón vacío nadie duda.
+  for (const v of ['', null, undefined, 'cualquier cosa', '2026-13-45']) {
+    assert.equal(horaLocal(v as string), '', `valor ${String(v)}`);
+  }
+});
+
+test('§7.4 · el día también es el local, no el UTC', () => {
+  // Un mensaje de las 21:00 de México es del día siguiente en UTC: el
+  // separador «Ayer / Hoy» del chat caía un día corrido.
+  const iso = '2026-09-12T03:30:00.000Z';
+  assert.equal(diaDeInstante(iso), diaLocal(new Date(iso)));
+  assert.equal(diaDeInstante(''), '');
+  assert.equal(diaDeInstante('no es fecha'), '');
 });

@@ -305,12 +305,18 @@ export function CuentasConectadas({
    * El servidor arma la URL —él tiene el client_id— y acá solo se navega. La
    * pantalla no conoce ningún dato de la aplicación de Google.
    */
-  async function conectarGoogle() {
+  /**
+   * @param nueva Conectar OTRA cuenta en vez de reemplazar la que hay.
+   *   La primera es la del calendario; las demás se conectan para leer —hoy, la
+   *   agenda de contactos—. Cambiar en qué calendario se escriben las reuniones
+   *   es otra decisión y no puede ser el efecto secundario de esto.
+   */
+  async function conectarGoogle(nueva = false) {
     setYendoAGoogle(true);
     setGoogleFallo(null);
     try {
       const r = await pb.send<{ listo: boolean; url?: string; motivo?: string }>(
-        '/api/google/inicio',
+        `/api/google/inicio${nueva ? '?nueva=1' : ''}`,
         {},
       );
       if (r.listo && r.url) {
@@ -373,15 +379,22 @@ export function CuentasConectadas({
     try {
       const r = await pb.send<{
         ok?: boolean;
+        cuentas?: number;
         contactos?: number;
+        fallos?: string[];
         chats?: number;
         perfiles?: number;
         error?: string;
       }>('/api/google/contactos', { method: 'POST', body: {} });
 
+      // Los fallos se dicen AUNQUE haya salido bien: si una de tres cuentas no
+      // se pudo leer, el resultado es parcial y hay que saberlo. Un «listo» que
+      // esconde un error es un «listo» que miente.
+      const parcial = r?.fallos?.length ? ` ⚠ ${r.fallos.join(' · ')}` : '';
       setAgenda(
         r?.ok
-          ? `${r.contactos ?? 0} contactos leídos · ${r.chats ?? 0} chats y ${r.perfiles ?? 0} perfiles con nombre nuevo.`
+          ? `${r.contactos ?? 0} contactos de ${r.cuentas ?? 1} cuenta(s) · ` +
+              `${r.chats ?? 0} chats y ${r.perfiles ?? 0} perfiles con nombre nuevo.${parcial}`
           : (r?.error ?? 'No se pudo leer la agenda.'),
       );
     } catch (err) {
@@ -748,6 +761,23 @@ export function CuentasConectadas({
                 onClick={() => void traerHistorico()}
               >
                 {trayendo ? 'trayendo…' : 'Traer el histórico'}
+              </button>
+            )}
+
+            {/* Conectar OTRA cuenta de Google.
+                Los contactos de una persona están repartidos entre la cuenta de
+                trabajo y la personal, y «Traer los nombres» lee todas las
+                conectadas. La primera sigue siendo la del calendario: conectar
+                una segunda no cambia dónde se escriben las reuniones. */}
+            {google?.conectado && !confirmarCorte && (
+              <button
+                type="button"
+                className="boton-mini"
+                disabled={yendoAGoogle}
+                title="Conectar otra cuenta de Google para leer también su agenda de contactos. No cambia el calendario donde se escriben las reuniones."
+                onClick={() => void conectarGoogle(true)}
+              >
+                Conectar otra cuenta
               </button>
             )}
 

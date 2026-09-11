@@ -3,7 +3,7 @@ import { COLUMNA_WA } from '@crm/core/anchos';
 import { useAncho } from '../../lib/useAncho';
 import { conDias, ultimoTexto, type MensajeChat } from '@crm/core/chat';
 import { paraWhatsApp } from '@crm/core/telefono';
-import { diaLocal } from '@crm/core/fecha';
+import { diaLocal, horaLocal } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
 
 interface ChatRecord {
@@ -71,10 +71,9 @@ function iniciales(de: string): string {
     .toUpperCase();
 }
 
-function hora(iso: string): string {
-  const s = String(iso ?? '');
-  return s.length >= 16 ? s.slice(11, 16) : '';
-}
+// La hora la convierte core: cortar el texto del ISO da la hora UTC, y el
+// 11/09 eso mostraba 17:05 donde WhatsApp decia 11:05.
+const hora = horaLocal;
 
 /**
  * Los últimos ocho dígitos de un teléfono.

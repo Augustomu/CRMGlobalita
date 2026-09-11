@@ -80,11 +80,44 @@ function redirectUri(c) {
 
 /** La fila de Google de un usuario, o null si no conecto. */
 function cuentaDe(usuarioId) {
+  // LA DEL CALENDARIO, que es una sola. Desde el 11/09 una persona puede tener
+  // varias cuentas de Google conectadas —para leer la agenda de todas— pero el
+  // calendario no admite ambiguedad: una reunion se escribe en UNO, y con dos
+  // conectadas habria que preguntar en cual cada vez.
+  //
+  // El `|| usuario = {:u}` del final es para las conexiones que existian antes
+  // de que hubiera `principal`: si ninguna esta marcada, vale la que haya.
   try {
-    return $app.findFirstRecordByFilter('google_cuenta', 'usuario = {:u}', { u: usuarioId });
+    return $app.findFirstRecordByFilter(
+      'google_cuenta',
+      'usuario = {:u} && principal = true',
+      { u: usuarioId },
+    );
   } catch (_) {
-    // findFirstRecordByFilter tira si no hay filas; no es un error.
-    return null;
+    try {
+      return $app.findFirstRecordByFilter('google_cuenta', 'usuario = {:u}', { u: usuarioId });
+    } catch (__) {
+      // findFirstRecordByFilter tira si no hay filas; no es un error.
+      return null;
+    }
+  }
+}
+
+/**
+ * TODAS las cuentas de Google de una persona.
+ *
+ * Para lo que se LEE —la agenda, hoy— tiene sentido mirar todas: los contactos
+ * de alguien estan repartidos entre la cuenta de trabajo y la personal, y
+ * pedirle que elija cual leer es pedirle que sepa de antemano en cual esta cada
+ * telefono.
+ */
+function cuentasDe(usuarioId) {
+  try {
+    return $app.findRecordsByFilter('google_cuenta', 'usuario = {:u}', '-principal', 50, 0, {
+      u: usuarioId,
+    });
+  } catch (_) {
+    return [];
   }
 }
 
@@ -367,6 +400,7 @@ module.exports = {
   configurado,
   redirectUri,
   cuentaDe,
+  cuentasDe,
   form,
   sincronizar,
   moverEventoExterno,
