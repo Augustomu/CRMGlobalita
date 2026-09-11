@@ -312,7 +312,20 @@ async function vincular(abrev: string): Promise<number> {
               ultima_senal_wa: new Date().toISOString(),
               qr_wa: '',
               qr_wa_desde: '',
-              wa_motivo: '',
+              /*
+               * UN PEDIDO DE BAJA NO SE BORRA AL CONECTAR.
+               *
+               * `wa_motivo` guarda por qué la sesión NO está viva, así que al
+               * conectar se limpia — salvo cuando dice «desvincular», que no es
+               * un motivo sino una ORDEN pendiente.
+               *
+               * El 11/09 Augusto apretó Desvincular sin ningún worker vivo. El
+               * pedido quedó escrito, el worker arrancó después, conectó, y su
+               * primera escritura lo borró: cuando el reloj fue a mirar si
+               * había algo que hacer, ya no había nada. Dos veces seguidas, y
+               * desde la pantalla se ve igual que un botón roto.
+               */
+              wa_motivo: cuenta.wa_motivo === 'desvincular' ? 'desvincular' : '',
               wa_numero: numero,
             });
             intento = 0;

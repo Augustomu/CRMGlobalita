@@ -526,25 +526,6 @@ export function CuentasConectadas({
             </div>
           )}
 
-          {confirmarBaja && (
-            <div className="cc-fila cc-nota">
-              <span className="cc-estado">
-                Se cierra la sesión de {confirmarBaja} y el dispositivo sale del teléfono. Para
-                volver hay que escanear un QR nuevo.
-              </span>
-              <button
-                type="button"
-                className="boton-principal"
-                onClick={() => void desvincular(confirmarBaja)}
-              >
-                Desvincular
-              </button>
-              <button type="button" className="boton-mini" onClick={() => setConfirmarBaja(null)}>
-                Dejarlo como está
-              </button>
-            </div>
-          )}
-
           {conWhatsapp.length === 0 && (
             <div className="cc-fila cc-nota">
               <span className="cc-estado">
@@ -570,27 +551,56 @@ export function CuentasConectadas({
                 <span className="cc-detalle">
                   {viva ? '' : espera ? `${espera} ${espera === 1 ? 'frenado' : 'frenados'}` : ''}
                 </span>
-                {/* Desvincular sólo aparece con la sesión viva: sobre una
-                    caída no hay nada que dar de baja, y un botón que no hace
-                    nada es peor que no tenerlo. */}
-                {viva && (
-                  <button
-                    type="button"
-                    className="boton-mini"
-                    title="Cerrar la sesión y sacar el dispositivo del teléfono"
-                    onClick={() => setConfirmarBaja(c.abrev)}
-                  >
-                    Desvincular
-                  </button>
+                {/* La confirmación va EN LA MISMA FILA, reemplazando a los
+                    botones, igual que la de Google unas líneas más abajo. La
+                    versión anterior abría un bloque aparte a todo lo ancho:
+                    quedaba un botón gigante y el texto suelto arriba. Cuando ya
+                    hay un patrón para «confirmar algo que no se deshace», se
+                    usa ese — dos formas distintas de preguntar lo mismo en una
+                    pantalla es lo que la vuelve difícil de leer. */}
+                {viva && confirmarBaja === c.abrev ? (
+                  <>
+                    <button
+                      type="button"
+                      className="boton-mini-peligro"
+                      title="Cierra la sesión y saca el dispositivo del teléfono. Para volver hay que escanear un QR nuevo."
+                      onClick={() => void desvincular(c.abrev)}
+                    >
+                      Sí, desvincular
+                    </button>
+                    <button
+                      type="button"
+                      className="boton-mini"
+                      onClick={() => setConfirmarBaja(null)}
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Sólo con la sesión viva: sobre una caída no hay nada que
+                        dar de baja, y un botón que no hace nada es peor que no
+                        tenerlo. */}
+                    {viva && (
+                      <button
+                        type="button"
+                        className="boton-mini"
+                        title="Cerrar la sesión y sacar el dispositivo del teléfono"
+                        onClick={() => setConfirmarBaja(c.abrev)}
+                      >
+                        Desvincular
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className={viva ? 'boton-mini' : 'boton-principal'}
+                      title={viva ? 'Volver a vincular este número' : 'Vincular este número'}
+                      onClick={() => void abrirVinculo(c.abrev)}
+                    >
+                      {viva ? 'QR' : 'Vincular'}
+                    </button>
+                  </>
                 )}
-                <button
-                  type="button"
-                  className={viva ? 'boton-mini' : 'boton-principal'}
-                  title={viva ? 'Volver a vincular este número' : 'Vincular este número'}
-                  onClick={() => void abrirVinculo(c.abrev)}
-                >
-                  {viva ? 'QR' : 'Vincular'}
-                </button>
               </div>
             );
           })}

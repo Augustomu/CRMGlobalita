@@ -506,11 +506,8 @@ export function escuchar(
    * worker lo ve por la suscripción en vivo que PocketBase ya ofrece: sin
    * puertos abiertos ni una forma nueva de hablarle a este proceso.
    */
-  void pb
-    .collection('cuenta')
-    .subscribe(cuentaId, (e) => {
-      if (String(e.record?.wa_motivo ?? '') !== 'desvincular') return;
-      void (async () => {
+  const darDeBaja = () => {
+    void (async () => {
         decir('');
         decir('  Pidieron desvincular desde el CRM.');
         try {
@@ -530,12 +527,41 @@ export function escuchar(
         decir('  Listo. Apretá «Vincular» cuando quieras y va a pedir un QR nuevo.');
         process.exit(0);
       })();
-    })
-    .catch(() => {
-      // Sin suscripción el worker anda igual; sólo no se puede desvincular
-      // desde la pantalla. Se dice para que no se descubra apretando el botón.
-      decir('  (no pude escuchar el pedido de desvincular: usá el teléfono)');
-    });
+  };
+
+  /*
+   * SE PREGUNTA CADA DIEZ SEGUNDOS. No se usa la suscripción en vivo.
+   *
+   * PocketBase ofrece realtime y la pantalla lo usa — pero en el navegador, que
+   * tiene `EventSource` de fábrica. En Node esa suscripción se abre sin quejarse
+   * y **no llega ningún evento**: se probó el 11/09 contra la sesión real,
+   * apretando el botón con el worker vivo, y el worker no se enteró. Un fallo
+   * silencioso, que es el peor de los dos mundos.
+   *
+   * Preguntar cada diez segundos es una consulta a una fila por índice, contra
+   * una base que está en esta misma máquina. Es más barato que el problema que
+   * evita, y **no puede fallar en silencio**.
+   *
+   * Y ATIENDE EL PEDIDO QUE YA ESTABA. El 11/09 Augusto apretó Desvincular sin
+   * ningún worker vivo —lo había matado un reinicio— y el pedido quedó escrito
+   * sin nadie que lo ejecutara: desde la pantalla, un botón que no hace nada.
+   * La primera vuelta del reloj es inmediata justamente por eso.
+   */
+  let dandoDeBaja = false;
+  const mirarSiHayPedido = async () => {
+    if (dandoDeBaja) return;
+    try {
+      const c = await pb.collection('cuenta').getOne(cuentaId);
+      if (String((c as { wa_motivo?: string }).wa_motivo ?? '') !== 'desvincular') return;
+      dandoDeBaja = true;
+      darDeBaja();
+    } catch {
+      // La base puede estar reiniciándose. Se vuelve a mirar en diez segundos.
+    }
+  };
+  void mirarSiHayPedido();
+  const reloj = setInterval(() => void mirarSiHayPedido(), 10000);
+  reloj.unref?.();
 
   if (dias > 0) {
     let total = 0;
