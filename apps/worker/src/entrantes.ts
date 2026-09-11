@@ -44,7 +44,6 @@
  */
 import type { WASocket } from '@whiskeysockets/baileys';
 import { decidirRuteoEntrante, type PerfilConTelefono } from '@crm/core/ruteo';
-import { normalizarTelefono } from '@crm/core/telefono';
 import { DIAS_DE_HISTORIAL, entraEnElHistorial } from '@crm/core/chat';
 import type PocketBase from 'pocketbase';
 
@@ -182,8 +181,25 @@ export async function guardarEntrante(
   pais: string,
   e: Entrante,
 ): Promise<string> {
-  const tel = normalizarTelefono(e.telefono, pais);
-  const e164 = tel.valido ? tel.valor : e.telefono.replace(/\D+/g, '');
+  /*
+   * EL NUMERO DE UN JID YA ES E.164. No se normaliza contra ningún país.
+   *
+   * Encontrado el 11/09 revisando los primeros entrantes reales: un mexicano
+   * había quedado guardado como `545215523036183`. WhatsApp había mandado
+   * `5215523036183` —52 de México, ya internacional— y `normalizarTelefono`,
+   * al ver que no empezaba con el 54 de Argentina, le pegó el 54 adelante.
+   *
+   * Con un solo país de prospección no se notaba. Acá se prospecta en México y
+   * Brasil, así que **la mayoría de los números entrantes no son argentinos**:
+   * el país configurado los rompía a casi todos, y un teléfono roto no cruza
+   * con ningún perfil nunca más.
+   *
+   * `normalizarTelefono` sigue siendo lo correcto para lo que TIPEA una
+   * persona —ahí sí falta el país—. Un JID no: WhatsApp no tiene números
+   * locales.
+   */
+  void pais;
+  const e164 = e.telefono.replace(/\D+/g, '');
 
   const candidatos = await candidatosPorTelefono(pb, e164);
   const r = decidirRuteoEntrante(cuentaId, candidatos);
