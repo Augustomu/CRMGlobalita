@@ -1145,20 +1145,33 @@ página de revisión.
       páginas del paginado de Sales Navigator está anotado como **hipótesis** en
       `TOPE_DE_PAGINAS`. La primera corrida la tiene que hacer Augusto y hay que
       mirarla: `node apps/worker/src/medir.ts <ABREV> --simular` primero.
-- [ ] 🔒 **8.5 · WhatsApp con Baileys.** Una sola cuenta, según Augusto.
-      **El número ya está decidido**: lo pasó el 10/09 y quedó en `.env` como
-      `WA_NUMERO` (no en el repo: es público). Ya no bloquea.
-      **Y `apps/worker/` ya existe** desde el 10/09, así que el primer paso de la
-      lista de abajo está hecho. Falta el adaptador de Baileys en sí.
-      Pedido el 09/09: *«desarrollar la Baileys para conectar WhatsApp»*.
-      Lo que implica, en orden: `apps/worker/` desde cero (hoy está vacío) →
-      Baileys con la sesión en disco y el QR servido por una ruta del CRM →
-      la cola de envíos (`cola`, 0 filas) → el tope diario por cuenta (hoy 30,
-      configurable) → y el enganche con los chats entrantes, que ya tienen tabla
-      (`entrante`, 4 filas) y pantalla.
-      ⚠️ **Baileys no es una API oficial de WhatsApp.** Una cuenta que manda de
-      más se bloquea, y el tope diario existe por eso. Antes de conectar el
-      número de verdad hay que decidir **con qué número se prueba**.
+- [x] ✅ **8.5 a · Vincular WhatsApp — HECHO el 10/09.** Pedido el 09/09:
+      *«desarrollar la Baileys para conectar WhatsApp»*.
+
+      `node apps/worker/src/whatsapp.ts vincular <ABREV>` dibuja el QR en la
+      terminal —verificado— y lo escribe en la cuenta para que también lo muestre
+      la pantalla; `estado <ABREV>` dice cómo está sin tocar nada. Baileys
+      `7.0.0-rc14`. Las reglas —reconexión, caducidad del QR, cuándo dejar de
+      insistir, si la credencial murió— en `core/whatsapp.ts` con 15 tests.
+      Migración 1788609000. Manual §8.2.
+
+      **El número lo pasó Augusto el 10/09** y vive en `.env` como `WA_NUMERO`,
+      nunca en el repo. Si alguien escanea con el teléfono equivocado, el comando
+      lo dice en el momento en vez de que se descubra el día que sale un mensaje.
+
+      **NO MANDA NINGÚN MENSAJE, y es a propósito**: una sesión que sólo está
+      conectada no se bloquea. Es el paso con menos riesgo de §8.2.
+
+- [ ] 🔒 **8.5 b · Mandar por WhatsApp.** Lo que falta, en orden: la cola de
+      envíos (`cola`, 0 filas) → el tope diario por cuenta (hoy 30, configurable)
+      → los acks a `mensaje.ack` → y el enganche con los entrantes, que ya tienen
+      tabla (`entrante`) y pantalla (`WaPersonal.tsx`), y cuyo comentario dice
+      textual que «el worker va a escribir ahí».
+      ⚠️ **Baileys no es una API oficial.** Una cuenta que manda de más se
+      bloquea, el bloqueo puede ser permanente y no hay soporte al que apelar. El
+      tope diario y el calentamiento existen por eso. Y §3.11 es decisión cerrada:
+      el mensaje de un lead va a `mensaje`, sólo el de un desconocido a
+      `chat_personal`.
 - [ ] **8.6 · Testear la integración con Calendar de punta a punta.** Pedido el
       09/09. Hoy 8.1 está marcado hecho porque el código está y sincroniza —hay
       1.769 eventos traídos y 3 ya vinculados a un lead— pero **nunca se probó
