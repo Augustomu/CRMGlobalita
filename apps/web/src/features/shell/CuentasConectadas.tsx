@@ -160,6 +160,47 @@ export function CuentasConectadas({
   }, [qr]);
 
   /**
+   * Mientras el panel está abierto, se PREGUNTA por la cuenta. No se espera.
+   *
+   * Arriba hay una suscripción en vivo y está bien: cuando anda, el QR aparece
+   * solo. Pero se apoya en una conexión abierta contra PocketBase, y esa
+   * conexión se corta sin avisar — el servidor se reinicia, la pestaña estuvo
+   * dormida, la red parpadeó. Cuando eso pasa la pantalla se queda esperando un
+   * cambio que ya ocurrió.
+   *
+   * El 11/09 pasó tres veces seguidas: el QR estaba escrito en la base,
+   * fresco, y la pantalla seguía diciendo «prendiendo la sesión». Desde el otro
+   * lado eso es indistinguible de un worker que no arrancó.
+   *
+   * Cada tres segundos y SÓLO con el panel abierto: es una fila por su id
+   * contra una base que casi siempre está en la misma máquina, y dura lo que
+   * dura escanear un código. La suscripción sigue siendo el camino rápido;
+   * esto es el que no se puede romper en silencio.
+   */
+  useEffect(() => {
+    if (!qr) return;
+    let vivo = true;
+    const mirar = async () => {
+      const c = cuentas.find((x) => x.abrev === qr);
+      if (!c) return;
+      try {
+        const fresca = await pb.collection('cuenta').getOne<CuentaRecord>(c.id);
+        if (!vivo) return;
+        setCuentas((antes) => antes.map((x) => (x.id === fresca.id ? { ...x, ...fresca } : x)));
+      } catch {
+        // La base puede estar reiniciándose. Se vuelve a mirar en tres segundos.
+      }
+    };
+    void mirar();
+    const t = setInterval(() => void mirar(), 3000);
+    return () => {
+      vivo = false;
+      clearInterval(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qr]);
+
+  /**
    * Llevar la vista al panel cuando se abre.
    *
    * El panel se dibuja al final del cuerpo, debajo de LinkedIn y de Google. Con
