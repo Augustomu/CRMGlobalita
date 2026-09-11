@@ -5703,7 +5703,12 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 }
 .cc-fila {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 84px minmax(0, 90px) auto;
+  /* UNA SOLA GRILLA PARA LAS TRES SECCIONES. Augusto, 11/09: «el estado
+     deberia aparecer todo alineado y del lado derecho desconectar, tanto para
+     LinkedIn, WhatsApp como Google». Con anchos distintos por seccion el ojo
+     no puede recorrer la columna de estados de arriba abajo, que es para lo
+     que se abre esta pantalla. */
+  grid-template-columns: 44px minmax(0, 1fr) 112px minmax(0, 92px) max-content;
   gap: 8px;
   align-items: center;
   padding: 7px 2px;
@@ -7210,13 +7215,3 @@ textarea.agenda-hover-notas:focus { border-color: var(--accent); }
 /* El icono de «abrir en otra aplicacion» de la fila del chat. */
 .wap-accion svg { width: 13px; height: 13px; display: block; }
 
-/* La fila de Google: su propia grilla.
-   `.cc-fila` tiene cinco columnas pensadas para LinkedIn y WhatsApp —pastilla,
-   nombre, estado, detalle, un boton—. La de Google tiene un CORREO, que es
-   largo, y dos o tres botones: la ultima columna se comia el ancho y el correo
-   salia como «cuenta...». Aca el correo manda y los botones se acomodan
-   despues, envolviendo si hace falta. */
-.cc-fila-google {
-  grid-template-columns: 42px minmax(140px, 1fr) auto auto;
-}
-.cc-fila-google .cc-perfil { min-width: 0; }

@@ -548,6 +548,10 @@ export function CuentasConectadas({
                 <span className="cc-detalle">
                   {viva ? '' : `${pendientes.get(c.id) ?? 0} en cola esperando`}
                 </span>
+                {/* Vacía, pero presente: sin la quinta celda la fila de
+                    LinkedIn tiene cuatro y las otras cinco, y los estados
+                    dejan de estar en la misma columna. */}
+                <span className="cc-acciones" />
               </div>
             );
           })}
@@ -618,13 +622,16 @@ export function CuentasConectadas({
                 <span className="cc-detalle">
                   {viva ? '' : espera ? `${espera} ${espera === 1 ? 'frenado' : 'frenados'}` : ''}
                 </span>
-                {/* La confirmación va EN LA MISMA FILA, reemplazando a los
-                    botones, igual que la de Google unas líneas más abajo. La
-                    versión anterior abría un bloque aparte a todo lo ancho:
-                    quedaba un botón gigante y el texto suelto arriba. Cuando ya
-                    hay un patrón para «confirmar algo que no se deshace», se
-                    usa ese — dos formas distintas de preguntar lo mismo en una
-                    pantalla es lo que la vuelve difícil de leer. */}
+                {/* TODOS LOS BOTONES EN LA QUINTA CELDA.
+                    Sueltos, cada uno ocupaba una celda de la grilla y la fila
+                    crecía a lo alto: el «QR» caía debajo del nombre y los
+                    estados de WhatsApp dejaban de estar alineados con los de
+                    LinkedIn.
+
+                    La confirmación va en la MISMA fila, reemplazando a los
+                    botones, igual que la de Google más abajo: cuando ya hay un
+                    patrón para «confirmar algo que no se deshace», se usa ese. */}
+                <span className="cc-acciones">
                 {viva && confirmarBaja === c.abrev ? (
                   <>
                     <button
@@ -668,6 +675,7 @@ export function CuentasConectadas({
                     </button>
                   </>
                 )}
+                </span>
               </div>
             );
           })}
@@ -703,7 +711,7 @@ export function CuentasConectadas({
           {(google?.cuentas ?? [])
             .filter((c) => !c.principal && c.conectada)
             .map((c) => (
-              <div key={c.id} className="cc-fila cc-fila-google">
+              <div key={c.id} className="cc-fila">
                 <span className="pastilla">ag</span>
                 <span className="cc-perfil">{c.email || 'sin correo'}</span>
                 <span className="cc-estado cc-ok">
@@ -716,7 +724,7 @@ export function CuentasConectadas({
               </div>
             ))}
 
-          <div className="cc-fila cc-fila-google">
+          <div className="cc-fila">
             <span className="pastilla">cal</span>
             <span className="cc-perfil">
               {google?.conectado

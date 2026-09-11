@@ -331,7 +331,11 @@ export async function guardarEntrante(
       // se podía pegar después con el resto de su conversación.
       wa_jid: e.jid || '',
       telefono: e164,
-      nombre: e.nombre || '',
+      // EL NOMBRE DE WHATSAPP VA A SU CAMPO.  queda para la agenda de
+      // Google y para lo que escriba una persona: hasta el 11/09 caian todos
+      // en el mismo, y como la agenda no pisa lo que ya esta, no podia
+      // completar ni un solo chat de los 56.
+      nombre_wa: e.nombre || '',
       mensajes: [nuevo],
       no_leido: true,
     });
@@ -512,7 +516,7 @@ export async function guardarHistorial(
       await pb.collection('chat_personal').update(chatId, {
         mensajes: todos,
         wa_jid: clave,
-        ...(c.nombre ? { nombre: c.nombre } : {}),
+        ...(c.nombre ? { nombre_wa: c.nombre } : {}),
         ...(c.tel ? { telefono: c.tel } : {}),
       });
     } else {
@@ -520,7 +524,7 @@ export async function guardarHistorial(
         cuenta: cuentaId,
         wa_jid: clave,
         telefono: c.tel,
-        nombre: c.nombre,
+        nombre_wa: c.nombre,
         mensajes: todos,
         no_leido: false,
       });

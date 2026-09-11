@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { COLUMNA_WA } from '@crm/core/anchos';
 import { useAncho } from '../../lib/useAncho';
 import { conDias, ultimoTexto, type MensajeChat } from '@crm/core/chat';
-import { paraWhatsApp } from '@crm/core/telefono';
 import { diaLocal, horaLocal } from '@crm/core/fecha';
 import { pb } from '../../lib/pocketbase';
 import { Emojis } from './Emojis';
@@ -13,6 +12,8 @@ interface ChatRecord {
   nombre: string;
   telefono: string;
   no_leido: boolean;
+  /** El que dijo WhatsApp. `nombre` es el de la agenda o el que puso alguien. */
+  nombre_wa?: string;
   mensajes: MensajeChat[] | null;
   /** La foto de perfil que trajo el worker. Vacio = no hay. */
   foto?: string;
@@ -60,6 +61,17 @@ function porUltimoMensaje<T extends { mensajes: MensajeChat[] | null; updated?: 
  * teléfono salen los últimos dos dígitos, que es lo único que lo distingue de
  * otro teléfono a simple vista.
  */
+/**
+ * El nombre que se muestra.
+ *
+ * `nombre` es el de la agenda de Google o el que escribió una persona;
+ * `nombre_wa` es el que la otra persona eligió para sí misma. El primero gana
+ * cuando existe: es el que Augusto reconoce al recorrer la lista.
+ */
+function comoSeLlama(c: { nombre?: string; nombre_wa?: string }): string {
+  return String(c.nombre ?? '').trim() || String(c.nombre_wa ?? '').trim();
+}
+
 function iniciales(de: string): string {
   const s = String(de ?? '').trim();
   if (!s) return '·';
@@ -93,6 +105,10 @@ function corto(tel: string): string {
   return t.length > 6 ? `…${t.slice(-6)}` : t;
 }
 
+/**
+ *  ya no se usa: se iba a la ficha despues de «Mover a FU», y ese
+ * boton se fue el 11/09. Se deja en las props para no tocar quien la llama.
+ */
 interface Props {
   onIrAlLead: (id: string) => void;
 }
@@ -106,7 +122,7 @@ interface Props {
  * pila es el orden en que hay que mirarlas: primero lo que no requiere nada,
  * después lo que sí, y al final el archivo.
  */
-export function WaPersonal({ onIrAlLead }: Props) {
+export function WaPersonal(_props: Props) {
   /**
    * El toggle de Gmail (§8.5, decisión #8).
    *
@@ -277,37 +293,10 @@ export function WaPersonal({ onIrAlLead }: Props) {
     }
   }
 
-  /**
-   * «Mover a FU»: crea el perfil y el lead bajo la cuenta que recibió el
-   * mensaje, y abre la ficha.
-   *
-   * Crea SIEMPRE con el teléfono como dato del perfil (D08), no del lead: si el
-   * mismo número aparece mañana en otra cuenta, tiene que encontrar este mismo
-   * perfil y no armar un duplicado.
-   */
-  async function moverAFollowup(telefono: string, nombre: string, cuenta: string, entranteId?: string, chatId?: string) {
-    try {
-      const perfil = await pb.collection('perfil').create({
-        nombre: nombre || corto(telefono),
-        telefono,
-        telefono_raw: telefono,
-        telefono_valido: Boolean(paraWhatsApp(telefono)),
-      });
-      const lead = await pb.collection('lead').create({
-        perfil: perfil.id,
-        cuenta,
-        etapa: 'R0',
-        situacion: 'en_curso',
-        lista: 'Entrante de WhatsApp',
-      });
-      if (entranteId) await pb.collection('entrante').update(entranteId, { resuelto: true });
-      if (chatId) await pb.collection('chat_personal').delete(chatId);
-      await recargar();
-      onIrAlLead(lead.id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }
+  // `moverAFollowup` se fue el 11/09 junto con su botón. Con el diseño nuevo,
+  // si alguien ya es lead se le contesta desde donde está el lead; y si no lo
+  // es, esta pantalla es donde tiene que quedarse. Crear un lead desde acá era
+  // el paso que sobraba.
 
   async function enviar() {
     if (!activo || !borrador.trim()) return;
@@ -339,9 +328,12 @@ export function WaPersonal({ onIrAlLead }: Props) {
     >
       <div className="wap-col">
         <div className="wap-cabecera">
-          <span className="wap-titulo">WA Personal</span>
-          <span className="campo-ayuda">amigos y familia</span>
-          <span className="campo-ayuda tabular al-final">{chats.length} chats</span>
+          {/* SIN TÍTULO NI SUBTÍTULO. Augusto, 11/09: «cambiá el título de WA
+              PERSONAL amigos y familia, eliminá todo eso». Tiene razón: la
+              solapa de arriba ya dice dónde está uno, y «amigos y familia»
+              describía un criterio que ya no existe — lo que queda acá es todo
+              lo que NO es un lead, no sólo lo personal. */}
+          <span className="campo-ayuda tabular">{chats.length} chats</span>
         </div>
 
         {/*
@@ -422,7 +414,7 @@ export function WaPersonal({ onIrAlLead }: Props) {
                 />
               ) : (
                 <span className="wap-foto wap-foto-vacia" aria-hidden="true">
-                  {iniciales(c.nombre || c.telefono)}
+                  {iniciales(comoSeLlama(c) || c.telefono)}
                 </span>
               )}
               <button
@@ -453,8 +445,8 @@ export function WaPersonal({ onIrAlLead }: Props) {
                   */}
                   <span className="wap-chat-nombre">
                     {telefonosEnLaBase.has(ultimosOcho(c.telefono))
-                      ? c.nombre
-                      : String(c.telefono ?? '').trim() || c.nombre}
+                      ? comoSeLlama(c)
+                      : String(c.telefono ?? '').trim() || comoSeLlama(c)}
                   </span>
                   {/*
                     LAS FLECHAS VAN ACÁ, pegadas al nombre, y la hora se fue al
@@ -544,17 +536,10 @@ export function WaPersonal({ onIrAlLead }: Props) {
 
       <div className="wap-hilo">
         <div className="wap-hilo-header">
-          <span className="wap-hilo-nombre">{activo?.nombre ?? 'sin chat seleccionado'}</span>
-          {activo && (
-            <button
-              type="button"
-              className="wap-boton al-final"
-              title="Es un contacto de trabajo: lo pasa a la base y abre su ficha en Follow-up"
-              onClick={() => void moverAFollowup(activo.telefono, activo.nombre, activo.cuenta, undefined, activo.id)}
-            >
-              Mover a FU
-            </button>
-          )}
+          <span className="wap-hilo-nombre">{(activo && comoSeLlama(activo)) || corto(activo?.telefono ?? '') || 'sin chat seleccionado'}</span>
+          {/* «Mover a FU» se fue el 11/09. Con el diseño nuevo, si alguien ya
+              es lead se le contesta desde donde esta el lead; y si no lo es,
+              esta pantalla es justamente donde tiene que quedarse. */}
         </div>
 
         {error && <div className="aviso-error">{error}</div>}
