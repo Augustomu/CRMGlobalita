@@ -138,6 +138,42 @@ export function entraEnElHistorial(
   return antiguedadEnDias <= Math.max(0, dias);
 }
 
+/**
+ * Cuántos mensajes se guardan por conversación.
+ *
+ * POR QUE HAY UN TOPE. Los mensajes de un chat viven en UN campo, como una
+ * lista. Eso es cómodo —se lee el chat entero de una— y tiene un límite real:
+ * el campo admite 500 KB, y el 11/09 una conversación de dos meses llegó a
+ * 4.468 mensajes y 481 KB. La siguiente escritura falló entera: no entró ni
+ * ese mensaje ni los de las conversaciones que venían después en la tanda.
+ *
+ * Y hay un costo antes del límite: la lista se reescribe COMPLETA cada vez que
+ * llega un mensaje. Medio mega de ida y vuelta por cada «dale» que entra.
+ *
+ * 400 es más de lo que nadie recorre en esta pantalla —son meses de una
+ * conversación activa— y deja el campo en menos de 50 KB.
+ */
+export const TOPE_MENSAJES_POR_CHAT = 400;
+
+/**
+ * Deja los más recientes y descarta los más viejos.
+ *
+ * SE TIRAN LOS VIEJOS Y NO LOS NUEVOS, que es lo contrario de lo que hace un
+ * tope mal escrito. Lo que importa de un chat es en qué quedó.
+ *
+ * Asume la lista ordenada por fecha, que es como la guarda el worker. No
+ * reordena acá: ordenar en una función que dice «recortar» es hacer dos cosas,
+ * y la segunda no se ve.
+ */
+export function recortarChat(
+  mensajes: MensajeChat[],
+  tope: number = TOPE_MENSAJES_POR_CHAT,
+): MensajeChat[] {
+  const t = Math.max(1, Math.floor(Number(tope) || TOPE_MENSAJES_POR_CHAT));
+  if (!Array.isArray(mensajes) || mensajes.length <= t) return mensajes ?? [];
+  return mensajes.slice(mensajes.length - t);
+}
+
 export type EstadoConversacion = 'sin_leer' | 'sin_responder' | 'respondido' | 'sin_mensajes';
 
 export function estadoDeConversacion(

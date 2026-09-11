@@ -4147,7 +4147,11 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* El fondo del hilo, como el de WhatsApp: pedido el 11/09. Es la unica
+   pantalla del CRM que imita a otra aplicacion, y es a proposito — aca se esta
+   mirando una conversacion de WhatsApp y el parecido la hace reconocible. */
 .wap-burbujas {
+  background: var(--wa-fondo);
   min-height: 0;
   overflow-y: auto;
   padding: 12px 14px;
@@ -4173,9 +4177,9 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   max-width: 70%;
   padding: 6px 10px 16px;
   border-radius: 2px 8px 8px 8px;
-  background: var(--bg);
-  color: var(--text);
-  border: .5px solid var(--border);
+  background: var(--wa-burbuja-in);
+  color: var(--wa-texto);
+  border: .5px solid var(--wa-borde);
   font-size: var(--txt-base);
   line-height: 1.45;
   position: relative;
@@ -4184,18 +4188,17 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 }
 .wap-burbuja-out {
   border-radius: 8px 2px 8px 8px;
-  background: var(--success-light);
-  color: var(--brand-whatsapp);
-  border-color: var(--teal-br);
+  background: var(--wa-burbuja-out);
+  color: var(--wa-texto);
+  border-color: var(--wa-borde);
 }
 .wap-burbuja-hora {
   position: absolute;
   bottom: 2px;
   right: 8px;
   font-size: var(--txt-xs);
-  color: var(--hint);
+  color: var(--wa-hora);
 }
-.wap-burbuja-out .wap-burbuja-hora { color: var(--brand-whatsapp); opacity: .8; }
 .wap-escribir {
   padding: 10px 14px;
   border-top: .5px solid var(--border);

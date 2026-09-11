@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { estadoDeConversacion, conDias, etiquetaDeDia, ultimoTexto, entraEnElHistorial, DIAS_DE_HISTORIAL, type MensajeChat } from '../src/chat.ts';
+import { estadoDeConversacion, conDias, etiquetaDeDia, ultimoTexto, entraEnElHistorial, DIAS_DE_HISTORIAL, recortarChat, TOPE_MENSAJES_POR_CHAT, type MensajeChat } from '../src/chat.ts';
 
 const HOY = '2026-09-08';
 
@@ -176,4 +176,42 @@ test('§8.2 · DIAS_DE_HISTORIAL es el default y son los 2 meses pedidos', () =>
   const ahora = new Date('2026-09-11T12:00:00Z');
   const hace30 = (ahora.getTime() - 30 * 86400000) / 1000;
   assert.equal(entraEnElHistorial(hace30, undefined, ahora), true);
+});
+
+// ------------------------------------------------ el tope por conversación
+
+// El 11/09, importando dos meses de historial real, una conversación llegó a
+// 4.468 mensajes y 481 KB contra un campo que admite 500. La escritura falló
+// ENTERA: no entró ese mensaje ni los de las conversaciones que venían después
+// en la misma tanda.
+
+test('§7.4 · se guardan los ÚLTIMOS, no los primeros', () => {
+  // Lo que importa de un chat es en qué quedó. Un tope que corta por el final
+  // deja la conversación congelada en su primer día.
+  const muchos = Array.from({ length: 500 }, (_, i) => m('in', String(i), `2026-09-01T00:00:${String(i % 60).padStart(2, '0')}`));
+  const r = recortarChat(muchos, 400);
+  assert.equal(r.length, 400);
+  assert.equal(r[0]!.texto, '100', 'arranca en el 100: se fueron los 100 más viejos');
+  assert.equal(r[r.length - 1]!.texto, '499', 'y el último es el último');
+});
+
+test('§7.4 · una conversación corta no se toca', () => {
+  const pocos = [m('in', 'hola'), m('out', 'chau')];
+  assert.equal(recortarChat(pocos, 400), pocos, 'devuelve la misma lista, sin copiarla');
+});
+
+test('§7.4 · un tope inválido no vacía la conversación', () => {
+  // El tope puede venir de configuración. Un 0 o un negativo que devolviera una
+  // lista vacía borraría el chat en la próxima escritura.
+  const tres = [m('in', 'a'), m('in', 'b'), m('in', 'c')];
+  for (const t of [0, -5, NaN]) {
+    assert.ok(recortarChat(tres, t as number).length >= 1, `tope ${t}`);
+  }
+});
+
+test('§7.4 · el tope es 400 y deja el campo bien abajo del límite', () => {
+  assert.equal(TOPE_MENSAJES_POR_CHAT, 400);
+  // 4.468 mensajes pesaron 481 KB, o sea ~110 bytes cada uno. 400 son ~44 KB,
+  // menos de una décima parte de los 500 KB que admite el campo.
+  assert.ok(TOPE_MENSAJES_POR_CHAT * 110 < 500000);
 });

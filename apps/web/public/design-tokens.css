@@ -65,6 +65,19 @@
 
   --teal-light: #B8E8D4;
   --teal-br: #9FCFB8;
+
+  /* Los colores de WhatsApp, para el hilo de WA Personal.
+     Pedido el 11/09: «que los colores de las burbujas queden los mismos que
+     los de WhatsApp, lo mismo que su fondo». Son los de la aplicacion, no los
+     del CRM, y por eso tienen su propio prefijo: acá se está mirando una
+     conversación de WhatsApp y el parecido es lo que la hace reconocible.
+     Es la unica pantalla del CRM que imita a otra aplicacion a proposito. */
+  --wa-fondo: #EFEAE2;
+  --wa-burbuja-in: #FFFFFF;
+  --wa-burbuja-out: #D9FDD3;
+  --wa-texto: #111B21;
+  --wa-hora: #667781;
+  --wa-borde: rgb(0 0 0 / .08);
 }
 
 .tema-oscuro {
@@ -102,6 +115,14 @@
 
   --teal-light: #1A3B38;
   --teal-br: #2d4441;
+  /* WhatsApp, version oscura: son los colores reales de su modo oscuro. */
+  --wa-fondo: #0B141A;
+  --wa-burbuja-in: #202C33;
+  --wa-burbuja-out: #005C4B;
+  --wa-texto: #E9EDEF;
+  --wa-hora: #8696A0;
+  --wa-borde: rgb(255 255 255 / .06);
+
 }
 
 /* Tema noche: calido, menos contraste, para trabajar de noche. */
@@ -140,6 +161,14 @@
 
   --teal-light: #233029;
   --teal-br: #33443a;
+  /* WhatsApp, version oscura: son los colores reales de su modo oscuro. */
+  --wa-fondo: #0B141A;
+  --wa-burbuja-in: #202C33;
+  --wa-burbuja-out: #005C4B;
+  --wa-texto: #E9EDEF;
+  --wa-hora: #8696A0;
+  --wa-borde: rgb(255 255 255 / .06);
+
 }
 
 /* Base heredada del prototipo. */

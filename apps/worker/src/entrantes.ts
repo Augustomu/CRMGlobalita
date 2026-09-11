@@ -44,7 +44,7 @@
  */
 import type { WASocket } from '@whiskeysockets/baileys';
 import { decidirRuteoEntrante, type PerfilConTelefono } from '@crm/core/ruteo';
-import { DIAS_DE_HISTORIAL, entraEnElHistorial } from '@crm/core/chat';
+import { DIAS_DE_HISTORIAL, entraEnElHistorial, recortarChat } from '@crm/core/chat';
 import { existsSync, rmSync } from 'node:fs';
 import type PocketBase from 'pocketbase';
 
@@ -394,6 +394,7 @@ export async function guardarHistorial(
   pb: PocketBase,
   cuentaId: string,
   mensajes: MensajeCrudo[],
+  sock: WASocket | null = null,
   dias: number = DIAS_DE_HISTORIAL,
   ahora: Date = new Date(),
   /**
@@ -414,7 +415,7 @@ export async function guardarHistorial(
   // Se agrupa por conversación antes de escribir: una sola lectura y una sola
   // escritura por chat, en vez de una por mensaje. Con dos meses de historial
   // la diferencia es entre decenas de escrituras y miles.
-  const porChat = new Map<string, { nombre: string; tel: string; ms: { quien: string; texto: string; en: string }[] }>();
+  const porChat = new Map<string, { nombre: string; tel: string; jid: string; ms: { quien: string; texto: string; en: string }[] }>();
 
   for (const m of mensajes ?? []) {
     r.mirados++;
@@ -437,9 +438,12 @@ export async function guardarHistorial(
     // reconoce al abrir la pantalla. Sólo se cae al `pushName` cuando el
     // contacto no está guardado.
     const nombre = nombres.get(jid) || (tel ? nombres.get(`${tel}@s.whatsapp.net`) : '') || m.pushName || '';
-    const clave = tel || `nombre:${nombre || jid}`;
+    // LA IDENTIDAD ES EL JID. Ver la migracion 1788720000: agrupar por «sin
+    // telefono y sin nombre» junto las conversaciones de personas distintas
+    // en una sola de 4.468 mensajes.
+    const clave = jid;
 
-    if (!porChat.has(clave)) porChat.set(clave, { nombre, tel, ms: [] });
+    if (!porChat.has(clave)) porChat.set(clave, { nombre, tel, jid, ms: [] });
     // Si una tanda posterior trae el nombre de la agenda y la primera no lo
     // tenía, se completa: el historial llega desordenado.
     else if (nombre && !porChat.get(clave)!.nombre) porChat.get(clave)!.nombre = nombre;
@@ -453,14 +457,23 @@ export async function guardarHistorial(
   }
 
   for (const [clave, c] of porChat) {
-    const filtro = c.tel
-      ? `telefono = "${c.tel}"`
-      : `telefono = "" && nombre = "${String(c.nombre).replace(/"/g, '')}"`;
+    /*
+     * SE BUSCA POR JID. Ver la migración 1788720000.
+     *
+     * Antes se buscaba por teléfono y, cuando no había, por «teléfono vacío y
+     * nombre vacío» — una condición que cumplen TODOS los que no tienen ni
+     * número ni nombre. El 11/09 eso juntó las conversaciones de varias
+     * personas en una sola fila de 4.468 mensajes.
+     *
+     * El teléfono queda de respaldo para los chats que se guardaron antes de
+     * que existiera el JID: sin eso, cada uno de ellos se duplicaría.
+     */
+    const filtro = `wa_jid = "${clave}"` + (c.tel ? ` || (wa_jid = "" && telefono = "${c.tel}")` : '');
 
     const previos = await pb
       .collection('chat_personal')
-      .getFullList<{ id: string; mensajes?: unknown }>({ filter: filtro })
-      .catch(() => [] as { id: string; mensajes?: unknown }[]);
+      .getFullList<{ id: string; mensajes?: unknown; foto?: string }>({ filter: filtro })
+      .catch(() => [] as { id: string; mensajes?: unknown; foto?: string }[]);
 
     const antes = previos.length && Array.isArray(previos[0]!.mensajes) ? (previos[0]!.mensajes as { texto?: string; en?: string }[]) : [];
     const yaEstan = new Set(antes.map((m) => `${m.texto}·${m.en}`));
@@ -469,23 +482,40 @@ export async function guardarHistorial(
     if (!suma.length) continue;
 
     // Ordenados por hora: el historial llega en tandas y sin garantía de orden.
-    const todos = [...antes, ...suma].sort((a, b) => String(a.en ?? '').localeCompare(String(b.en ?? '')));
+    // Y recortados: el campo admite 500 KB y una conversación de dos meses los
+    // rozó. El tope y el porqué están en `core/chat.ts`.
+    const todos = recortarChat(
+      [...antes, ...suma].sort((a, b) => String(a.en ?? '').localeCompare(String(b.en ?? ''))) as never,
+    ) as unknown as { texto?: string; en?: string }[];
 
+    let chatId: string;
     if (previos.length) {
-      // `no_leido` NO se toca: lo viejo no vuelve a estar sin leer.
-      await pb.collection('chat_personal').update(previos[0]!.id, { mensajes: todos });
+      // `no_leido` NO se toca: lo viejo no vuelve a estar sin leer. El nombre y
+      // el JID sí se completan si faltaban.
+      chatId = previos[0]!.id;
+      await pb.collection('chat_personal').update(chatId, {
+        mensajes: todos,
+        wa_jid: clave,
+        ...(c.nombre ? { nombre: c.nombre } : {}),
+        ...(c.tel ? { telefono: c.tel } : {}),
+      });
     } else {
-      await pb.collection('chat_personal').create({
+      const creado = await pb.collection('chat_personal').create({
         cuenta: cuentaId,
+        wa_jid: clave,
         telefono: c.tel,
         nombre: c.nombre,
         mensajes: todos,
         no_leido: false,
       });
+      chatId = creado.id;
       r.chats++;
     }
     r.guardados += suma.length;
-    void clave;
+
+    // Y la foto, una sola vez por chat. Va al final: si WhatsApp tarda, los
+    // mensajes ya están guardados.
+    if (sock && !previos[0]?.foto) await traerLaFoto(sock, pb, chatId, c.jid);
   }
 
   return r;
@@ -640,6 +670,7 @@ export function escuchar(
             pb,
             cuentaId,
             (h.messages ?? []) as MensajeCrudo[],
+            sock,
             dias,
             new Date(),
             nombres,
