@@ -29,9 +29,18 @@ const GOOGLE_API = 'https://www.googleapis.com/calendar/v3';
 //
 // Van juntos en el mismo consentimiento a proposito: agregar un alcance despues
 // obliga a que cada persona vuelva a conectar su cuenta.
+// `contacts.readonly` se agrego el 11/09. Es SOLO LECTURA de la agenda: sirve
+// para ponerle nombre a los 58 chats de WhatsApp que entraron con el numero
+// pelado, y a los perfiles que quedaron sin nombre completo.
+//
+// NO INCLUYE GMAIL. Leer el correo es otro permiso y otra conversacion: seria
+// darle al CRM acceso a toda la correspondencia de una persona para completar
+// un par de campos. Si algun dia hace falta, se pide aparte y se explica que
+// se lee.
 const SCOPE =
   'https://www.googleapis.com/auth/calendar.events ' +
-  'https://www.googleapis.com/auth/calendar.readonly';
+  'https://www.googleapis.com/auth/calendar.readonly ' +
+  'https://www.googleapis.com/auth/contacts.readonly';
 
 /**
  * Lo que hace falta tener puesto. Ver deploy/PASO-A-PASO.md, paso 4.6.
