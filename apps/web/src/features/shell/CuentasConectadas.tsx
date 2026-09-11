@@ -103,6 +103,15 @@ export function CuentasConectadas({
    */
   const [pedidoEn, setPedidoEn] = useState<string | null>(null);
   const [errorWa, setErrorWa] = useState<string | null>(null);
+  /**
+   * Lo último que dijo el worker.
+   *
+   * El proceso lo lanza PocketBase, que **descarta su salida**: si se muere al
+   * arrancar, el servidor contesta 200 —porque lanzarlo salió bien— y acá no
+   * pasa nada. Eso es indistinguible de un botón roto, y es lo que Augusto
+   * reportó dos veces el 11/09. El worker deja un diario y acá se muestra.
+   */
+  const [diario, setDiario] = useState<string>('');
   const [eligiendoCuenta, setEligiendoCuenta] = useState(false);
   /** Para llevar la vista al panel: con Google abajo, el QR quedaba fuera de cuadro. */
   const panelQr = useRef<HTMLDivElement | null>(null);
@@ -133,6 +142,18 @@ export function CuentasConectadas({
     if (!qr) return;
     panelQr.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [qr]);
+
+  /**
+   * Si a los 8 segundos de pedirlo no hay código, el worker tiene algo que
+   * decir. Una sola vez y no en bucle: es para explicar una falla, no para
+   * vigilar un proceso sano.
+   */
+  useEffect(() => {
+    if (!qr || !pedidoEn) return;
+    const t = setTimeout(() => void leerDiario(qr), 8000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qr, pedidoEn]);
 
   const [google, setGoogle] = useState<EstadoGoogle | null>(null);
   const [googleFallo, setGoogleFallo] = useState<string | null>(null);
@@ -285,9 +306,23 @@ export function CuentasConectadas({
    * publicado en el VPS, por ejemplo). Ahí no se inventa nada: se dice que hay
    * que correr el comando a mano, que sigue funcionando igual.
    */
+  /** Trae el diario del worker. Silencioso: es información de apoyo. */
+  async function leerDiario(abrev: string) {
+    try {
+      const r = await pb.send<{ hay?: boolean; texto?: string }>(
+        `/api/wa/diario?abrev=${encodeURIComponent(abrev)}`,
+        {},
+      );
+      setDiario(r?.hay ? String(r.texto ?? '') : '');
+    } catch {
+      setDiario('');
+    }
+  }
+
   async function abrirVinculo(abrev: string) {
     setQr(abrev);
     setErrorWa(null);
+    setDiario('');
     setEligiendoCuenta(false);
     try {
       const r = await pb.send<{ ok?: boolean; ya_estaba?: boolean; error?: string }>(
@@ -648,6 +683,15 @@ export function CuentasConectadas({
                 )}
 
                 {errorWa && <span className="cc-estado cc-mal">{errorWa}</span>}
+
+                {/* Lo que dijo el worker, sólo cuando NO hay código. Con el QR
+                    a la vista sobra: el proceso está andando. */}
+                {!vigente && diario && (
+                  <details className="cc-diario">
+                    <summary className="campo-ayuda">Qué dijo el worker</summary>
+                    <pre>{diario}</pre>
+                  </details>
+                )}
 
                 <div className="cc-fila">
                   {/* Reintentar sólo cuando de verdad no hay nadie emitiendo.

@@ -31,6 +31,53 @@
 // token del usuario que apretó el botón: sirve para lo mismo, caduca solo, y
 // no vale para nada fuera de esta base.
 
+// Qué dijo el worker en su última corrida.
+//
+// POR QUE HACE FALTA UN ENDPOINT PARA ESTO. `cmd.start()` lanza el proceso y
+// **descarta su salida**: si se muere al arrancar, PocketBase contesta 200
+// —porque el lanzamiento salió bien— y del otro lado no pasa nada. Desde la
+// pantalla eso es indistinguible de un botón roto, que es exactamente lo que
+// Augusto reportó dos veces el 11/09.
+//
+// El worker escribe todo lo que dice en `ultima-corrida.log`, al lado de su
+// credencial. Esto lo devuelve para que la pantalla pueda mostrar el motivo en
+// vez de un silencio.
+routerAdd(
+  'GET',
+  '/api/wa/diario',
+  (e) => {
+    if (!String($os.getenv('WORKER_LOCAL') || '')) {
+      return e.json(404, { error: 'no disponible' });
+    }
+
+    const abrev = String(e.request.url.query().get('abrev') || '').trim().toUpperCase();
+    if (!/^[A-Z]{2,4}$/.test(abrev)) {
+      return e.json(400, { error: 'Abreviatura inválida.' });
+    }
+
+    // La misma carpeta que arma `carpetaDeSesion()` en el worker. Está escrita
+    // dos veces —acá y allá— y no hay dónde compartirla: uno corre adentro de
+    // PocketBase y el otro es Node. Si cambia una, cambia la otra.
+    const base =
+      String($os.getenv('WA_SESION_DIR') || '') ||
+      (String($os.getenv('USERPROFILE') || '') || String($os.getenv('HOME') || '')) +
+        '/.globalita-wa';
+    const ruta = base + '/' + abrev.toLowerCase() + '/ultima-corrida.log';
+
+    try {
+      const crudo = toString($os.readFile(ruta));
+      // Las últimas líneas alcanzan: el motivo está al final, y el QR dibujado
+      // en caracteres ocupa cientos de líneas que acá no sirven de nada.
+      const lineas = crudo.split('\n').filter((l) => l.trim() !== '');
+      return e.json(200, { hay: true, texto: lineas.slice(-14).join('\n') });
+    } catch (err) {
+      // Todavía no corrió nunca, o la carpeta no existe. No es un error.
+      return e.json(200, { hay: false, texto: '' });
+    }
+  },
+  $apis.requireAuth(),
+);
+
 routerAdd(
   'POST',
   '/api/wa/vincular',
@@ -89,9 +136,18 @@ routerAdd(
     }
 
     // El token del usuario que apretó el botón. El worker entra como él.
+    //
+    // Y CON QUE COLECCION VALIDARLO. Un token no dice solo, desde afuera, de
+    // qué colección salió, y el worker tiene que refrescarlo contra la que
+    // corresponde: si entra un superusuario y el worker prueba contra `users`,
+    // PocketBase contesta «requires auth record from _superusers collection» y
+    // el proceso muere ANTES de escribir nada. Pasó, y desde el navegador se ve
+    // igual que si el botón no hiciera nada.
     let token = '';
+    let coleccion = 'users';
     try {
       token = e.auth.newAuthToken();
+      coleccion = e.auth.collection().name || 'users';
     } catch (err) {
       return e.json(500, { error: 'No se pudo generar el token para el worker: ' + String(err) });
     }
@@ -109,6 +165,7 @@ routerAdd(
       if (v) entorno.push(k + '=' + v);
     }
     entorno.push('PB_TOKEN=' + token);
+    entorno.push('PB_COL=' + coleccion);
 
     const node = String($os.getenv('NODE_EXE') || '') || 'node';
     const script = raiz + '/apps/worker/src/whatsapp.ts';

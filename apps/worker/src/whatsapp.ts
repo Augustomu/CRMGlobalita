@@ -22,7 +22,7 @@
  * sesión de WhatsApp no se respalda: se vuelve a vincular. Copiarla a un lugar
  * versionado es peor que perderla.
  */
-import { mkdirSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import baileys, { Browsers, useMultiFileAuthState, type WASocket } from '@whiskeysockets/baileys';
@@ -40,7 +40,41 @@ import {
 import { entrar } from './base.ts';
 import { NoSePuede } from './seguridad.ts';
 
-const decir = (m: string) => console.log(m);
+/**
+ * Todo lo que este proceso dice, también a un archivo.
+ *
+ * POR QUE. Cuando al worker lo lanza el botón del CRM, nadie está mirando una
+ * terminal: PocketBase arranca el proceso y descarta su salida. Si el proceso
+ * se muere al arrancar —un token que no sirve, una dependencia que falta, una
+ * variable de entorno que no llegó— **desde la pantalla se ve exactamente igual
+ * que si el botón no hiciera nada**. Pasó el 11/09 y costó media hora
+ * encontrarlo a mano.
+ *
+ * Se pisa en cada corrida a propósito: lo que importa es POR QUE FALLÓ ESTA
+ * VEZ. Un log que crece es un log que nadie abre.
+ */
+let dondeEscribir: string | null = null;
+function abrirElDiario(dir: string): void {
+  dondeEscribir = join(dir, 'ultima-corrida.log');
+  try {
+    writeFileSync(dondeEscribir, `${new Date().toISOString()} · arranca\n`, 'utf8');
+  } catch {
+    dondeEscribir = null;
+  }
+}
+
+const decir = (m: string) => {
+  console.log(m);
+  if (!dondeEscribir) return;
+  try {
+    appendFileSync(dondeEscribir, m + '\n', 'utf8');
+  } catch {
+    // Si no se puede escribir el diario, la corrida sigue: es un espejo, no el
+    // trabajo. Pero deja de intentarlo, para no repetir el error 300 veces.
+    dondeEscribir = null;
+  }
+};
+
 const dormir = (ms: number) => new Promise((r) => setTimeout(r, Math.max(0, ms)));
 
 /**
@@ -326,16 +360,24 @@ async function correr(): Promise<number> {
     return 2;
   }
 
+  // Lo PRIMERO, antes de hablar con la base. Lo que más se rompe es justamente
+  // entrar —un token vencido, una variable que no llegó— y si el diario se
+  // abriera después, ese error sería el único que no queda escrito.
+  abrirElDiario(carpetaDeSesion(abrev));
+
   return comando === 'estado' ? verEstado(abrev) : vincular(abrev);
 }
 
 correr()
   .then((c) => process.exit(c))
   .catch((e) => {
+    // Por `decir` y no por `console.error`: el que lanzó esto puede ser el
+    // botón del CRM, y ahí nadie ve la consola. El diario es lo único que
+    // queda, y es lo que la pantalla lee para decir qué pasó.
     if (e instanceof NoSePuede) {
-      console.error('\n' + e.message + '\n');
+      decir('\n' + e.message + '\n');
       process.exit(1);
     }
-    console.error('\nSe rompió: ' + (e as Error).message + '\n');
+    decir('\nSe rompió: ' + ((e as Error)?.message || String(e)) + '\n');
     process.exit(3);
   });

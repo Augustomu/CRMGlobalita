@@ -5676,6 +5676,35 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
   align-items: center;
   gap: 8px;
 }
+/* Lo que dijo el worker cuando no hay código.
+   Cerrado por defecto: es la salida cruda de un proceso, y quien sólo quiere
+   escanear un QR no tiene por qué verla. Pero cuando algo falla es lo único
+   que dice por qué, así que está a un clic y no escondida en una terminal. */
+.cc-diario {
+  align-self: stretch;
+  font-size: var(--txt-xs);
+}
+.cc-diario summary {
+  cursor: pointer;
+}
+.cc-diario pre {
+  margin-top: 6px;
+  padding: 8px;
+  max-height: 180px;
+  overflow: auto;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--txt-xs);
+  line-height: 1.5;
+  /* El texto del worker viene con saltos propios y puede traer rutas largas:
+     se respetan los saltos y se parte lo que no entra, en vez de estirar el
+     panel a lo ancho. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 /* La caja del QR. Crece para el código y se queda chica cuando no hay ninguno:
    un recuadro grande y vacío se lee como un error de carga. El borde punteado es
    del estado vacío —dice «acá va a aparecer algo»— y con el código puesto sobra. */
