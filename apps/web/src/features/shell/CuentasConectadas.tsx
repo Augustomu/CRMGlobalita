@@ -796,8 +796,11 @@ export function CuentasConectadas({
                 <span className="cc-acciones">
                   {pasarCalendario === c.id ? (
                     <>
+                      {/* Acá SÍ va el texto: la pregunta tiene que decir qué
+                          cambia y qué no antes de que alguien la conteste. Es
+                          el único momento en que vale empujar la fila. */}
                       <span className="campo-ayuda">
-                        Las reuniones nuevas van a ir a esta cuenta. Las ya creadas se quedan donde están.
+                        Las reuniones nuevas van a esta cuenta; las ya creadas se quedan.
                       </span>
                       <button
                         type="button"
@@ -827,21 +830,36 @@ export function CuentasConectadas({
                     </>
                   ) : (
                     <>
+                      {/* DOS ICONOS Y NO DOS TEXTOS. «Usar para el calendario»
+                          son cuatro palabras en una fila que ya tiene nombre,
+                          estado y detalle: empujaban todo y la columna de
+                          estados dejaba de leerse de arriba abajo. Lo que hacen
+                          lo dicen al pasar por encima. */}
                       <button
                         type="button"
-                        className="boton-mini"
-                        title="Que las reuniones del CRM se escriban en el calendario de esta cuenta. Las ya creadas se quedan donde están."
+                        className="cc-icono"
+                        title="Escribir las reuniones del CRM en el calendario de esta cuenta. Las ya creadas se quedan donde están."
+                        aria-label="Usar esta cuenta para el calendario"
                         onClick={() => setPasarCalendario(c.id)}
                       >
-                        Usar para el calendario
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                          <rect x="3" y="5" width="18" height="16" rx="2.5" />
+                          <path d="M3 10h18M8 3v4M16 3v4" strokeLinecap="round" />
+                          <path d="M9 15.5l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                       </button>
                       <button
                         type="button"
-                        className="boton-mini"
+                        className="cc-icono cc-icono-peligro"
                         title="Dejar de leer la agenda de contactos de esta cuenta. Los nombres ya puestos se quedan."
+                        aria-label="Desconectar esta cuenta"
                         onClick={() => setSoltarCuenta(c.id)}
                       >
-                        Desconectar
+                        {/* El símbolo de apagar: se lee sin leyenda. */}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+                          <path d="M12 3v9" strokeLinecap="round" />
+                          <path d="M7.5 6.5a7 7 0 1 0 9 0" strokeLinecap="round" />
+                        </svg>
                       </button>
                     </>
                   )}

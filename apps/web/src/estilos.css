@@ -5760,6 +5760,46 @@ code { font-family: ui-monospace, monospace; font-size: var(--txt-sm); }
 .cc-ok { color: var(--success); }
 .cc-mal { color: var(--error); }
 .cc-detalle { font-size: var(--txt-xs); color: var(--hint); white-space: nowrap; }
+
+/* LA CELDA DE LAS ACCIONES. El TSX la usa desde el 11/09 y esta regla no
+   existía: era un <span> pelado, o sea `display: inline`, y los botones se
+   acomodaban donde caían — que es lo que desalineaba la columna del estado.
+   Contra el borde derecho y en una sola línea, como el resto de la grilla. */
+.cc-acciones {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Los botones que son un icono y nada más.
+   Van así y no con su texto porque «Usar para el calendario» son cuatro
+   palabras en una fila que ya tiene nombre, estado y detalle: el texto empuja
+   todo lo demás y la columna de estados deja de leerse de arriba abajo, que es
+   para lo único que se abre esta pantalla.
+   DIBUJADOS, no emoji: cada sistema operativo dibuja el emoji a su manera y
+   dos filas seguidas no quedarían del mismo alto. Lo que dicen, lo dicen al
+   pasar por encima. */
+.cc-icono {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: .5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+.cc-icono svg { width: 14px; height: 14px; display: block; }
+.cc-icono:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent-br); }
+.cc-icono:disabled { opacity: .45; cursor: default; }
+.cc-icono:disabled:hover { background: var(--surface); color: var(--muted); border-color: var(--border); }
+.cc-icono-peligro:hover { background: var(--error-light); color: var(--error); border-color: var(--error); }
 .cc-vacio { padding: 18px; text-align: center; color: var(--hint); font-size: var(--txt-md); }
 
 .cc-qr-panel {
