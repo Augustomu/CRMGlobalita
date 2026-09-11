@@ -39,6 +39,7 @@ import {
 } from '@crm/core/whatsapp';
 import { entrar } from './base.ts';
 import { NoSePuede } from './seguridad.ts';
+import { escuchar } from './entrantes.ts';
 
 /**
  * Todo lo que este proceso dice, también a un archivo.
@@ -309,6 +310,12 @@ async function vincular(abrev: string): Promise<number> {
             decir('  la credencial queda guardada y la próxima vez no hace falta escanear.');
             listo = true;
             latir(pb, cuenta.id);
+
+            // Y a partir de acá, escucha. Hasta el 11/09 la sesión sólo se
+            // mantenía viva: WhatsApp conectado y nadie del otro lado. Augusto
+            // lo notó apenas vinculó — «está conectado pero no veo mis chats».
+            escuchar(sock, pb, cuenta.id, process.env.WA_PAIS || 'Argentina', decir);
+            decir('  Escuchando lo que entre. No contesta nada.');
             return;
           }
 
